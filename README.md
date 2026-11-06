@@ -1,18 +1,11 @@
 # dotdash
 
-A [morzer](https://github.com/morzecrew/morzer) bundle for a censorship-resistant
-proxy on one Docker host. Clients reach Xray two ways: VLESS + XHTTP through
-Cloudflare to Caddy, which serves a cover site on every path but a secret one, or
-VLESS over an XDNS tunnel on UDP/53 for networks where only DNS gets out. Both
-use VLESS Encryption (ML-KEM-768). Every connection leaves through your ISP or
-residential SOCKS5/HTTP proxy with no direct fallback, so an outage stops traffic
-instead of exposing the server's IP. The origin accepts only Cloudflare (Origin
-CA certificate plus Authenticated Origin Pulls with your own CA); containers run
-non-root and read-only, and secrets stay SOPS-encrypted and reach containers
-only as files.
+A [morzer](https://github.com/morzecrew/morzer) bundle that runs an Xray gateway
+behind Caddy and Cloudflare on a single Docker host, with a DNS-based entry point
+alongside it and all outbound traffic routed through an upstream proxy you
+provide.
 
-> Needs `ghcr.io/morzecrew/xray` ([platform-images#125](https://github.com/morzecrew/platform-images/issues/125));
-> until it is published the manifest pins a placeholder digest.
+> Requires `ghcr.io/morzecrew/xray` ([platform-images#125](https://github.com/morzecrew/platform-images/issues/125)).
 
 ## Install
 
