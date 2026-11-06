@@ -31,7 +31,7 @@ services:
     tmpfs:
       # Where the image writes the config with secrets resolved; never disk.
       - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
-    secrets: [vless_uuid, vless_decryption, xhttp_path, upstream_username, upstream_password]
+    secrets: [vless_uuid, vless_seed, xhttp_path, upstream_username, upstream_password]
     ports:
       - "${DOTDASH_PARAM_XDNS_BIND:-0.0.0.0}:53:5353/udp"
     networks: [backend, egress]
@@ -71,7 +71,8 @@ services:
       start_period: 5s
 
   # One-shot behind a profile, started only by `morzer task run client-config`.
-  # Reuses the Caddy image for its shell; no network at all.
+  # The Caddy image for its shell, the Xray image mounted for the helper that
+  # derives the client key from the seed file; no network at all.
   client-config:
     <<: *hardened
     restart: "no"
@@ -83,7 +84,12 @@ services:
       XDNS_DOMAIN: ${DOTDASH_PARAM_XDNS_DOMAIN:?}
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
-    secrets: [vless_uuid, vless_encryption, xhttp_path]
+      - type: image
+        source: ${DOTDASH_IMAGE_XRAY:?set by morzer}
+        target: /opt/xray
+        image:
+          subpath: usr/local/bin
+    secrets: [vless_uuid, vless_seed, xhttp_path]
 
 networks:
   edge: {}
@@ -97,10 +103,8 @@ secrets:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/vless_uuid
   xhttp_path:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/xhttp_path
-  vless_decryption:
-    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/vless_decryption
-  vless_encryption:
-    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/vless_encryption
+  vless_seed:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/vless_seed
   upstream_username:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream_username
   upstream_password:

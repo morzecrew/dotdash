@@ -4,7 +4,7 @@
 set -eu
 
 uuid=$(cat /run/secrets/vless_uuid)
-enc=$(cat /run/secrets/vless_encryption)
+enc=$(/opt/xray/xray-entrypoint vless-encryption /run/secrets/vless_seed)
 path=$(cat /run/secrets/xhttp_path)
 : "${DOMAIN:?}" "${XDNS_DOMAIN:?}"
 

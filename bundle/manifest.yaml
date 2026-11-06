@@ -30,8 +30,9 @@ compatibility:
 requirements:
   architectures: [amd64, arm64]
   tools:
-    docker: ">=24"
-    compose: ">=2.30"
+    # client-config mounts the Xray image (Compose `type: image`).
+    docker: ">=28.0.0"
+    compose: ">=2.35.0"
   memory: 512MiB
   disk: 2GiB
   # TCP only. UDP/53 for the DNS tunnel is not checked here: on a host whose

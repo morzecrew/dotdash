@@ -1,7 +1,8 @@
 {{- /*
 Xray config. Morzer renders it to <etc>/application.yaml, Compose mounts it as
 /etc/xray/config.json, and ghcr.io/morzecrew/xray replaces each
-{"$file": "<path>"} with that file's content before starting Xray
+{"$file": "<path>"} with that file's content, and {"$vlessDecryption": "<path>"}
+with the server key derived from that seed, before starting Xray
 (platform-images#125). No secret value is ever in this file.
 
 There is no direct (freedom) outbound: if the upstream proxy is down, traffic
@@ -17,7 +18,7 @@ stops rather than leaving from this server's own IP.
       "protocol": "vless",
       "settings": {
         "clients": [{"id": {"$file": "/run/secrets/vless_uuid"}}],
-        "decryption": {"$file": "/run/secrets/vless_decryption"}
+        "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
       },
       "streamSettings": {
         "network": "xhttp",
@@ -32,7 +33,7 @@ stops rather than leaving from this server's own IP.
       "protocol": "vless",
       "settings": {
         "clients": [{"id": {"$file": "/run/secrets/vless_uuid"}}],
-        "decryption": {"$file": "/run/secrets/vless_decryption"}
+        "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
       },
       "streamSettings": {
         "network": "kcp",
