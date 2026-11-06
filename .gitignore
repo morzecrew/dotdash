@@ -1,0 +1,4 @@
+# Key material from scripts/cf-aop-cert.sh and the Cloudflare dashboard.
+/aop/
+*.key
+*.pem

@@ -1,0 +1,113 @@
+# dotdash. Caddy is the only TCP entrypoint: Cloudflare connects to it with a
+# client certificate, it serves a cover site and passes one secret path to
+# Xray. Xray sits on an internal network for that, and publishes UDP/53 itself
+# for the DNS tunnel. Every client connection leaves through the upstream proxy.
+#
+# Compose sees only what morzer gives it: DOTDASH_IMAGE_*, DOTDASH_PARAM_*,
+# DOTDASH_DOMAIN, DOTDASH_CONFIG_FILE, DOTDASH_RELEASE_DIR, DOTDASH_SECRETS_DIR.
+
+x-hardened: &hardened
+  restart: unless-stopped
+  user: "65532:65532"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  pids_limit: 256
+  logging:
+    driver: local
+    options: {max-size: 10m, max-file: "3"}
+
+services:
+  xray:
+    <<: *hardened
+    image: ${DOTDASH_IMAGE_XRAY:?set by morzer}
+    environment:
+      # The config's loopback-only http inbound: the probe takes the same
+      # routing and upstream as client traffic.
+      XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:10809
+      XRAY_HEALTHCHECK_URL: ${DOTDASH_PARAM_HEALTHCHECK_URL:-https://www.gstatic.com/generate_204}
+    volumes:
+      - ${DOTDASH_CONFIG_FILE:-/etc/dotdash/application.yaml}:/etc/xray/config.json:ro
+    tmpfs:
+      # Where the image writes the config with secrets resolved; never disk.
+      - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
+    secrets: [vless_uuid, vless_decryption, xhttp_path, upstream_username, upstream_password]
+    ports:
+      - "${DOTDASH_PARAM_XDNS_BIND:-0.0.0.0}:53:5353/udp"
+    networks: [backend, egress]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/xray-entrypoint", "healthcheck"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 20s
+
+  caddy:
+    <<: *hardened
+    image: ${DOTDASH_IMAGE_CADDY:?set by morzer}
+    environment:
+      DOMAIN: ${DOTDASH_DOMAIN:?install with --domain}
+    volumes:
+      - ${DOTDASH_RELEASE_DIR:?set by morzer}/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${DOTDASH_RELEASE_DIR:?set by morzer}/site:/srv:ro
+    tmpfs:
+      # Stateless: the certificate is a secret and there is no ACME.
+      - /data:uid=65532,gid=65532,mode=0700,size=8m
+      - /config:uid=65532,gid=65532,mode=0700,size=8m
+    secrets: [origin_cert, origin_key, cf_aop_ca, xhttp_path]
+    ports:
+      - "${DOTDASH_PARAM_HTTPS_PORT:-443}:8443/tcp"
+    networks: [edge, backend]
+    mem_limit: 256m
+    depends_on:
+      xray:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # One-shot behind a profile, started only by `morzer task run client-config`.
+  # Reuses the Caddy image for its shell; no network at all.
+  client-config:
+    <<: *hardened
+    restart: "no"
+    image: ${DOTDASH_IMAGE_CADDY:?set by morzer}
+    profiles: [tasks]
+    network_mode: none
+    environment:
+      DOMAIN: ${DOTDASH_DOMAIN:?install with --domain}
+      XDNS_DOMAIN: ${DOTDASH_PARAM_XDNS_DOMAIN:?}
+    volumes:
+      - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
+    secrets: [vless_uuid, vless_encryption, xhttp_path]
+
+networks:
+  edge: {}
+  # Caddy to Xray only; no route out.
+  backend:
+    internal: true
+  egress: {}
+
+secrets:
+  vless_uuid:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/vless_uuid
+  xhttp_path:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/xhttp_path
+  vless_decryption:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/vless_decryption
+  vless_encryption:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/vless_encryption
+  upstream_username:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream_username
+  upstream_password:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream_password
+  origin_cert:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/origin_cert
+  origin_key:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/origin_key
+  cf_aop_ca:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/cf_aop_ca

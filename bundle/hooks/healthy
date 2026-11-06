@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Healthy when both long-running services report healthy. Xray's healthcheck
+# fetches a URL through the upstream proxy, so this covers the egress path.
+set -euo pipefail
+
+project=${DOTDASH_COMPOSE_PROJECT:-dotdash}
+status=$(docker compose -p "$project" ps --format '{{.Service}}={{.Health}}')
+
+for service in xray caddy; do
+  if ! grep -qx "$service=healthy" <<<"$status"; then
+    echo "$service is not healthy: $(grep "^$service=" <<<"$status" || echo 'not running')" >&2
+    exit 1
+  fi
+done

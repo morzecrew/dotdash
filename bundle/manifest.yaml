@@ -1,0 +1,135 @@
+# yaml-language-server: $schema=https://morzecrew.github.io/morzer/schemas/selfhost-v1alpha1-manifest.json
+api_version: selfhost/v1alpha1
+kind: application-release
+
+metadata:
+  name: dotdash
+  # Stamped by `morzer release build --version X`, together with VERSION.
+  version: 0.0.0
+  description: Xray behind a Cloudflare-fronted Caddy, plus a DNS tunnel, egressing through an ISP proxy
+  vendor: morzecrew
+  release_notes: RELEASE.md
+
+providers:
+  runtime: {name: compose}
+  secrets: {name: sops-age}
+  health: {name: http}
+
+runtimes:
+  compose:
+    files:
+      - compose/compose.yaml
+    options:
+      project: dotdash
+
+compatibility:
+  # The manager this bundle is verified and rehearsed with.
+  min_manager_version: "0.12.0"
+  rollback_safe: true
+
+requirements:
+  architectures: [amd64, arm64]
+  tools:
+    docker: ">=24"
+    compose: ">=2.30"
+  memory: 512MiB
+  disk: 2GiB
+  # TCP only. UDP/53 for the DNS tunnel is not checked here: on a host whose
+  # systemd-resolved stub holds 127.0.0.53:53, set xdns_bind to the public IP.
+  ports: ["{{ .Parameters.https_port }}"]
+
+parameters:
+  https_port:
+    type: port
+    default: 443
+    description: Host port Caddy serves HTTPS on; Cloudflare connects to it
+    services: [caddy]
+  upstream_protocol:
+    type: enum
+    values: [socks, http]
+    default: socks
+    description: Protocol of the ISP/residential proxy every client connection leaves through
+    services: [xray]
+  upstream_host:
+    type: string
+    required: true
+    description: Host name or IP of the ISP/residential proxy
+    services: [xray]
+  upstream_port:
+    type: port
+    required: true
+    description: Port of the ISP/residential proxy
+    services: [xray]
+  upstream_udp:
+    type: bool
+    default: false
+    description: Relay client UDP through a SOCKS5 upstream that supports UDP ASSOCIATE; otherwise UDP is dropped
+    services: [xray]
+  xdns_domain:
+    type: string
+    required: true
+    description: Zone delegated to this server for the DNS tunnel, e.g. t.example.com (its NS record points here)
+    services: [xray]
+  xdns_bind:
+    type: string
+    default: 0.0.0.0
+    description: Host address UDP/53 is published on for the DNS tunnel
+    services: [xray]
+  xdns_mtu:
+    type: int
+    default: 900
+    description: mKCP packet size the DNS tunnel answers with; must fit the EDNS0 size resolvers on the path advertise (1232 is common, lower it if replies are lost)
+    services: [xray]
+  log_level:
+    type: enum
+    values: [debug, info, warning, error, none]
+    default: warning
+    description: Xray error-log verbosity; the access log is always off
+    services: [xray]
+  healthcheck_url:
+    type: string
+    default: https://www.gstatic.com/generate_204
+    description: URL Xray's healthcheck fetches through the upstream proxy; any 2xx is healthy
+    services: [xray]
+
+images:
+  # ponytail: placeholder digest until platform-images#125 publishes the image;
+  # release verify passes, a deployment does not.
+  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
+
+# Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);
+# its content is JSON, which is also YAML. Secrets are not in it: it holds
+# {"$file": ...} references the image resolves at start.
+configuration:
+  - template: templates/xray.json.tmpl
+    target: /etc/dotdash/application.yaml
+    mode: "0644"
+
+secrets:
+  source: /etc/dotdash/secrets.sops.yaml
+  render_to: /run/dotdash/secrets
+  schema: secrets.schema.yaml
+
+operations:
+  smoke_test:
+    kind: hook
+    command: ["hooks/smoke-test"]
+    timeout: 2m
+
+tasks:
+  client-config:
+    description: "Print client settings: the XHTTP share link and the XDNS outbound (output is credentials)"
+    service: client-config
+    command: ["sh", "/task/client-config.sh"]
+    timeout: 1m
+
+health:
+  checks:
+    # Xray's own healthcheck fetches healthcheck_url through the upstream, so
+    # "healthy" means the whole egress path works, not that a process is up.
+    - {name: services, type: command, command: ["hooks/healthy"], timeout: 30s}
+
+retention:
+  releases: 3
+  backups: 3

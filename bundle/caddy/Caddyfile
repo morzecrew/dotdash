@@ -1,0 +1,55 @@
+# dotdash edge. Native expansion only: {$DOMAIN} from the environment when the
+# Caddyfile is adapted, {file.*} from the secret files on each request.
+{
+	admin off
+	auto_https off
+	servers {
+		protocols h1 h2
+	}
+}
+
+# The container healthcheck's: loopback, plain HTTP, never published.
+http://127.0.0.1:8081 {
+	bind 127.0.0.1
+	respond /healthz 200
+}
+
+https://{$DOMAIN}:8443 {
+	# Cloudflare Origin CA certificate, trusted by Cloudflare only. A client
+	# that is not Cloudflare presenting our AOP certificate fails the handshake:
+	# a scanner on the bare IP gets nothing, not even the cover site.
+	tls /run/secrets/origin_cert /run/secrets/origin_key {
+		protocols tls1.2 tls1.3
+		client_auth {
+			mode require_and_verify
+			trust_pool file /run/secrets/cf_aop_ca
+		}
+	}
+
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+
+	@xhttp path /{file./run/secrets/xhttp_path}/*
+	handle @xhttp {
+		# h2c so XHTTP stream-up/stream-one survive; no buffering either way.
+		reverse_proxy xray:8080 {
+			# Xray needs no client addresses; keep them out of it.
+			header_up -X-Forwarded-For
+			header_up -X-Real-IP
+			header_up -CF-Connecting-IP
+			transport http {
+				versions h2c
+			}
+			flush_interval -1
+		}
+	}
+
+	handle {
+		root * /srv
+		file_server
+	}
+}

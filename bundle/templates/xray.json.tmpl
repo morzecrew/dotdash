@@ -1,0 +1,74 @@
+{{- /*
+Xray config. Morzer renders it to <etc>/application.yaml, Compose mounts it as
+/etc/xray/config.json, and ghcr.io/morzecrew/xray replaces each
+{"$file": "<path>"} with that file's content before starting Xray
+(platform-images#125). No secret value is ever in this file.
+
+There is no direct (freedom) outbound: if the upstream proxy is down, traffic
+stops rather than leaving from this server's own IP.
+*/ -}}
+{
+  "log": {"loglevel": "{{ .Parameters.log_level }}", "access": "none", "dnsLog": false},
+  "inbounds": [
+    {
+      "tag": "xhttp",
+      "listen": "0.0.0.0",
+      "port": 8080,
+      "protocol": "vless",
+      "settings": {
+        "clients": [{"id": {"$file": "/run/secrets/vless_uuid"}}],
+        "decryption": {"$file": "/run/secrets/vless_decryption"}
+      },
+      "streamSettings": {
+        "network": "xhttp",
+        "xhttpSettings": {"path": {"$file": "/run/secrets/xhttp_path"}, "mode": "auto"}
+      },
+      "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
+    },
+    {
+      "tag": "xdns",
+      "listen": "0.0.0.0",
+      "port": 5353,
+      "protocol": "vless",
+      "settings": {
+        "clients": [{"id": {"$file": "/run/secrets/vless_uuid"}}],
+        "decryption": {"$file": "/run/secrets/vless_decryption"}
+      },
+      "streamSettings": {
+        "network": "kcp",
+        "kcpSettings": {"mtu": {{ .Parameters.xdns_mtu }}, "tti": 200},
+        "finalmask": {"udp": [{"type": "xdns", "settings": {"domains": [{"names": ["{{ .Parameters.xdns_domain }}"], "edns0": 1232}]}}]}
+      },
+      "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
+    },
+    {
+      "tag": "probe",
+      "listen": "127.0.0.1",
+      "port": 10809,
+      "protocol": "http"
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "upstream",
+      "protocol": "{{ .Parameters.upstream_protocol }}",
+      "settings": {
+        "address": "{{ .Parameters.upstream_host }}",
+        "port": {{ .Parameters.upstream_port }},
+        "user": {"$file": "/run/secrets/upstream_username"},
+        "pass": {"$file": "/run/secrets/upstream_password"}
+      }
+    },
+    {"tag": "block", "protocol": "blackhole"}
+  ],
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+      {"ip": ["geoip:private"], "outboundTag": "block"},
+      {"protocol": ["bittorrent"], "outboundTag": "block"}
+      {{- if not (and (eq (print .Parameters.upstream_udp) "true") (eq .Parameters.upstream_protocol "socks")) }},
+      {"network": "udp", "outboundTag": "block"}
+      {{- end }}
+    ]
+  }
+}

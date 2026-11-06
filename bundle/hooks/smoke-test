@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# The one promise a healthcheck cannot see: the origin refuses anyone who is
+# not Cloudflare. A TLS handshake without the AOP client certificate must fail;
+# if it succeeds, the IP serves the site (and the Xray path) to any scanner.
+set -euo pipefail
+
+domain=${DOTDASH_DOMAIN:?install with --domain}
+port=${DOTDASH_PARAM_HTTPS_PORT:?}
+
+if ! command -v curl >/dev/null; then
+  echo "curl not installed; cannot check that the origin requires Cloudflare's client certificate" >&2
+  exit 2
+fi
+
+rc=0
+curl -sk --noproxy '*' -o /dev/null --max-time 10 --resolve "$domain:$port:127.0.0.1" "https://$domain:$port/" || rc=$?
+case $rc in
+  0) echo "origin answered without a client certificate: Authenticated Origin Pulls is not enforced" >&2; exit 1 ;;
+  6|7|28) echo "origin unreachable on 127.0.0.1:$port (curl exit $rc)" >&2; exit 1 ;;
+  *) ;; # TLS refused, during the handshake or by an alert right after it (35, 55, 56)
+esac
