@@ -17,12 +17,11 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@f3bddb35476e05e1c5880387300e76ec64aa7168 # feat/pre-apply-hooks (bundle-ci#14)
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@e9350aacbe919a809d7dafe5d788f608c6c5f0b5 # v0.5.0
     with:
       ref: ${{ github.sha }}
       version: 0.0.0-pr.${{ github.event.pull_request.number }}
       signing: ephemeral
-      bundle-ci-ref: f3bddb35476e05e1c5880387300e76ec64aa7168
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
       components: ""
       probe-paths: ""

@@ -23,14 +23,13 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@f3bddb35476e05e1c5880387300e76ec64aa7168 # feat/pre-apply-hooks (bundle-ci#14)
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@e9350aacbe919a809d7dafe5d788f608c6c5f0b5 # v0.5.0
     with:
       ref: ${{ github.sha }}
       channel: main
       signing: dev
       # Nothing moved since the last run: the version is already published.
       on-existing: skip
-      bundle-ci-ref: f3bddb35476e05e1c5880387300e76ec64aa7168
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
       components: ""
       probe-paths: ""
@@ -50,7 +49,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@f3bddb35476e05e1c5880387300e76ec64aa7168 # feat/pre-apply-hooks (bundle-ci#14)
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@e9350aacbe919a809d7dafe5d788f608c6c5f0b5 # v0.5.0
     with:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}

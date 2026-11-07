@@ -14,7 +14,7 @@ jobs:
   retention:
     # The package API is reached with GH_PAT, not GITHUB_TOKEN.
     permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@f3bddb35476e05e1c5880387300e76ec64aa7168 # feat/pre-apply-hooks (bundle-ci#14)
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@e9350aacbe919a809d7dafe5d788f608c6c5f0b5 # v0.5.0
     with:
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
     secrets:
