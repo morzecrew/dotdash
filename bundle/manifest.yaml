@@ -102,7 +102,7 @@ parameters:
     services: [xray]
 
 images:
-  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:a13c328d7ded9cb6ea510f3556aed910415f9f28fb090b36b9652883a15eb332
+  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:99597f9e903abdd6d72e591f6afb5d1eddf6f843c101113cba871e6d0e964ce2
   caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
 
 # Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);
@@ -126,9 +126,10 @@ operations:
 
 tasks:
   client-config:
-    description: "Print client settings: the REALITY and XHTTP share links, and the XDNS outbound under the xdns profile (output is credentials)"
+    description: "Print client settings, for every client or the one named after --: REALITY and XHTTP links, XDNS outbound (output is credentials)"
     service: client-config
     command: ["sh", "/task/client-config.sh"]
+    args: true
     timeout: 1m
 
 health:

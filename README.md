@@ -40,12 +40,20 @@ certificate.
 **4. Clients**
 
 ```sh
-morzer task run client-config --output
+morzer task run client-config --output             # every client
+morzer task run client-config --output -- phone    # one
 ```
 
 Prints a REALITY link (v2rayN, v2rayNG, Hiddify, Happ, Streisand), an XHTTP
 link, and an Xray outbound for the DNS tunnel when it is on. Treat the output
 as a password.
+
+Each device should get its own id. `morzer secret edit vless_clients` opens the
+list, one `<uuid> [name]` per line (`uuidgen` makes an id). Add a line for a
+device and delete it to revoke the device; Xray restarts on save. A revoked
+device still knows the shared keys. If it must not even recognise the server,
+also rotate `reality_key` and `vless_seed` (`morzer secret rotate <name>`) and
+resend every device's links.
 
 ### DNS tunnel (optional)
 
