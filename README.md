@@ -313,7 +313,7 @@ confuse each other's backups. A `file://` target needs no `--credentials-file`.
 | `xdns_domain` | `t` | delegated tunnel zone (`xdns` profile); a name with no dot is under the domain |
 | `xdns_bind` | `0.0.0.0` | host address for UDP/53 |
 | `xdns_mtu` | `900` | tunnel reply size; lower if replies get lost |
-| `log_level` | `warning` | Xray error log; access log is always off |
+| `log_level` | `error` | Xray error log; access log is always off. `warning` and below name the destinations of failed connections |
 | `healthcheck_url` | `https://www.gstatic.com/generate_204` | fetched through the upstream by the healthcheck |
 | `healthcheck_expect` | `.*` | regular expression the healthcheck response must match, such as the exit IP |
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (Caddy's own CA, for a machine the internet cannot reach) |

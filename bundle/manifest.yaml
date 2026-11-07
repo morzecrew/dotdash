@@ -115,8 +115,8 @@ parameters:
   log_level:
     type: enum
     values: [debug, info, warning, error, none]
-    default: warning
-    description: Xray error-log verbosity; the access log is always off
+    default: error
+    description: "Xray error-log verbosity; the access log is always off. warning and below name the destinations of failed connections, so keep them for debugging"
     services: [xray]
   healthcheck_url:
     type: string
