@@ -18,7 +18,7 @@ jobs:
   guard:
     permissions:
       contents: read
-    uses: morzecrew/bundle-ci/.github/workflows/guard.yml@668e3a3c984bf4bb037fa5e8f2227e54285fc4e0 # main after bundle-ci#18
+    uses: morzecrew/bundle-ci/.github/workflows/guard.yml@81de6be3a5769e1398beb35ab6e6004cf3fd3e96 # v0.6.0
     with:
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
       tag-prefix: canary-v
@@ -28,7 +28,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@668e3a3c984bf4bb037fa5e8f2227e54285fc4e0 # main after bundle-ci#18
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@81de6be3a5769e1398beb35ab6e6004cf3fd3e96 # v0.6.0
     with:
       ref: ${{ github.sha }}
       version: ${{ needs.guard.outputs.version }}
@@ -47,7 +47,6 @@ jobs:
         --set server=www.gstatic.com --set address=rig.invalid
         --set reality_public_key=set-by-the-rig
       release-pubkey: ${{ vars.MINISIGN_RELEASE_PUBKEY }}
-      bundle-ci-ref: 668e3a3c984bf4bb037fa5e8f2227e54285fc4e0
     secrets:
       minisign-key: ${{ secrets.MINISIGN_RELEASE_KEY }}
 
@@ -57,7 +56,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@668e3a3c984bf4bb037fa5e8f2227e54285fc4e0 # main after bundle-ci#18
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@81de6be3a5769e1398beb35ab6e6004cf3fd3e96 # v0.6.0
     with:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}
