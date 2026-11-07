@@ -262,7 +262,8 @@ Check a change with `morzer release verify ./bundle --render-check`.
 [bundle-ci](https://github.com/morzecrew/bundle-ci) builds, signs and
 smoke-tests the bundle on every pull request and push. A push to `main`
 publishes `:main`, and a tag `vX.Y.Z` on `main` publishes `:X.Y.Z` and
-`:stable`. The smoke install (`.github/smoke.d`) runs a stand-in upstream
+`:stable` and creates a GitHub release from `CHANGELOG.md` with the signed
+archive attached. The smoke install (`.github/smoke.d`) runs a stand-in upstream
 proxy and `cert_issuer=internal`, then connects clients over REALITY and XHTTP.
 Renovate opens a pull request when a pinned image's tag or digest moves, so the
 same smoke test gates each bump.
