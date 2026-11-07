@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The `canary-config` task's init command names the product, without which morzer 0.13.0 cannot install the canary from its registry reference.
 
+- A failed first apply no longer leaves a directory where Xray's rendered configuration goes, which made every later apply fail to render it. A missing configuration file or Caddyfile now stops the container from starting instead.
+
 ### Security
 
 - ...

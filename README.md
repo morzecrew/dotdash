@@ -85,9 +85,19 @@ sudo morzer task run client-config --output -- phone | grep '^vless://' |
   while read -r link; do qrencode -t ansiutf8 "$link"; done
 ```
 
-Each device should get its own id. `morzer secret edit vless_clients` opens the
-list, one `<uuid> [name]` per line (`uuidgen` makes an id). Add a line for a
-device and delete it to revoke the device; Xray restarts on save. A revoked
+Each device should get its own id. `sudo morzer secret edit vless_clients`
+opens the list as YAML, one `<uuid> [name]` per line of a `|` block
+(`uuidgen` makes an id); without the `|`, YAML joins the lines into one:
+
+```yaml
+vless_clients: |
+  e3532f3a-a23d-4bb0-ba7e-db8ba3ccd740 laptop
+  0b8f6f4e-5c1d-4a2b-9e3f-7d6c5b4a3921 phone
+```
+
+It opens `$EDITOR`, which `sudo` drops, so `vi` unless you pass one:
+`sudo EDITOR=nano morzer secret edit vless_clients`. Add a line for a device
+and delete it to revoke the device; Xray restarts on save. A revoked
 device still knows the shared keys. If it must not even recognise the server,
 also rotate `reality_key` and `vless_seed` (`morzer secret rotate <name>`) and
 resend every device's links.
