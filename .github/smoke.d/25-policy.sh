@@ -39,13 +39,16 @@ caught() { # <jq edit> <phrase the violation must carry> [gate]: edit Xray's con
 caught '.outbounds += [{tag: "direct", protocol: "freedom"}]' "a freedom outbound"
 caught '.outbounds[0].protocol = "freedom"' "a freedom outbound"
 # The rig runs resolve=gateway, the default: DoH through the upstream, which
-# is handed addresses only. Each edit breaks that one way.
-caught '.dns.servers = ["1.1.1.1"]' "DNS other than DoH"
-caught '.dns.servers = ["https+local://1.1.1.1/dns-query"]' "DNS other than DoH"
-caught 'del(.outbounds[0].targetStrategy)' "can still hand it a name"
-caught '.outbounds[0].targetStrategy = "UseIPv4"' "can still hand it a name"
-caught 'del(.dns)' "resolves names with no DNS"
-caught 'del(.dns) | del(.outbounds[0].targetStrategy) | .routing.domainStrategy = "IPIfNonMatch"' "resolves names with no DNS"
+# is handed addresses only. Each edit breaks that one way. A release from
+# before the parameter has no DNS of its own to break.
+if sudo morzer config list 2>/dev/null | grep -qw resolve; then
+  caught '.dns.servers = ["1.1.1.1"]' "DNS other than DoH"
+  caught '.dns.servers = ["https+local://1.1.1.1/dns-query"]' "DNS other than DoH"
+  caught 'del(.outbounds[0].targetStrategy)' "can still hand it a name"
+  caught '.outbounds[0].targetStrategy = "UseIPv4"' "can still hand it a name"
+  caught 'del(.dns)' "resolves names with no DNS"
+  caught 'del(.dns) | del(.outbounds[0].targetStrategy) | .routing.domainStrategy = "IPIfNonMatch"' "resolves names with no DNS"
+fi
 caught '.routing.rules += [{network: "tcp", outboundTag: "block"}]' "last routing rule"
 caught '(.inbounds[] | select(.tag == "probe")).listen = "0.0.0.0"' "listens beyond loopback"
 caught '(.inbounds[] | select(.tag == "reality")).settings.decryption = "none"' "no VLESS decryption"
