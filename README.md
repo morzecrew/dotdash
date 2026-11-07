@@ -52,9 +52,13 @@ sudo morzer secret set upstream_password
 sudo morzer apply
 ```
 
-`--product` is needed while morzer reads it from the release only when the
-release is a local path
+Spell `--product dotdash` exactly: morzer names the variables it hands the
+bundle after the installation, and the bundle reads `DOTDASH_*`
+([morzecrew/morzer#298](https://github.com/morzecrew/morzer/issues/298)). It is
+needed at all only because morzer reads the name from a local release alone
 ([morzecrew/morzer#297](https://github.com/morzecrew/morzer/issues/297)).
+Before the first `apply`, each `secret set` reports that it restarted nothing;
+the value is stored.
 `MINISIGN_RELEASE_PUBKEY` is this repository's variable of that name
 (`gh variable get MINISIGN_RELEASE_PUBKEY -R morzecrew/dotdash`). If the package
 is private, log root's Docker in to ghcr first.
