@@ -20,6 +20,7 @@ x-client: &client
   environment:
     XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:10809
     XRAY_HEALTHCHECK_URL: ${DOTDASH_CANARY_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
+    XRAY_HEALTHCHECK_TIMEOUT: 7s
   tmpfs:
     - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
   # No healthcheck here: hooks/healthy runs the probe itself (see there).

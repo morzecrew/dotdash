@@ -16,7 +16,7 @@ through an upstream proxy you provide.
 ## Install
 
 Requires a domain whose DNS you can edit (any provider), a Linux host with
-Docker ≥ 28 and Compose ≥ 2.35, `sops`, `age`, morzer ≥ 0.12.0, and upstream
+Docker ≥ 28 and Compose ≥ 2.35, `sops`, `age`, morzer ≥ 0.13.0, and upstream
 proxy credentials. `example.com` below is your domain.
 
 **1. DNS**: `example.com  A  <server IP>`.
@@ -93,7 +93,8 @@ bundled page otherwise, with no restart.
 ### DNS tunnel (optional)
 
 Delegate `t.example.com` to the server, open 53/udp, and add `--profile xdns`
-to `morzer init` in step 3. For another zone, add `--set xdns_domain=<zone>`. If
+to `morzer init` in step 3, or turn it on later with `sudo morzer config set
+installation.profile=xdns`. For another zone, set `xdns_domain=<zone>`. If
 `systemd-resolved` holds port 53, set `xdns_bind` to the public IP.
 
 ```text
@@ -150,6 +151,10 @@ as root; the install above already requires that key's signature. A release
 that fails to install is not retried, and `morzer status` says so. See morzer's
 [unattended updates](https://github.com/morzecrew/morzer/blob/main/pages/docs/operating/unattended-updates.md).
 
+**The manager.** A release may need a newer morzer than the machine runs, and
+is refused until it has one. `sudo morzer self-update` installs the newest,
+checked against the signing key built into the running one.
+
 **Backups.** morzer backs up every night: the secrets, encrypted to the
 recovery key, and Caddy's certificates. They stay on the machine until it has a
 target; `file://` and `ssh://` work too. See morzer's
@@ -202,8 +207,8 @@ morzer (`scripts/bootstrap.sh`), and no open port.
    sudo morzer config set doctor.schedule='*:0/10'
    ```
 
-`doctor` then fails on `this machine reaches the internet through dotdash`
-when three tries in a row cannot fetch `probe_url` through dotdash, and each
+`doctor` then fails on `health endpoints respond` when three tries in a row
+cannot fetch `probe_url` through dotdash, and each
 failing check notifies again until it is fixed. The canary's releases are tags
 `canary-vX.Y.Z`; its channels are `dotdash-canary:main` and `:stable`, signed
 with this repository's keys.
