@@ -1,0 +1,57 @@
+# The dev channel: build, sign and smoke-test every change to the bundle on
+# main, then publish `:<version>` and move `:main`. The jobs are
+# bundle-ci's; this file says when they run and what they may do. dotdash
+# pins third-party images in its manifest, so nothing here pins components.
+name: main
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - bundle/**
+      - .github/smoke.d/**
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: main-bundle
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    permissions:
+      contents: read
+      packages: read
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@e9350aacbe919a809d7dafe5d788f608c6c5f0b5 # v0.5.0
+    with:
+      ref: ${{ github.sha }}
+      channel: main
+      signing: dev
+      # Nothing moved since the last run: the version is already published.
+      on-existing: skip
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+      components: ""
+      probe-paths: ""
+      operator-secrets: upstream_username upstream_password
+      # What init refuses without; .github/smoke.d/pre-apply supplies the rest.
+      init-args: >-
+        --domain dotdash.test --set upstream_host=upstream.rig.invalid
+        --set upstream_port=18080 --set upstream_protocol=http
+        --set healthcheck_url=http://target:8000/ --set cert_issuer=internal
+      dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}
+    secrets:
+      minisign-key: ${{ secrets.MINISIGN_DEV_KEY }}
+
+  publish:
+    needs: bundle
+    if: needs.bundle.outputs.proceed == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@e9350aacbe919a809d7dafe5d788f608c6c5f0b5 # v0.5.0
+    with:
+      version: ${{ needs.bundle.outputs.version }}
+      archive: ${{ needs.bundle.outputs.archive }}
+      channel: main
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}

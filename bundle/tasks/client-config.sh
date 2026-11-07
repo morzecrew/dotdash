@@ -5,6 +5,8 @@
 set -eu
 : "${DOMAIN:?}" "${HTTPS_PORT:?}"
 want=${1:-}
+# A tunnel zone with no dot is a name under the domain, as in the template.
+case ${XDNS_DOMAIN:-} in '' | *.*) ;; *) XDNS_DOMAIN=${XDNS_DOMAIN}.${DOMAIN} ;; esac
 
 enc=$(/opt/xray/xray-entrypoint vless-encryption /run/secrets/vless_seed)
 path=$(cat /run/secrets/xhttp_path)

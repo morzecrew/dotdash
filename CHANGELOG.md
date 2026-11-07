@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - morzer bundle `dotdash`: Xray's VLESS + REALITY (Vision) inbound on 443 in
   front of a Caddy cover site with a Let's Encrypt certificate, VLESS + XHTTP
   behind one secret path of that site for a CDN in front, and an optional
-  VLESS + XDNS DNS tunnel on UDP/53 (`xdns` profile). All egress goes through
+  VLESS + XDNS DNS tunnel on UDP/53 (`xdns` profile, zone `t.<domain>` by
+  default). All egress goes through
   an ISP/residential SOCKS5 or HTTP proxy, optionally over TLS, with no direct
   fallback.
 - Health: Xray is healthy only while a URL fetched through the upstream proxy
@@ -22,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the `xdns` profile, the XDNS outbound.
 - morzer generates every key: the REALITY key and short id, and the VLESS
   Encryption key pair, which derives from one seed (`vless_seed`).
+- `cert_issuer`: Let's Encrypt (`acme`, the default) or Caddy's own CA
+  (`internal`) for a machine the internet cannot reach.
+- CI through bundle-ci: every pull request and push builds, signs and
+  smoke-tests the bundle in a rig with a stand-in upstream proxy; a push to
+  `main` publishes `ghcr.io/morzecrew/dotdash:main`, a `vX.Y.Z` tag `:X.Y.Z`
+  and `:stable`.
 - One VLESS id per device: `vless_clients` holds one `<uuid> [name]` per line,
   so deleting a line revokes that device alone. `client-config` prints every
   client's settings, or one client's when given its name.
