@@ -3,14 +3,15 @@
 # layer when it cannot. Uses 10-clients.sh's clients (SOCKS on 11080, 11081)
 # and pre-apply/10-rig.sh's upstream.
 #
-# 1. The rendered config has no way out but the upstream: two outbounds,
-#    upstream and block, no DNS of its own, upstream the explicit last rule.
-# 2. A destination the server reaches directly (Caddy's port 80, on the
+# (The rendered config's invariants are hooks/policy's, tested in
+# 25-policy.sh.)
+#
+# 1. A destination the server reaches directly (Caddy's port 80, on the
 #    bundle's network) is unreachable through the tunnel, since the upstream
 #    cannot resolve it: no direct path exists.
-# 3. With the upstream stopped, clients get nothing and doctor fails, naming
+# 2. With the upstream stopped, clients get nothing and doctor fails, naming
 #    the upstream's address; started again, both recover.
-# 4. With a wrong upstream password, doctor fails naming the credentials.
+# 3. With a wrong upstream password, doctor fails naming the credentials.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -21,17 +22,6 @@ if ! sudo grep -qF 'name: egress' /opt/dotdash/current/manifest.yaml; then
   exit 0
 fi
 
-config=/etc/dotdash/application.yaml
-sudo jq -e '
-  ([.outbounds[].tag] == ["upstream", "block"])
-  and (.outbounds[0].protocol | IN("socks", "http"))
-  and (.outbounds[1].protocol == "blackhole")
-  and ([.. | objects | .protocol? // empty] | index("freedom") | not)
-  and (.routing.domainStrategy == "AsIs")
-  and (has("dns") | not)
-  and (.routing.rules[-1] == {network: "tcp,udp", outboundTag: "upstream"})
-' "${config}" >/dev/null || die "the rendered Xray config has a way out other than the upstream: $(sudo jq -c '{outbounds: [.outbounds[] | {tag, protocol}], routing}' "${config}")"
-echo "20-fail-closed.sh: the config leaves through the upstream only"
 
 through() { # <socks port> <url>: fetch through a client
   curl -fsS -o /dev/null --max-time 15 --socks5-hostname "127.0.0.1:$1" "$2"

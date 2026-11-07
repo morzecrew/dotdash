@@ -5,6 +5,10 @@
 # issuance takes a moment, so this retries for up to 90s.
 set -euo pipefail
 
+# First the invariants (hooks/policy): a release that breaks one fails here and
+# is rolled back.
+"$(dirname "$0")/policy"
+
 port=${DOTDASH_PARAM_HTTPS_PORT:?}
 domain=${DOTDASH_DOMAIN:?}
 project=${DOTDASH_COMPOSE_PROJECT:-dotdash}

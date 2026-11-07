@@ -194,7 +194,11 @@ target at its default level hears about that and not about warnings, and it
 says which layer failed: the upstream proxy's address, its credentials, the
 destination behind it, or an exit that no longer matches `healthcheck_expect`.
 Traffic only ever leaves through the upstream: with it down, clients get
-nothing rather than this server's own address. See
+nothing rather than this server's own address. Every apply and update, and
+every `doctor`, checks that against what runs: the rendered Xray config has no
+way out but the upstream and accepts only listed clients, and the containers
+publish nothing beyond 80, `https_port` and 53, unprivileged. An update that
+breaks it is rolled back, and a change made by hand fails `doctor`. See
 morzer's [notifications](https://github.com/morzecrew/morzer/blob/main/pages/docs/operating/notifications.md).
 
 ```sh

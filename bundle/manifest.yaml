@@ -125,6 +125,9 @@ parameters:
     services: [xray]
 
 images:
+  # hooks/policy reads the rendered config with it, run with no network, so
+  # the host needs no jq of its own.
+  jq: ghcr.io/jqlang/jq:1.8.1@sha256:4f34c6d23f4b1372ac789752cc955dc67c2ae177eb1b5860b75cdc5091ce6f91
   xray: ghcr.io/morzecrew/xray:26.10.31@sha256:a9a39feaeab2f83a0b76459755b9aa92d54e5f30030b5f818e322e3e5f7a8f81
   caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
 
@@ -175,6 +178,16 @@ health:
     # destination, the exit). `doctor` fails while either check does.
     - {name: cover-site, type: command, command: ["hooks/healthy", "cover-site"], timeout: 10s}
     - {name: egress, type: command, command: ["hooks/healthy", "egress"], timeout: 30s}
+
+# The release's invariants (hooks/policy), against what runs: `doctor` fails
+# when they drift. smoke_test checks them after every apply and update.
+preflight:
+  policy:
+    description: traffic leaves through the upstream only, and nothing is published or privileged beyond the release's own
+    command: [hooks/policy]
+    fatal: true
+    timeout: 1m
+    remedy: re-render with `morzer apply`, and look at what changed /etc/dotdash/application.yaml or the containers
 
 backup:
   volumes:
