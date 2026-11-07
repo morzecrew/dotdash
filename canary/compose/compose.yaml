@@ -29,8 +29,42 @@ services:
   reality:
     <<: *client
     volumes:
-      - /etc/dotdash-canary/reality.json:/etc/xray/config.json:ro
+      # Long form, so a missing file fails the start rather than becoming a
+      # directory morzer cannot render over.
+      - type: bind
+        source: /etc/dotdash-canary/reality.json
+        target: /etc/xray/config.json
+        read_only: true
+        bind: {create_host_path: false}
     secrets: [vless_id, vless_encryption, reality_short_id]
+
+  # One-shot behind a profile, started only by `morzer task run measure`. On
+  # the project's network it reaches each transport's probe inbound, which is
+  # why those listen beyond loopback; nothing outside the project can.
+  measure:
+    image: ${DOTDASH_CANARY_IMAGE_BUSYBOX:?set by morzer}
+    restart: "no"
+    profiles: [tasks]
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    environment:
+      PROBE_URL: ${DOTDASH_CANARY_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
+    volumes:
+      - ${DOTDASH_CANARY_RELEASE_DIR:?set by morzer}/tasks:/task:ro
+      - type: image
+        source: ${DOTDASH_CANARY_IMAGE_XRAY:?set by morzer}
+        target: /opt/xray
+        image:
+          subpath: usr/local/bin
+      # busybox has no CA certificates; the healthcheck needs them for https.
+      - type: image
+        source: ${DOTDASH_CANARY_IMAGE_XRAY:?set by morzer}
+        target: /etc/ssl/certs
+        image:
+          subpath: etc/ssl/certs
 
 secrets:
   vless_id: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/vless_id"}

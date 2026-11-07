@@ -3,5 +3,9 @@ services:
   xhttp:
     extends: {file: compose.yaml, service: reality}
     volumes:
-      - /etc/dotdash-canary/xhttp.json:/etc/xray/config.json:ro
+      - type: bind
+        source: /etc/dotdash-canary/xhttp.json
+        target: /etc/xray/config.json
+        read_only: true
+        bind: {create_host_path: false}
     secrets: [xhttp_path]
