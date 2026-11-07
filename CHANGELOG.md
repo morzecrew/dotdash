@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Encryption key pair, which derives from one seed (`vless_seed`).
 - `cert_issuer`: Let's Encrypt (`acme`, the default) or Caddy's own CA
   (`internal`) for a machine the internet cannot reach.
+- CI through bundle-ci: every pull request and push builds, signs and
+  smoke-tests the bundle in a rig with a stand-in upstream proxy; a push to
+  `main` publishes `ghcr.io/morzecrew/dotdash:main`, a `vX.Y.Z` tag `:X.Y.Z`
+  and `:stable`.
 - One VLESS id per device: `vless_clients` holds one `<uuid> [name]` per line,
   so deleting a line revokes that device alone. `client-config` prints every
   client's settings, or one client's when given its name.

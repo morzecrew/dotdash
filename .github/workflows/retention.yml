@@ -1,0 +1,21 @@
+# Keep the bundle package small: the last 5 dev versions, which a dev machine
+# may still roll back to, and untagged versions for a day. `main`, `stable`
+# and every X.Y.Z are never selected. The job is bundle-ci's.
+name: retention
+
+on:
+  schedule:
+    - cron: "41 3 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  retention:
+    # The package API is reached with GH_PAT, not GITHUB_TOKEN.
+    permissions: {}
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@f3bddb35476e05e1c5880387300e76ec64aa7168 # feat/pre-apply-hooks (bundle-ci#14)
+    with:
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+    secrets:
+      token: ${{ secrets.GH_PAT }}
