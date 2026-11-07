@@ -23,7 +23,15 @@ proxy credentials. `example.com` below is your domain.
 
 **2. Server**: open 80/tcp and 443/tcp (80 is for the certificate). Docker's
 published ports bypass ufw and firewalld, so the host firewall guards only the
-rest, SSH included: allow keys only (`PasswordAuthentication no`).
+rest, SSH included: allow keys only (`PasswordAuthentication no`). On a fresh
+Debian or Ubuntu server, `scripts/bootstrap.sh` installs everything above but
+the domain and credentials, turns on security updates, and sets SSH to keys
+only once an authorized key exists:
+
+```sh
+curl -fsSLO https://raw.githubusercontent.com/morzecrew/dotdash/main/scripts/bootstrap.sh
+less bootstrap.sh && sudo bash bootstrap.sh
+```
 
 **3. Deploy**
 
