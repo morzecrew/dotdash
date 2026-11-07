@@ -23,7 +23,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@e9350aacbe919a809d7dafe5d788f608c6c5f0b5 # v0.5.0
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@668e3a3c984bf4bb037fa5e8f2227e54285fc4e0 # main after bundle-ci#18
     with:
       ref: ${{ github.sha }}
       channel: main
@@ -41,6 +41,7 @@ jobs:
         --set healthcheck_url=http://target:8000/ --set cert_issuer=internal
         --profile xdns
       dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}
+      bundle-ci-ref: 668e3a3c984bf4bb037fa5e8f2227e54285fc4e0
     secrets:
       minisign-key: ${{ secrets.MINISIGN_DEV_KEY }}
 
@@ -50,7 +51,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@e9350aacbe919a809d7dafe5d788f608c6c5f0b5 # v0.5.0
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@668e3a3c984bf4bb037fa5e8f2227e54285fc4e0 # main after bundle-ci#18
     with:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}
