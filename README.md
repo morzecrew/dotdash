@@ -21,7 +21,9 @@ proxy credentials. `example.com` below is your domain.
 
 **1. DNS**: `example.com  A  <server IP>`.
 
-**2. Server**: open 80/tcp and 443/tcp (80 is for the certificate).
+**2. Server**: open 80/tcp and 443/tcp (80 is for the certificate). Docker's
+published ports bypass ufw and firewalld, so the host firewall guards only the
+rest, SSH included: allow keys only (`PasswordAuthentication no`).
 
 **3. Deploy**
 
@@ -76,6 +78,11 @@ ns.example.com.  A   <server IP>
 t.example.com.   NS  ns.example.com.
 ```
 
+A zone under a domain of its own is better, such as `--set
+xdns_domain=t.example.net` delegated from `example.net`: a resolver that flags
+tunnel queries flags the domain they are under, and blocking it would take
+`example.com` with it.
+
 ### CDN (optional)
 
 The XHTTP link also works through a CDN that proxies HTTP/2 to
@@ -83,6 +90,40 @@ The XHTTP link also works through a CDN that proxies HTTP/2 to
 proxies `example.com` itself, use the server IP in the REALITY link. Check the
 CDN's terms first; some, Cloudflare's self-serve plans among them, prohibit
 proxy services.
+
+## Keeping it running
+
+**Updates.** To install each release from `:stable` unattended, nightly at
+03:30 unless `update.schedule` says otherwise:
+
+```sh
+sudo morzer config set update.check=true
+sudo morzer config set update.channel=oci://ghcr.io/morzecrew/dotdash:stable
+sudo morzer config set update.auto_apply=true
+```
+
+This hands whoever holds the release key root on the machine, since hooks run
+as root; the install above already requires that key's signature. A release
+that fails to install is not retried, and `morzer status` says so. See morzer's
+[unattended updates](https://github.com/morzecrew/morzer/blob/main/pages/docs/operating/unattended-updates.md).
+
+**Backups.** morzer backs up every night: the secrets, encrypted to the
+recovery key, and Caddy's certificates. They stay on the machine until it has a
+target; `file://` and `ssh://` work too. See morzer's
+[backups](https://github.com/morzecrew/morzer/blob/main/pages/docs/operating/backups.md)
+and [recovering a lost machine](https://github.com/morzecrew/morzer/blob/main/pages/docs/operating/recovering-a-lost-machine.md).
+
+```sh
+sudo morzer backup target add s3://bucket/dotdash --credentials backup_s3
+```
+
+**Alerts.** A target receives morzer's event JSON: each failed apply, update or
+backup, each staged release, and every morning what `doctor` found wrong. See
+morzer's [notifications](https://github.com/morzecrew/morzer/blob/main/pages/docs/operating/notifications.md).
+
+```sh
+sudo morzer notify target add https://hooks.example/morzer --min-level warn
+```
 
 ## Parameters
 
@@ -100,8 +141,7 @@ proxy services.
 | `healthcheck_url` | `https://www.gstatic.com/generate_204` | fetched through the upstream by the healthcheck |
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (Caddy's own CA, for a machine the internet cannot reach) |
 
-Check a change with `morzer release verify ./bundle --render-check`. For
-offsite backups and alerts, configure a morzer backup target and notifications.
+Check a change with `morzer release verify ./bundle --render-check`.
 
 ## CI
 
@@ -110,3 +150,5 @@ smoke-tests the bundle on every pull request and push. A push to `main`
 publishes `:main`, and a tag `vX.Y.Z` on `main` publishes `:X.Y.Z` and
 `:stable`. The smoke install (`.github/smoke.d`) runs a stand-in upstream
 proxy and `cert_issuer=internal`, then connects clients over REALITY and XHTTP.
+Renovate opens a pull request when a pinned image's tag or digest moves, so the
+same smoke test gates each bump.

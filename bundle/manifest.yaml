@@ -29,6 +29,10 @@ compatibility:
   # The manager this bundle is verified and rehearsed with.
   min_manager_version: "0.12.0"
   rollback_safe: true
+  # dotdash keeps no database. morzer installs a release unattended only if it
+  # declares the schema its migrations leave, so 1 stands for "none" and never
+  # changes.
+  database_schema_produces: 1
 
 requirements:
   architectures: [amd64, arm64]
