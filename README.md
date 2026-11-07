@@ -23,7 +23,15 @@ proxy credentials. `example.com` below is your domain.
 
 **2. Server**: open 80/tcp and 443/tcp (80 is for the certificate). Docker's
 published ports bypass ufw and firewalld, so the host firewall guards only the
-rest, SSH included: allow keys only (`PasswordAuthentication no`).
+rest, SSH included: allow keys only (`PasswordAuthentication no`). On a fresh
+Debian or Ubuntu server, `scripts/bootstrap.sh` installs everything above but
+the domain and credentials, turns on security updates, and sets SSH to keys
+only once an authorized key exists:
+
+```sh
+curl -fsSLO https://raw.githubusercontent.com/morzecrew/dotdash/main/scripts/bootstrap.sh
+less bootstrap.sh && sudo bash bootstrap.sh
+```
 
 **3. Deploy**
 
@@ -58,7 +66,13 @@ morzer task run client-config --output -- phone    # one
 
 Prints a REALITY link (v2rayN, v2rayNG, Hiddify, Happ, Streisand), an XHTTP
 link, and an Xray outbound for the DNS tunnel when it is on. Treat the output
-as a password.
+as a password. To scan a link with a phone, show each as a QR code in the
+terminal (`qrencode` package):
+
+```sh
+sudo morzer task run client-config --output -- phone | grep '^vless://' |
+  while read -r link; do qrencode -t ansiutf8 "$link"; done
+```
 
 Each device should get its own id. `morzer secret edit vless_clients` opens the
 list, one `<uuid> [name]` per line (`uuidgen` makes an id). Add a line for a
@@ -66,6 +80,15 @@ device and delete it to revoke the device; Xray restarts on save. A revoked
 device still knows the shared keys. If it must not even recognise the server,
 also rotate `reality_key` and `vless_seed` (`morzer secret rotate <name>`) and
 resend every device's links.
+
+### Cover site
+
+Anyone reaching port 443 without the REALITY key sees a website. The bundled
+page differs between servers only in its title, so a scanner that indexes
+pages can still group them by the rest. Give each server its own site: put
+static files in `/srv/dotdash` (the `site_dir` parameter), readable by uid
+65532. Caddy serves them wherever they have the requested path, and the
+bundled page otherwise, with no restart.
 
 ### DNS tunnel (optional)
 
@@ -90,6 +113,26 @@ The XHTTP link also works through a CDN that proxies HTTP/2 to
 proxies `example.com` itself, use the server IP in the REALITY link. Check the
 CDN's terms first; some, Cloudflare's self-serve plans among them, prohibit
 proxy services.
+
+### Several servers (optional)
+
+Clients can switch to another server when one stops answering. Install dotdash
+on each server under its own domain, copy the first server's keys to the
+others, and list them all on every server. Use the same `https_port`
+everywhere.
+
+```sh
+# on the first server; sudo on b.example.com must not prompt
+for s in vless_clients vless_seed reality_key reality_short_id xhttp_path; do
+  sudo cat /run/dotdash/secrets/$s | ssh b.example.com sudo morzer secret set $s
+done
+# on every server
+sudo morzer config set servers=example.com,b.example.com
+```
+
+`client-config` then prints links for each server and an Xray config that
+uses whichever answers fastest (v2rayN or v2rayNG: custom config). Add and
+revoke devices on every server.
 
 ## Keeping it running
 
@@ -118,12 +161,62 @@ sudo morzer backup target add s3://bucket/dotdash --credentials backup_s3
 ```
 
 **Alerts.** A target receives morzer's event JSON: each failed apply, update or
-backup, each staged release, and every morning what `doctor` found wrong. See
+backup, each staged release, and every morning what `doctor` found wrong.
+`doctor` fails when Xray cannot reach the internet through the upstream, so a
+target at its default level hears about that and not about warnings. See
 morzer's [notifications](https://github.com/morzecrew/morzer/blob/main/pages/docs/operating/notifications.md).
 
 ```sh
-sudo morzer notify target add https://hooks.example/morzer --min-level warn
+sudo morzer notify target add https://hooks.example/morzer
 ```
+
+**Exit IP.** With a static exit IP from the upstream, make the healthcheck ask
+an IP-echo service and expect that IP. Xray turns unhealthy, and `doctor`
+fails, when the provider moves you to another address:
+
+```sh
+sudo morzer config set healthcheck_url=https://api.ipify.org 'healthcheck_expect=^203\.0\.113\.7\s*$'
+```
+
+### Canary (optional)
+
+The server cannot tell when a network starts blocking it. A
+[dotdash-canary](https://github.com/morzecrew/dotdash-canary) machine inside
+that network, such as a small box at home, connects as a client and fails
+`doctor` when it cannot get out through dotdash. Give it a client of its own
+(a `canary` line in `vless_clients`), then print its setup on the server and
+run that on the canary machine:
+
+```sh
+sudo morzer task run canary-config --output -- canary
+```
+
+On the canary machine, add a notify target and check every ten minutes:
+`sudo morzer config set doctor.schedule='*:0/10'`. While the path stays
+broken, each check notifies again.
+
+### Moving to a new server
+
+When the server's IP is blocked or the machine is lost, rebuild it elsewhere
+from the recovery key and a backup. Client links name the domain, and the keys
+come back from the backup, so devices keep the links they have. Prepare for it
+now: keep the recovery key off the machine, give morzer a backup target (above),
+and set the domain's `A` record TTL to 300 seconds or less.
+
+```sh
+# on the new server, after scripts/bootstrap.sh
+sudo morzer --product dotdash installation import --from-backup \
+  --target s3://bucket/dotdash --credentials-file ./bucket.yaml \
+  --identity ~/dotdash-recovery.key
+sudo morzer update oci://ghcr.io/morzecrew/dotdash:stable
+# optional, keeps Caddy's certificate: the id and installation id import printed
+sudo morzer backup fetch <backup id>
+sudo morzer restore --force --confirm <installation id> --identity ~/dotdash-recovery.key
+```
+
+Then point `example.com`, and `ns.example.com` for the DNS tunnel, at the new
+IP, and shut the old machine down: two live servers with one installation id
+confuse each other's backups. A `file://` target needs no `--credentials-file`.
 
 ## Parameters
 
@@ -139,7 +232,10 @@ sudo morzer notify target add https://hooks.example/morzer --min-level warn
 | `xdns_mtu` | `900` | tunnel reply size; lower if replies get lost |
 | `log_level` | `warning` | Xray error log; access log is always off |
 | `healthcheck_url` | `https://www.gstatic.com/generate_204` | fetched through the upstream by the healthcheck |
+| `healthcheck_expect` | `.*` | regular expression the healthcheck response must match, such as the exit IP |
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (Caddy's own CA, for a machine the internet cannot reach) |
+| `site_dir` | `/srv/dotdash` | host directory of your own cover site |
+| `servers` | `self` | servers sharing these keys, comma-separated, for client configs; `self` is this one |
 
 Check a change with `morzer release verify ./bundle --render-check`.
 

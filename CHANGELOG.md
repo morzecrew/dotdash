@@ -35,3 +35,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unattended updates: the manifest declares `database_schema_produces`, which
   morzer's `update.auto_apply` requires before it installs a release on its
   own. The README covers turning them on, offsite backups and alerts.
+- `site_dir` (default `/srv/dotdash`): Caddy serves your own cover site from
+  it wherever it has the requested file. The bundled page is now titled with
+  the domain, so no two servers serve the same page.
+- `servers`: several servers sharing the same keys. `client-config` prints
+  links for each and an Xray config that uses whichever answers fastest.
+- README: QR codes for the share links.
+- `doctor` fails, so a notify target at its default level hears it, when Xray
+  cannot reach the internet through the upstream: a fatal preflight check
+  probes it live. An unhealthy container alone only warns there.
+- `healthcheck_expect`: a regular expression the healthcheck response must
+  match. With `healthcheck_url` at an IP-echo service, a changed exit IP makes
+  Xray unhealthy and fails `doctor`.
+- `canary-config` task: the init command and secrets for a
+  [dotdash-canary](https://github.com/morzecrew/dotdash-canary) machine, which
+  checks from inside a network that dotdash is still reachable.
+- README: moving to a new server from the recovery key and a backup, with the
+  client links unchanged.
+- `scripts/bootstrap.sh` prepares a fresh Debian or Ubuntu server: Docker and
+  Compose, sops, age, morzer, security updates, and SSH with keys only.

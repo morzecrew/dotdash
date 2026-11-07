@@ -30,5 +30,6 @@ jobs:
         --domain dotdash.test --set upstream_host=upstream.rig.invalid
         --set upstream_port=18080 --set upstream_protocol=http
         --set healthcheck_url=http://target:8000/ --set cert_issuer=internal
+        --profile xdns
       # smoke-update installs the published :main first, trusting this key.
       dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}

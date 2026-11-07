@@ -28,6 +28,7 @@ services:
       # routing and upstream as client traffic.
       XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:10809
       XRAY_HEALTHCHECK_URL: ${DOTDASH_PARAM_HEALTHCHECK_URL:-https://www.gstatic.com/generate_204}
+      XRAY_HEALTHCHECK_EXPECT: ${DOTDASH_PARAM_HEALTHCHECK_EXPECT:-.*}
     volumes:
       - ${DOTDASH_CONFIG_FILE:-/etc/dotdash/application.yaml}:/etc/xray/config.json:ro
     tmpfs:
@@ -58,7 +59,10 @@ services:
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ${DOTDASH_RELEASE_DIR:?set by morzer}/site:/srv:ro
+      # The bundled page, and the operator's own site, served instead when it
+      # has the requested file (the Caddyfile decides).
+      - ${DOTDASH_RELEASE_DIR:?set by morzer}/site:/srv/default:ro
+      - ${DOTDASH_PARAM_SITE_DIR:-/srv/dotdash}:/srv/own:ro
       # The ACME account and certificates. The image's /data/caddy is mode
       # 1777, and a fresh volume copies it, so uid 65532 can write there.
       - caddy_data:/data
@@ -91,6 +95,7 @@ services:
     environment:
       DOMAIN: ${DOTDASH_DOMAIN:?install with --domain}
       HTTPS_PORT: ${DOTDASH_PARAM_HTTPS_PORT:-443}
+      SERVERS: ${DOTDASH_PARAM_SERVERS:-self}
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image
