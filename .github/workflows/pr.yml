@@ -17,7 +17,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@e9350aacbe919a809d7dafe5d788f608c6c5f0b5 # v0.5.0
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@81de6be3a5769e1398beb35ab6e6004cf3fd3e96 # v0.6.0
     with:
       ref: ${{ github.sha }}
       version: 0.0.0-pr.${{ github.event.pull_request.number }}

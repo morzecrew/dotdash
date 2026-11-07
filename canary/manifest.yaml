@@ -1,0 +1,103 @@
+# yaml-language-server: $schema=https://morzecrew.github.io/morzer/schemas/selfhost-v1alpha1-manifest.json
+api_version: selfhost/v1alpha1
+kind: application-release
+
+metadata:
+  name: dotdash-canary
+  # Stamped by `morzer release build --version X`, together with VERSION.
+  version: 0.0.0
+  description: A dotdash client on a machine inside the network you care about, healthy only while it can reach the internet through dotdash
+  vendor: morzecrew
+  release_notes: RELEASE.md
+
+providers:
+  runtime: {name: compose}
+  secrets: {name: sops-age}
+  health: {name: http}
+
+runtimes:
+  compose:
+    files:
+      - compose/compose.yaml
+    profiles:
+      # Also checks the XHTTP path, through dotdash's cover site.
+      xhttp: [compose/xhttp.yaml]
+    options:
+      project: dotdash-canary
+
+configuration:
+  - template: templates/reality.json.tmpl
+    target: /etc/dotdash-canary/reality.json
+    mode: "0644"
+  - template: templates/xhttp.json.tmpl
+    target: /etc/dotdash-canary/xhttp.json
+    mode: "0644"
+
+secrets:
+  source: /etc/dotdash-canary/secrets.sops.yaml
+  render_to: /run/dotdash-canary/secrets
+  schema: secrets.schema.yaml
+
+compatibility:
+  # The manager this bundle is verified and rehearsed with.
+  min_manager_version: "0.12.0"
+  rollback_safe: true
+  # No database. morzer installs a release unattended only if it declares the
+  # schema its migrations leave, so 1 stands for "none" (morzecrew/morzer#289).
+  database_schema_produces: 1
+
+requirements:
+  architectures: [amd64, arm64]
+  tools:
+    docker: ">=28.0.0"
+    compose: ">=2.35.0"
+  memory: 128MiB
+  disk: 512MiB
+
+# `morzer task run canary-config -- <client>` on the dotdash server prints the
+# init command and the secrets for this machine.
+parameters:
+  server:
+    type: string
+    description: The dotdash server's domain, sent as the TLS server name
+    services: [reality, xhttp]
+  address:
+    type: string
+    description: Where to connect, normally the same domain; an IP or a CDN's name also works
+    services: [reality, xhttp]
+  port:
+    type: port
+    default: 443
+    description: The dotdash server's https_port
+    services: [reality, xhttp]
+  reality_public_key:
+    type: string
+    description: The REALITY public key, the pbk of a dotdash REALITY link
+    services: [reality]
+  probe_url:
+    type: string
+    default: https://www.gstatic.com/generate_204
+    description: What each check fetches through dotdash; any 2xx is healthy
+    services: [reality, xhttp]
+
+images:
+  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:a9a39feaeab2f83a0b76459755b9aa92d54e5f30030b5f818e322e3e5f7a8f81
+
+health:
+  checks:
+    # Each service fetches probe_url through dotdash, up to three tries.
+    - {name: services, type: command, command: ["hooks/healthy"], timeout: 2m}
+
+# The same probe, fatal, so `doctor` fails as an error and notifies a target
+# at its default level when this machine cannot get out through dotdash.
+preflight:
+  reachable:
+    description: this machine reaches the internet through dotdash
+    command: [hooks/healthy]
+    fatal: true
+    timeout: 2m
+    remedy: check the dotdash server, then this network's path to it
+
+retention:
+  releases: 3
+  backups: 3

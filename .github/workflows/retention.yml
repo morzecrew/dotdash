@@ -1,4 +1,4 @@
-# Keep the bundle package small: the last 5 dev versions, which a dev machine
+# Keep the bundle packages small: the last 5 dev versions, which a dev machine
 # may still roll back to, and untagged versions for a day. `main`, `stable`
 # and every X.Y.Z are never selected. The job is bundle-ci's.
 name: retention
@@ -14,8 +14,17 @@ jobs:
   retention:
     # The package API is reached with GH_PAT, not GITHUB_TOKEN.
     permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@e9350aacbe919a809d7dafe5d788f608c6c5f0b5 # v0.5.0
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@81de6be3a5769e1398beb35ab6e6004cf3fd3e96 # v0.6.0
     with:
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+    secrets:
+      token: ${{ secrets.GH_PAT }}
+
+  canary:
+    permissions: {}
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@81de6be3a5769e1398beb35ab6e6004cf3fd3e96 # v0.6.0
+    with:
+      package: dotdash-canary
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
     secrets:
       token: ${{ secrets.GH_PAT }}
