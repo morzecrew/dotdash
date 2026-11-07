@@ -161,12 +161,39 @@ sudo morzer backup target add s3://bucket/dotdash --credentials backup_s3
 ```
 
 **Alerts.** A target receives morzer's event JSON: each failed apply, update or
-backup, each staged release, and every morning what `doctor` found wrong. See
+backup, each staged release, and every morning what `doctor` found wrong.
+`doctor` fails when Xray cannot reach the internet through the upstream, so a
+target at its default level hears about that and not about warnings. See
 morzer's [notifications](https://github.com/morzecrew/morzer/blob/main/pages/docs/operating/notifications.md).
 
 ```sh
-sudo morzer notify target add https://hooks.example/morzer --min-level warn
+sudo morzer notify target add https://hooks.example/morzer
 ```
+
+**Exit IP.** With a static exit IP from the upstream, make the healthcheck ask
+an IP-echo service and expect that IP. Xray turns unhealthy, and `doctor`
+fails, when the provider moves you to another address:
+
+```sh
+sudo morzer config set healthcheck_url=https://api.ipify.org 'healthcheck_expect=^203\.0\.113\.7\s*$'
+```
+
+### Canary (optional)
+
+The server cannot tell when a network starts blocking it. A
+[dotdash-canary](https://github.com/morzecrew/dotdash-canary) machine inside
+that network, such as a small box at home, connects as a client and fails
+`doctor` when it cannot get out through dotdash. Give it a client of its own
+(a `canary` line in `vless_clients`), then print its setup on the server and
+run that on the canary machine:
+
+```sh
+sudo morzer task run canary-config --output -- canary
+```
+
+On the canary machine, add a notify target and check every ten minutes:
+`sudo morzer config set doctor.schedule='*:0/10'`. While the path stays
+broken, each check notifies again.
 
 ### Moving to a new server
 
@@ -205,6 +232,7 @@ confuse each other's backups. A `file://` target needs no `--credentials-file`.
 | `xdns_mtu` | `900` | tunnel reply size; lower if replies get lost |
 | `log_level` | `warning` | Xray error log; access log is always off |
 | `healthcheck_url` | `https://www.gstatic.com/generate_204` | fetched through the upstream by the healthcheck |
+| `healthcheck_expect` | `.*` | regular expression the healthcheck response must match, such as the exit IP |
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (Caddy's own CA, for a machine the internet cannot reach) |
 | `site_dir` | `/srv/dotdash` | host directory of your own cover site |
 | `servers` | `self` | servers sharing these keys, comma-separated, for client configs; `self` is this one |

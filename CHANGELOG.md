@@ -41,6 +41,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `servers`: several servers sharing the same keys. `client-config` prints
   links for each and an Xray config that uses whichever answers fastest.
 - README: QR codes for the share links.
+- `doctor` fails, so a notify target at its default level hears it, when Xray
+  cannot reach the internet through the upstream: a fatal preflight check
+  probes it live. An unhealthy container alone only warns there.
+- `healthcheck_expect`: a regular expression the healthcheck response must
+  match. With `healthcheck_url` at an IP-echo service, a changed exit IP makes
+  Xray unhealthy and fails `doctor`.
+- `canary-config` task: the init command and secrets for a
+  [dotdash-canary](https://github.com/morzecrew/dotdash-canary) machine, which
+  checks from inside a network that dotdash is still reachable.
 - README: moving to a new server from the recovery key and a backup, with the
   client links unchanged.
 - `scripts/bootstrap.sh` prepares a fresh Debian or Ubuntu server: Docker and
