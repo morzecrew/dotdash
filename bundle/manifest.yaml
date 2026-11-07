@@ -154,6 +154,12 @@ tasks:
     command: ["sh", "/task/client-config.sh"]
     args: true
     timeout: 1m
+  exit-check:
+    description: "Print the IPv4 and IPv6 exits the upstream leaves from, with their network (ASN) and country, and whether they match; changes nothing"
+    service: exit-check
+    command: ["sh", "/task/exit-check.sh"]
+    args: true
+    timeout: 2m
   canary-config:
     description: "Print the init command and secrets for a dotdash-canary machine acting as the client named after -- (output is credentials)"
     service: client-config
@@ -163,10 +169,12 @@ tasks:
 
 health:
   checks:
-    # Xray's own healthcheck fetches healthcheck_url through the upstream, so
-    # "healthy" means the whole egress path works, not that a process is up,
-    # and `doctor` fails while it does not.
-    - {name: services, type: command, command: ["hooks/healthy"], timeout: 30s}
+    # egress fetches healthcheck_url through Xray and the upstream, so healthy
+    # means the whole way out works, not that a process is up; failing, it
+    # names the layer (the upstream's address, its credentials, the
+    # destination, the exit). `doctor` fails while either check does.
+    - {name: cover-site, type: command, command: ["hooks/healthy", "cover-site"], timeout: 10s}
+    - {name: egress, type: command, command: ["hooks/healthy", "egress"], timeout: 30s}
 
 backup:
   volumes:

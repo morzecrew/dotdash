@@ -115,6 +115,18 @@ services:
           subpath: usr/local/bin
     secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id]
 
+  # One-shot behind a profile, started only by `morzer task run exit-check`.
+  # It shares Xray's network namespace, so it reaches the probe inbound on
+  # 127.0.0.1:10809 and asks through the upstream as client traffic leaves.
+  exit-check:
+    <<: *hardened
+    restart: "no"
+    image: ${DOTDASH_IMAGE_CADDY:?set by morzer}
+    profiles: [tasks]
+    network_mode: service:xray
+    volumes:
+      - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
+
 networks:
   edge: {}
   # Caddy and Xray to each other only; no route out.

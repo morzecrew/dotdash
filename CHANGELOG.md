@@ -9,11 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- ...
+- The `exit-check` task prints the IPv4 and IPv6 addresses the upstream leaves from, each with its network and country, and says whether IPv6 is unavailable or leaves from another network than IPv4. It changes nothing.
 
 ### Changed
 
-- ...
+- When the way out fails, `doctor` says which layer did: the upstream proxy's address, its credentials, the destination behind it, or an exit that no longer matches `healthcheck_expect`. The health checks are now `cover-site` and `egress`.
 
 ### Deprecated
 

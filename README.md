@@ -189,7 +189,11 @@ sudo morzer backup target add s3://bucket/dotdash --credentials backup_s3
 **Alerts.** A target receives morzer's event JSON: each failed apply, update or
 backup, each staged release, and every morning what `doctor` found wrong.
 `doctor` fails when Xray cannot reach the internet through the upstream, so a
-target at its default level hears about that and not about warnings. See
+target at its default level hears about that and not about warnings, and it
+says which layer failed: the upstream proxy's address, its credentials, the
+destination behind it, or an exit that no longer matches `healthcheck_expect`.
+Traffic only ever leaves through the upstream: with it down, clients get
+nothing rather than this server's own address. See
 morzer's [notifications](https://github.com/morzecrew/morzer/blob/main/pages/docs/operating/notifications.md).
 
 ```sh
@@ -203,6 +207,21 @@ fails, when the provider moves you to another address:
 ```sh
 sudo morzer config set healthcheck_url=https://api.ipify.org 'healthcheck_expect=^203\.0\.113\.7\s*$'
 ```
+
+**Checking the exit.** `exit-check` asks, through the upstream as client
+traffic goes, which IPv4 and IPv6 addresses sites see, and from which network
+(ASN) and country. It changes nothing.
+
+```sh
+sudo morzer task run exit-check --output
+```
+
+"IPv6 unavailable" means the upstream has no IPv6 exit, so sites see IPv4 only;
+that is not a leak. "MISMATCH" means both answer from different networks, which
+a site reached over both can tell apart; ask the provider for matching IPv6.
+An IP checker in a browser that shows an IPv6 address this task calls
+unavailable is seeing the device's own, outside the tunnel: route IPv6 through
+the tunnel, or turn it off, in the client app.
 
 ### Canary (optional)
 
