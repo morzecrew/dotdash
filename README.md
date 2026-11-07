@@ -33,6 +33,10 @@ curl -fsSLO https://raw.githubusercontent.com/morzecrew/dotdash/main/scripts/boo
 less bootstrap.sh && sudo bash bootstrap.sh
 ```
 
+Installing morzer yourself, give its `install.sh` `--dir /usr/local/bin`, as
+`bootstrap.sh` does: run as your user it picks `~/.local/bin`, which `sudo`
+does not search, and morzer's timers run the binary from where it was put.
+
 **3. Deploy**
 
 ```sh
