@@ -1,21 +1,24 @@
 #!/usr/bin/env bash
-# The one promise a healthcheck cannot see: the origin refuses anyone who is
-# not Cloudflare. A TLS handshake without the AOP client certificate must fail;
-# if it succeeds, the IP serves the site (and the Xray path) to any scanner.
+# What no healthcheck sees: from outside, the TLS port must look like the cover
+# site, with a certificate a browser trusts. That proves REALITY relays anything
+# without its key to Caddy, and that Caddy got its certificate. The first
+# issuance takes a moment, so this retries for up to 90s.
 set -euo pipefail
 
 domain=${DOTDASH_DOMAIN:?install with --domain}
 port=${DOTDASH_PARAM_HTTPS_PORT:?}
 
 if ! command -v curl >/dev/null; then
-  echo "curl not installed; cannot check that the origin requires Cloudflare's client certificate" >&2
+  echo "curl not installed; cannot check the cover site" >&2
   exit 2
 fi
 
-rc=0
-curl -sk --noproxy '*' -o /dev/null --max-time 10 --resolve "$domain:$port:127.0.0.1" "https://$domain:$port/" || rc=$?
-case $rc in
-  0) echo "origin answered without a client certificate: Authenticated Origin Pulls is not enforced" >&2; exit 1 ;;
-  6|7|28) echo "origin unreachable on 127.0.0.1:$port (curl exit $rc)" >&2; exit 1 ;;
-  *) ;; # TLS refused, during the handshake or by an alert right after it (35, 55, 56)
-esac
+for _ in $(seq 18); do
+  if err=$(curl -sS --fail --noproxy '*' -o /dev/null --max-time 5 \
+    --resolve "$domain:$port:127.0.0.1" "https://$domain:$port/" 2>&1); then
+    exit 0
+  fi
+  sleep 5
+done
+echo "cover site not served on 127.0.0.1:$port: $err" >&2
+exit 1

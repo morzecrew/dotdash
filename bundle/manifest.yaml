@@ -6,7 +6,7 @@ metadata:
   name: dotdash
   # Stamped by `morzer release build --version X`, together with VERSION.
   version: 0.0.0
-  description: Xray behind a Cloudflare-fronted Caddy, plus a DNS tunnel, egressing through an ISP proxy
+  description: Xray with REALITY in front of a Caddy cover site, an optional DNS tunnel, egressing through an upstream proxy
   vendor: morzecrew
   release_notes: RELEASE.md
 
@@ -19,6 +19,9 @@ runtimes:
   compose:
     files:
       - compose/compose.yaml
+    profiles:
+      # The DNS tunnel on UDP/53, which also needs xdns_domain.
+      xdns: [compose/xdns.yaml]
     options:
       project: dotdash
 
@@ -37,14 +40,14 @@ requirements:
   disk: 2GiB
   # TCP only. UDP/53 for the DNS tunnel is not checked here: on a host whose
   # systemd-resolved stub holds 127.0.0.53:53, set xdns_bind to the public IP.
-  ports: ["{{ .Parameters.https_port }}"]
+  ports: ["80", "{{ .Parameters.https_port }}"]
 
 parameters:
   https_port:
     type: port
     default: 443
-    description: Host port Caddy serves HTTPS on; Cloudflare connects to it
-    services: [caddy]
+    description: Host port of the REALITY inbound; anything without its key reaches the cover site
+    services: [xray]
   upstream_protocol:
     type: enum
     values: [socks, http]
@@ -61,6 +64,11 @@ parameters:
     required: true
     description: Port of the ISP/residential proxy
     services: [xray]
+  upstream_tls:
+    type: bool
+    default: false
+    description: Connect to the upstream proxy over TLS (an HTTPS or SOCKS-over-TLS proxy), so its credentials and your destinations do not cross the network in clear
+    services: [xray]
   upstream_udp:
     type: bool
     default: false
@@ -68,8 +76,8 @@ parameters:
     services: [xray]
   xdns_domain:
     type: string
-    required: true
-    description: Zone delegated to this server for the DNS tunnel, e.g. t.example.com (its NS record points here)
+    default: ""
+    description: Zone delegated to this server for the DNS tunnel, e.g. t.example.com (its NS record points here); used by the xdns profile
     services: [xray]
   xdns_bind:
     type: string
@@ -94,9 +102,7 @@ parameters:
     services: [xray]
 
 images:
-  # ponytail: placeholder digest until platform-images#125 publishes the image;
-  # release verify passes, a deployment does not.
-  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:a13c328d7ded9cb6ea510f3556aed910415f9f28fb090b36b9652883a15eb332
   caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
 
 # Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);
@@ -120,7 +126,7 @@ operations:
 
 tasks:
   client-config:
-    description: "Print client settings: the XHTTP share link and the XDNS outbound (output is credentials)"
+    description: "Print client settings: the REALITY and XHTTP share links, and the XDNS outbound under the xdns profile (output is credentials)"
     service: client-config
     command: ["sh", "/task/client-config.sh"]
     timeout: 1m
@@ -130,6 +136,11 @@ health:
     # Xray's own healthcheck fetches healthcheck_url through the upstream, so
     # "healthy" means the whole egress path works, not that a process is up.
     - {name: services, type: command, command: ["hooks/healthy"], timeout: 30s}
+
+backup:
+  volumes:
+    # Caddy's ACME account and certificates: written whole, safe to copy live.
+    caddy_data: {consistency: hot}
 
 retention:
   releases: 3

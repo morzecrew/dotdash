@@ -1,4 +1,3 @@
-# Key material from scripts/cf-aop-cert.sh and the Cloudflare dashboard.
-/aop/
+# Key material never belongs in the repository.
 *.key
 *.pem

@@ -9,15 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- morzer bundle `dotdash`: Caddy behind Cloudflare (Origin CA certificate,
-  zone-level Authenticated Origin Pulls) in front of Xray's VLESS + XHTTP
-  inbound, a VLESS + XDNS DNS tunnel on UDP/53, and all egress through an
-  ISP/residential SOCKS5 or HTTP proxy with no direct fallback.
+- morzer bundle `dotdash`: Xray's VLESS + REALITY (Vision) inbound on 443 in
+  front of a Caddy cover site with a Let's Encrypt certificate, VLESS + XHTTP
+  behind one secret path of that site for a CDN in front, and an optional
+  VLESS + XDNS DNS tunnel on UDP/53 (`xdns` profile). All egress goes through
+  an ISP/residential SOCKS5 or HTTP proxy, optionally over TLS, with no direct
+  fallback.
 - Health: Xray is healthy only while a URL fetched through the upstream proxy
-  answers; the smoke test checks that the origin refuses TLS without
-  Cloudflare's client certificate.
-- `client-config` task printing the XHTTP share link and the XDNS outbound.
-- VLESS Encryption keys derive from a morzer-generated seed (`vless_seed`), so
-  installing needs no key generation by hand.
-- `scripts/cf-aop-cert.sh` for the Authenticated Origin Pulls CA and client
+  answers; the smoke test checks that port 443 serves the site with a trusted
   certificate.
+- `client-config` task printing the REALITY and XHTTP share links and, under
+  the `xdns` profile, the XDNS outbound.
+- morzer generates every key: the REALITY key and short id, and the VLESS
+  Encryption key pair, which derives from one seed (`vless_seed`).

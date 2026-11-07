@@ -5,12 +5,38 @@ Xray config. Morzer renders it to <etc>/application.yaml, Compose mounts it as
 with the server key derived from that seed, before starting Xray
 (platform-images#125). No secret value is ever in this file.
 
+REALITY owns the public TLS port. A client holding the key gets Xray; anything
+else (browsers, scanners, ACME, a CDN) is relayed to Caddy, which serves the
+cover site with its own certificate and passes the XHTTP path back here.
+
 There is no direct (freedom) outbound: if the upstream proxy is down, traffic
 stops rather than leaving from this server's own IP.
 */ -}}
+{{- $domain := required "install with --domain" .Installation.Domain -}}
 {
   "log": {"loglevel": "{{ .Parameters.log_level }}", "access": "none", "dnsLog": false},
   "inbounds": [
+    {
+      "tag": "reality",
+      "listen": "0.0.0.0",
+      "port": 443,
+      "protocol": "vless",
+      "settings": {
+        "clients": [{"id": {"$file": "/run/secrets/vless_uuid"}, "flow": "xtls-rprx-vision"}],
+        "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
+      },
+      "streamSettings": {
+        "network": "raw",
+        "security": "reality",
+        "realitySettings": {
+          "target": "caddy:443",
+          "serverNames": ["{{ $domain }}"],
+          "privateKey": {"$file": "/run/secrets/reality_key"},
+          "shortIds": [{"$file": "/run/secrets/reality_short_id"}]
+        }
+      },
+      "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
+    },
     {
       "tag": "xhttp",
       "listen": "0.0.0.0",
@@ -26,6 +52,7 @@ stops rather than leaving from this server's own IP.
       },
       "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
     },
+{{- if eq .Profile "xdns" }}
     {
       "tag": "xdns",
       "listen": "0.0.0.0",
@@ -38,10 +65,11 @@ stops rather than leaving from this server's own IP.
       "streamSettings": {
         "network": "kcp",
         "kcpSettings": {"mtu": {{ .Parameters.xdns_mtu }}, "tti": 200},
-        "finalmask": {"udp": [{"type": "xdns", "settings": {"domains": [{"names": ["{{ .Parameters.xdns_domain }}"], "edns0": 1232}]}}]}
+        "finalmask": {"udp": [{"type": "xdns", "settings": {"domains": [{"names": ["{{ required "the xdns profile needs xdns_domain" .Parameters.xdns_domain }}"], "edns0": 1232}]}}]}
       },
       "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
     },
+{{- end }}
     {
       "tag": "probe",
       "listen": "127.0.0.1",
@@ -59,6 +87,9 @@ stops rather than leaving from this server's own IP.
         "user": {"$file": "/run/secrets/upstream_username"},
         "pass": {"$file": "/run/secrets/upstream_password"}
       }
+{{- if eq (print .Parameters.upstream_tls) "true" }},
+      "streamSettings": {"security": "tls", "tlsSettings": {"serverName": "{{ .Parameters.upstream_host }}"}}
+{{- end }}
     },
     {"tag": "block", "protocol": "blackhole"}
   ],

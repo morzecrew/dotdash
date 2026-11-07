@@ -1,8 +1,11 @@
-# dotdash edge. Native expansion only: {$DOMAIN} from the environment when the
-# Caddyfile is adapted, {file.*} from the secret files on each request.
+# dotdash cover site. Native expansion only: {$DOMAIN} from the environment
+# when the Caddyfile is adapted, {file.*} from the secret files on each request.
+#
+# Port 443 here is reached only through Xray's REALITY inbound, which relays
+# every connection that does not carry its key. Port 80 is published directly,
+# for the ACME HTTP-01 challenge and the redirect to HTTPS.
 {
 	admin off
-	auto_https off
 	servers {
 		protocols h1 h2
 	}
@@ -14,18 +17,7 @@ http://127.0.0.1:8081 {
 	respond /healthz 200
 }
 
-https://{$DOMAIN}:8443 {
-	# Cloudflare Origin CA certificate, trusted by Cloudflare only. A client
-	# that is not Cloudflare presenting our AOP certificate fails the handshake:
-	# a scanner on the bare IP gets nothing, not even the cover site.
-	tls /run/secrets/origin_cert /run/secrets/origin_key {
-		protocols tls1.2 tls1.3
-		client_auth {
-			mode require_and_verify
-			trust_pool file /run/secrets/cf_aop_ca
-		}
-	}
-
+{$DOMAIN} {
 	header {
 		-Server
 		Strict-Transport-Security "max-age=31536000"
