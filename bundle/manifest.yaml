@@ -155,6 +155,12 @@ tasks:
     command: ["sh", "/task/client-config.sh"]
     args: true
     timeout: 1m
+  canary-config:
+    description: "Print the init command and secrets for a dotdash-canary machine acting as the client named after -- (output is credentials)"
+    service: client-config
+    command: ["sh", "/task/canary-config.sh"]
+    args: true
+    timeout: 1m
 
 health:
   checks:
