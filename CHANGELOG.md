@@ -32,3 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - One VLESS id per device: `vless_clients` holds one `<uuid> [name]` per line,
   so deleting a line revokes that device alone. `client-config` prints every
   client's settings, or one client's when given its name.
+- Unattended updates: the manifest declares `database_schema_produces`, which
+  morzer's `update.auto_apply` requires before it installs a release on its
+  own. The README covers turning them on, offsite backups and alerts.
