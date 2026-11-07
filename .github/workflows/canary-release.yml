@@ -1,13 +1,13 @@
-# The canary's stable channel: a tag canary-vX.Y.Z on main builds, signs and
-# smoke-tests that commit's canary/, publishes dotdash-canary:X.Y.Z and moves
-# :stable, then creates the GitHub release from canary/CHANGELOG.md. dotdash's
-# own release.yml (tags v*) never sees these tags. The jobs
-# are bundle-ci's.
+# The canary's stable channel, released with dotdash: the same tag vX.Y.Z on
+# main builds, signs and smoke-tests that commit's canary/, publishes
+# dotdash-canary:X.Y.Z, moves :stable and attaches the archive to the tag's
+# GitHub release, whichever of this and release.yml creates it. The jobs are
+# bundle-ci's.
 name: canary-release
 
 on:
   push:
-    tags: ["canary-v*"]
+    tags: ["v*"]
 
 permissions: {}
 
@@ -22,7 +22,6 @@ jobs:
     uses: morzecrew/bundle-ci/.github/workflows/guard.yml@c35447d9d5c1200455ab247d03932bea8120f6b6 # v0.7.0
     with:
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
-      tag-prefix: canary-v
 
   bundle:
     needs: guard
@@ -39,7 +38,6 @@ jobs:
       bundle-dir: canary
       version-paths: canary
       package: dotdash-canary
-      tag-prefix: canary-v
       smoke-hooks: .github/canary-smoke.d
       components: ""
       probe-paths: ""
@@ -73,6 +71,4 @@ jobs:
     with:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}
-      package: dotdash-canary
-      changelog: canary/CHANGELOG.md
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}

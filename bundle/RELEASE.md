@@ -30,6 +30,10 @@
 
 - The `canary-config` task prints the init command and secrets for a dotdash-canary machine acting as one of the clients.
 
+- dotdash-canary, a second bundle released with dotdash as `ghcr.io/morzecrew/dotdash-canary`, for a machine inside a network you care about, such as a box at home. It connects to a dotdash server as an ordinary client and needs no open port.
+
+- The canary's health check fetches `probe_url` through dotdash over REALITY, and with the `xhttp` profile also over XHTTP, in up to three tries. `doctor` fails when all three fail, so a notify target at its default level hears that the network lost its way out.
+
 - Services run as a non-root user in read-only containers with every capability dropped. Xray's access log is always off.
 
 - `scripts/bootstrap.sh` prepares a fresh Debian or Ubuntu server: Docker, sops, age and morzer, unattended security updates, and SSH with keys only once an authorized key exists.

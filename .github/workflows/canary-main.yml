@@ -33,7 +33,6 @@ jobs:
       bundle-dir: canary
       version-paths: canary
       package: dotdash-canary
-      tag-prefix: canary-v
       smoke-hooks: .github/canary-smoke.d
       components: ""
       probe-paths: ""
