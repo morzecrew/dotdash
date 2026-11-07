@@ -168,6 +168,29 @@ morzer's [notifications](https://github.com/morzecrew/morzer/blob/main/pages/doc
 sudo morzer notify target add https://hooks.example/morzer --min-level warn
 ```
 
+### Moving to a new server
+
+When the server's IP is blocked or the machine is lost, rebuild it elsewhere
+from the recovery key and a backup. Client links name the domain, and the keys
+come back from the backup, so devices keep the links they have. Prepare for it
+now: keep the recovery key off the machine, give morzer a backup target (above),
+and set the domain's `A` record TTL to 300 seconds or less.
+
+```sh
+# on the new server, after scripts/bootstrap.sh
+sudo morzer --product dotdash installation import --from-backup \
+  --target s3://bucket/dotdash --credentials-file ./bucket.yaml \
+  --identity ~/dotdash-recovery.key
+sudo morzer update oci://ghcr.io/morzecrew/dotdash:stable
+# optional, keeps Caddy's certificate: the id and installation id import printed
+sudo morzer backup fetch <backup id>
+sudo morzer restore --force --confirm <installation id> --identity ~/dotdash-recovery.key
+```
+
+Then point `example.com`, and `ns.example.com` for the DNS tunnel, at the new
+IP, and shut the old machine down: two live servers with one installation id
+confuse each other's backups. A `file://` target needs no `--credentials-file`.
+
 ## Parameters
 
 | Name | Default | |

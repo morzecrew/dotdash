@@ -41,5 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `servers`: several servers sharing the same keys. `client-config` prints
   links for each and an Xray config that uses whichever answers fastest.
 - README: QR codes for the share links.
+- README: moving to a new server from the recovery key and a backup, with the
+  client links unchanged.
 - `scripts/bootstrap.sh` prepares a fresh Debian or Ubuntu server: Docker and
   Compose, sops, age, morzer, security updates, and SSH with keys only.
