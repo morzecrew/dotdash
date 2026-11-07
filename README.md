@@ -58,7 +58,13 @@ morzer task run client-config --output -- phone    # one
 
 Prints a REALITY link (v2rayN, v2rayNG, Hiddify, Happ, Streisand), an XHTTP
 link, and an Xray outbound for the DNS tunnel when it is on. Treat the output
-as a password.
+as a password. To scan a link with a phone, show each as a QR code in the
+terminal (`qrencode` package):
+
+```sh
+sudo morzer task run client-config --output -- phone | grep '^vless://' |
+  while read -r link; do qrencode -t ansiutf8 "$link"; done
+```
 
 Each device should get its own id. `morzer secret edit vless_clients` opens the
 list, one `<uuid> [name]` per line (`uuidgen` makes an id). Add a line for a
@@ -66,6 +72,15 @@ device and delete it to revoke the device; Xray restarts on save. A revoked
 device still knows the shared keys. If it must not even recognise the server,
 also rotate `reality_key` and `vless_seed` (`morzer secret rotate <name>`) and
 resend every device's links.
+
+### Cover site
+
+Anyone reaching port 443 without the REALITY key sees a website. The bundled
+page differs between servers only in its title, so a scanner that indexes
+pages can still group them by the rest. Give each server its own site: put
+static files in `/srv/dotdash` (the `site_dir` parameter), readable by uid
+65532. Caddy serves them wherever they have the requested path, and the
+bundled page otherwise, with no restart.
 
 ### DNS tunnel (optional)
 
@@ -90,6 +105,26 @@ The XHTTP link also works through a CDN that proxies HTTP/2 to
 proxies `example.com` itself, use the server IP in the REALITY link. Check the
 CDN's terms first; some, Cloudflare's self-serve plans among them, prohibit
 proxy services.
+
+### Several servers (optional)
+
+Clients can switch to another server when one stops answering. Install dotdash
+on each server under its own domain, copy the first server's keys to the
+others, and list them all on every server. Use the same `https_port`
+everywhere.
+
+```sh
+# on the first server; sudo on b.example.com must not prompt
+for s in vless_clients vless_seed reality_key reality_short_id xhttp_path; do
+  sudo cat /run/dotdash/secrets/$s | ssh b.example.com sudo morzer secret set $s
+done
+# on every server
+sudo morzer config set servers=example.com,b.example.com
+```
+
+`client-config` then prints links for each server and an Xray config that
+uses whichever answers fastest (v2rayN or v2rayNG: custom config). Add and
+revoke devices on every server.
 
 ## Keeping it running
 
@@ -140,6 +175,8 @@ sudo morzer notify target add https://hooks.example/morzer --min-level warn
 | `log_level` | `warning` | Xray error log; access log is always off |
 | `healthcheck_url` | `https://www.gstatic.com/generate_204` | fetched through the upstream by the healthcheck |
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (Caddy's own CA, for a machine the internet cannot reach) |
+| `site_dir` | `/srv/dotdash` | host directory of your own cover site |
+| `servers` | `self` | servers sharing these keys, comma-separated, for client configs; `self` is this one |
 
 Check a change with `morzer release verify ./bundle --render-check`.
 

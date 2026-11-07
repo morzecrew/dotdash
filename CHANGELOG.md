@@ -35,3 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unattended updates: the manifest declares `database_schema_produces`, which
   morzer's `update.auto_apply` requires before it installs a release on its
   own. The README covers turning them on, offsite backups and alerts.
+- `site_dir` (default `/srv/dotdash`): Caddy serves your own cover site from
+  it wherever it has the requested file. The bundled page is now titled with
+  the domain, so no two servers serve the same page.
+- `servers`: several servers sharing the same keys. `client-config` prints
+  links for each and an Xray config that uses whichever answers fastest.
+- README: QR codes for the share links.
