@@ -46,47 +46,46 @@ EOF
   done | sed '$ s/,$//'
 }
 
+xdns_outbound() { # <id>: the DNS tunnel, for the config's last resort
+  cat <<EOF
+    {"tag": "xdns", "protocol": "vless",
+     "settings": {"address": "1.1.1.1", "port": 53, "id": "$1", "encryption": "${enc}"},
+     "streamSettings": {"network": "kcp", "kcpSettings": {"mtu": 130, "tti": 200},
+       "finalmask": {"udp": [{"type": "xdns", "settings": {
+         "domains": [{"names": ["${XDNS_DOMAIN}"], "edns0": 1232}],
+         "resolvers": [{"addrs": ["udp://1.1.1.1:53"]}]}}]}}}
+EOF
+}
+
 client() { # <id> <label>
   echo "== $2 =="
   for s in $servers; do
     if [ "$count" -gt 1 ]; then label="$2-$s"; else label=$2; fi
     links "$1" "$label" "$s"
   done
-  if [ "$count" -gt 1 ]; then
-    cat <<EOF
-Xray client config that moves to another server when one stops answering
-(v2rayN, v2rayNG: custom config; local SOCKS on 10808, HTTP on 10809):
+  if [ "$count" -gt 1 ]; then where=" on any of the servers"; else where=; fi
+  if [ -n "${XDNS_DOMAIN:-}" ]; then
+    last=", and the DNS tunnel only when none answers"
+    fallback=', "fallbackTag": "xdns"'
+  else
+    last='' fallback=''
+  fi
+  cat <<EOF
+Xray client config, for v2rayN or v2rayNG as a custom config (local SOCKS on
+10808, HTTP on 10809). It uses whichever of REALITY and XHTTP answers
+fastest${where}${last}:
 {
   "inbounds": [
     {"listen": "127.0.0.1", "port": 10808, "protocol": "socks", "settings": {"udp": true}},
     {"listen": "127.0.0.1", "port": 10809, "protocol": "http"}
   ],
   "outbounds": [
-$(outbounds "$1")
+$(outbounds "$1")$([ -z "${XDNS_DOMAIN:-}" ] || printf ',\n%s' "$(xdns_outbound "$1")")
   ],
   "observatory": {"subjectSelector": ["dotdash-"], "probeUrl": "https://www.gstatic.com/generate_204", "probeInterval": "1m"},
   "routing": {
-    "balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}}],
+    "balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}${fallback}}],
     "rules": [{"type": "field", "network": "tcp,udp", "balancerTag": "dotdash"}]
-  }
-}
-
-EOF
-  fi
-  [ -n "${XDNS_DOMAIN:-}" ] || return 0
-  cat <<EOF
-XDNS tunnel, Xray client outbound:
-{
-  "tag": "dotdash-xdns",
-  "protocol": "vless",
-  "settings": {"address": "1.1.1.1", "port": 53, "id": "$1", "encryption": "${enc}"},
-  "streamSettings": {
-    "network": "kcp",
-    "kcpSettings": {"mtu": 130, "tti": 200},
-    "finalmask": {"udp": [{"type": "xdns", "settings": {
-      "domains": [{"names": ["${XDNS_DOMAIN}"], "edns0": 1232}],
-      "resolvers": [{"addrs": ["udp://1.1.1.1:53"]}]
-    }}]}
   }
 }
 
@@ -106,9 +105,10 @@ done </run/secrets/vless_clients
 
 [ -n "${XDNS_DOMAIN:-}" ] || exit 0
 cat <<EOF
-XDNS is slow, for networks where only DNS works. Replace the resolver with one
-the network allows; DoH ("https://...") or "tcp://" also work. "address" must
-be an IP: XDNS sends through the resolvers, not to it. UDP is dropped unless
-the upstream is SOCKS5 with upstream_udp=true, so point the client's DNS at DoH
-or TCP and lookups ride the tunnel.
+The config's "xdns" outbound, the DNS tunnel, is slow, for networks where only
+DNS works. Replace its resolver with one the network allows; DoH
+("https://...") or "tcp://" also work. Its "address" must be an IP: XDNS sends
+through the resolvers, not to it. UDP is dropped unless the upstream is SOCKS5
+with upstream_udp=true, so point the client's DNS at DoH or TCP and lookups
+ride the tunnel.
 EOF
