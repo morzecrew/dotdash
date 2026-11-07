@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "semanticCommits": "enabled",
+  "customManagers": [
+    {
+      "description": "Images pinned as repo:tag@sha256: in the bundle manifest",
+      "customType": "regex",
+      "managerFilePatterns": ["/^bundle/manifest\\.yaml$/"],
+      "matchStrings": [
+        "(?<depName>[a-z0-9.-]+\\.[a-z]+/[a-z0-9._/-]+):(?<currentValue>[A-Za-z0-9._-]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Titles follow gitmoji-conventional: `⬆️ build(deps): update ...`",
+      "matchPackageNames": ["*"],
+      "semanticCommitType": "⬆️ build"
+    }
+  ]
+}
