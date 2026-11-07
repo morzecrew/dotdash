@@ -180,20 +180,33 @@ sudo morzer config set healthcheck_url=https://api.ipify.org 'healthcheck_expect
 
 ### Canary (optional)
 
-The server cannot tell when a network starts blocking it. A
-[dotdash-canary](https://github.com/morzecrew/dotdash-canary) machine inside
-that network, such as a small box at home, connects as a client and fails
-`doctor` when it cannot get out through dotdash. Give it a client of its own
-(a `canary` line in `vless_clients`), then print its setup on the server and
-run that on the canary machine:
+The server cannot tell when a network starts blocking it. The canary is a
+second, small bundle from this repository (`canary/`, published as
+`ghcr.io/morzecrew/dotdash-canary`) for a machine inside that network, such
+as a box at home: it connects as an ordinary client, fetches a URL through
+dotdash, and fails `doctor` when it cannot. It needs Docker, sops, age and
+morzer (`scripts/bootstrap.sh`), and no open port.
 
-```sh
-sudo morzer task run canary-config --output -- canary
-```
+1. On the server, give it a client of its own: a `<uuid> canary` line in
+   `sudo morzer secret edit vless_clients`. Revoke it like any device.
+2. Print its setup there, and run what it prints on the canary machine:
 
-On the canary machine, add a notify target and check every ten minutes:
-`sudo morzer config set doctor.schedule='*:0/10'`. While the path stays
-broken, each check notifies again.
+   ```sh
+   sudo morzer task run canary-config --output -- canary
+   ```
+
+3. On the canary machine, add a notify target and check every ten minutes:
+
+   ```sh
+   sudo morzer notify target add https://hooks.example/morzer
+   sudo morzer config set doctor.schedule='*:0/10'
+   ```
+
+`doctor` then fails on `this machine reaches the internet through dotdash`
+when three tries in a row cannot fetch `probe_url` through dotdash, and each
+failing check notifies again until it is fixed. The canary's releases are tags
+`canary-vX.Y.Z`; its channels are `dotdash-canary:main` and `:stable`, signed
+with this repository's keys.
 
 ### Moving to a new server
 

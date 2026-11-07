@@ -1,0 +1,38 @@
+# dotdash-canary. Each service is an Xray client of one dotdash path, with a
+# loopback HTTP inbound only the image's probe uses: hooks/healthy runs it, and
+# it passes when a request went out through dotdash and came back.
+#
+# Compose sees only what morzer gives it: DOTDASH_CANARY_IMAGE_*,
+# DOTDASH_CANARY_PARAM_*, DOTDASH_CANARY_SECRETS_DIR.
+
+x-client: &client
+  image: ${DOTDASH_CANARY_IMAGE_XRAY:?set by morzer}
+  restart: unless-stopped
+  user: "65532:65532"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  pids_limit: 128
+  mem_limit: 128m
+  logging:
+    driver: local
+    options: {max-size: 10m, max-file: "3"}
+  environment:
+    XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:10809
+    XRAY_HEALTHCHECK_URL: ${DOTDASH_CANARY_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
+  tmpfs:
+    - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
+  # No healthcheck here: hooks/healthy runs the probe itself (see there).
+
+services:
+  reality:
+    <<: *client
+    volumes:
+      - /etc/dotdash-canary/reality.json:/etc/xray/config.json:ro
+    secrets: [vless_id, vless_encryption, reality_short_id]
+
+secrets:
+  vless_id: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/vless_id"}
+  vless_encryption: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/vless_encryption"}
+  reality_short_id: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/reality_short_id"}
+  xhttp_path: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/xhttp_path"}

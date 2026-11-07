@@ -1,0 +1,7 @@
+# The xhttp profile: the XHTTP path too, through dotdash's cover site.
+services:
+  xhttp:
+    extends: {file: compose.yaml, service: reality}
+    volumes:
+      - /etc/dotdash-canary/xhttp.json:/etc/xray/config.json:ro
+    secrets: [xhttp_path]

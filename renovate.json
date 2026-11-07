@@ -5,9 +5,9 @@
   "platformAutomerge": false,
   "customManagers": [
     {
-      "description": "Images pinned as repo:tag@sha256: in the bundle manifest",
+      "description": "Images pinned as repo:tag@sha256: in the two bundle manifests",
       "customType": "regex",
-      "managerFilePatterns": ["/^bundle/manifest\\.yaml$/"],
+      "managerFilePatterns": ["/^(bundle|canary)/manifest\\.yaml$/"],
       "matchStrings": [
         "(?<depName>[a-z0-9.-]+\\.[a-z]+/[a-z0-9._/-]+):(?<currentValue>[A-Za-z0-9._-]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
       ],
