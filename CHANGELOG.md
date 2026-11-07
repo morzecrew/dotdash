@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- ...
+- The `canary-config` task's init command names the product, without which morzer 0.13.0 cannot install the canary from its registry reference.
 
 ### Security
 

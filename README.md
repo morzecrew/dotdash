@@ -33,11 +33,15 @@ curl -fsSLO https://raw.githubusercontent.com/morzecrew/dotdash/main/scripts/boo
 less bootstrap.sh && sudo bash bootstrap.sh
 ```
 
+Installing morzer yourself, give its `install.sh` `--dir /usr/local/bin`, as
+`bootstrap.sh` does: run as your user it picks `~/.local/bin`, which `sudo`
+does not search, and morzer's timers run the binary from where it was put.
+
 **3. Deploy**
 
 ```sh
 morzer secret recipients generate-recovery-key ~/dotdash-recovery.key   # store off the machine
-sudo morzer init --release oci://ghcr.io/morzecrew/dotdash:stable \
+sudo morzer init --product dotdash --release oci://ghcr.io/morzecrew/dotdash:stable \
   --require-signature --signing-key "$MINISIGN_RELEASE_PUBKEY" \
   --domain example.com --recovery-recipient age1… \
   --set upstream_host=proxy.provider.example --set upstream_port=1080
@@ -48,6 +52,13 @@ sudo morzer secret set upstream_password
 sudo morzer apply
 ```
 
+Spell `--product dotdash` exactly: morzer names the variables it hands the
+bundle after the installation, and the bundle reads `DOTDASH_*`
+([morzecrew/morzer#298](https://github.com/morzecrew/morzer/issues/298)). It is
+needed at all only because morzer reads the name from a local release alone
+([morzecrew/morzer#297](https://github.com/morzecrew/morzer/issues/297)).
+Before the first `apply`, each `secret set` reports that it restarted nothing;
+the value is stored.
 `MINISIGN_RELEASE_PUBKEY` is this repository's variable of that name
 (`gh variable get MINISIGN_RELEASE_PUBKEY -R morzecrew/dotdash`). If the package
 is private, log root's Docker in to ghcr first.
