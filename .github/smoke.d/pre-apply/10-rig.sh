@@ -10,8 +10,8 @@
 # purpose (/rig/upstream.pass keeps the right password). It shares a network
 # with the healthcheck's target, which only it resolves; the bundle's Xray
 # reaches it on the rig's docker0 address. The target also stands in for the
-# IP-echo and network-lookup services exit-check asks. Both run images the
-# bundle pins, already in the rig.
+# IP-echo and network-lookup services exit-check asks, and serves /blob for
+# the benchmark. Both run images the bundle pins, already in the rig.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -39,9 +39,15 @@ cat >/rig/target/Caddyfile <<'EOF'
 	respond /info/203.0.113.7/country "ZZ"
 	respond /info/2001:db8::7/org "AS64501 Other Network"
 	respond /info/2001:db8::7/country "YY"
+	handle /blob {
+		root * /etc/caddy
+		file_server
+	}
 	respond "ok"
 }
 EOF
+# 1 MiB for the benchmark's transfers (.github/bench).
+head -c 1048576 /dev/urandom >/rig/target/blob
 chmod -R a+rX /rig/upstream /rig/target
 chmod a+r /rig/upstream.pass
 sudo docker network create dotdash-rig >/dev/null

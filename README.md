@@ -332,3 +332,11 @@ with both signed archives attached. The smoke install (`.github/smoke.d`) runs a
 proxy and `cert_issuer=internal`, then connects clients over REALITY and XHTTP.
 Renovate opens a pull request when a pinned image's tag or digest moves, so the
 same smoke test gates each bump.
+
+A weekly benchmark, and any pull request that changes the pinned images or
+Xray's config, measures REALITY and XHTTP in a rig under added latency and
+packet loss (Linux netem, on the client's side only): fetch success, time to
+first byte, 1 MiB transfers, and how fast clients get back through after Xray
+restarts. A pull request's run summary shows its figures beside the last ones
+from `main`, and each run keeps its JSON for 90 days. It informs and never
+gates; run it with other parameters from the Actions tab.
