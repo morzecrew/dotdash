@@ -7,4 +7,4 @@ services:
 
   client-config:
     environment:
-      XDNS_DOMAIN: ${DOTDASH_PARAM_XDNS_DOMAIN:?the xdns profile needs xdns_domain}
+      XDNS_DOMAIN: ${DOTDASH_PARAM_XDNS_DOMAIN:-t}

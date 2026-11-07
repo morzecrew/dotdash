@@ -14,6 +14,8 @@ There is no direct (freedom) outbound: if the upstream proxy is down, traffic
 stops rather than leaving from this server's own IP.
 */ -}}
 {{- $domain := required "install with --domain" .Installation.Domain -}}
+{{- $xdns := .Parameters.xdns_domain -}}
+{{- if not (contains $xdns ".") }}{{ $xdns = printf "%s.%s" $xdns $domain }}{{ end -}}
 {
   "log": {"loglevel": "{{ .Parameters.log_level }}", "access": "none", "dnsLog": false},
   "inbounds": [
@@ -67,7 +69,7 @@ stops rather than leaving from this server's own IP.
       "streamSettings": {
         "network": "kcp",
         "kcpSettings": {"mtu": {{ .Parameters.xdns_mtu }}, "tti": 200},
-        "finalmask": {"udp": [{"type": "xdns", "settings": {"domains": [{"names": ["{{ required "the xdns profile needs xdns_domain" .Parameters.xdns_domain }}"], "edns0": 1232}]}}]}
+        "finalmask": {"udp": [{"type": "xdns", "settings": {"domains": [{"names": ["{{ $xdns }}"], "edns0": 1232}]}}]}
       },
       "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
     },

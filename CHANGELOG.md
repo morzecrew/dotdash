@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - morzer bundle `dotdash`: Xray's VLESS + REALITY (Vision) inbound on 443 in
   front of a Caddy cover site with a Let's Encrypt certificate, VLESS + XHTTP
   behind one secret path of that site for a CDN in front, and an optional
-  VLESS + XDNS DNS tunnel on UDP/53 (`xdns` profile). All egress goes through
+  VLESS + XDNS DNS tunnel on UDP/53 (`xdns` profile, zone `t.<domain>` by
+  default). All egress goes through
   an ISP/residential SOCKS5 or HTTP proxy, optionally over TLS, with no direct
   fallback.
 - Health: Xray is healthy only while a URL fetched through the upstream proxy

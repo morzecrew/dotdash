@@ -5,13 +5,19 @@
 # issuance takes a moment, so this retries for up to 90s.
 set -euo pipefail
 
-domain=${DOTDASH_DOMAIN:?install with --domain}
 port=${DOTDASH_PARAM_HTTPS_PORT:?}
+project=${DOTDASH_COMPOSE_PROJECT:-dotdash}
 
 if ! command -v curl >/dev/null; then
   echo "curl not installed; cannot check the cover site" >&2
   exit 2
 fi
+
+caddy=$(docker ps -q --filter "label=com.docker.compose.project=$project" \
+  --filter label=com.docker.compose.service=caddy | sed -n 1p)
+[ -n "$caddy" ] || { echo "no running caddy container in project $project" >&2; exit 1; }
+# A hook is given no domain; the one Caddy serves is in its environment.
+domain=$(docker exec "$caddy" printenv DOMAIN)
 
 for _ in $(seq 18); do
   if err=$(curl -sS --fail --noproxy '*' -o /dev/null --max-time 5 \

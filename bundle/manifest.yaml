@@ -76,8 +76,8 @@ parameters:
     services: [xray]
   xdns_domain:
     type: string
-    default: ""
-    description: Zone delegated to this server for the DNS tunnel, e.g. t.example.com (its NS record points here); used by the xdns profile
+    default: t
+    description: Zone delegated to this server for the DNS tunnel (xdns profile); a name with no dot is taken under the domain, so t is t.example.com
     services: [xray]
   xdns_bind:
     type: string
