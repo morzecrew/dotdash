@@ -11,7 +11,7 @@
 # firewalld anyway, and an SSH port guessed wrong would lock you out.
 set -euo pipefail
 
-MORZER_VERSION=0.12.0
+MORZER_VERSION=0.13.0
 SOPS_VERSION=3.13.3
 declare -A SOPS_SHA256=(
 	[amd64]=e5bec3346a873ae91d871550f3e698c1aad962aff462a080e40f25fde17fef6b
@@ -59,7 +59,10 @@ if ! sops --version 2>/dev/null | grep -q "^sops ${SOPS_VERSION}"; then
 	install -m 0755 "${tmp}" /usr/local/bin/sops
 fi
 
-if ! morzer --version 2>/dev/null | grep -q " ${MORZER_VERSION}\$"; then
+# Never older: `morzer self-update` may have moved past this, and an older
+# manager refuses a machine a newer one has run on.
+have=$(morzer --version 2>/dev/null | awk '{print $NF}')
+if [ "$(printf '%s\n' "${MORZER_VERSION}" "${have:-0}" | sort -V | head -1)" != "${MORZER_VERSION}" ]; then
 	say "morzer ${MORZER_VERSION}"
 	# The installer of that release checks the archive's minisign signature.
 	curl -fsSL "https://raw.githubusercontent.com/morzecrew/morzer/v${MORZER_VERSION}/install.sh" |
