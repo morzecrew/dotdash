@@ -67,6 +67,10 @@ else
 	v6= v6why=$why
 	echo "IPv6 exit  unavailable: $v6why"
 fi
+case ${RESOLVE:-gateway} in
+gateway) echo "Names    resolved here over ${DNS_RESOLVER:-DoH}, through the upstream: it is handed addresses only" ;;
+*) echo "Names    resolved by the upstream, which sees every hostname (resolve=upstream)" ;;
+esac
 echo
 
 asn() { printf '%s' "$1" | sed -n 's/^\(AS[0-9][0-9]*\).*/\1/p'; }

@@ -78,14 +78,14 @@ recovers() {
 }
 
 sudo docker stop dotdash-rig-upstream >/dev/null
-if through 11080 http://target:8000/ 2>/dev/null; then
+if through 11080 http://11.99.0.10:8000/ 2>/dev/null; then
   sudo docker start dotdash-rig-upstream >/dev/null
   die "a client still reached the target with the upstream stopped"
 fi
 fails_naming "cannot connect to the upstream proxy"
 sudo docker start dotdash-rig-upstream >/dev/null
 recovers
-through 11080 http://target:8000/ || die "the client did not recover with the upstream"
+through 11080 http://11.99.0.10:8000/ || die "the client did not recover with the upstream"
 echo "20-fail-closed.sh: upstream stopped, clients get nothing and doctor names the upstream; both recover"
 
 printf wrong | sudo morzer secret set upstream_password >/dev/null

@@ -157,6 +157,9 @@ services:
     image: ${DOTDASH_IMAGE_CADDY:?set by morzer}
     profiles: [tasks]
     network_mode: service:xray
+    environment:
+      RESOLVE: ${DOTDASH_PARAM_RESOLVE:-gateway}
+      DNS_RESOLVER: ${DOTDASH_PARAM_DNS_RESOLVER:-https://1.1.1.1/dns-query}
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
 

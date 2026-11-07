@@ -20,10 +20,20 @@ leaving it to Xray's rule that the first outbound is the default; UDP the
 upstream cannot relay is blocked before it.
 */ -}}
 {{- $domain := required "install with --domain" .Installation.Domain -}}
+{{- /* resolve=gateway: names are resolved here, over DoH that itself goes out
+through the upstream, and the upstream is handed addresses only, so it never
+learns the hostnames. ForceIP, not UseIP: UseIP falls back to sending the name
+when resolution fails. IPOnDemand resolves before the routing rules, so a name
+that points at a private address is blocked like the address. resolve=upstream
+hands the upstream the names, as before. */ -}}
+{{- $gateway := eq .Parameters.resolve "gateway" -}}
 {{- $xdns := .Parameters.xdns_domain -}}
 {{- if not (contains $xdns ".") }}{{ $xdns = printf "%s.%s" $xdns $domain }}{{ end -}}
 {
   "log": {"loglevel": "{{ .Parameters.log_level }}", "access": "none", "dnsLog": false},
+{{- if $gateway }}
+  "dns": {"servers": ["{{ .Parameters.dns_resolver }}"], "queryStrategy": "UseIP", "disableFallback": true, "tag": "dns"},
+{{- end }}
   "inbounds": [
     {
       "tag": "reality",
@@ -88,12 +98,15 @@ upstream cannot relay is blocked before it.
     }
   ],
   "outbounds": [
-    {"tag": "upstream", "protocol": "socks", "settings": {"address": "gate", "port": 1080}},
+    {"tag": "upstream", "protocol": "socks", "settings": {"address": "gate", "port": 1080}{{ if $gateway }}, "targetStrategy": "ForceIPv4v6"{{ end }}},
     {"tag": "block", "protocol": "blackhole"}
   ],
   "routing": {
-    "domainStrategy": "AsIs",
+    "domainStrategy": "{{ if $gateway }}IPOnDemand{{ else }}AsIs{{ end }}",
     "rules": [
+{{- if $gateway }}
+      {"inboundTag": ["dns"], "outboundTag": "upstream"},
+{{- end }}
       {"ip": ["geoip:private"], "outboundTag": "block"},
       {"protocol": ["bittorrent"], "outboundTag": "block"}
       {{- if not (and (eq (print .Parameters.upstream_udp) "true") (eq .Parameters.upstream_protocol "socks")) }},

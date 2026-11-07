@@ -24,7 +24,7 @@ requests=${BENCH_REQUESTS:-20}
 transfers=${BENCH_TRANSFERS:-3}
 delays=${BENCH_DELAYS:-0 100:30 250:50}
 losses=${BENCH_LOSSES:-0 2 5}
-target=http://target:8000
+target=http://11.99.0.10:8000
 log() { echo "bench: $*" >&2; }
 die() { log "$*"; exit 1; }
 

@@ -61,7 +61,7 @@ check() { # <name> <socks port>
   sudo docker run -d --name "dotdash-rig-$1" --network host \
     -v "${dir}/$1:/etc/xray:ro" -v "${dir}/root.pem:/ca/root.pem:ro" "${xray}" >/dev/null
   got=$(curl -fsS --max-time 30 --retry 5 --retry-delay 2 --retry-all-errors \
-    --socks5-hostname "127.0.0.1:$2" http://target:8000/) \
+    --socks5-hostname "127.0.0.1:$2" http://11.99.0.10:8000/) \
     || { sudo docker logs "dotdash-rig-$1" 2>&1 | tail -5 >&2; die "$1: no answer through the tunnel"; }
   [ "${got}" = ok ] || die "$1: unexpected answer through the tunnel"
   echo "10-clients.sh: $1 ok"
@@ -83,7 +83,7 @@ rig_config() { # <socks port>
         | (if .tag == "xdns"
            then .streamSettings.finalmask.udp[0].settings.resolvers = [{addrs: ["udp://127.0.0.1:53"]}]
            else . end))
-    | .observatory.probeUrl = "http://target:8000/" | .observatory.probeInterval = "5s"'
+    | .observatory.probeUrl = "http://11.99.0.10:8000/" | .observatory.probeInterval = "5s"'
 }
 config_check() { # <name> <socks port> <servers>: client-config's config with those servers
   local out config

@@ -92,6 +92,17 @@ parameters:
     default: 900
     description: mKCP packet size the DNS tunnel answers with; must fit the EDNS0 size resolvers on the path advertise (1232 is common, lower it if replies are lost)
     services: [xray]
+  resolve:
+    type: enum
+    values: [gateway, upstream]
+    default: gateway
+    description: "Who turns hostnames into addresses. gateway: this server, over dns_resolver, which itself goes out through the upstream, so the upstream sees addresses only; a name resolving to a private address is blocked. upstream: the upstream, which then sees every hostname"
+    services: [xray]
+  dns_resolver:
+    type: string
+    default: https://1.1.1.1/dns-query
+    description: "The DNS-over-HTTPS server resolve=gateway asks, through the upstream; it sees the names, the upstream does not. Only https:// URLs are accepted"
+    services: [xray]
   healthcheck_expect:
     type: string
     default: ".*"
