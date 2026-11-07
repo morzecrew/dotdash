@@ -12,7 +12,7 @@ if out=$(sudo morzer doctor 2>&1); then
   sudo docker start canary-rig-server >/dev/null
   die "doctor passes with the server stopped"
 fi
-grep -qE '^ *x this machine reaches the internet through dotdash' <<<"${out}" \
+grep -qF 'cannot reach the internet through dotdash' <<<"${out}" \
   || die "doctor failed, but not on the canary's check: ${out}"
 sudo docker start canary-rig-server >/dev/null
 for _ in $(seq 12); do

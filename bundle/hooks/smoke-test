@@ -6,6 +6,7 @@
 set -euo pipefail
 
 port=${DOTDASH_PARAM_HTTPS_PORT:?}
+domain=${DOTDASH_DOMAIN:?}
 project=${DOTDASH_COMPOSE_PROJECT:-dotdash}
 
 if ! command -v curl >/dev/null; then
@@ -16,8 +17,6 @@ fi
 caddy=$(docker ps -q --filter "label=com.docker.compose.project=$project" \
   --filter label=com.docker.compose.service=caddy | sed -n 1p)
 [ -n "$caddy" ] || { echo "no running caddy container in project $project" >&2; exit 1; }
-# A hook is given no domain; the one Caddy serves is in its environment.
-domain=$(docker exec "$caddy" printenv DOMAIN)
 
 # With cert_issuer=internal "trusted" means signed by Caddy's own root.
 ca=()

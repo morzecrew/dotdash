@@ -26,13 +26,12 @@ runtimes:
       project: dotdash
 
 compatibility:
-  # The manager this bundle is verified and rehearsed with.
-  min_manager_version: "0.12.0"
+  # The manager this bundle is verified and rehearsed with, and the first that
+  # reads `database: none`.
+  min_manager_version: "0.13.0"
   rollback_safe: true
-  # dotdash keeps no database. morzer installs a release unattended only if it
-  # declares the schema its migrations leave, so 1 stands for "none" and never
-  # changes.
-  database_schema_produces: 1
+  # No database, which an unattended update needs declared.
+  database: none
 
 requirements:
   architectures: [amd64, arm64]
@@ -165,18 +164,9 @@ tasks:
 health:
   checks:
     # Xray's own healthcheck fetches healthcheck_url through the upstream, so
-    # "healthy" means the whole egress path works, not that a process is up.
+    # "healthy" means the whole egress path works, not that a process is up,
+    # and `doctor` fails while it does not.
     - {name: services, type: command, command: ["hooks/healthy"], timeout: 30s}
-
-# The upstream probe again, fatal, so `doctor` fails as an error and notifies
-# when egress breaks.
-preflight:
-  egress:
-    description: Xray reaches the internet through the upstream proxy
-    command: [hooks/egress]
-    fatal: true
-    timeout: 2m
-    remedy: check the upstream proxy's address, credentials and balance
 
 backup:
   volumes:

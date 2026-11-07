@@ -14,7 +14,7 @@ jobs:
   retention:
     # The package API is reached with GH_PAT, not GITHUB_TOKEN.
     permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@81de6be3a5769e1398beb35ab6e6004cf3fd3e96 # v0.6.0
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@c35447d9d5c1200455ab247d03932bea8120f6b6 # v0.7.0
     with:
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
     secrets:
@@ -22,7 +22,7 @@ jobs:
 
   canary:
     permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@81de6be3a5769e1398beb35ab6e6004cf3fd3e96 # v0.6.0
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@c35447d9d5c1200455ab247d03932bea8120f6b6 # v0.7.0
     with:
       package: dotdash-canary
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}

@@ -39,12 +39,12 @@ secrets:
   schema: secrets.schema.yaml
 
 compatibility:
-  # The manager this bundle is verified and rehearsed with.
-  min_manager_version: "0.12.0"
+  # The manager this bundle is verified and rehearsed with, and the first whose
+  # `doctor` fails on a failing health check.
+  min_manager_version: "0.13.0"
   rollback_safe: true
-  # No database. morzer installs a release unattended only if it declares the
-  # schema its migrations leave, so 1 stands for "none" (morzecrew/morzer#289).
-  database_schema_produces: 1
+  # No database, which an unattended update needs declared.
+  database: none
 
 requirements:
   architectures: [amd64, arm64]
@@ -86,17 +86,9 @@ images:
 health:
   checks:
     # Each service fetches probe_url through dotdash, up to three tries.
-    - {name: services, type: command, command: ["hooks/healthy"], timeout: 2m}
-
-# The same probe, fatal, so `doctor` fails as an error and notifies a target
-# at its default level when this machine cannot get out through dotdash.
-preflight:
-  reachable:
-    description: this machine reaches the internet through dotdash
-    command: [hooks/healthy]
-    fatal: true
-    timeout: 2m
-    remedy: check the dotdash server, then this network's path to it
+    # `doctor` runs it too, and fails, so a notify target at its default level
+    # hears when this machine cannot get out through dotdash.
+    - {name: through-dotdash, type: command, command: ["hooks/healthy"], timeout: 2m}
 
 retention:
   releases: 3

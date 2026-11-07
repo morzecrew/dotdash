@@ -9,13 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- morzer bundle `dotdash`: Xray's VLESS + REALITY (Vision) inbound on 443 in
-  front of a Caddy cover site with a Let's Encrypt certificate, VLESS + XHTTP
-  behind one secret path of that site for a CDN in front, and an optional
-  VLESS + XDNS DNS tunnel on UDP/53 (`xdns` profile, zone `t.<domain>` by
-  default). All egress goes through
-  an ISP/residential SOCKS5 or HTTP proxy, optionally over TLS, with no direct
-  fallback.
+- morzer bundle `dotdash`, for morzer 0.13.0 or later: Xray's VLESS + REALITY
+  (Vision) inbound on 443 in front of a Caddy cover site with a Let's Encrypt
+  certificate, VLESS + XHTTP behind one secret path of that site for a CDN in
+  front, and an optional VLESS + XDNS DNS tunnel on UDP/53 (`xdns` profile,
+  zone `t.<domain>` by default), which `config set installation.profile=xdns`
+  also turns on after install. All egress goes through an ISP/residential
+  SOCKS5 or HTTP proxy, optionally over TLS, with no direct fallback.
 - Health: Xray is healthy only while a URL fetched through the upstream proxy
   answers; the smoke test checks that port 443 serves the site with a trusted
   certificate.
@@ -32,9 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - One VLESS id per device: `vless_clients` holds one `<uuid> [name]` per line,
   so deleting a line revokes that device alone. `client-config` prints every
   client's settings, or one client's when given its name.
-- Unattended updates: the manifest declares `database_schema_produces`, which
-  morzer's `update.auto_apply` requires before it installs a release on its
-  own. The README covers turning them on, offsite backups and alerts.
+- Unattended updates: the manifest declares that dotdash keeps no database
+  (`compatibility.database: none`), which morzer's `update.auto_apply`
+  requires before it installs a release on its own. The README covers turning them on, offsite backups and alerts.
 - `site_dir` (default `/srv/dotdash`): Caddy serves your own cover site from
   it wherever it has the requested file. The bundled page is now titled with
   the domain, so no two servers serve the same page.
@@ -42,8 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   links for each and an Xray config that uses whichever answers fastest.
 - README: QR codes for the share links.
 - `doctor` fails, so a notify target at its default level hears it, when Xray
-  cannot reach the internet through the upstream: a fatal preflight check
-  probes it live. An unhealthy container alone only warns there.
+  cannot reach the internet through the upstream, since Xray's healthcheck
+  then fails.
 - `healthcheck_expect`: a regular expression the healthcheck response must
   match. With `healthcheck_url` at an IP-echo service, a changed exit IP makes
   Xray unhealthy and fails `doctor`.

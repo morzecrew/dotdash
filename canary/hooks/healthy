@@ -1,17 +1,10 @@
 #!/usr/bin/env bash
 # Healthy when each running service, reality and under the xhttp profile xhttp,
 # fetches probe_url through dotdash, in up to three tries so one lost request
-# is not an alert. The probe runs here rather than as a Docker healthcheck:
-# morzer reads an unhealthy container as not running, which only warns and
-# skips the health check.
+# is not an alert. It probes live, so `doctor` reports the path as it is now.
+# `doctor` gives health checks 30s in all: a try times out after 7s
+# (XRAY_HEALTHCHECK_TIMEOUT), so three fit with the pauses between them.
 set -euo pipefail
-
-# Also the fatal preflight check, so a broken path fails `doctor` as an error
-# (the health check only warns there). Before an operation it has nothing to
-# probe yet and must not block one: exit 2 passes as not applicable.
-if [ "${DOTDASH_CANARY_PHASE:-}" = preflight ] && [ "${DOTDASH_CANARY_OPERATION_TYPE:-}" != doctor ]; then
-  exit 2
-fi
 
 project=${DOTDASH_CANARY_COMPOSE_PROJECT:-dotdash-canary}
 services=$(docker compose -p "$project" ps --format '{{.Service}}')
@@ -21,7 +14,7 @@ for service in $services; do
     if out=$(docker compose -p "$project" exec -T "$service" /usr/local/bin/xray-entrypoint healthcheck 2>&1); then
       continue 2
     fi
-    [ "$try" = 3 ] || sleep 5
+    [ "$try" = 3 ] || sleep 2
   done
   echo "$service cannot reach the internet through dotdash: $out" >&2
   exit 1
