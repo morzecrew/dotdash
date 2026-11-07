@@ -154,6 +154,12 @@ tasks:
     command: ["sh", "/task/client-config.sh"]
     args: true
     timeout: 1m
+  exit-check:
+    description: "Print the IPv4 and IPv6 exits the upstream leaves from, with their network (ASN) and country, and whether they match; changes nothing"
+    service: exit-check
+    command: ["sh", "/task/exit-check.sh"]
+    args: true
+    timeout: 2m
   canary-config:
     description: "Print the init command and secrets for a dotdash-canary machine acting as the client named after -- (output is credentials)"
     service: client-config
