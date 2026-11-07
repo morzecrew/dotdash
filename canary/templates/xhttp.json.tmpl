@@ -1,0 +1,16 @@
+{
+  "log": {"loglevel": "warning", "access": "none"},
+  "inbounds": [{"tag": "probe", "listen": "127.0.0.1", "port": 10809, "protocol": "http"}],
+  "outbounds": [{
+    "tag": "dotdash", "protocol": "vless",
+    "settings": {
+      "address": "{{ required "set address" .Parameters.address }}", "port": {{ .Parameters.port }},
+      "id": {"$file": "/run/secrets/vless_id"},
+      "encryption": {"$file": "/run/secrets/vless_encryption"}
+    },
+    "streamSettings": {"network": "xhttp", "security": "tls",
+      "tlsSettings": {"serverName": "{{ .Parameters.server }}", "alpn": ["h2"], "fingerprint": "chrome"},
+      "xhttpSettings": {"path": {"$file": "/run/secrets/xhttp_path"}, "host": "{{ .Parameters.server }}", "mode": "auto"}
+    }
+  }]
+}

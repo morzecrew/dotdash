@@ -47,9 +47,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `healthcheck_expect`: a regular expression the healthcheck response must
   match. With `healthcheck_url` at an IP-echo service, a changed exit IP makes
   Xray unhealthy and fails `doctor`.
-- `canary-config` task: the init command and secrets for a
-  [dotdash-canary](https://github.com/morzecrew/dotdash-canary) machine, which
-  checks from inside a network that dotdash is still reachable.
+- The canary, a second bundle in `canary/` published as
+  `ghcr.io/morzecrew/dotdash-canary` (releases tagged `canary-vX.Y.Z`): a
+  dotdash client on a machine inside a network, whose `doctor` fails when it
+  cannot fetch `probe_url` through dotdash. The `canary-config` task prints its
+  init command and secrets.
 - README: moving to a new server from the recovery key and a backup, with the
   client links unchanged.
 - `scripts/bootstrap.sh` prepares a fresh Debian or Ubuntu server: Docker and

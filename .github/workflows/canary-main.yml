@@ -1,0 +1,61 @@
+# The canary's dev channel: build, sign and smoke-test every change to canary/
+# on main, then publish ghcr.io/morzecrew/dotdash-canary:<version> and move
+# :main. The jobs are bundle-ci's.
+name: canary-main
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - canary/**
+      - .github/canary-smoke.d/**
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: main-canary
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    permissions:
+      contents: read
+      packages: read
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@668e3a3c984bf4bb037fa5e8f2227e54285fc4e0 # main after bundle-ci#18
+    with:
+      ref: ${{ github.sha }}
+      channel: main
+      signing: dev
+      # Nothing moved since the last run: the version is already published.
+      on-existing: skip
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+      bundle-dir: canary
+      version-paths: canary
+      package: dotdash-canary
+      tag-prefix: canary-v
+      smoke-hooks: .github/canary-smoke.d
+      components: ""
+      probe-paths: ""
+      operator-secrets: vless_id vless_encryption reality_short_id xhttp_path
+      init-args: >-
+        --set server=www.gstatic.com --set address=rig.invalid
+        --set reality_public_key=set-by-the-rig
+      dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}
+      bundle-ci-ref: 668e3a3c984bf4bb037fa5e8f2227e54285fc4e0
+    secrets:
+      minisign-key: ${{ secrets.MINISIGN_DEV_KEY }}
+
+  publish:
+    needs: bundle
+    if: needs.bundle.outputs.proceed == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@668e3a3c984bf4bb037fa5e8f2227e54285fc4e0 # main after bundle-ci#18
+    with:
+      version: ${{ needs.bundle.outputs.version }}
+      archive: ${{ needs.bundle.outputs.archive }}
+      channel: main
+      package: dotdash-canary
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}

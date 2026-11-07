@@ -1,0 +1,66 @@
+# The canary's stable channel: a tag canary-vX.Y.Z on main builds, signs and
+# smoke-tests that commit's canary/, publishes dotdash-canary:X.Y.Z and moves
+# :stable. dotdash's own release.yml (tags v*) never sees these tags. The jobs
+# are bundle-ci's.
+name: canary-release
+
+on:
+  push:
+    tags: ["canary-v*"]
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    permissions:
+      contents: read
+    uses: morzecrew/bundle-ci/.github/workflows/guard.yml@668e3a3c984bf4bb037fa5e8f2227e54285fc4e0 # main after bundle-ci#18
+    with:
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+      tag-prefix: canary-v
+
+  bundle:
+    needs: guard
+    permissions:
+      contents: read
+      packages: read
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@668e3a3c984bf4bb037fa5e8f2227e54285fc4e0 # main after bundle-ci#18
+    with:
+      ref: ${{ github.sha }}
+      version: ${{ needs.guard.outputs.version }}
+      channel: stable
+      signing: release
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+      bundle-dir: canary
+      version-paths: canary
+      package: dotdash-canary
+      tag-prefix: canary-v
+      smoke-hooks: .github/canary-smoke.d
+      components: ""
+      probe-paths: ""
+      operator-secrets: vless_id vless_encryption reality_short_id xhttp_path
+      init-args: >-
+        --set server=www.gstatic.com --set address=rig.invalid
+        --set reality_public_key=set-by-the-rig
+      release-pubkey: ${{ vars.MINISIGN_RELEASE_PUBKEY }}
+      bundle-ci-ref: 668e3a3c984bf4bb037fa5e8f2227e54285fc4e0
+    secrets:
+      minisign-key: ${{ secrets.MINISIGN_RELEASE_KEY }}
+
+  publish:
+    needs: bundle
+    if: needs.bundle.outputs.proceed == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@668e3a3c984bf4bb037fa5e8f2227e54285fc4e0 # main after bundle-ci#18
+    with:
+      version: ${{ needs.bundle.outputs.version }}
+      archive: ${{ needs.bundle.outputs.archive }}
+      channel: stable
+      package: dotdash-canary
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}

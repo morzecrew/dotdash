@@ -1,0 +1,18 @@
+{
+  "log": {"loglevel": "warning", "access": "none"},
+  "inbounds": [{"tag": "probe", "listen": "127.0.0.1", "port": 10809, "protocol": "http"}],
+  "outbounds": [{
+    "tag": "dotdash", "protocol": "vless",
+    "settings": {
+      "address": "{{ required "set address" .Parameters.address }}", "port": {{ .Parameters.port }},
+      "id": {"$file": "/run/secrets/vless_id"},
+      "encryption": {"$file": "/run/secrets/vless_encryption"},
+      "flow": "xtls-rprx-vision"
+    },
+    "streamSettings": {"network": "raw", "security": "reality", "realitySettings": {
+      "serverName": "{{ required "set server" .Parameters.server }}", "fingerprint": "chrome",
+      "password": "{{ required "set reality_public_key" .Parameters.reality_public_key }}",
+      "shortId": {"$file": "/run/secrets/reality_short_id"}
+    }}
+  }]
+}
