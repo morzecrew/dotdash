@@ -1,5 +1,6 @@
 # The stable channel: a tag `vX.Y.Z` on main builds, signs and smoke-tests
-# that commit's bundle, publishes `:X.Y.Z` and moves `:stable`. No image is
+# that commit's bundle, publishes `:X.Y.Z`, moves `:stable` and creates the
+# GitHub release from CHANGELOG.md, the archive attached. No image is
 # tagged: dotdash's images are third-party pins. The jobs are bundle-ci's.
 name: release
 
@@ -17,7 +18,7 @@ jobs:
   guard:
     permissions:
       contents: read
-    uses: morzecrew/bundle-ci/.github/workflows/guard.yml@c35447d9d5c1200455ab247d03932bea8120f6b6 # v0.7.0
+    uses: morzecrew/bundle-ci/.github/workflows/guard.yml@c87702ae668b057166cb6a713fbcfd288d979a6c # v0.8.0
     with:
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
 
@@ -26,7 +27,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@c35447d9d5c1200455ab247d03932bea8120f6b6 # v0.7.0
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@c87702ae668b057166cb6a713fbcfd288d979a6c # v0.8.0
     with:
       ref: ${{ github.sha }}
       version: ${{ needs.guard.outputs.version }}
@@ -51,9 +52,19 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@c35447d9d5c1200455ab247d03932bea8120f6b6 # v0.7.0
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@c87702ae668b057166cb6a713fbcfd288d979a6c # v0.8.0
     with:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}
       channel: stable
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+
+  github-release:
+    needs: [bundle, publish]
+    permissions:
+      contents: write
+    uses: morzecrew/bundle-ci/.github/workflows/github-release.yml@c87702ae668b057166cb6a713fbcfd288d979a6c # v0.8.0
+    with:
+      version: ${{ needs.bundle.outputs.version }}
+      archive: ${{ needs.bundle.outputs.archive }}
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}

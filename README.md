@@ -209,9 +209,9 @@ morzer (`scripts/bootstrap.sh`), and no open port.
 
 `doctor` then fails on `health endpoints respond` when three tries in a row
 cannot fetch `probe_url` through dotdash, and each
-failing check notifies again until it is fixed. The canary's releases are tags
-`canary-vX.Y.Z`; its channels are `dotdash-canary:main` and `:stable`, signed
-with this repository's keys.
+failing check notifies again until it is fixed. The canary is released with
+dotdash, at the same version: its channels are `dotdash-canary:main` and
+`:stable`, signed with this repository's keys.
 
 ### Moving to a new server
 
@@ -262,7 +262,8 @@ Check a change with `morzer release verify ./bundle --render-check`.
 [bundle-ci](https://github.com/morzecrew/bundle-ci) builds, signs and
 smoke-tests the bundle on every pull request and push. A push to `main`
 publishes `:main`, and a tag `vX.Y.Z` on `main` publishes `:X.Y.Z` and
-`:stable`. The smoke install (`.github/smoke.d`) runs a stand-in upstream
+`:stable` for both bundles and creates one GitHub release from `CHANGELOG.md`
+with both signed archives attached. The smoke install (`.github/smoke.d`) runs a stand-in upstream
 proxy and `cert_issuer=internal`, then connects clients over REALITY and XHTTP.
 Renovate opens a pull request when a pinned image's tag or digest moves, so the
 same smoke test gates each bump.
