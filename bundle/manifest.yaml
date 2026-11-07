@@ -99,6 +99,11 @@ parameters:
     default: acme
     description: "Where the site certificate comes from: acme is Let's Encrypt, over ports 80 and 443; internal is Caddy's own CA, for a machine the internet cannot reach"
     services: [caddy]
+  site_dir:
+    type: string
+    default: /srv/dotdash
+    description: "Host directory of your own cover site, served in place of the bundled page; files must be readable by uid 65532"
+    services: [caddy]
   log_level:
     type: enum
     values: [debug, info, warning, error, none]

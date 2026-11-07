@@ -58,7 +58,10 @@ services:
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ${DOTDASH_RELEASE_DIR:?set by morzer}/site:/srv:ro
+      # The bundled page, and the operator's own site, served instead when it
+      # has the requested file (the Caddyfile decides).
+      - ${DOTDASH_RELEASE_DIR:?set by morzer}/site:/srv/default:ro
+      - ${DOTDASH_PARAM_SITE_DIR:-/srv/dotdash}:/srv/own:ro
       # The ACME account and certificates. The image's /data/caddy is mode
       # 1777, and a fresh volume copies it, so uid 65532 can write there.
       - caddy_data:/data

@@ -43,8 +43,19 @@ http://127.0.0.1:8081 {
 		}
 	}
 
+	# The operator's site (site_dir) wherever it has the file; otherwise the
+	# bundled page, titled with the domain so no two servers serve one body.
+	@own file {
+		root /srv/own
+		try_files {path} {path}/index.html
+	}
+	handle @own {
+		root * /srv/own
+		file_server
+	}
 	handle {
-		root * /srv
+		root * /srv/default
+		templates
 		file_server
 	}
 }
