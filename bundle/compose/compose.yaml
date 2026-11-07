@@ -28,6 +28,7 @@ services:
       # routing and upstream as client traffic.
       XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:10809
       XRAY_HEALTHCHECK_URL: ${DOTDASH_PARAM_HEALTHCHECK_URL:-https://www.gstatic.com/generate_204}
+      XRAY_HEALTHCHECK_EXPECT: ${DOTDASH_PARAM_HEALTHCHECK_EXPECT:-.*}
     volumes:
       - ${DOTDASH_CONFIG_FILE:-/etc/dotdash/application.yaml}:/etc/xray/config.json:ro
     tmpfs:

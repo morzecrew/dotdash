@@ -93,6 +93,11 @@ parameters:
     default: 900
     description: mKCP packet size the DNS tunnel answers with; must fit the EDNS0 size resolvers on the path advertise (1232 is common, lower it if replies are lost)
     services: [xray]
+  healthcheck_expect:
+    type: string
+    default: ".*"
+    description: "Regular expression (RE2) the healthcheck response must match. With healthcheck_url at an IP-echo service, the upstream's exit IP anchored, such as ^203\\.0\\.113\\.7\\s*$, makes Xray unhealthy when the exit IP changes"
+    services: [xray]
   cert_issuer:
     type: enum
     values: [acme, internal]
@@ -121,7 +126,7 @@ parameters:
     services: [xray]
 
 images:
-  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:99597f9e903abdd6d72e591f6afb5d1eddf6f843c101113cba871e6d0e964ce2
+  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:a9a39feaeab2f83a0b76459755b9aa92d54e5f30030b5f818e322e3e5f7a8f81
   caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
 
 # Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);
@@ -156,6 +161,16 @@ health:
     # Xray's own healthcheck fetches healthcheck_url through the upstream, so
     # "healthy" means the whole egress path works, not that a process is up.
     - {name: services, type: command, command: ["hooks/healthy"], timeout: 30s}
+
+# The upstream probe again, fatal, so `doctor` fails as an error and notifies
+# when egress breaks.
+preflight:
+  egress:
+    description: Xray reaches the internet through the upstream proxy
+    command: [hooks/egress]
+    fatal: true
+    timeout: 2m
+    remedy: check the upstream proxy's address, credentials and balance
 
 backup:
   volumes:
