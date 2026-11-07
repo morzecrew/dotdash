@@ -1,0 +1,52 @@
+{{- /*
+The gate: the one container with a route out. Xray itself sits on internal
+networks only, where a container can neither publish a port nor reach
+anything beyond the other containers, so it cannot send traffic anywhere
+directly whatever its config says. The gate carries what has to cross:
+
+  - in: the public TLS port (and with the DNS tunnel UDP/53) to Xray, byte
+    for byte (dokodemo-door);
+  - out: Xray's SOCKS hop to the upstream proxy, which the gate dials with
+    the upstream's credentials. Xray never holds them.
+
+Nothing else is routed: the freedom outbound carries only the public inbounds,
+whose destination is fixed to Xray, and everything else is blocked.
+*/ -}}
+{
+  "log": {"loglevel": "{{ .Parameters.log_level }}", "access": "none", "dnsLog": false},
+  "inbounds": [
+    {"tag": "public-tls", "listen": "0.0.0.0", "port": 443, "protocol": "dokodemo-door",
+     "settings": {"address": "xray", "port": 443, "network": "tcp"}},
+{{- if eq .Profile "xdns" }}
+    {"tag": "public-dns", "listen": "0.0.0.0", "port": 5353, "protocol": "dokodemo-door",
+     "settings": {"address": "xray", "port": 5353, "network": "udp"}},
+{{- end }}
+    {"tag": "egress", "listen": "0.0.0.0", "port": 1080, "protocol": "socks",
+     "settings": {"auth": "noauth", "udp": {{ and (eq (print .Parameters.upstream_udp) "true") (eq .Parameters.upstream_protocol "socks") }}}}
+  ],
+  "outbounds": [
+    {
+      "tag": "upstream",
+      "protocol": "{{ .Parameters.upstream_protocol }}",
+      "settings": {
+        "address": "{{ .Parameters.upstream_host }}",
+        "port": {{ .Parameters.upstream_port }},
+        "user": {"$file": "/run/secrets/upstream_username"},
+        "pass": {"$file": "/run/secrets/upstream_password"}
+      }
+{{- if eq (print .Parameters.upstream_tls) "true" }},
+      "streamSettings": {"security": "tls", "tlsSettings": {"serverName": "{{ .Parameters.upstream_host }}"}}
+{{- end }}
+    },
+    {"tag": "inside", "protocol": "freedom"},
+    {"tag": "block", "protocol": "blackhole"}
+  ],
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+      {"inboundTag": ["public-tls"{{ if eq .Profile "xdns" }}, "public-dns"{{ end }}], "outboundTag": "inside"},
+      {"inboundTag": ["egress"], "outboundTag": "upstream"},
+      {"network": "tcp,udp", "outboundTag": "block"}
+    ]
+  }
+}

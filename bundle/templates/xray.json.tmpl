@@ -11,7 +11,10 @@ else (browsers, scanners, ACME, a CDN) is relayed to Caddy, which serves the
 cover site with its own certificate and passes the XHTTP path back here.
 
 There is no direct (freedom) outbound: if the upstream proxy is down, traffic
-stops rather than leaving from this server's own IP. The last routing rule
+stops rather than leaving from this server's own IP. Nor could there be one:
+this container sits on internal networks only, and its one way out is the
+gate (gate.json.tmpl), which dials the upstream with the credentials this
+container never holds. The last routing rule
 names the upstream as the default outright, after the blocks, rather than
 leaving it to Xray's rule that the first outbound is the default; UDP the
 upstream cannot relay is blocked before it.
@@ -85,19 +88,7 @@ upstream cannot relay is blocked before it.
     }
   ],
   "outbounds": [
-    {
-      "tag": "upstream",
-      "protocol": "{{ .Parameters.upstream_protocol }}",
-      "settings": {
-        "address": "{{ .Parameters.upstream_host }}",
-        "port": {{ .Parameters.upstream_port }},
-        "user": {"$file": "/run/secrets/upstream_username"},
-        "pass": {"$file": "/run/secrets/upstream_password"}
-      }
-{{- if eq (print .Parameters.upstream_tls) "true" }},
-      "streamSettings": {"security": "tls", "tlsSettings": {"serverName": "{{ .Parameters.upstream_host }}"}}
-{{- end }}
-    },
+    {"tag": "upstream", "protocol": "socks", "settings": {"address": "gate", "port": 1080}},
     {"tag": "block", "protocol": "blackhole"}
   ],
   "routing": {

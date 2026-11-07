@@ -50,33 +50,33 @@ parameters:
     type: port
     default: 443
     description: Host port of the REALITY inbound; anything without its key reaches the cover site
-    services: [xray]
+    services: [gate]
   upstream_protocol:
     type: enum
     values: [socks, http]
     default: socks
     description: Protocol of the ISP/residential proxy every client connection leaves through
-    services: [xray]
+    services: [xray, gate]
   upstream_host:
     type: string
     required: true
     description: Host name or IP of the ISP/residential proxy
-    services: [xray]
+    services: [gate]
   upstream_port:
     type: port
     required: true
     description: Port of the ISP/residential proxy
-    services: [xray]
+    services: [gate]
   upstream_tls:
     type: bool
     default: false
     description: Connect to the upstream proxy over TLS (an HTTPS or SOCKS-over-TLS proxy), so its credentials and your destinations do not cross the network in clear
-    services: [xray]
+    services: [gate]
   upstream_udp:
     type: bool
     default: false
     description: Relay client UDP through a SOCKS5 upstream that supports UDP ASSOCIATE; otherwise UDP is dropped
-    services: [xray]
+    services: [xray, gate]
   xdns_domain:
     type: string
     default: t
@@ -86,7 +86,7 @@ parameters:
     type: string
     default: 0.0.0.0
     description: Host address UDP/53 is published on for the DNS tunnel
-    services: [xray]
+    services: [gate]
   xdns_mtu:
     type: int
     default: 900
@@ -117,7 +117,7 @@ parameters:
     values: [debug, info, warning, error, none]
     default: error
     description: "Xray error-log verbosity; the access log is always off. warning and below name the destinations of failed connections, so keep them for debugging"
-    services: [xray]
+    services: [xray, gate]
   healthcheck_url:
     type: string
     default: https://www.gstatic.com/generate_204
@@ -137,6 +137,9 @@ images:
 configuration:
   - template: templates/xray.json.tmpl
     target: /etc/dotdash/application.yaml
+    mode: "0644"
+  - template: templates/gate.json.tmpl
+    target: /etc/dotdash/gate.json
     mode: "0644"
 
 secrets:

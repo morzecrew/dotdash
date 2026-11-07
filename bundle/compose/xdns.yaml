@@ -1,7 +1,9 @@
 # The xdns profile (`morzer init --profile xdns`): the DNS tunnel on UDP/53.
-# The inbound itself is in the Xray template, under the same profile.
+# The inbound itself is in the Xray template, under the same profile, and the
+# gate's forward in gate.json.tmpl.
 services:
-  xray:
+  # Published by the gate, which forwards it to Xray's inbound.
+  gate:
     ports:
       - "${DOTDASH_PARAM_XDNS_BIND:-0.0.0.0}:53:5353/udp"
 

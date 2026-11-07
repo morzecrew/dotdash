@@ -6,6 +6,9 @@
 # (The rendered config's invariants are hooks/policy's, tested in
 # 25-policy.sh.)
 #
+# 0. Xray's own network namespace reaches nothing outside the project, not
+#    even the upstream; the gate's reaches the upstream. Whatever Xray's
+#    config said, it would have no route out.
 # 1. A destination the server reaches directly (Caddy's port 80, on the
 #    bundle's network) is unreachable through the tunnel, since the upstream
 #    cannot resolve it: no direct path exists.
@@ -27,6 +30,22 @@ through() { # <socks port> <url>: fetch through a client
   curl -fsS -o /dev/null --max-time 15 --socks5-hostname "127.0.0.1:$1" "$2"
 }
 caddy=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' caddy | sed -n 1p)
+host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
+reaches() { # <service> <host> <port>
+  sudo docker run --rm --network "container:$(service_container "$1")" "${caddy}" nc -z -w 3 "$2" "$3" 2>/dev/null
+}
+# A release from before the gate has Xray on a network with a route out.
+if sudo test -f /etc/dotdash/gate.json; then
+  reaches gate "${host}" 18080 || die "the control failed: the gate does not reach the upstream on ${host}:18080"
+  for dest in "${host} 18080" "1.1.1.1 443"; do
+    # shellcheck disable=SC2086 # host and port
+    if reaches xray ${dest}; then
+      die "Xray's network reaches ${dest% *}:${dest#* } directly; it should have no route out"
+    fi
+  done
+  echo "20-fail-closed.sh: Xray's network has no route out; only the gate reaches the upstream"
+fi
+
 sudo docker run --rm --network "container:$(service_container xray)" "${caddy}" nc -z -w 3 caddy 80 \
   || die "the control failed: Xray's network does not reach caddy:80 directly"
 for port in 11080 11081; do

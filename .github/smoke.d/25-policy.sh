@@ -9,25 +9,30 @@ set -euo pipefail
 
 release=/opt/dotdash/current
 # A release from before the policy check has nothing to check.
-if ! sudo test -x "${release}/hooks/policy"; then
-  echo "${0##*/}: skipped, the installed release predates it"
+if ! sudo test -x "${release}/hooks/policy" || ! sudo test -f /etc/dotdash/gate.json; then
+  echo "${0##*/}: skipped, the installed release predates it (or the gate)"
   exit 0
 fi
 config=/etc/dotdash/application.yaml
-policy() { # [config]: hooks/policy's output; its status
+gate=/etc/dotdash/gate.json
+policy() { # [config] [gate config]: hooks/policy's output; its status
   sudo env DOTDASH_RELEASE_DIR="${release}" DOTDASH_CONFIG_FILE="${1:-${config}}" \
-    DOTDASH_PARAM_HTTPS_PORT=443 DOTDASH_COMPOSE_PROJECT=dotdash "${release}/hooks/policy" 2>&1
+    DOTDASH_GATE_CONFIG="${2:-${gate}}" DOTDASH_PARAM_HTTPS_PORT=443 DOTDASH_COMPOSE_PROJECT=dotdash \
+    "${release}/hooks/policy" 2>&1
 }
 
 out=$(policy) || die "policy fails on the running deployment: ${out}"
 echo "25-policy.sh: the running deployment keeps every invariant"
 
 work=$(mktemp -d)
-caught() { # <jq edit> <phrase the violation must carry>
-  sudo jq "$1" "${config}" | tee "${work}/config.json" >/dev/null
+caught() { # <jq edit> <phrase the violation must carry> [gate]: edit Xray's config, or the gate's
   local out
-  if out=$(policy "${work}/config.json"); then
-    die "policy passes a config with: $1"
+  if [ "${3:-}" = gate ]; then
+    sudo jq "$1" "${gate}" | tee "${work}/gate.json" >/dev/null
+    out=$(policy "${config}" "${work}/gate.json") && die "policy passes a gate config with: $1"
+  else
+    sudo jq "$1" "${config}" | tee "${work}/config.json" >/dev/null
+    out=$(policy "${work}/config.json") && die "policy passes a config with: $1"
   fi
   grep -qF -- "$2" <<<"${out}" || die "policy failed on '$1', but not saying '$2': ${out}"
 }
@@ -40,6 +45,11 @@ caught '(.inbounds[] | select(.tag == "probe")).listen = "0.0.0.0"' "listens bey
 caught '(.inbounds[] | select(.tag == "reality")).settings.decryption = "none"' "no VLESS decryption"
 caught '(.inbounds[] | select(.tag == "xhttp")).settings.flow = "xtls-rprx-vision"' "sets a flow on XHTTP"
 caught '.inbounds += [{tag: "debug", listen: "127.0.0.1", port: 9999, protocol: "http"}]' "unexpected inbounds"
+caught '.outbounds[0].settings.address = "proxy.example"' "not a SOCKS hop to the gate"
+caught '(.inbounds[] | select(.tag == "public-tls")).settings.address = "1.1.1.1"' "forwards public-tls to 1.1.1.1" gate
+caught '.routing.rules = [{network: "tcp,udp", outboundTag: "inside"}] + .routing.rules' "out directly" gate
+caught '.inbounds += [{tag: "debug", listen: "0.0.0.0", port: 9999, protocol: "http"}]' "unexpected inbounds" gate
+caught '.routing.rules |= .[:-1]' "does not block what its rules leave" gate
 echo "25-policy.sh: each injected violation is named"
 
 caddy=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' caddy | sed -n 1p)
@@ -49,6 +59,13 @@ out=$(policy) && { sudo docker rm -f dotdash-rig-intruder >/dev/null; die "polic
 sudo docker rm -f dotdash-rig-intruder >/dev/null
 grep -qF "intruder publishes 10809/tcp" <<<"${out}" || die "policy missed the published 10809: ${out}"
 echo "25-policy.sh: a container publishing a port nothing should is named"
+
+xray=$(service_container xray)
+sudo docker network connect dotdash_egress "${xray}"
+out=$(policy) && { sudo docker network disconnect dotdash_egress "${xray}"; die "policy passes Xray on the egress network"; }
+sudo docker network disconnect dotdash_egress "${xray}"
+grep -qF "xray is on dotdash_egress, a network with a route out" <<<"${out}" || die "policy missed Xray on the egress network: ${out}"
+echo "25-policy.sh: Xray attached to a network with a route out is named"
 
 # Drift: the rendered file changes under the running deployment. Xray reads it
 # only at start, so nothing it does changes meanwhile.

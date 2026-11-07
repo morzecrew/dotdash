@@ -40,13 +40,13 @@ services:
     tmpfs:
       # Where the image writes the config with secrets resolved; never disk.
       - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
-    secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, upstream_username, upstream_password]
+    secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id]
     # REALITY on 443 inside too (Xray warns on any other port), as uid 65532
     # with no capabilities.
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
-    ports:
-      - "${DOTDASH_PARAM_HTTPS_PORT:-443}:443/tcp"
-    networks: [backend, egress]
+    # Internal networks only: no published port, no route out. The gate
+    # forwards the public port in and carries the way out.
+    networks: [backend, inside]
     mem_limit: 512m
     healthcheck:
       test: ["CMD", "/usr/local/bin/xray-entrypoint", "healthcheck"]
@@ -54,6 +54,39 @@ services:
       timeout: 15s
       retries: 3
       start_period: 20s
+
+  # The one container with a route out (gate.json.tmpl): the public port in to
+  # Xray, and Xray's way out to the upstream, whose credentials only it holds.
+  gate:
+    <<: *hardened
+    image: ${DOTDASH_IMAGE_XRAY:?set by morzer}
+    volumes:
+      - type: bind
+        source: /etc/dotdash/gate.json
+        target: /etc/xray/config.json
+        read_only: true
+        bind: {create_host_path: false}
+    tmpfs:
+      - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
+    secrets: [upstream_username, upstream_password]
+    sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
+    ports:
+      - "${DOTDASH_PARAM_HTTPS_PORT:-443}:443/tcp"
+    networks: [inside, egress]
+    # After Xray, not before: an update from a release where Xray published
+    # https_port itself recreates Xray first, freeing the port the gate binds.
+    # Xray's healthcheck, which goes out through the gate, passes once it runs.
+    depends_on:
+      xray:
+        condition: service_started
+    mem_limit: 256m
+    healthcheck:
+      # No proxy configured, so the image checks that Xray runs.
+      test: ["CMD", "/usr/local/bin/xray-entrypoint", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   caddy:
     <<: *hardened
@@ -132,6 +165,10 @@ networks:
   # Caddy and Xray to each other only; no route out.
   backend:
     internal: true
+  # Xray and the gate to each other only; no route out.
+  inside:
+    internal: true
+  # The gate's way out, and where the public port is published.
   egress: {}
 
 volumes:
