@@ -85,6 +85,7 @@ proxy services.
 | `xdns_mtu` | `900` | tunnel reply size; lower if replies get lost |
 | `log_level` | `warning` | Xray error log; access log is always off |
 | `healthcheck_url` | `https://www.gstatic.com/generate_204` | fetched through the upstream by the healthcheck |
+| `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (Caddy's own CA, for a machine the internet cannot reach) |
 
 Check a change with `morzer release verify ./bundle --render-check`. For
 offsite backups and alerts, configure a morzer backup target and notifications.

@@ -89,6 +89,12 @@ parameters:
     default: 900
     description: mKCP packet size the DNS tunnel answers with; must fit the EDNS0 size resolvers on the path advertise (1232 is common, lower it if replies are lost)
     services: [xray]
+  cert_issuer:
+    type: enum
+    values: [acme, internal]
+    default: acme
+    description: "Where the site certificate comes from: acme is Let's Encrypt, over ports 80 and 443; internal is Caddy's own CA, for a machine the internet cannot reach"
+    services: [caddy]
   log_level:
     type: enum
     values: [debug, info, warning, error, none]

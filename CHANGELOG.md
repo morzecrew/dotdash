@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the `xdns` profile, the XDNS outbound.
 - morzer generates every key: the REALITY key and short id, and the VLESS
   Encryption key pair, which derives from one seed (`vless_seed`).
+- `cert_issuer`: Let's Encrypt (`acme`, the default) or Caddy's own CA
+  (`internal`) for a machine the internet cannot reach.
 - One VLESS id per device: `vless_clients` holds one `<uuid> [name]` per line,
   so deleting a line revokes that device alone. `client-config` prints every
   client's settings, or one client's when given its name.

@@ -6,6 +6,9 @@
 # for the ACME HTTP-01 challenge and the redirect to HTTPS.
 {
 	admin off
+	# acme: Let's Encrypt. internal: Caddy's own CA, for a machine the
+	# internet cannot reach, such as a CI rig (the cert_issuer parameter).
+	cert_issuer {$CERT_ISSUER}
 	servers {
 		protocols h1 h2
 	}
