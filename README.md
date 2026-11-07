@@ -194,7 +194,10 @@ target at its default level hears about that and not about warnings, and it
 says which layer failed: the upstream proxy's address, its credentials, the
 destination behind it, or an exit that no longer matches `healthcheck_expect`.
 Traffic only ever leaves through the upstream: with it down, clients get
-nothing rather than this server's own address. Every apply and update, and
+nothing rather than this server's own address. Xray itself has no route out
+of the machine: it runs on internal Docker networks only, and a small gate
+container forwards the public port to it and carries its traffic to the
+upstream, holding the upstream's credentials. Every apply and update, and
 every `doctor`, checks that against what runs: the rendered Xray config has no
 way out but the upstream and accepts only listed clients, and the containers
 publish nothing beyond 80, `https_port` and 53, unprivileged. An update that

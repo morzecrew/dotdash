@@ -2,10 +2,11 @@
 # The release's health checks, one per argument:
 #
 #   cover-site  Caddy reports healthy.
-#   egress      Xray fetches healthcheck_url through the upstream, now. When it
-#               cannot, the message names the layer that failed: the upstream's
-#               address, its credentials, the destination behind it, or an
-#               exit that no longer matches healthcheck_expect.
+#   egress      Xray fetches healthcheck_url through the gate and the upstream,
+#               now. When it cannot, the message names the layer that failed:
+#               the gate, the upstream's address, its credentials, the
+#               destination behind it, or an exit that no longer matches
+#               healthcheck_expect.
 #
 # Through Xray a refused login and a stopped upstream look alike (a 503, or a
 # dropped tunnel), so a failed fetch is followed by asking the upstream
@@ -69,7 +70,7 @@ why() {
   if [ "$code" = 407 ] || [ "$rc" = 97 ] || [[ $err == *"response 407"* ]]; then
     echo "the upstream proxy at $host:$port refused the credentials (upstream_username, upstream_password)"
   elif [ "$rc" = 0 ] && [[ $code == [23]* ]]; then
-    echo "the upstream answers when asked directly, so the fault is in Xray: $out"
+    echo "the upstream answers when asked directly, so the fault is in Xray or the gate: $out"
   elif [ "$rc" = 0 ]; then
     echo "the upstream accepted the credentials, but $url answered $code through it"
   else
@@ -78,7 +79,9 @@ why() {
 }
 
 egress() {
-  local out try
+  local out try gate
+  gate=$(docker compose -p "$project" ps --format '{{.Service}}={{.State}}' | sed -n 's/^gate=//p')
+  [ "$gate" = running ] || { echo "the gate, Xray's only way out, is not running: ${gate:-no container}" >&2; exit 1; }
   for try in 1 2; do
     if out=$(docker compose -p "$project" exec -T -e XRAY_HEALTHCHECK_TIMEOUT=6s xray \
       /usr/local/bin/xray-entrypoint healthcheck 2>&1); then

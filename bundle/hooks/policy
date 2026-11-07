@@ -2,14 +2,19 @@
 # The release's invariants, checked against what actually runs rather than the
 # templates that should produce it:
 #
-#   - traffic leaves through the upstream only: two outbounds, upstream and
-#     block, no freedom anywhere, no DNS of its own, names resolved by the
-#     upstream, and the upstream the explicit last routing rule;
+#   - Xray's traffic leaves through the upstream only: two outbounds, the
+#     upstream (a SOCKS hop to the gate, with no credentials) and block, no
+#     freedom anywhere, no DNS of its own, names resolved by the upstream, and
+#     the upstream the explicit last routing rule;
 #   - every VLESS inbound demands a listed client and VLESS decryption, no
 #     XHTTP inbound sets a flow, and anything else listens on loopback only;
-#   - the containers publish only 80, https_port and, with the DNS tunnel, 53,
-#     and run unprivileged: no added capability, read-only, uid 65532, not on
-#     the host's network.
+#   - the gate forwards its public inbounds to Xray only, carries Xray's hop
+#     to the upstream, and blocks everything else;
+#   - Xray is on internal networks only, so it has no route out at all, and
+#     publishes nothing; the gate publishes only https_port and, with the DNS
+#     tunnel, 53, and Caddy only 80;
+#   - every container runs unprivileged: no added capability, read-only, uid
+#     65532, not on the host's network.
 #
 # smoke_test runs it after every apply and update, so a release that breaks
 # one is rolled back; `doctor` runs it as a fatal preflight, so drift notifies.
@@ -26,19 +31,25 @@ fi
 
 project=${DOTDASH_COMPOSE_PROJECT:-dotdash}
 config=${DOTDASH_CONFIG_FILE:-/etc/dotdash/application.yaml}
+gate=${DOTDASH_GATE_CONFIG:-/etc/dotdash/gate.json}
 release=${DOTDASH_RELEASE_DIR:?}
 https_port=${DOTDASH_PARAM_HTTPS_PORT:-443}
 jq_image=$(sed -n 's/^  jq: *//p' "${release}/manifest.yaml")
 [ -n "${jq_image}" ] || { echo "policy: the release pins no jq image" >&2; exit 1; }
 docker image inspect "${jq_image}" >/dev/null 2>&1 || docker pull -q "${jq_image}" >/dev/null
 
-violations=$(docker run --rm -i --network none --read-only --cap-drop ALL --user 65532:65532 \
-  "${jq_image}" -r '
-  def check($ok; $what): if $ok then empty else $what end;
+jq() { # <filter> <file>: the filter's output, or why the file does not parse
+  docker run --rm -i --network none --read-only --cap-drop ALL --user 65532:65532 \
+    "${jq_image}" -r "def check(\$ok; \$what): if \$ok then empty else \$what end; $1" <"$2" 2>&1 ||
+    echo "$2 does not parse"
+}
+
+violations=$(jq '
   [.outbounds[]?.tag] as $tags
   | ([.inbounds[]?.tag] - ["reality", "xhttp", "xdns", "probe"]) as $extra
   | check($tags == ["upstream", "block"]; "the outbounds are \($tags), not upstream and block"),
-    check(.outbounds[0].protocol | IN("socks", "http"); "the first outbound speaks \(.outbounds[0].protocol), not socks or http"),
+    check(.outbounds[0] | .protocol == "socks" and .settings.address == "gate" and .settings.user == null;
+      "the upstream outbound is not a SOCKS hop to the gate without credentials"),
     check(.outbounds[1].protocol == "blackhole"; "the block outbound is not a blackhole"),
     check([.. | objects | .protocol? // empty] | index("freedom") == null; "a freedom outbound sends traffic out directly"),
     check((.routing.domainStrategy // "AsIs") == "AsIs"; "Xray resolves names itself (domainStrategy \(.routing.domainStrategy))"),
@@ -51,14 +62,27 @@ violations=$(docker run --rm -i --network none --read-only --cap-drop ALL --user
       check(.streamSettings.network != "xhttp" or .settings.flow == null; "inbound \(.tag) sets a flow on XHTTP")),
     (.inbounds[]? | select(.protocol != "vless") |
       check(.listen == "127.0.0.1"; "inbound \(.tag) (\(.protocol)) listens beyond loopback"))
-  ' <"${config}" 2>&1) || violations="the rendered config does not parse: ${violations}"
+  ' "${config}")
+violations+=$'\n'$(jq '
+  ([.inbounds[]?.tag] - ["public-tls", "public-dns", "egress"]) as $extra
+  | [.routing.rules[]? | select(.outboundTag == "inside") | .inboundTag // ["(any)"] | .[]] as $inward
+  | check($extra == []; "the gate has unexpected inbounds: \($extra)"),
+    (.inbounds[]? | select(.protocol == "dokodemo-door") |
+      check(.settings.address == "xray"; "the gate forwards \(.tag) to \(.settings.address), not Xray")),
+    check([.outbounds[]?.tag] == ["upstream", "inside", "block"]; "the gate'"'"'s outbounds are \([.outbounds[]?.tag])"),
+    check(.outbounds[0].protocol | IN("socks", "http"); "the gate dials the upstream with \(.outbounds[0].protocol)"),
+    check(.outbounds[2].protocol == "blackhole"; "the gate'"'"'s block outbound is not a blackhole"),
+    check(($inward - ["public-tls", "public-dns"]) == []; "the gate sends \($inward - ["public-tls", "public-dns"]) out directly"),
+    check(.routing.rules[-1] == {network: "tcp,udp", outboundTag: "block"}; "the gate does not block what its rules leave"),
+    check(has("dns") | not; "the gate has a DNS section of its own")
+  ' "${gate}")
 
 # shellcheck disable=SC2016 # a Go template, for docker inspect
 # Fields split on |, not spaces: read collapses empty fields between spaces,
 # and a container with no user set has one.
 format='{{index .Config.Labels "com.docker.compose.service"}}|{{.HostConfig.Privileged}}|{{.HostConfig.ReadonlyRootfs}}|{{.Config.User}}|{{.HostConfig.NetworkMode}}|{{json .HostConfig.CapAdd}}|{{range $p, $b := .HostConfig.PortBindings}}{{range $b}}{{$p}}={{.HostIp}}:{{.HostPort}};{{end}}{{end}}'
-# The DNS tunnel's 53/udp is expected only where its inbound is configured.
-xdns=$(grep -c '"tag": *"xdns"' "${config}" || true)
+# The DNS tunnel's 53/udp is expected only where the gate forwards it.
+xdns=$(grep -c '"tag": *"public-dns"' "${gate}" || true)
 while IFS='|' read -r name privileged readonly user network caps ports; do
   [ -n "${name}" ] || continue
   [ "${privileged}" = false ] || violations+=$'\n'"${name} runs privileged"
@@ -68,12 +92,21 @@ while IFS='|' read -r name privileged readonly user network caps ports; do
   case ${caps} in null | '[]') ;; *) violations+=$'\n'"${name} adds capabilities ${caps}" ;; esac
   for binding in ${ports//;/ }; do
     case ${name}/${binding} in
-    xray/443/tcp=*:"${https_port}" | caddy/80/tcp=*:80) ;;
-    xray/5353/udp=*:53) [ "${xdns}" -gt 0 ] || violations+=$'\n'"xray publishes 53/udp with no DNS tunnel configured" ;;
+    gate/443/tcp=*:"${https_port}" | caddy/80/tcp=*:80) ;;
+    gate/5353/udp=*:53) [ "${xdns}" -gt 0 ] || violations+=$'\n'"the gate publishes 53/udp with no DNS tunnel configured" ;;
     *) violations+=$'\n'"${name} publishes ${binding%%=*} on ${binding#*=}, which nothing should" ;;
     esac
   done
 done < <(docker ps -q --filter "label=com.docker.compose.project=${project}" | xargs -r docker inspect -f "${format}")
+
+# Xray's networks must all be internal: on any other, it has a route out.
+xray=$(docker ps -q --filter "label=com.docker.compose.project=${project}" --filter label=com.docker.compose.service=xray)
+if [ -n "${xray}" ]; then
+  for net in $(docker inspect -f '{{range $n, $_ := .NetworkSettings.Networks}}{{$n}} {{end}}' "${xray}"); do
+    [ "$(docker network inspect -f '{{.Internal}}' "${net}")" = true ] ||
+      violations+=$'\n'"xray is on ${net}, a network with a route out"
+  done
+fi
 
 violations=$(sed '/^$/d' <<<"${violations}")
 [ -z "${violations}" ] && exit 0
