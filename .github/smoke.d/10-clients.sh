@@ -3,7 +3,9 @@
 # (pre-apply/10-rig.sh) through every entry point: REALITY on 443, XHTTP
 # through REALITY's fallback to Caddy's secret path, and the DNS tunnel (the
 # rig installs the xdns profile), queried at the server itself. Then the config
-# that moves between servers, with a server that does not exist listed first.
+# for v2rayN, with a server that does not exist listed first, with this one
+# alone, and with only the server that does not exist, so that it falls back
+# to the DNS tunnel.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -38,9 +40,16 @@ jq -n --arg id "$(id "${xhttp}")" --arg enc "$(param "${xhttp}" encryption)" \
          certificates: [{usage: "verify", certificateFile: "/ca/root.pem"}]},
        xhttpSettings: {path: $path, host: $sni, mode: "auto"}}}]}' \
   >"${dir}/xhttp/client.json"
-# The printed outbound, its resolver pointed at the server: the rig has no
-# delegation for the zone.
-xdns=$(awk '/^XDNS tunnel/{on=1; next} on{print} on && /^}$/{exit}' <<<"${out}")
+# client-config's Xray config: the lines from the "{" after its heading to the
+# matching "}" at the start of a line.
+full_config() { awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"$1"; }
+# The DNS tunnel's outbound, its resolver pointed at the server: the rig has no
+# delegation for the zone. A release before the full config printed it alone.
+if grep -q '^XDNS tunnel' <<<"${out}"; then
+  xdns=$(awk '/^XDNS tunnel/{on=1; next} on{print} on && /^}$/{exit}' <<<"${out}")
+else
+  xdns=$(full_config "${out}" | jq '.outbounds[] | select(.tag == "xdns")')
+fi
 [ -n "${xdns}" ] || die "client-config printed no XDNS outbound"
 jq '{inbounds: [{listen: "127.0.0.1", port: 11082, protocol: "socks"}],
    outbounds: [.streamSettings.finalmask.udp[0].settings.resolvers = [{addrs: ["udp://127.0.0.1:53"]}]]}' \
@@ -61,21 +70,44 @@ check reality 11080
 check xhttp 11081
 check xdns 11082
 
-# A release from before the servers parameter has nothing to check.
-if sudo morzer config list 2>/dev/null | grep -qw servers; then
-  sudo morzer config set servers=gone.dotdash.test,self >/dev/null || die "config set servers failed"
-  out=$(sudo morzer task run client-config --output)
-  sudo morzer config unset servers >/dev/null
-  failover=$(awk '/^Xray client config that moves/{on=1; getline; next} on{print} on && /^}$/{exit}' <<<"${out}")
-  [ -n "${failover}" ] || die "client-config printed no failover config for two servers"
-  jq '.inbounds = [{listen: "127.0.0.1", port: 11083, protocol: "socks"}]
+# The full config, pointed at the rig: this server at 127.0.0.1 trusting
+# Caddy's CA, the DNS tunnel's resolver at the server, and an observatory that
+# probes the rig's target every 5s. A server that does not exist stays as is.
+rig_config() { # <socks port>
+  jq --argjson port "$1" '.inbounds = [{listen: "127.0.0.1", port: $port, protocol: "socks"}]
     | .outbounds |= map(
         (if .settings.address == "dotdash.test" then .settings.address = "127.0.0.1" else . end)
         | (if .streamSettings.security == "tls"
            then .streamSettings.tlsSettings.certificates = [{usage: "verify", certificateFile: "/ca/root.pem"}]
+           else . end)
+        | (if .tag == "xdns"
+           then .streamSettings.finalmask.udp[0].settings.resolvers = [{addrs: ["udp://127.0.0.1:53"]}]
            else . end))
-    | .observatory.probeUrl = "http://target:8000/" | .observatory.probeInterval = "5s"' \
-    <<<"${failover}" >"${dir}/failover/client.json"
-  chmod a+r "${dir}/failover/client.json"
-  check failover 11083
+    | .observatory.probeUrl = "http://target:8000/" | .observatory.probeInterval = "5s"'
+}
+config_check() { # <name> <socks port> <servers>: client-config's config with those servers
+  local out config
+  sudo morzer config set "servers=$3" >/dev/null || die "config set servers=$3 failed"
+  out=$(sudo morzer task run client-config --output)
+  sudo morzer config unset servers >/dev/null
+  config=$(full_config "${out}")
+  [ -n "${config}" ] || die "$1: client-config printed no Xray config for servers=$3"
+  mkdir -p "${dir}/$1"
+  rig_config "$2" <<<"${config}" >"${dir}/$1/client.json"
+  chmod -R a+rX "${dir}/$1"
+  check "$1" "$2"
+}
+
+# A release from before the servers parameter has nothing to check.
+if sudo morzer config list 2>/dev/null | grep -qw servers; then
+  # A server that does not answer first, then this one: the config uses the
+  # one that answers.
+  config_check failover 11083 gone.dotdash.test,self
+  # Before the full config, a release printed a config for several servers
+  # alone, and none with the DNS tunnel as its last resort.
+  if grep -q 'only when none answers' <<<"$(sudo morzer task run client-config --output)"; then
+    config_check config 11084 self
+    # No server answers, so the config falls back to the DNS tunnel.
+    config_check fallback 11085 gone.dotdash.test
+  fi
 fi
