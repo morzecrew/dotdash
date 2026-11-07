@@ -37,7 +37,7 @@ less bootstrap.sh && sudo bash bootstrap.sh
 
 ```sh
 morzer secret recipients generate-recovery-key ~/dotdash-recovery.key   # store off the machine
-sudo morzer init --release oci://ghcr.io/morzecrew/dotdash:stable \
+sudo morzer init --product dotdash --release oci://ghcr.io/morzecrew/dotdash:stable \
   --require-signature --signing-key "$MINISIGN_RELEASE_PUBKEY" \
   --domain example.com --recovery-recipient age1… \
   --set upstream_host=proxy.provider.example --set upstream_port=1080
@@ -48,6 +48,9 @@ sudo morzer secret set upstream_password
 sudo morzer apply
 ```
 
+`--product` is needed while morzer reads it from the release only when the
+release is a local path
+([morzecrew/morzer#297](https://github.com/morzecrew/morzer/issues/297)).
 `MINISIGN_RELEASE_PUBKEY` is this repository's variable of that name
 (`gh variable get MINISIGN_RELEASE_PUBKEY -R morzecrew/dotdash`). If the package
 is private, log root's Docker in to ghcr first.
