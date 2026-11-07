@@ -81,7 +81,17 @@ parameters:
     services: [reality, xhttp]
 
 images:
+  # The measure task's shell; Xray's image has none.
+  busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
   xray: ghcr.io/morzecrew/xray:26.10.31@sha256:a9a39feaeab2f83a0b76459755b9aa92d54e5f30030b5f818e322e3e5f7a8f81
+
+tasks:
+  measure:
+    description: "Measure each transport through dotdash: N fetches (20 unless given), with success rate, timeouts and latency, as JSON; arguments: [count] [url] [timeout]"
+    service: measure
+    command: ["sh", "/task/measure.sh"]
+    args: true
+    timeout: 15m
 
 health:
   checks:
