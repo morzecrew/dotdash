@@ -1,0 +1,42 @@
+# A pull request that changes the image pins: each morzecrew image must carry a
+# provenance attestation signed for platform-images' publish workflow on main
+# (platform-images#134), so a digest nobody built there cannot be merged.
+# Renovate's bumps wait for this check as for the smoke test.
+name: images
+
+on:
+  pull_request:
+    paths: [bundle/manifest.yaml]
+
+permissions: {}
+
+concurrency:
+  group: images-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  provenance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify each morzecrew image's provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          refs=$(grep -oE 'ghcr\.io/morzecrew/[a-z0-9._/-]+:[A-Za-z0-9._-]+@sha256:[a-f0-9]{64}' bundle/manifest.yaml)
+          [ -n "${refs}" ] || { echo "::error::bundle/manifest.yaml pins no ghcr.io/morzecrew image"; exit 1; }
+          for ref in ${refs}; do
+            repo=${ref%%:*} digest=${ref##*@}
+            gh attestation verify "oci://${repo}@${digest}" --owner morzecrew \
+              --signer-workflow morzecrew/platform-images/.github/workflows/publish.yaml \
+              --source-ref refs/heads/main >/dev/null
+            echo "${repo}@${digest}: provenance verified"
+          done
