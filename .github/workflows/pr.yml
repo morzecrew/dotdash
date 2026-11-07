@@ -17,7 +17,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@e9350aacbe919a809d7dafe5d788f608c6c5f0b5 # v0.5.0
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@668e3a3c984bf4bb037fa5e8f2227e54285fc4e0 # main after bundle-ci#18
     with:
       ref: ${{ github.sha }}
       version: 0.0.0-pr.${{ github.event.pull_request.number }}
@@ -33,3 +33,4 @@ jobs:
         --profile xdns
       # smoke-update installs the published :main first, trusting this key.
       dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}
+      bundle-ci-ref: 668e3a3c984bf4bb037fa5e8f2227e54285fc4e0
