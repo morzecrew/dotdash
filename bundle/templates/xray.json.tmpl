@@ -11,7 +11,10 @@ else (browsers, scanners, ACME, a CDN) is relayed to Caddy, which serves the
 cover site with its own certificate and passes the XHTTP path back here.
 
 There is no direct (freedom) outbound: if the upstream proxy is down, traffic
-stops rather than leaving from this server's own IP.
+stops rather than leaving from this server's own IP. The last routing rule
+names the upstream as the default outright, after the blocks, rather than
+leaving it to Xray's rule that the first outbound is the default; UDP the
+upstream cannot relay is blocked before it.
 */ -}}
 {{- $domain := required "install with --domain" .Installation.Domain -}}
 {{- $xdns := .Parameters.xdns_domain -}}
@@ -104,7 +107,8 @@ stops rather than leaving from this server's own IP.
       {"protocol": ["bittorrent"], "outboundTag": "block"}
       {{- if not (and (eq (print .Parameters.upstream_udp) "true") (eq .Parameters.upstream_protocol "socks")) }},
       {"network": "udp", "outboundTag": "block"}
-      {{- end }}
+      {{- end }},
+      {"network": "tcp,udp", "outboundTag": "upstream"}
     ]
   }
 }
