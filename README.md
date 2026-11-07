@@ -75,10 +75,11 @@ morzer task run client-config --output             # every client
 morzer task run client-config --output -- phone    # one
 ```
 
-Prints a REALITY link (v2rayN, v2rayNG, Hiddify, Happ, Streisand), an XHTTP
-link, and an Xray outbound for the DNS tunnel when it is on. Treat the output
-as a password. To scan a link with a phone, show each as a QR code in the
-terminal (`qrencode` package):
+Prints a REALITY link (v2rayN, v2rayNG, Hiddify, Happ, Streisand) and an XHTTP
+link, and one Xray config for v2rayN or v2rayNG (custom config) that uses
+whichever of the two answers fastest and, when the DNS tunnel is on, falls back
+to it only when neither does. Treat the output as a password. To scan a link
+with a phone, show each as a QR code in the terminal (`qrencode` package):
 
 ```sh
 sudo morzer task run client-config --output -- phone | grep '^vless://' |
@@ -152,9 +153,9 @@ done
 sudo morzer config set servers=example.com,b.example.com
 ```
 
-`client-config` then prints links for each server and an Xray config that
-uses whichever answers fastest (v2rayN or v2rayNG: custom config). Add and
-revoke devices on every server.
+`client-config` then prints links for each server, and its Xray config uses
+whichever server and transport answers fastest. Add and revoke devices on
+every server.
 
 ## Keeping it running
 
@@ -208,6 +209,17 @@ fails, when the provider moves you to another address:
 sudo morzer config set healthcheck_url=https://api.ipify.org 'healthcheck_expect=^203\.0\.113\.7\s*$'
 ```
 
+**Monitoring.** For history rather than alerts, point morzer's metrics at the
+node exporter's textfile directory: every minute it writes the services and
+health checks (`morzer_health_check_ok{check="egress"}`), and after each
+scheduled `doctor` every check (`morzer_doctor_check`), which Prometheus keeps
+as transitions over time. See morzer's
+[monitoring with Prometheus](https://github.com/morzecrew/morzer/blob/main/pages/docs/operating/monitoring-with-prometheus.md).
+
+```sh
+sudo morzer config set metrics.textfile=/var/lib/prometheus/node-exporter
+```
+
 **Checking the exit.** `exit-check` asks, through the upstream as client
 traffic goes, which IPv4 and IPv6 addresses sites see, and from which network
 (ASN) and country. It changes nothing.
@@ -221,7 +233,10 @@ that is not a leak. "MISMATCH" means both answer from different networks, which
 a site reached over both can tell apart; ask the provider for matching IPv6.
 An IP checker in a browser that shows an IPv6 address this task calls
 unavailable is seeing the device's own, outside the tunnel: route IPv6 through
-the tunnel, or turn it off, in the client app.
+the tunnel, or turn it off, in the client app. Likewise, a device keeps its
+traffic inside the tunnel when the tunnel drops only if its app says so (TUN
+mode with a kill switch, or "block connections without VPN" on Android); the
+server cannot enforce it.
 
 ### Canary (optional)
 
@@ -252,6 +267,16 @@ cannot fetch `probe_url` through dotdash, and each
 failing check notifies again until it is fixed. The canary is released with
 dotdash, at the same version: its channels are `dotdash-canary:main` and
 `:stable`, signed with this repository's keys.
+
+To compare the transports from that network, `measure` fetches `probe_url`
+through each one N times (20 unless given) and prints JSON: how many
+succeeded, timed out or failed, and the latency of those that succeeded. It
+measures the way through dotdash, not the exit, which `exit-check` on the
+server covers.
+
+```sh
+sudo morzer task run measure --output -- 50
+```
 
 ### Moving to a new server
 
