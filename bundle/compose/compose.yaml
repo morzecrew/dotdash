@@ -94,6 +94,7 @@ services:
     environment:
       DOMAIN: ${DOTDASH_DOMAIN:?install with --domain}
       HTTPS_PORT: ${DOTDASH_PARAM_HTTPS_PORT:-443}
+      SERVERS: ${DOTDASH_PARAM_SERVERS:-self}
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image

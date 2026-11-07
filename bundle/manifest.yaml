@@ -99,6 +99,10 @@ parameters:
     default: acme
     description: "Where the site certificate comes from: acme is Let's Encrypt, over ports 80 and 443; internal is Caddy's own CA, for a machine the internet cannot reach"
     services: [caddy]
+  servers:
+    type: string
+    default: self
+    description: "Servers with these same secrets, comma-separated; self is this one. client-config prints links for each and, with more than one, a config that uses whichever answers fastest"
   site_dir:
     type: string
     default: /srv/dotdash
