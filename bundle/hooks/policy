@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# The release's invariants, checked against what actually runs rather than the
+# templates that should produce it:
+#
+#   - traffic leaves through the upstream only: two outbounds, upstream and
+#     block, no freedom anywhere, no DNS of its own, names resolved by the
+#     upstream, and the upstream the explicit last routing rule;
+#   - every VLESS inbound demands a listed client and VLESS decryption, no
+#     XHTTP inbound sets a flow, and anything else listens on loopback only;
+#   - the containers publish only 80, https_port and, with the DNS tunnel, 53,
+#     and run unprivileged: no added capability, read-only, uid 65532, not on
+#     the host's network.
+#
+# smoke_test runs it after every apply and update, so a release that breaks
+# one is rolled back; `doctor` runs it as a fatal preflight, so drift notifies.
+# It prints each violation and exits 1. The rendered config is read with jq
+# from its own image, pinned in the manifest and run with no network, so the
+# host needs no jq.
+set -euo pipefail
+
+# As a preflight it checks what runs, which an operation is about to replace:
+# only `doctor` asks it there. Exit 2 is "not applicable".
+if [ "${DOTDASH_PHASE:-}" = preflight ] && [ "${DOTDASH_OPERATION_TYPE:-}" != doctor ]; then
+  exit 2
+fi
+
+project=${DOTDASH_COMPOSE_PROJECT:-dotdash}
+config=${DOTDASH_CONFIG_FILE:-/etc/dotdash/application.yaml}
+release=${DOTDASH_RELEASE_DIR:?}
+https_port=${DOTDASH_PARAM_HTTPS_PORT:-443}
+jq_image=$(sed -n 's/^  jq: *//p' "${release}/manifest.yaml")
+[ -n "${jq_image}" ] || { echo "policy: the release pins no jq image" >&2; exit 1; }
+docker image inspect "${jq_image}" >/dev/null 2>&1 || docker pull -q "${jq_image}" >/dev/null
+
+violations=$(docker run --rm -i --network none --read-only --cap-drop ALL --user 65532:65532 \
+  "${jq_image}" -r '
+  def check($ok; $what): if $ok then empty else $what end;
+  [.outbounds[]?.tag] as $tags
+  | ([.inbounds[]?.tag] - ["reality", "xhttp", "xdns", "probe"]) as $extra
+  | check($tags == ["upstream", "block"]; "the outbounds are \($tags), not upstream and block"),
+    check(.outbounds[0].protocol | IN("socks", "http"); "the first outbound speaks \(.outbounds[0].protocol), not socks or http"),
+    check(.outbounds[1].protocol == "blackhole"; "the block outbound is not a blackhole"),
+    check([.. | objects | .protocol? // empty] | index("freedom") == null; "a freedom outbound sends traffic out directly"),
+    check((.routing.domainStrategy // "AsIs") == "AsIs"; "Xray resolves names itself (domainStrategy \(.routing.domainStrategy))"),
+    check(has("dns") | not; "Xray has a DNS section of its own"),
+    check(.routing.rules[-1] == {network: "tcp,udp", outboundTag: "upstream"}; "the last routing rule does not name the upstream"),
+    check($extra == []; "unexpected inbounds: \($extra)"),
+    (.inbounds[]? | select(.protocol == "vless") |
+      check(.settings.clients != null; "inbound \(.tag) accepts no client list"),
+      check(.settings.decryption != null and .settings.decryption != "none"; "inbound \(.tag) has no VLESS decryption"),
+      check(.streamSettings.network != "xhttp" or .settings.flow == null; "inbound \(.tag) sets a flow on XHTTP")),
+    (.inbounds[]? | select(.protocol != "vless") |
+      check(.listen == "127.0.0.1"; "inbound \(.tag) (\(.protocol)) listens beyond loopback"))
+  ' <"${config}" 2>&1) || violations="the rendered config does not parse: ${violations}"
+
+# shellcheck disable=SC2016 # a Go template, for docker inspect
+# Fields split on |, not spaces: read collapses empty fields between spaces,
+# and a container with no user set has one.
+format='{{index .Config.Labels "com.docker.compose.service"}}|{{.HostConfig.Privileged}}|{{.HostConfig.ReadonlyRootfs}}|{{.Config.User}}|{{.HostConfig.NetworkMode}}|{{json .HostConfig.CapAdd}}|{{range $p, $b := .HostConfig.PortBindings}}{{range $b}}{{$p}}={{.HostIp}}:{{.HostPort}};{{end}}{{end}}'
+# The DNS tunnel's 53/udp is expected only where its inbound is configured.
+xdns=$(grep -c '"tag": *"xdns"' "${config}" || true)
+while IFS='|' read -r name privileged readonly user network caps ports; do
+  [ -n "${name}" ] || continue
+  [ "${privileged}" = false ] || violations+=$'\n'"${name} runs privileged"
+  [ "${readonly}" = true ] || violations+=$'\n'"${name} has a writable root filesystem"
+  [ "${user}" = 65532:65532 ] || violations+=$'\n'"${name} runs as '${user:-root}', not 65532:65532"
+  [ "${network}" != host ] || violations+=$'\n'"${name} is on the host's network"
+  case ${caps} in null | '[]') ;; *) violations+=$'\n'"${name} adds capabilities ${caps}" ;; esac
+  for binding in ${ports//;/ }; do
+    case ${name}/${binding} in
+    xray/443/tcp=*:"${https_port}" | caddy/80/tcp=*:80) ;;
+    xray/5353/udp=*:53) [ "${xdns}" -gt 0 ] || violations+=$'\n'"xray publishes 53/udp with no DNS tunnel configured" ;;
+    *) violations+=$'\n'"${name} publishes ${binding%%=*} on ${binding#*=}, which nothing should" ;;
+    esac
+  done
+done < <(docker ps -q --filter "label=com.docker.compose.project=${project}" | xargs -r docker inspect -f "${format}")
+
+violations=$(sed '/^$/d' <<<"${violations}")
+[ -z "${violations}" ] && exit 0
+# One line, for doctor's message; each violation also on its own line.
+echo "policy: $(paste -sd ';' <<<"${violations}" | sed 's/;/; /g')" >&2
+exit 1
