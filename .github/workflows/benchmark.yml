@@ -1,0 +1,124 @@
+# REALITY and XHTTP under added latency and packet loss, in a rig on a
+# GitHub-hosted runner: never on a real machine. It informs, it never gates:
+# nothing requires it, and a pull request that changes the pinned images or
+# Xray's config sees its figures beside the last ones from main.
+#
+# The rig is bundle-ci's rehearsal (rehearse.sh): it installs the published
+# :main with the smoke hooks' stand-in upstream and target, then this tree's
+# bundle goes on top, and .github/bench/bench.sh measures it.
+name: benchmark
+
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      requests:
+        description: Small fetches per scenario and transport
+        default: "20"
+      transfers:
+        description: 1 MiB transfers per scenario and transport
+        default: "3"
+      delays:
+        description: Added delays, <ms>[:<jitter ms>], space-separated
+        default: "0 100:30 250:50"
+      losses:
+        description: Added packet loss in percent, space-separated
+        default: "0 2 5"
+  pull_request:
+    paths:
+      - bundle/manifest.yaml
+      - bundle/templates/**
+      - .github/bench/**
+      - .github/workflows/benchmark.yml
+
+permissions: {}
+
+concurrency:
+  group: benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    # GitHub-hosted on purpose: netem needs the host's sch_netem module, which
+    # a self-hosted runner may not have or let a job load.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      packages: read
+      # The last benchmark of main, to compare a pull request with.
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: morzecrew/bundle-ci
+          ref: c87702ae668b057166cb6a713fbcfd288d979a6c # v0.8.0
+          path: .bundle-ci
+          persist-credentials: false
+
+      - name: Install oras, and load netem
+        run: |
+          BIN_DIR="${RUNNER_TEMP}/bin" bash .bundle-ci/scripts/tools.sh oras
+          echo "${RUNNER_TEMP}/bin" >>"${GITHUB_PATH}"
+          sudo modprobe sch_netem
+
+      - name: Install dotdash in a rig
+        env:
+          REHEARSE_PUBKEY: ${{ vars.MINISIGN_DEV_PUBKEY }}
+          REHEARSE_PROBE_PATHS: ""
+          REHEARSE_OPERATOR_SECRETS: upstream_username upstream_password
+          REHEARSE_INIT_ARGS: >-
+            --domain dotdash.test --set upstream_host=upstream.rig.invalid
+            --set upstream_port=18080 --set upstream_protocol=http
+            --set healthcheck_url=http://target:8000/ --set cert_issuer=internal
+            --profile xdns
+        run: |
+          bash .bundle-ci/scripts/rehearse.sh --keep
+          bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal \
+            sh -c 'bash /rig/smoke.sh update "$(ls /rig/dist/*.tar.zst | head -1)"'
+
+      - name: Benchmark
+        env:
+          BENCH_REQUESTS: ${{ inputs.requests || '20' }}
+          BENCH_TRANSFERS: ${{ inputs.transfers || '3' }}
+          BENCH_DELAYS: ${{ inputs.delays || '0 100:30 250:50' }}
+          BENCH_LOSSES: ${{ inputs.losses || '0 2 5' }}
+        run: |
+          bash .bundle-ci/scripts/rig.sh cp dotdash-rehearsal .github/bench/bench.sh /rig/bench.sh
+          bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal env \
+            BENCH_REQUESTS="${BENCH_REQUESTS}" BENCH_TRANSFERS="${BENCH_TRANSFERS}" \
+            BENCH_DELAYS="${BENCH_DELAYS}" BENCH_LOSSES="${BENCH_LOSSES}" \
+            bash /rig/bench.sh >"${RUNNER_TEMP}/benchmark.json"
+          jq -e '.scenarios | length > 0' "${RUNNER_TEMP}/benchmark.json" >/dev/null
+
+      - name: Summarize, beside main's last benchmark
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          baseline=
+          if [ "${EVENT}" = pull_request ]; then
+            run=$(gh run list -R "${GITHUB_REPOSITORY}" --workflow benchmark.yml --branch main \
+              --status success --limit 1 --json databaseId -q '.[0].databaseId // empty')
+            if [ -n "${run}" ] && gh run download "${run}" -R "${GITHUB_REPOSITORY}" -n benchmark \
+              -D "${RUNNER_TEMP}/baseline" 2>/dev/null; then
+              baseline=${RUNNER_TEMP}/baseline/benchmark.json
+            fi
+          fi
+          bash .github/bench/summary.sh "${RUNNER_TEMP}/benchmark.json" ${baseline:+"${baseline}"} \
+            >>"${GITHUB_STEP_SUMMARY}"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: benchmark
+          path: ${{ runner.temp }}/benchmark.json
+          retention-days: 90
+
+      - name: Remove the rig
+        if: always()
+        run: bash .bundle-ci/scripts/rig.sh stop dotdash-rehearsal || true
