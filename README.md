@@ -21,7 +21,9 @@ proxy credentials. `example.com` below is your domain.
 
 **1. DNS**: `example.com  A  <server IP>`.
 
-**2. Server**: open 80/tcp and 443/tcp (80 is for the certificate).
+**2. Server**: open 80/tcp and 443/tcp (80 is for the certificate). Docker's
+published ports bypass ufw and firewalld, so the host firewall guards only the
+rest, SSH included: allow keys only (`PasswordAuthentication no`).
 
 **3. Deploy**
 
@@ -75,6 +77,11 @@ to `morzer init` in step 3. For another zone, add `--set xdns_domain=<zone>`. If
 ns.example.com.  A   <server IP>
 t.example.com.   NS  ns.example.com.
 ```
+
+A zone under a domain of its own is better, such as `--set
+xdns_domain=t.example.net` delegated from `example.net`: a resolver that flags
+tunnel queries flags the domain they are under, and blocking it would take
+`example.com` with it.
 
 ### CDN (optional)
 
