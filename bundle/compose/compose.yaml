@@ -30,7 +30,13 @@ services:
       XRAY_HEALTHCHECK_URL: ${DOTDASH_PARAM_HEALTHCHECK_URL:-https://www.gstatic.com/generate_204}
       XRAY_HEALTHCHECK_EXPECT: ${DOTDASH_PARAM_HEALTHCHECK_EXPECT:-.*}
     volumes:
-      - ${DOTDASH_CONFIG_FILE:-/etc/dotdash/application.yaml}:/etc/xray/config.json:ro
+      # Long form, so a missing file fails the start: the short form has
+      # Docker create a directory there, which morzer cannot render over.
+      - type: bind
+        source: ${DOTDASH_CONFIG_FILE:-/etc/dotdash/application.yaml}
+        target: /etc/xray/config.json
+        read_only: true
+        bind: {create_host_path: false}
     tmpfs:
       # Where the image writes the config with secrets resolved; never disk.
       - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
@@ -58,7 +64,11 @@ services:
     # 80 and 443 inside, as above.
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
     volumes:
-      - ${DOTDASH_RELEASE_DIR:?set by morzer}/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - type: bind
+        source: ${DOTDASH_RELEASE_DIR:?set by morzer}/caddy/Caddyfile
+        target: /etc/caddy/Caddyfile
+        read_only: true
+        bind: {create_host_path: false}
       # The bundled page, and the operator's own site, served instead when it
       # has the requested file (the Caddyfile decides).
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/site:/srv/default:ro
