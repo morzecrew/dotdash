@@ -1199,6 +1199,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Fixed
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1306,7 +1317,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Fixed
@@ -1440,6 +1451,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Fixed
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1547,7 +1569,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Fixed
@@ -1691,7 +1713,16 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Unattended updates apply releases again, and <code>morzer rollback</code> works again, both of which 0.4.0 turned off for its own change of the upstream settings. An update from 0.3.x is still refused until the <code>upstream</code> secret is set.</li>
+<li>
+<p>Unattended updates apply releases again, and <code>morzer rollback</code> works again, both of which 0.4.0 turned off for its own change of the upstream settings. An update from 0.3.x is still refused until the <code>upstream</code> secret is set.</p>
+</li>
+<li>
+<p><code>bootstrap.sh</code> is served from the documentation site: <code>curl -fsSLO https://morzecrew.github.io/dotdash/bootstrap.sh</code>. The documentation itself moved from the README to <a href="https://morzecrew.github.io/dotdash/">https://morzecrew.github.io/dotdash/</a>, one version per release.</p>
+</li>
+</ul>
+<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>bootstrap.sh</code> installs morzer 0.14.0, which both bundles require. It installed 0.13.0, so <code>init</code> on a freshly prepared host refused the release until <code>morzer self-update</code>.</li>
 </ul>
 <h2 id="040-2026-11-08">[0.4.0] - 2026-11-08<a class="headerlink" href="#040-2026-11-08" title="Permanent link">&para;</a></h2>
 <h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">&para;</a></h3>
@@ -1772,7 +1803,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p><code>client-config</code> prints one complete Xray config per device, for one server too: it uses whichever of REALITY and XHTTP answers fastest on any listed server, and the DNS tunnel only when none answers, instead of printing the tunnel's outbound alone.</p>
 </li>
 </ul>
-<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
 <p>The cover site's error answers, such as 404 and 405, no longer name the server, and carry the site's headers like its pages do. A prober could tell them apart.</p>
