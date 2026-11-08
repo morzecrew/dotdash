@@ -69,7 +69,7 @@ services:
         bind: {create_host_path: false}
     tmpfs:
       - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
-    secrets: [upstream_username, upstream_password]
+    secrets: [upstream_username, upstream_password, upstream6_username, upstream6_password]
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
     ports:
       - "${DOTDASH_PARAM_HTTPS_PORT:-443}:443/tcp"
@@ -217,6 +217,10 @@ secrets:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream_username
   upstream_password:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream_password
+  upstream6_username:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream6_username
+  upstream6_password:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream6_password
   reality_key:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/reality_key
   reality_short_id:

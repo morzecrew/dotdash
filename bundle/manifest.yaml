@@ -84,6 +84,31 @@ parameters:
     default: false
     description: Relay client UDP through a SOCKS5 upstream that supports UDP ASSOCIATE; otherwise UDP is dropped
     services: [xray, gate]
+  upstream6_host:
+    type: string
+    default: none
+    description: "Host name or IP of a second proxy for IPv6, or none. With it, a destination that has an IPv6 address leaves through it, IPv4-only ones through upstream_host, and neither falls back to the other"
+    services: [xray, gate]
+  upstream6_port:
+    type: port
+    default: 1080
+    description: Port of the IPv6 proxy (upstream6_host)
+    services: [gate]
+  upstream6_protocol:
+    type: enum
+    values: [socks, http]
+    default: socks
+    description: Protocol of the IPv6 proxy (upstream6_host); its credentials are the upstream6_username and upstream6_password secrets
+    services: [gate]
+  upstream6_tls:
+    type: bool
+    default: false
+    description: Connect to the IPv6 proxy over TLS
+    services: [gate]
+  healthcheck6_url:
+    type: string
+    default: http://api6.ipify.org
+    description: "With upstream6_host, a URL with an IPv6 address only, which the egress health check also fetches, through the IPv6 proxy; any 2xx is healthy"
   xdns_domain:
     type: string
     default: t

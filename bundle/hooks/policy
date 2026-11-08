@@ -3,8 +3,9 @@
 # templates that should produce it:
 #
 #   - Xray's traffic leaves through the upstream only: two outbounds, the
-#     upstream (a SOCKS hop to the gate, with no credentials) and block, no
-#     freedom anywhere, and the upstream the explicit last routing rule;
+#     upstream (a SOCKS hop to the gate, with no credentials) and block, and
+#     with upstream6_host a third, upstream6, the same hop to the gate's IPv6
+#     egress; no freedom anywhere, and the upstream the explicit last rule;
 #   - names are resolved either by the upstream (no DNS in Xray, names passed
 #     on), or here over DoH routed through the upstream, with the upstream
 #     handed addresses only (ForceIP, never UseIP's fallback to the name);
@@ -51,7 +52,11 @@ jq() { # <filter> <file>: the filter's output, or why the file does not parse
 violations=$(jq '
   [.outbounds[]?.tag] as $tags
   | ([.inbounds[]?.tag] - ["reality", "xhttp", "xhttp-reality", "xdns", "probe"]) as $extra
-  | check($tags == ["upstream", "block"]; "the outbounds are \($tags), not upstream and block"),
+  | check($tags == ["upstream", "block"] or $tags == ["upstream", "block", "upstream6"];
+      "the outbounds are \($tags), not upstream and block (and upstream6)"),
+    (.outbounds[2]? // empty |
+      check(.protocol == "socks" and .settings.address == "gate" and .settings.port == 1081 and .settings.user == null;
+        "the upstream6 outbound is not a SOCKS hop to the gate'"'"'s IPv6 egress without credentials")),
     check(.outbounds[0] | .protocol == "socks" and .settings.address == "gate" and .settings.user == null;
       "the upstream outbound is not a SOCKS hop to the gate without credentials"),
     check(.outbounds[1].protocol == "blackhole"; "the block outbound is not a blackhole"),
@@ -64,7 +69,9 @@ violations=$(jq '
           | ($s | length) > 0 and ($s | all(startswith("https://")));
           "Xray asks DNS other than DoH through the upstream (\([.dns.servers[]? | if type == "string" then . else .address end]))"),
         check($target | startswith("forceip");
-          "Xray resolves names, but the upstream outbound can still hand it a name (targetStrategy \($target))")
+          "Xray resolves names, but the upstream outbound can still hand it a name (targetStrategy \($target))"),
+        (.outbounds[2]? // empty | (.targetStrategy // "AsIs" | ascii_downcase) |
+          check(. == "forceipv6"; "the upstream6 outbound can hand the IPv6 proxy a name or an IPv4 address (targetStrategy \(.))"))
       else
         # resolve=upstream: names go to the upstream as they are.
         check((.routing.domainStrategy // "AsIs") == "AsIs"; "Xray resolves names with no DNS of its own (domainStrategy \(.routing.domainStrategy))"),
@@ -81,13 +88,15 @@ violations=$(jq '
   ' "${config}")
 violations+=$'\n'$(jq '
   ["public-tls", "public-dns", "public-xhttp-reality"] as $public
-  | ([.inbounds[]?.tag] - $public - ["egress"]) as $extra
+  | ([.inbounds[]?.tag] - $public - ["egress", "egress6"]) as $extra
   | [.routing.rules[]? | select(.outboundTag == "inside") | .inboundTag // ["(any)"] | .[]] as $inward
   | check($extra == []; "the gate has unexpected inbounds: \($extra)"),
     (.inbounds[]? | select(.protocol == "dokodemo-door") |
       check(.settings.address == "xray"; "the gate forwards \(.tag) to \(.settings.address), not Xray")),
-    check([.outbounds[]?.tag] == ["upstream", "inside", "block"]; "the gate'"'"'s outbounds are \([.outbounds[]?.tag])"),
-    check(.outbounds[0].protocol | IN("socks", "http"); "the gate dials the upstream with \(.outbounds[0].protocol)"),
+    check([.outbounds[]?.tag] | . == ["upstream", "inside", "block"] or . == ["upstream", "inside", "block", "upstream6"];
+      "the gate'"'"'s outbounds are \([.outbounds[]?.tag])"),
+    check([.outbounds[0], .outbounds[3]? // empty] | all(.protocol | IN("socks", "http"));
+      "the gate dials an upstream with \([.outbounds[0], .outbounds[3]? // empty | .protocol])"),
     check(.outbounds[2].protocol == "blackhole"; "the gate'"'"'s block outbound is not a blackhole"),
     check(($inward - $public) == []; "the gate sends \($inward - $public) out directly"),
     check(.routing.rules[-1] == {network: "tcp,udp", outboundTag: "block"}; "the gate does not block what its rules leave"),
