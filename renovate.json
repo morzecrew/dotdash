@@ -12,12 +12,22 @@
         "(?<depName>[a-z0-9.-]+\\.[a-z]+/[a-z0-9._/-]+):(?<currentValue>[A-Za-z0-9._-]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
       ],
       "datasourceTemplate": "docker"
+    },
+    {
+      "description": "The morzer release bootstrap.sh installs. No check runs the script, so its bumps wait for a person.",
+      "customType": "regex",
+      "managerFilePatterns": ["/^scripts/bootstrap\\.sh$/"],
+      "matchStrings": ["MORZER_VERSION=(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "morzecrew/morzer",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$"
     }
   ],
   "packageRules": [
     {
       "description": "An image bump merges itself once its checks pass, and :main publishes it; :stable still waits for a tag, majors for a person. Renovate merges rather than GitHub (platformAutomerge off): main requires no checks, so GitHub's auto-merge would not wait for them.",
       "matchManagers": ["custom.regex"],
+      "matchDatasources": ["docker"],
       "matchUpdateTypes": ["digest", "patch", "minor"],
       "automerge": true
     },

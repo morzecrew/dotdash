@@ -11,7 +11,7 @@ Needs: a domain, a Linux host with Docker ≥ 28 and Compose ≥ 2.35, `sops`,
    age and morzer, turns on security updates, and sets SSH to keys only:
 
     ```sh
-    curl -fsSLO https://raw.githubusercontent.com/morzecrew/dotdash/main/scripts/bootstrap.sh
+    curl -fsSLO https://morzecrew.github.io/dotdash/bootstrap.sh
     less bootstrap.sh && sudo bash bootstrap.sh
     ```
 

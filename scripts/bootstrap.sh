@@ -4,14 +4,17 @@
 # that takes keys only, and unattended security updates. Run again, it redoes
 # nothing that is already done.
 #
-#   curl -fsSLO https://raw.githubusercontent.com/morzecrew/dotdash/main/scripts/bootstrap.sh
+#   curl -fsSLO https://morzecrew.github.io/dotdash/bootstrap.sh
 #   less bootstrap.sh && sudo bash bootstrap.sh
+#
+# The site serves the copy from the newest release (docs-release.yml).
 #
 # It leaves the firewall alone: Docker's published ports bypass ufw and
 # firewalld anyway, and an SSH port guessed wrong would lock you out.
 set -euo pipefail
 
-MORZER_VERSION=0.13.0
+# Renovate bumps MORZER_VERSION (renovate.json); SOPS_VERSION and its sums by hand.
+MORZER_VERSION=0.14.0
 SOPS_VERSION=3.13.3
 declare -A SOPS_SHA256=(
 	[amd64]=e5bec3346a873ae91d871550f3e698c1aad962aff462a080e40f25fde17fef6b

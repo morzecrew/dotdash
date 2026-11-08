@@ -8,11 +8,12 @@ and XHTTP with REALITY, and all traffic out through your upstream proxy.
 
 ## Quick start
 
-On a host with Docker, sops, age and morzer
-([`scripts/bootstrap.sh`](scripts/bootstrap.sh) installs them), with
-`example.com` pointing at it and 80/443 open:
+On a fresh Debian or Ubuntu host, with `example.com` pointing at it and
+80/443 open:
 
 ```sh
+curl -fsSLO https://morzecrew.github.io/dotdash/bootstrap.sh    # Docker, sops, age, morzer
+less bootstrap.sh && sudo bash bootstrap.sh
 morzer secret recipients generate-recovery-key ~/dotdash-recovery.key   # keep it off the machine
 sudo morzer init --release oci://ghcr.io/morzecrew/dotdash:stable \
   --require-signature --signing-key "$MINISIGN_RELEASE_PUBKEY" \
