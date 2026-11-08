@@ -41,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The `canary-config` task's init command names the product, without which morzer 0.13.0 cannot install the canary from its registry reference.
 
+- The cover site's error answers, such as 404 and 405, no longer name the server, and carry the site's headers like its pages do. A prober could tell them apart.
+
 - The canary's `xhttp` profile applies. Its Compose file found the base file by a path relative to a directory morzer does not run Compose from, so the profile failed validation.
 
 - A failed first apply, of dotdash or the canary, no longer leaves a directory where Xray's rendered configuration goes, which made every later apply fail to render it. A missing configuration file or Caddyfile now stops the container from starting instead.
