@@ -31,13 +31,13 @@ when resolution fails. IPOnDemand resolves before the routing rules, so a name
 that points at a private address is blocked like the address. resolve=upstream
 hands the upstream the names, as before. */ -}}
 {{- $gateway := eq .Parameters.resolve "gateway" -}}
-{{- /* upstream6_host: a second proxy, for IPv6. A destination with an IPv6
+{{- /* upstream6_protocol: a second proxy, for IPv6. A destination with an IPv6
 address leaves through it: with resolve=gateway, IPOnDemand resolves a name
 for the ::/0 rule, so a name with an AAAA record matches it, and the hop
 hands that proxy IPv6 addresses only (ForceIPv6) and the first IPv4 only
 (ForceIPv4). Neither falls back to the other. With resolve=upstream only IPv6
 literals match. IPv6 UDP is blocked: the hop to it carries none. */ -}}
-{{- $v6 := ne .Parameters.upstream6_host "none" -}}
+{{- $v6 := ne .Parameters.upstream6_protocol "none" -}}
 {{- $withXdns := or (eq .Profile "xdns") (eq .Profile "xdns-xhttp-reality") -}}
 {{- $xhttpReality := or (eq .Profile "xhttp-reality") (eq .Profile "xdns-xhttp-reality") -}}
 {{- $xdns := .Parameters.xdns_domain -}}

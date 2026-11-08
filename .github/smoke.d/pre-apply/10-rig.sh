@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # What a real machine has before its first apply and this rig does not: an
 # upstream proxy, and the URL the healthcheck fetches through it. The workflows'
-# init-args already gave init the domain, every other upstream setting, that
-# URL (http://11.99.0.10:8000/) and cert_issuer=internal, which needs no Let's
+# init-args already gave init the domain, the upstream's protocol, that URL
+# (http://11.99.0.10:8000/) and cert_issuer=internal, which needs no Let's
 # Encrypt; only the upstream's address is known no earlier than here.
 #
 # The target has a fixed address in a subnet that is not private (11.99.0.0/24,
@@ -11,11 +11,11 @@
 # name only the rig knows would resolve nowhere. 35-resolve.sh uses the name
 # `target`, which the upstream resolves, to show what resolve=upstream hands it.
 #
-# The upstream is an Xray HTTP proxy with one account, whose credentials
-# replace the random ones smoke.sh set, so a later hook can break them on
-# purpose (/rig/upstream.pass keeps the right password). It shares a network
-# with the healthcheck's target, which only it resolves; the bundle's Xray
-# reaches it on the rig's docker0 address. The target also stands in for the
+# The upstream is an Xray HTTP proxy with one account, which replaces the
+# random value smoke.sh set, so a later hook can break the credentials on
+# purpose (/rig/upstream.conn keeps the right "user:pass@host:port"). It
+# shares a network with the healthcheck's target, which only it resolves; the
+# bundle's Xray reaches it on the rig's docker0 address. The target also stands in for the
 # IP-echo and network-lookup services exit-check asks, and serves /blob for
 # the benchmark. Both run images the bundle pins, already in the rig.
 # shellcheck source=/dev/null
@@ -30,7 +30,7 @@ host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
 
 mkdir -p /rig/upstream /rig/target /rig/upstream-log
 pass=$(random)
-printf '%s' "${pass}" >/rig/upstream.pass
+printf 'rig:%s@%s:18080' "${pass}" "${host}" >/rig/upstream.conn
 # It logs every destination it is asked for (35-resolve.sh reads them).
 jq -n --arg pass "${pass}" '{log: {access: "/log/access.log", loglevel: "warning"},
   inbounds: [{listen: "0.0.0.0", port: 8080, protocol: "http",
@@ -58,14 +58,19 @@ EOF
 # 1 MiB for the benchmark's transfers (.github/bench).
 head -c 1048576 /dev/urandom >/rig/target/blob
 chmod -R a+rX /rig/upstream /rig/target
-chmod a+r /rig/upstream.pass
+chmod a+r /rig/upstream.conn
 sudo docker network create --subnet 11.99.0.0/24 dotdash-rig >/dev/null
 sudo docker run -d --name dotdash-rig-target --network dotdash-rig --ip 11.99.0.10 --network-alias target \
   -v /rig/target:/etc/caddy:ro "${caddy}" >/dev/null
 sudo docker run -d --name dotdash-rig-upstream --network dotdash-rig -p 18080:8080 \
   -v /rig/upstream:/etc/xray:ro -v /rig/upstream-log:/log "${xray}" >/dev/null
 
-sudo morzer config set "upstream_host=${host}"
 # Before the first apply morzer has nothing to restart, and says so.
-printf rig | sudo morzer secret set upstream_username >/dev/null 2>&1 || true
-printf '%s' "${pass}" | sudo morzer secret set upstream_password >/dev/null 2>&1 || true
+printf "%s" "$(cat /rig/upstream.conn)" | sudo morzer secret set upstream >/dev/null 2>&1 || true
+# A release from before the upstream secret, which smoke-update installs
+# first, takes a host and a port parameter and two secrets instead. Only such
+# a release accepts upstream_host; the secret above it ignores.
+if sudo morzer config set "upstream_host=${host}" upstream_port=18080 >/dev/null 2>&1; then
+  printf rig | sudo morzer secret set upstream_username >/dev/null 2>&1 || true
+  printf '%s' "${pass}" | sudo morzer secret set upstream_password >/dev/null 2>&1 || true
+fi

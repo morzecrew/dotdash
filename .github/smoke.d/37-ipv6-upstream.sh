@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# A second upstream for IPv6 (upstream6_host). The rig has no IPv6, so a
+# A second upstream for IPv6 (upstream6_protocol, the upstream6 secret). The rig has no IPv6, so a
 # stand-in IPv6 proxy connects everything it is asked for to the rig's
 # target, which answers "ok"; the first upstream reaches the real sites. Which
 # one carried a fetch shows in its answer. (Xray writes its access log late,
@@ -19,8 +19,8 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo morzer config list 2>/dev/null | grep -qE '^ +upstream6_host +'; then
-  echo "${0##*/}: skipped, the installed release predates it"
+if ! sudo grep -q '^  - name: upstream6$' /opt/dotdash/current/secrets.schema.yaml; then
+  echo "${0##*/}: skipped, the installed release predates the upstream6 secret"
   exit 0
 fi
 
@@ -44,14 +44,13 @@ for _ in $(seq 20); do [ -e "${log6}" ] && break; sleep 0.5; done
 
 restore() {
   sudo docker start dotdash-rig-upstream6 >/dev/null 2>&1 || true
-  for k in upstream6_host upstream6_port upstream6_protocol; do sudo morzer config unset "$k" >/dev/null 2>&1 || true; done
+  sudo morzer config unset upstream6_protocol >/dev/null 2>&1 || true
   sudo docker rm -f dotdash-rig-upstream6 >/dev/null 2>&1 || true
 }
 trap restore EXIT
 
-printf rig6 | sudo morzer secret set upstream6_username >/dev/null
-printf '%s' "${pass6}" | sudo morzer secret set upstream6_password >/dev/null
-sudo morzer config set "upstream6_host=${host}" upstream6_port=18081 upstream6_protocol=http >/dev/null \
+printf 'rig6:%s@%s:18081' "${pass6}" "${host}" | sudo morzer secret set upstream6 >/dev/null
+sudo morzer config set upstream6_protocol=http >/dev/null \
   || die "could not turn on the IPv6 upstream (its health check failed?)"
 
 body() { # <url>: through 10-clients.sh's REALITY client; the body, or nothing
@@ -94,9 +93,9 @@ grep -qE 'cannot connect to the IPv6 proxy at|the IPv6 proxy at [^ ]+ does not a
 sudo docker start dotdash-rig-upstream6 >/dev/null
 echo "${0##*/}: with the IPv6 proxy stopped, IPv6 fails without falling back, IPv4 works, and doctor names it"
 
-printf 'wrong' | sudo morzer secret set upstream6_password >/dev/null
+printf 'rig6:wrong@%s:18081' "${host}" | sudo morzer secret set upstream6 >/dev/null
 out=$(doctor)
-grep -q 'the IPv6 proxy at [^ ]* refused the credentials (upstream6_username, upstream6_password)' <<<"${out}" \
+grep -q 'the IPv6 proxy at [^ ]* refused the credentials in the upstream6 secret' <<<"${out}" \
   || die "doctor does not name the IPv6 proxy's credentials"
-printf '%s' "${pass6}" | sudo morzer secret set upstream6_password >/dev/null
+printf 'rig6:%s@%s:18081' "${pass6}" "${host}" | sudo morzer secret set upstream6 >/dev/null
 echo "${0##*/}: a wrong IPv6 proxy password, and doctor names its credentials"

@@ -77,10 +77,9 @@ jobs:
           REHEARSE_PUBKEY: ${{ vars.MINISIGN_DEV_PUBKEY }}
           REHEARSE_MORZER_VERSION: "0.14.0"
           REHEARSE_PROBE_PATHS: ""
-          REHEARSE_OPERATOR_SECRETS: upstream_username upstream_password
+          REHEARSE_OPERATOR_SECRETS: upstream
           REHEARSE_INIT_ARGS: >-
-            --domain dotdash.test --set upstream_host=upstream.rig.invalid
-            --set upstream_port=18080 --set upstream_protocol=http
+            --domain dotdash.test --set upstream_protocol=http
             --set healthcheck_url=http://11.99.0.10:8000/ --set cert_issuer=internal
             --profile xdns
         run: |

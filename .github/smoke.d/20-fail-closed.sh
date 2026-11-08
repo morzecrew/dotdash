@@ -88,8 +88,8 @@ recovers
 through 11080 http://11.99.0.10:8000/ || die "the client did not recover with the upstream"
 echo "20-fail-closed.sh: upstream stopped, clients get nothing and doctor names the upstream; both recover"
 
-printf wrong | sudo morzer secret set upstream_password >/dev/null
+printf 'rig:wrong@%s' "$(sed 's/.*@//' /rig/upstream.conn)" | sudo morzer secret set upstream >/dev/null
 fails_naming "refused the credentials"
-printf '%s' "$(cat /rig/upstream.pass)" | sudo morzer secret set upstream_password >/dev/null
+printf "%s" "$(cat /rig/upstream.conn)" | sudo morzer secret set upstream >/dev/null
 recovers
 echo "20-fail-closed.sh: a wrong upstream password, and doctor names the credentials"

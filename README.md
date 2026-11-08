@@ -45,17 +45,19 @@ does not search, and morzer's timers run the binary from where it was put.
 morzer secret recipients generate-recovery-key ~/dotdash-recovery.key   # store off the machine
 sudo morzer init --release oci://ghcr.io/morzecrew/dotdash:stable \
   --require-signature --signing-key "$MINISIGN_RELEASE_PUBKEY" \
-  --domain example.com --recovery-recipient age1… \
-  --set upstream_host=proxy.provider.example --set upstream_port=1080
+  --domain example.com --recovery-recipient age1…
 # also --set upstream_protocol=http, --set upstream_tls=true if the proxy needs them
 
-sudo morzer secret set upstream_username
-sudo morzer secret set upstream_password
+sudo morzer secret set upstream    # user:pass@proxy.provider.example:1080
 sudo morzer apply
 ```
 
-Before the first `apply`, each `secret set` reports that it restarted nothing;
-the value is stored.
+The `upstream` secret is the whole proxy in one value, `user:pass@host:port`
+(`host:port` for one that asks for no login), so moving to another proxy is
+one `secret set` and one restart. The password may contain `:` and `@`, and an
+IPv6 host goes in brackets; there is no `socks5://` in front, since the
+protocol is `upstream_protocol`. Before the first `apply`, `secret set`
+reports that it restarted nothing; the value is stored.
 `MINISIGN_RELEASE_PUBKEY` is this repository's variable of that name
 (`gh variable get MINISIGN_RELEASE_PUBKEY -R morzecrew/dotdash`). If the package
 is private, log root's Docker in to ghcr first.
@@ -161,25 +163,24 @@ Most residential and ISP proxies leave over IPv4 only, so sites see no IPv6
 (`exit-check` says "IPv6 unavailable"). A second proxy for IPv6, such as a
 static IPv6 proxy bought on its own, can carry it. Every destination with an
 IPv6 address then leaves through it, sites that have both included, and the
-rest through `upstream_host`. Neither falls back to the other: with the IPv6
-proxy down, IPv6 destinations fail.
+rest through the first. Neither falls back to the other: with the IPv6 proxy
+down, IPv6 destinations fail.
 
 ```sh
-sudo morzer secret set upstream6_username
-sudo morzer secret set upstream6_password
-sudo morzer config set upstream6_host=v6.proxy.example upstream6_port=1080   # also upstream6_protocol=http, upstream6_tls=true if it needs them
+sudo morzer secret set upstream6                    # user:pass@v6.proxy.example:1080
+sudo morzer config set upstream6_protocol=socks     # or http; also upstream6_tls=true if it needs it
 sudo morzer task run exit-check --output
 ```
 
-Set the two secrets first: until then they hold generated placeholders, which
-the proxy refuses. This server reaches the proxy over IPv4, so it needs no IPv6
+Set the secret first: until then it holds a generated placeholder, which the
+gate cannot use. This server reaches the proxy over IPv4, so it needs no IPv6
 of its own. The egress health check then also fetches `healthcheck6_url`
 through the proxy, and `doctor` names the proxy that fails. The split needs
 `resolve=gateway`, the default, which knows each destination's addresses; with
 `resolve=upstream` only IPv6 literals take it. Two proxies from different
 providers leave from different networks, which `exit-check` reports as a
 mismatch: a site reached over both can tell, though one with both is reached
-over IPv6 alone. `sudo morzer config unset upstream6_host` turns it off.
+over IPv6 alone. `sudo morzer config unset upstream6_protocol` turns it off.
 
 ### CDN (optional)
 
@@ -432,13 +433,10 @@ confuse each other's backups. A `file://` target needs no `--credentials-file`.
 
 | Name | Default | |
 | --- | --- | --- |
-| `upstream_protocol` | `socks` | `socks` or `http` |
-| `upstream_host`, `upstream_port` | required | upstream proxy |
+| `upstream_protocol` | `socks` | `socks` or `http`; the proxy itself is the `upstream` secret, `user:pass@host:port` |
 | `upstream_tls` | `false` | connect to the upstream over TLS |
 | `upstream_udp` | `false` | relay UDP via a SOCKS5 upstream with UDP ASSOCIATE; otherwise UDP is dropped |
-| `upstream6_host` | `none` | a second proxy for IPv6: destinations with an IPv6 address leave through it |
-| `upstream6_port` | `1080` | its port |
-| `upstream6_protocol` | `socks` | `socks` or `http`; credentials in `upstream6_username`, `upstream6_password` |
+| `upstream6_protocol` | `none` | `socks` or `http` for a second proxy for IPv6, the `upstream6` secret: destinations with an IPv6 address leave through it |
 | `upstream6_tls` | `false` | connect to it over TLS |
 | `https_port` | `443` | host port for REALITY and the site |
 | `xdns_domain` | `t` | delegated tunnel zone (`xdns` profile); a name with no dot is under the domain |
@@ -448,7 +446,7 @@ confuse each other's backups. A `file://` target needs no `--credentials-file`.
 | `log_level` | `error` | Xray error log; access log is always off. `warning` and below name the destinations of failed connections |
 | `healthcheck_url` | `https://www.gstatic.com/generate_204` | fetched through the upstream by the healthcheck |
 | `healthcheck_expect` | `.*` | regular expression the healthcheck response must match, such as the exit IP |
-| `healthcheck6_url` | `http://api6.ipify.org` | with `upstream6_host`, an IPv6-only URL the healthcheck also fetches, through it |
+| `healthcheck6_url` | `http://api6.ipify.org` | with the IPv6 proxy, an IPv6-only URL the healthcheck also fetches, through it |
 | `resolve` | `gateway` | who turns hostnames into addresses: `gateway`, this server over `dns_resolver`, so the upstream sees addresses only; `upstream`, the upstream, which then sees every hostname |
 | `dns_resolver` | `https://1.1.1.1/dns-query` | the DNS-over-HTTPS server `resolve=gateway` asks, through the upstream, and `client-config`'s Xray config asks through the tunnel; `https://` only |
 | `subscription` | `false` | serve each device a subscription URL on the cover site, which `client-config` prints; as secret as its links |

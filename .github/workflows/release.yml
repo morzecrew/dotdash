@@ -37,10 +37,9 @@ jobs:
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
       components: ""
       probe-paths: ""
-      operator-secrets: upstream_username upstream_password
+      operator-secrets: upstream
       init-args: >-
-        --domain dotdash.test --set upstream_host=upstream.rig.invalid
-        --set upstream_port=18080 --set upstream_protocol=http
+        --domain dotdash.test --set upstream_protocol=http
         --set healthcheck_url=http://11.99.0.10:8000/ --set cert_issuer=internal
         --profile xdns
       release-pubkey: ${{ vars.MINISIGN_RELEASE_PUBKEY }}

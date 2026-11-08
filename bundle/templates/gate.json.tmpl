@@ -7,15 +7,18 @@ directly whatever its config says. The gate carries what has to cross:
   - in: the public TLS port, and under their profiles UDP/53 for the DNS
     tunnel and xhttp_reality_port, to Xray, byte for byte (dokodemo-door);
   - out: Xray's SOCKS hop to the upstream proxy, which the gate dials with
-    the upstream's credentials, and with upstream6_host a second hop (1081)
-    to the IPv6 proxy, with its own. Xray never holds either.
+    the upstream secret's address and credentials, and with
+    upstream6_protocol a second hop (1081) to the IPv6 proxy, with its own.
+    Xray never holds either. The image splits each secret's
+    "user:pass@host:port" into the outbound's settings ({"$proxy": ...}); TLS
+    takes the server name from that address.
 
 Nothing else is routed: the freedom outbound carries only the public inbounds,
 whose destination is fixed to Xray, and everything else is blocked.
 */ -}}
 {{- $withXdns := or (eq .Profile "xdns") (eq .Profile "xdns-xhttp-reality") -}}
 {{- $xhttpReality := or (eq .Profile "xhttp-reality") (eq .Profile "xdns-xhttp-reality") -}}
-{{- $v6 := ne .Parameters.upstream6_host "none" -}}
+{{- $v6 := ne .Parameters.upstream6_protocol "none" -}}
 {{- /* Two services cannot publish one host port; refused here, so the apply
 stops before anything is replaced. The template language has no fail: required
 fails on its empty value with the message. */ -}}
@@ -47,14 +50,9 @@ fails on its empty value with the message. */ -}}
     {
       "tag": "upstream",
       "protocol": "{{ .Parameters.upstream_protocol }}",
-      "settings": {
-        "address": "{{ .Parameters.upstream_host }}",
-        "port": {{ .Parameters.upstream_port }},
-        "user": {"$file": "/run/secrets/upstream_username"},
-        "pass": {"$file": "/run/secrets/upstream_password"}
-      }
+      "settings": {"$proxy": "/run/secrets/upstream"}
 {{- if eq (print .Parameters.upstream_tls) "true" }},
-      "streamSettings": {"security": "tls", "tlsSettings": {"serverName": "{{ .Parameters.upstream_host }}"}}
+      "streamSettings": {"security": "tls"}
 {{- end }}
     },
     {"tag": "inside", "protocol": "freedom"},
@@ -63,14 +61,9 @@ fails on its empty value with the message. */ -}}
     {
       "tag": "upstream6",
       "protocol": "{{ .Parameters.upstream6_protocol }}",
-      "settings": {
-        "address": "{{ .Parameters.upstream6_host }}",
-        "port": {{ .Parameters.upstream6_port }},
-        "user": {"$file": "/run/secrets/upstream6_username"},
-        "pass": {"$file": "/run/secrets/upstream6_password"}
-      }
+      "settings": {"$proxy": "/run/secrets/upstream6"}
 {{- if eq (print .Parameters.upstream6_tls) "true" }},
-      "streamSettings": {"security": "tls", "tlsSettings": {"serverName": "{{ .Parameters.upstream6_host }}"}}
+      "streamSettings": {"security": "tls"}
 {{- end }}
     }
 {{- end }}
