@@ -64,7 +64,7 @@ jobs:
       channel: main
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
 
-  # The command the README gives works on what was just published: the
+  # The command the docs give works on what was just published: the
   # attestation is there, signed by bundle-ci's publish workflow for this
   # commit.
   provenance:

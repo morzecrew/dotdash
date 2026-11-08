@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# What the README promises about revoking a device:
+# What the docs promise about revoking a device:
 #
 # 1. a device added to vless_clients gets through with its own links;
 # 2. deleting its line locks it out, and the other devices keep working;

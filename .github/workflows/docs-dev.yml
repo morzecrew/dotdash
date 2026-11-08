@@ -1,0 +1,68 @@
+# The documentation site. Every pull request that touches it builds it with
+# --strict, which fails on a broken link. A push to main publishes it as the
+# `dev` version on gh-pages, never the default once a release exists; released
+# versions are docs-release.yml's.
+name: docs-dev
+
+on:
+  pull_request:
+    paths: [pages/**, CHANGELOG.md, .github/workflows/docs-*.yml]
+  push:
+    branches: [main]
+    paths: [pages/**, CHANGELOG.md, .github/workflows/docs-*.yml]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          enable-cache: false
+
+      - name: Build the site
+        working-directory: pages
+        run: uv run --locked zensical build --strict
+
+  deploy:
+    needs: build
+    # `dev` follows main only, so a dispatch from another branch can't
+    # overwrite it.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Shared with docs-release.yml: every mike deploy pushes to gh-pages.
+    concurrency:
+      group: docs-deploy
+      cancel-in-progress: false
+    permissions:
+      contents: write # mike pushes the built site to gh-pages
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # zizmor: ignore[artipacked] mike pushes with these credentials
+        with:
+          fetch-depth: 0 # mike reads and updates the gh-pages branch
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          enable-cache: false
+
+      - name: Publish dev
+        working-directory: pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          uv run --locked mike deploy --push --branch gh-pages dev
+          # Until the first release publishes `latest`, the root would 404.
+          versions=$(uv run --locked mike list --branch gh-pages)
+          if ! grep -q '\[latest\]' <<<"$versions"; then
+            uv run --locked mike set-default --push --branch gh-pages dev
+          fi
