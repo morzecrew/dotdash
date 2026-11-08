@@ -36,8 +36,12 @@ jobs:
       probe-paths: ""
       operator-secrets: upstream
       # What init refuses without; .github/smoke.d/pre-apply supplies the rest.
+      # upstream_host and upstream_port are the published release's, from
+      # before the upstream secret, which smoke-update installs first; a
+      # release that does not declare them gets them left out (smoke.sh).
       init-args: >-
-        --domain dotdash.test --set upstream_protocol=http
+        --domain dotdash.test --set upstream_host=upstream.rig.invalid
+        --set upstream_port=18080 --set upstream_protocol=http
         --set healthcheck_url=http://11.99.0.10:8000/ --set cert_issuer=internal
         --profile xdns
       dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}

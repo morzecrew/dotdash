@@ -13,7 +13,8 @@
 #
 # The upstream is an Xray HTTP proxy with one account, which replaces the
 # random value smoke.sh set, so a later hook can break the credentials on
-# purpose (/rig/upstream.conn keeps the right "user:pass@host:port"). It
+# purpose (/rig/upstream.conn keeps the right "user:pass@host:port", and
+# /rig/upstream.pass the password alone, for a release before it). It
 # shares a network with the healthcheck's target, which only it resolves; the
 # bundle's Xray reaches it on the rig's docker0 address. The target also stands in for the
 # IP-echo and network-lookup services exit-check asks, and serves /blob for
@@ -31,6 +32,7 @@ host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
 mkdir -p /rig/upstream /rig/target /rig/upstream-log
 pass=$(random)
 printf 'rig:%s@%s:18080' "${pass}" "${host}" >/rig/upstream.conn
+printf '%s' "${pass}" >/rig/upstream.pass
 # It logs every destination it is asked for (35-resolve.sh reads them).
 jq -n --arg pass "${pass}" '{log: {access: "/log/access.log", loglevel: "warning"},
   inbounds: [{listen: "0.0.0.0", port: 8080, protocol: "http",
@@ -58,7 +60,7 @@ EOF
 # 1 MiB for the benchmark's transfers (.github/bench).
 head -c 1048576 /dev/urandom >/rig/target/blob
 chmod -R a+rX /rig/upstream /rig/target
-chmod a+r /rig/upstream.conn
+chmod a+r /rig/upstream.conn /rig/upstream.pass
 sudo docker network create --subnet 11.99.0.0/24 dotdash-rig >/dev/null
 sudo docker run -d --name dotdash-rig-target --network dotdash-rig --ip 11.99.0.10 --network-alias target \
   -v /rig/target:/etc/caddy:ro "${caddy}" >/dev/null

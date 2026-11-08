@@ -17,8 +17,9 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@7c7541d3844dbb4dcb3dd20a626b85ab4ec98be3 # v0.9.1
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@c9c8b09ad97ae2e622ae0bff2969074e67b83145 # bundle-ci#30
     with:
+      bundle-ci-ref: c9c8b09ad97ae2e622ae0bff2969074e67b83145
       morzer-version: "0.14.0"
       ref: ${{ github.sha }}
       version: 0.0.0-pr.${{ github.event.pull_request.number }}
@@ -27,8 +28,12 @@ jobs:
       components: ""
       probe-paths: ""
       operator-secrets: upstream
+      # upstream_host and upstream_port are the published release's, from
+      # before the upstream secret, which smoke-update installs first; a
+      # release that does not declare them gets them left out (smoke.sh).
       init-args: >-
-        --domain dotdash.test --set upstream_protocol=http
+        --domain dotdash.test --set upstream_host=upstream.rig.invalid
+        --set upstream_port=18080 --set upstream_protocol=http
         --set healthcheck_url=http://11.99.0.10:8000/ --set cert_issuer=internal
         --profile xdns
       # smoke-update installs the published :main first, trusting this key.

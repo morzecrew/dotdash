@@ -88,8 +88,16 @@ recovers
 through 11080 http://11.99.0.10:8000/ || die "the client did not recover with the upstream"
 echo "20-fail-closed.sh: upstream stopped, clients get nothing and doctor names the upstream; both recover"
 
-printf 'rig:wrong@%s' "$(sed 's/.*@//' /rig/upstream.conn)" | sudo morzer secret set upstream >/dev/null
-fails_naming "refused the credentials"
-printf "%s" "$(cat /rig/upstream.conn)" | sudo morzer secret set upstream >/dev/null
+# The rehearsal runs this against the published release too, which may
+# predate the upstream secret and take the password as a secret of its own.
+if sudo grep -q '^  - name: upstream$' /opt/dotdash/current/secrets.schema.yaml; then
+  printf 'rig:wrong@%s' "$(sed 's/.*@//' /rig/upstream.conn)" | sudo morzer secret set upstream >/dev/null
+  fails_naming "refused the credentials"
+  printf "%s" "$(cat /rig/upstream.conn)" | sudo morzer secret set upstream >/dev/null
+else
+  printf wrong | sudo morzer secret set upstream_password >/dev/null
+  fails_naming "refused the credentials"
+  printf "%s" "$(cat /rig/upstream.pass)" | sudo morzer secret set upstream_password >/dev/null
+fi
 recovers
 echo "20-fail-closed.sh: a wrong upstream password, and doctor names the credentials"
