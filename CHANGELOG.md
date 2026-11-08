@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The upstream proxy is one secret, `upstream`, holding `user:pass@host:port`, so changing proxy is one restart; `upstream_host`, `upstream_port`, `upstream_username` and `upstream_password` no longer work. Run `sudo morzer secret set upstream` before updating: an update without it is refused, and changes nothing.
+- The upstream proxy is one secret, `upstream`, holding `user:pass@host:port`, so changing proxy is one restart; `upstream_host`, `upstream_port`, `upstream_username` and `upstream_password` no longer work. Run `sudo morzer secret set upstream` before updating: an update without it is refused.
+
+- This release is never applied unattended, and `morzer rollback` from it is refused, since 0.3.x could not start without the old settings; the pre-update backup is the way back.
 
 - The IPv6 proxy is the `upstream6` secret in the same form, turned on by `upstream6_protocol` (`socks` or `http`, now `none` by default) instead of `upstream6_host`. With it on, set `upstream6` and `upstream6_protocol` before updating, or IPv6 goes back to the first proxy.
 
