@@ -105,12 +105,15 @@ resend every device's links.
 
 ### Cover site
 
-Anyone reaching port 443 without the REALITY key sees a website. The bundled
-page differs between servers only in its title, so a scanner that indexes
-pages can still group them by the rest. Give each server its own site: put
-static files in `/srv/dotdash` (the `site_dir` parameter), readable by uid
-65532. Caddy serves them wherever they have the requested path, and the
-bundled page otherwise, with no restart.
+Anyone reaching port 443 without the REALITY key sees a website, and gets
+exactly what Caddy alone would answer, whatever they send; CI probes for it.
+The weak spot is the bundled page: it differs between servers only in its
+title, so whoever has seen one dotdash server can find the others by the
+rest. Give each server a site of its own before handing out links: put static
+files in `/srv/dotdash` (the `site_dir` parameter), readable by uid 65532.
+Caddy serves them wherever they have the requested path, and the bundled page
+otherwise, with no restart. Several pages that look maintained blend in
+better than one.
 
 ### DNS tunnel (optional)
 
@@ -328,6 +331,10 @@ morzer (`scripts/bootstrap.sh`), and no open port.
 
 `canary-config` names the profiles that check more: `xhttp` adds XHTTP over
 TLS, and `xhttp-reality` XHTTP with REALITY.
+
+A canary watches one server. With several (`servers`), `canary-config` also
+prints what to change for each of the others: run a canary per server, or
+move one between them with `sudo morzer config set server=<name> address=<name>`.
 
 `doctor` then fails on `health endpoints respond` when three tries in a row
 cannot fetch `probe_url` through dotdash, and each

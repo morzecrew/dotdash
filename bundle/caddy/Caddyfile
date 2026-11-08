@@ -33,12 +33,21 @@ http://127.0.0.1:8081 {
 	respond /healthz 200
 }
 
-{$DOMAIN} {
+# On every answer, errors too: those skip the site's own routes, so without
+# handle_errors a 404 or 405 would name the server and drop the rest.
+(headers) {
 	header {
 		-Server
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer
+	}
+}
+
+{$DOMAIN} {
+	import headers
+	handle_errors {
+		import headers
 	}
 
 	@xhttp path /{file./run/secrets/xhttp_path}/*
