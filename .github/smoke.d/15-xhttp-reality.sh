@@ -64,7 +64,7 @@ locked_out() { # <socks port>
 }
 
 before=$(links)
-! grep -q 'xhttp-reality' <<<"${before}" || die "client-config prints XHTTP with REALITY under the xdns profile"
+! grep -q 'security=reality.*type=xhttp' <<<"${before}" || die "client-config prints XHTTP with REALITY under the xdns profile"
 ! published 8443 tcp || die "8443 is published under the xdns profile"
 
 # 1. Both optional transports.
