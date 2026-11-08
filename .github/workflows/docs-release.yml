@@ -1,0 +1,55 @@
+# A release's documentation. A vX.Y.Z tag publishes version X.Y on gh-pages;
+# when X.Y is the newest released minor it also takes the `latest` alias and
+# the root redirect, so a patch on an older minor refreshes that minor alone.
+# Dispatch it on a tag to publish that tag's docs again.
+name: docs-release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Shared with docs-dev.yml: every mike deploy pushes to gh-pages.
+    concurrency:
+      group: docs-deploy
+      cancel-in-progress: false
+    permissions:
+      contents: write # mike pushes the built site to gh-pages
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # zizmor: ignore[artipacked] mike pushes with these credentials
+        with:
+          fetch-depth: 0 # mike reads gh-pages; every tag, to find the newest minor
+          fetch-tags: true
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          enable-cache: false
+
+      - name: Publish the release's minor
+        working-directory: pages
+        env:
+          REF: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          if [ "$REF_TYPE" != tag ] || ! [[ "$REF" =~ ^v([0-9]+)\.([0-9]+)\.[0-9]+$ ]]; then
+            echo "::error::run on a vX.Y.Z tag (got $REF_TYPE '$REF')"
+            exit 1
+          fi
+          minor="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+          newest=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          newest=$(echo "${newest#v}" | cut -d. -f1,2)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ "$minor" = "$newest" ]; then
+            uv run --locked mike deploy --push --update-aliases --branch gh-pages "$minor" latest
+            uv run --locked mike set-default --push --branch gh-pages latest
+          else
+            uv run --locked mike deploy --push --branch gh-pages "$minor"
+          fi
+          echo "published $minor (newest minor: $newest)"

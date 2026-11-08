@@ -1,3 +1,8 @@
 # Key material never belongs in the repository.
 *.key
 *.pem
+
+# The docs site's build output and toolchain.
+pages/site/
+pages/.cache/
+pages/.venv/

@@ -1,0 +1,97 @@
+[project]
+site_name = "dotdash"
+site_url = "https://morzecrew.github.io/dotdash/"
+site_description = "A morzer bundle: Xray REALITY in front of a cover site, all traffic out through your upstream proxy"
+site_author = "Lev Litvinov"
+copyright = "&copy; 2026 Lev Litvinov and contributors"
+
+repo_url = "https://github.com/morzecrew/dotdash"
+repo_name = "dotdash"
+
+nav = [
+    { "Home" = "index.md" },
+    { "Get started" = [
+        "get-started/install.md",
+        "get-started/clients.md",
+    ] },
+    { "Options" = [
+        "options/cover-site.md",
+        "options/dns-tunnel.md",
+        "options/xhttp-reality.md",
+        "options/ipv6-upstream.md",
+        "options/cdn.md",
+        "options/several-servers.md",
+        "options/canary.md",
+    ] },
+    { "Operations" = [
+        "operations/index.md",
+        "operations/leaks.md",
+        "operations/device-dns.md",
+        "operations/move-server.md",
+    ] },
+    { "Reference" = [
+        "reference/parameters.md",
+        "reference/secrets.md",
+        "reference/releases.md",
+        "reference/changelog.md",
+    ] },
+]
+
+dev_addr = "localhost:8047"
+
+[project.theme]
+features = [
+    "search.highlight",
+    "navigation.footer",
+    "navigation.instant",
+    "navigation.instant.progress",
+    "navigation.tabs",
+    "navigation.sections",
+    "navigation.indexes",
+    "navigation.path",
+    "navigation.top",
+    "toc.follow",
+    "content.code.copy",
+    "content.code.select",
+]
+
+[project.theme.icon]
+logo = "lucide/radio-tower"
+repo = "fontawesome/brands/github"
+
+[[project.theme.palette]]
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+primary = "blue grey"
+accent = "teal"
+
+[[project.theme.palette]]
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+primary = "blue grey"
+accent = "teal"
+
+# The changelog page includes ../CHANGELOG.md rather than copying it.
+[project.markdown_extensions.pymdownx.snippets]
+base_path = ["docs", ".."]
+check_paths = true
+
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.pymdownx.details]
+[project.markdown_extensions.attr_list]
+[project.markdown_extensions.pymdownx.superfences]
+[project.markdown_extensions.tables]
+[project.markdown_extensions.toc]
+permalink = true
+[project.markdown_extensions.pymdownx.highlight]
+[project.markdown_extensions.pymdownx.inlinehilite]
+
+# The root redirects to `latest`, the newest released minor; a patch release
+# refreshes its minor. `dev` follows main and is never the default once a
+# release exists. See .github/workflows/docs-*.yml.
+[project.extra.version]
+provider = "mike"
+default = "latest"
+alias = true

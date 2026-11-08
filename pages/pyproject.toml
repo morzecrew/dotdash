@@ -1,0 +1,21 @@
+# The documentation site's toolchain, and nothing else: dotdash itself is a
+# morzer bundle with no Python. `uv sync` here, then `uv run zensical serve`.
+[project]
+name = "dotdash-docs"
+version = "0"
+requires-python = ">=3.12"
+
+[dependency-groups]
+docs = [
+    "mike",
+    "zensical>=0.0.43",
+]
+
+[tool.uv]
+package = false
+default-groups = ["docs"]
+
+# Zensical's mike fork, which has no PyPI release. Pinned to a commit, the one
+# bloomery and forze use, so a later `uv lock` can't move it silently.
+[tool.uv.sources]
+mike = { git = "https://github.com/squidfunk/mike", rev = "2d4ad799442f4592db8ad53b179bfb33db8c69ac" }
