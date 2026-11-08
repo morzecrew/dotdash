@@ -16,7 +16,7 @@ outbound traffic routed through an upstream proxy you provide.
 ## Install
 
 Requires a domain whose DNS you can edit (any provider), a Linux host with
-Docker ≥ 28 and Compose ≥ 2.35, `sops`, `age`, morzer ≥ 0.13.0, and upstream
+Docker ≥ 28 and Compose ≥ 2.35, `sops`, `age`, morzer ≥ 0.14.0, and upstream
 proxy credentials. `example.com` below is your domain.
 
 **1. DNS**: `example.com  A  <server IP>`.
@@ -41,7 +41,7 @@ does not search, and morzer's timers run the binary from where it was put.
 
 ```sh
 morzer secret recipients generate-recovery-key ~/dotdash-recovery.key   # store off the machine
-sudo morzer init --product dotdash --release oci://ghcr.io/morzecrew/dotdash:stable \
+sudo morzer init --release oci://ghcr.io/morzecrew/dotdash:stable \
   --require-signature --signing-key "$MINISIGN_RELEASE_PUBKEY" \
   --domain example.com --recovery-recipient age1… \
   --set upstream_host=proxy.provider.example --set upstream_port=1080
@@ -52,11 +52,6 @@ sudo morzer secret set upstream_password
 sudo morzer apply
 ```
 
-Spell `--product dotdash` exactly: morzer names the variables it hands the
-bundle after the installation, and the bundle reads `DOTDASH_*`
-([morzecrew/morzer#298](https://github.com/morzecrew/morzer/issues/298)). It is
-needed at all only because morzer reads the name from a local release alone
-([morzecrew/morzer#297](https://github.com/morzecrew/morzer/issues/297)).
 Before the first `apply`, each `secret set` reports that it restarted nothing;
 the value is stored.
 `MINISIGN_RELEASE_PUBKEY` is this repository's variable of that name
@@ -87,13 +82,12 @@ sudo morzer task run client-config --output -- phone | grep '^vless://' |
 ```
 
 Each device should get its own id. `sudo morzer secret edit vless_clients`
-opens the list as YAML, one `<uuid> [name]` per line of a `|` block
-(`uuidgen` makes an id); without the `|`, YAML joins the lines into one:
+opens the list as plain text, one `<uuid> [name]` per line (`uuidgen` makes an
+id):
 
-```yaml
-vless_clients: |
-  e3532f3a-a23d-4bb0-ba7e-db8ba3ccd740 laptop
-  0b8f6f4e-5c1d-4a2b-9e3f-7d6c5b4a3921 phone
+```text
+e3532f3a-a23d-4bb0-ba7e-db8ba3ccd740 laptop
+0b8f6f4e-5c1d-4a2b-9e3f-7d6c5b4a3921 phone
 ```
 
 It opens `$EDITOR`, which `sudo` drops, so `vi` unless you pass one:

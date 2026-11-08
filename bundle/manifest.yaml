@@ -33,7 +33,7 @@ runtimes:
 compatibility:
   # The manager this bundle is verified and rehearsed with, and the first that
   # reads `database: none`.
-  min_manager_version: "0.13.0"
+  min_manager_version: "0.14.0"
   rollback_safe: true
   # No database, which an unattended update needs declared.
   database: none
