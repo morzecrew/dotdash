@@ -32,8 +32,13 @@ status() { # <url>: the status code alone
 url_of() { # [client]: the subscription URL client-config prints for it
   sudo morzer task run client-config --output ${1:+-- "$1"} | grep -m1 -E "^https://${domain}/[0-9a-f]{32}\$" || true
 }
+# The rehearsal runs this against the published release too. One from before
+# --full prints each device's links beside its URL, and has no healthcheck on
+# the subscription service.
+if sudo grep -q -- '--full' /opt/dotdash/current/tasks/client-config.sh; then full=(--full); else full=(); fi
 links_of() { # [client]: its vless:// links, which --full prints
-  sudo morzer task run client-config --output -- --full ${1:+"$1"} | grep '^vless://' || true
+  local args=(${full[@]+"${full[@]}"} ${1:+"$1"})
+  sudo morzer task run client-config --output ${args[@]+-- "${args[@]}"} | grep '^vless://' || true
 }
 health() { # the subscription service's health
   sudo docker inspect -f '{{.State.Health.Status}}' "$(service_container subscription)" 2>/dev/null || true
@@ -48,10 +53,12 @@ trap restore EXIT
 sudo morzer config set subscription=true >/dev/null || die "could not turn subscriptions on"
 url=$(url_of)
 [ -n "${url}" ] || die "client-config prints no subscription URL with the parameter on"
-! grep -q '^vless://' <<<"$(sudo morzer task run client-config --output)" \
-  || die "client-config prints links beside the subscription URL without --full"
-for _ in $(seq 30); do [ "$(health)" = healthy ] && break; sleep 1; done
-[ "$(health)" = healthy ] || die "the subscription service is not healthy: $(health)"
+if [ ${#full[@]} -gt 0 ]; then
+  ! grep -q '^vless://' <<<"$(sudo morzer task run client-config --output)" \
+    || die "client-config prints links beside the subscription URL without --full"
+  for _ in $(seq 30); do [ "$(health)" = healthy ] && break; sleep 1; done
+  [ "$(health)" = healthy ] || die "the subscription service is not healthy: $(health)"
+fi
 served=$(fetch "${url}" | base64 -d 2>/dev/null || true)
 [ -n "${served}" ] || die "the subscription URL serves nothing"
 [ "${served}" = "$(links_of)" ] || die "the subscription does not serve the links client-config prints"

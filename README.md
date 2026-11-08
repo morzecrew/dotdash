@@ -77,11 +77,8 @@ link, and one Xray config for v2rayN or v2rayNG (custom config) that uses
 whichever of the two answers fastest and, when the DNS tunnel is on, falls back
 to it only when neither does. The config checks every entry every 30 seconds,
 a small request each, so it leaves one that stops answering within about half
-a minute. Each link is named after the device and its transport, behind the
-flag of the country the upstream leaves from, such as `🇩🇪 phone [reality]`,
-and `🇩🇪 (! 🇹🇷) phone [reality]` when IPv6 leaves from another country; the
-countries are looked up at start, as `exit-check` does, and a name has no flag
-when the lookup fails. Treat the output as a password. To scan a link
+a minute. Each link is named after the device and its transport, such as
+`phone [reality]`. Treat the output as a password. To scan a link
 with a phone, show each as a QR code in the terminal (`qrencode` package):
 
 ```sh

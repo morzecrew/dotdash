@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Links are named `🇩🇪 phone [reality]`, `[xhttp]` and `[xhttp+reality]`, not `dotdash-phone`: the flag of the country the upstream leaves from, a second (`🇩🇪 (! 🇹🇷)`) when IPv6 leaves from another, and none when the lookup fails. Apps show them once links are added again, or at the next subscription refresh.
+- Links are named after the device and transport, such as `phone [reality]`, `phone [xhttp]` and `phone [xhttp+reality]`, in place of `dotdash-phone`, `dotdash-xhttp-phone` and `dotdash-xhttp-reality-phone`. Apps show the new names once the links are added again, or at the next subscription refresh.
 
 ### Changed
 
