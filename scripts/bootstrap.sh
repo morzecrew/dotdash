@@ -98,4 +98,4 @@ EOF
 fi
 
 say "done: $(docker --version | cut -d, -f1), compose $(docker compose version --short), $(sops --version | head -1), $(morzer --version)"
-say "next: DNS, then step 3 of the README's Install"
+say "next: DNS, then the Deploy step of Install at https://morzecrew.github.io/dotdash/"

@@ -11,7 +11,7 @@
 # 2. xhttp-reality, on a port of its own: 53 is no longer published, the link
 #    names the new port and works there, and 8443 is shut. xhttp_reality_port
 #    equal to https_port or 80 is refused, and the deployment keeps serving.
-# 3. xdns again, the rollback the README gives: the port is shut, client-config
+# 3. xdns again, the rollback the docs give: the port is shut, client-config
 #    prints exactly what it did before, and the first clients get through.
 #
 # No link is printed: a failure names the step, not the credentials.
