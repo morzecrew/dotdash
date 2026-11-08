@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Both bundles need morzer 0.14.0 or later. `sudo morzer secret edit vless_clients` then opens the list as plain text, one client per line, and `init` needs no `--product`.
+
 - When the way out fails, `doctor` says which layer did: the upstream proxy's address, its credentials, the destination behind it, or an exit that no longer matches `healthcheck_expect`. The health checks are now `cover-site` and `egress`.
 
 - Xray's `log_level` defaults to `error`. At `warning` and below it names the destinations of failed connections, which a log should not keep; set it back for debugging.
@@ -42,8 +44,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ...
 
 ### Fixed
-
-- The `canary-config` task's init command names the product, without which morzer 0.13.0 cannot install the canary from its registry reference.
 
 - The cover site's error answers, such as 404 and 405, no longer name the server, and carry the site's headers like its pages do. A prober could tell them apart.
 

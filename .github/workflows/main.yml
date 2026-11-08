@@ -25,6 +25,7 @@ jobs:
       packages: read
     uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@7c7541d3844dbb4dcb3dd20a626b85ab4ec98be3 # v0.9.1
     with:
+      morzer-version: "0.14.0"
       ref: ${{ github.sha }}
       channel: main
       signing: dev
