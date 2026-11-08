@@ -9,7 +9,11 @@ services:
       - "${DOTDASH_PARAM_XHTTP_REALITY_PORT:-8443}:8443/tcp"
 
   # Set under these profiles only, not from the parameter, which has a default
-  # either way: with it, client-config prints the third link.
+  # either way: with it, client-config prints the third link, and the
+  # subscriptions carry it.
   client-config:
+    environment:
+      XHTTP_REALITY_PORT: ${DOTDASH_PARAM_XHTTP_REALITY_PORT:-8443}
+  subscription:
     environment:
       XHTTP_REALITY_PORT: ${DOTDASH_PARAM_XHTTP_REALITY_PORT:-8443}

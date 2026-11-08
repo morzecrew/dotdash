@@ -77,6 +77,17 @@ EOF
 
 client() { # <id> <label>
   echo "== $2 =="
+  if [ "${SUBSCRIPTION:-false}" = true ]; then
+    # As subscription.sh names the device's file.
+    token=$(printf '%s:%s' "$(cat /run/secrets/subscription_key)" "$1" | sha256sum | cut -c1-32)
+    if [ "${HTTPS_PORT}" = 443 ]; then at=; else at=":${HTTPS_PORT}"; fi
+    cat <<EOF
+Subscription, for the app to fetch these links from and refresh them after a
+revocation or a key rotation (as secret as the links):
+https://${DOMAIN}${at}/${token}
+
+EOF
+  fi
   for s in $servers; do
     if [ "$count" -gt 1 ]; then label="$2-$s"; else label=$2; fi
     links "$1" "$label" "$s"
@@ -120,11 +131,11 @@ EOF
 }
 
 # One client per line, "<uuid> [name]"; blank lines and "#" comments skipped,
-# as the image reads it.
+# as the image reads it. $1 names one client, or gives its uuid.
 found=
 while read -r id name _ || [ -n "${id:-}" ]; do
   case $id in '' | '#'*) continue ;; esac
-  [ -z "$want" ] || [ "$want" = "${name:-}" ] || continue
+  [ -z "$want" ] || [ "$want" = "${name:-}" ] || [ "$want" = "$id" ] || continue
   found=1
   client "$id" "${name:-client}"
 done </run/secrets/vless_clients

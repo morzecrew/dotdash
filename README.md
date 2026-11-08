@@ -173,6 +173,27 @@ sudo morzer config set servers=example.com,b.example.com
 whichever server and transport answers fastest. Add and revoke devices on
 every server.
 
+### Subscriptions (optional)
+
+With subscriptions on, each device gets a URL on the cover site that serves
+its links, which the app fetches and refreshes by itself. A device deleted from
+`vless_clients` stops getting links, and after a `secret rotate` of
+`reality_key` or `vless_seed` the apps take the new links at their next
+refresh, with nothing to resend:
+
+```sh
+sudo morzer config set subscription=true
+sudo morzer task run client-config --output -- phone   # the phone's URL, above its links
+```
+
+Add the URL as a subscription in the app (v2rayN, v2rayNG, Hiddify, Happ and
+Streisand take one) and let it update every few hours. The URL is as secret
+as the links: anyone holding it gets them, and nothing records who fetched it.
+`sudo morzer secret rotate subscription_key` moves every URL at once, for one
+that leaked; `client-config` prints the new ones. Any other URL gets the cover
+site's 404. With several servers, each one's URL lists the links of all of
+them, so a device can subscribe on any.
+
 ## Keeping it running
 
 **Updates.** To install each release from `:stable` unattended, nightly at
@@ -387,6 +408,7 @@ confuse each other's backups. A `file://` target needs no `--credentials-file`.
 | `healthcheck_expect` | `.*` | regular expression the healthcheck response must match, such as the exit IP |
 | `resolve` | `gateway` | who turns hostnames into addresses: `gateway`, this server over `dns_resolver`, so the upstream sees addresses only; `upstream`, the upstream, which then sees every hostname |
 | `dns_resolver` | `https://1.1.1.1/dns-query` | the DNS-over-HTTPS server `resolve=gateway` asks, through the upstream, and `client-config`'s Xray config asks through the tunnel; `https://` only |
+| `subscription` | `false` | serve each device a subscription URL on the cover site, which `client-config` prints; as secret as its links |
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (Caddy's own CA, for a machine the internet cannot reach) |
 | `site_dir` | `/srv/dotdash` | host directory of your own cover site |
 | `servers` | `self` | servers sharing these keys, comma-separated, for client configs; `self` is this one |
