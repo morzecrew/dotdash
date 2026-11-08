@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Healthy when each running service, reality and under the xhttp profile xhttp,
+# Healthy when each running service, reality and the one its profile adds,
 # fetches probe_url through dotdash, in up to three tries so one lost request
 # is not an alert. It probes live, so `doctor` reports the path as it is now.
 # `doctor` gives health checks 30s in all: a try times out after 7s

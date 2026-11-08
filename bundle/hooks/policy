@@ -13,8 +13,9 @@
 #   - the gate forwards its public inbounds to Xray only, carries Xray's hop
 #     to the upstream, and blocks everything else;
 #   - Xray is on internal networks only, so it has no route out at all, and
-#     publishes nothing; the gate publishes only https_port and, with the DNS
-#     tunnel, 53, and Caddy only 80;
+#     publishes nothing; the gate publishes only https_port and, where it
+#     forwards them, 53 for the DNS tunnel and xhttp_reality_port, and Caddy
+#     only 80;
 #   - every container runs unprivileged: no added capability, read-only, uid
 #     65532, not on the host's network.
 #
@@ -36,6 +37,7 @@ config=${DOTDASH_CONFIG_FILE:-/etc/dotdash/application.yaml}
 gate=${DOTDASH_GATE_CONFIG:-/etc/dotdash/gate.json}
 release=${DOTDASH_RELEASE_DIR:?}
 https_port=${DOTDASH_PARAM_HTTPS_PORT:-443}
+xhttp_reality_port=${DOTDASH_PARAM_XHTTP_REALITY_PORT:-8443}
 jq_image=$(sed -n 's/^  jq: *//p' "${release}/manifest.yaml")
 [ -n "${jq_image}" ] || { echo "policy: the release pins no jq image" >&2; exit 1; }
 docker image inspect "${jq_image}" >/dev/null 2>&1 || docker pull -q "${jq_image}" >/dev/null
@@ -48,7 +50,7 @@ jq() { # <filter> <file>: the filter's output, or why the file does not parse
 
 violations=$(jq '
   [.outbounds[]?.tag] as $tags
-  | ([.inbounds[]?.tag] - ["reality", "xhttp", "xdns", "probe"]) as $extra
+  | ([.inbounds[]?.tag] - ["reality", "xhttp", "xhttp-reality", "xdns", "probe"]) as $extra
   | check($tags == ["upstream", "block"]; "the outbounds are \($tags), not upstream and block"),
     check(.outbounds[0] | .protocol == "socks" and .settings.address == "gate" and .settings.user == null;
       "the upstream outbound is not a SOCKS hop to the gate without credentials"),
@@ -78,7 +80,8 @@ violations=$(jq '
       check(.listen == "127.0.0.1"; "inbound \(.tag) (\(.protocol)) listens beyond loopback"))
   ' "${config}")
 violations+=$'\n'$(jq '
-  ([.inbounds[]?.tag] - ["public-tls", "public-dns", "egress"]) as $extra
+  ["public-tls", "public-dns", "public-xhttp-reality"] as $public
+  | ([.inbounds[]?.tag] - $public - ["egress"]) as $extra
   | [.routing.rules[]? | select(.outboundTag == "inside") | .inboundTag // ["(any)"] | .[]] as $inward
   | check($extra == []; "the gate has unexpected inbounds: \($extra)"),
     (.inbounds[]? | select(.protocol == "dokodemo-door") |
@@ -86,7 +89,7 @@ violations+=$'\n'$(jq '
     check([.outbounds[]?.tag] == ["upstream", "inside", "block"]; "the gate'"'"'s outbounds are \([.outbounds[]?.tag])"),
     check(.outbounds[0].protocol | IN("socks", "http"); "the gate dials the upstream with \(.outbounds[0].protocol)"),
     check(.outbounds[2].protocol == "blackhole"; "the gate'"'"'s block outbound is not a blackhole"),
-    check(($inward - ["public-tls", "public-dns"]) == []; "the gate sends \($inward - ["public-tls", "public-dns"]) out directly"),
+    check(($inward - $public) == []; "the gate sends \($inward - $public) out directly"),
     check(.routing.rules[-1] == {network: "tcp,udp", outboundTag: "block"}; "the gate does not block what its rules leave"),
     check(has("dns") | not; "the gate has a DNS section of its own")
   ' "${gate}")
@@ -95,8 +98,9 @@ violations+=$'\n'$(jq '
 # Fields split on |, not spaces: read collapses empty fields between spaces,
 # and a container with no user set has one.
 format='{{index .Config.Labels "com.docker.compose.service"}}|{{.HostConfig.Privileged}}|{{.HostConfig.ReadonlyRootfs}}|{{.Config.User}}|{{.HostConfig.NetworkMode}}|{{json .HostConfig.CapAdd}}|{{range $p, $b := .HostConfig.PortBindings}}{{range $b}}{{$p}}={{.HostIp}}:{{.HostPort}};{{end}}{{end}}'
-# The DNS tunnel's 53/udp is expected only where the gate forwards it.
-xdns=$(grep -c '"tag": *"public-dns"' "${gate}" || true)
+# The DNS tunnel's 53/udp, and xhttp_reality_port, are expected only where the
+# gate forwards them.
+forwards() { grep -q "\"tag\": *\"$1\"" "${gate}"; }
 while IFS='|' read -r name privileged readonly user network caps ports; do
   [ -n "${name}" ] || continue
   [ "${privileged}" = false ] || violations+=$'\n'"${name} runs privileged"
@@ -107,7 +111,9 @@ while IFS='|' read -r name privileged readonly user network caps ports; do
   for binding in ${ports//;/ }; do
     case ${name}/${binding} in
     gate/443/tcp=*:"${https_port}" | caddy/80/tcp=*:80) ;;
-    gate/5353/udp=*:53) [ "${xdns}" -gt 0 ] || violations+=$'\n'"the gate publishes 53/udp with no DNS tunnel configured" ;;
+    gate/5353/udp=*:53) forwards public-dns || violations+=$'\n'"the gate publishes 53/udp with no DNS tunnel configured" ;;
+    gate/8443/tcp=*:"${xhttp_reality_port}") forwards public-xhttp-reality ||
+      violations+=$'\n'"the gate publishes ${xhttp_reality_port}/tcp with no XHTTP with REALITY configured" ;;
     *) violations+=$'\n'"${name} publishes ${binding%%=*} on ${binding#*=}, which nothing should" ;;
     esac
   done

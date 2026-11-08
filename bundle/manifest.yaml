@@ -22,6 +22,11 @@ runtimes:
     profiles:
       # The DNS tunnel on UDP/53, which also needs xdns_domain.
       xdns: [compose/xdns.yaml]
+      # VLESS over XHTTP with REALITY on xhttp_reality_port, beside the two
+      # transports every install has. One profile per installation, so both
+      # together is a profile of its own.
+      xhttp-reality: [compose/xhttp-reality.yaml]
+      xdns-xhttp-reality: [compose/xdns.yaml, compose/xhttp-reality.yaml]
     options:
       project: dotdash
 
@@ -43,6 +48,8 @@ requirements:
   disk: 2GiB
   # TCP only. UDP/53 for the DNS tunnel is not checked here: on a host whose
   # systemd-resolved stub holds 127.0.0.53:53, set xdns_bind to the public IP.
+  # Nor is xhttp_reality_port: these fields see the parameters, not the
+  # profile, and a default install must not need it free.
   ports: ["80", "{{ .Parameters.https_port }}"]
 
 parameters:
@@ -86,6 +93,11 @@ parameters:
     type: string
     default: 0.0.0.0
     description: Host address UDP/53 is published on for the DNS tunnel
+    services: [gate]
+  xhttp_reality_port:
+    type: port
+    default: 8443
+    description: "Host TCP port of XHTTP with REALITY (the xhttp-reality and xdns-xhttp-reality profiles); must differ from https_port and 80"
     services: [gate]
   xdns_mtu:
     type: int
@@ -166,7 +178,7 @@ operations:
 
 tasks:
   client-config:
-    description: "Print client settings, for every client or the one named after --: REALITY and XHTTP links, XDNS outbound (output is credentials)"
+    description: "Print client settings, for every client or the one named after --: REALITY and XHTTP links, and XHTTP with REALITY and the DNS tunnel under their profiles (output is credentials)"
     service: client-config
     command: ["sh", "/task/client-config.sh"]
     args: true

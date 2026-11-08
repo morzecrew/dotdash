@@ -1,0 +1,15 @@
+# The xhttp-reality profile, and with xdns.yaml xdns-xhttp-reality: VLESS over
+# XHTTP with REALITY, on a host port of its own (xhttp_reality_port). The
+# inbound is in the Xray template under the same profiles, and the gate's
+# forward in gate.json.tmpl.
+services:
+  # Published by the gate, which forwards it to Xray's inbound on 8443.
+  gate:
+    ports:
+      - "${DOTDASH_PARAM_XHTTP_REALITY_PORT:-8443}:8443/tcp"
+
+  # Set under these profiles only, not from the parameter, which has a default
+  # either way: with it, client-config prints the third link.
+  client-config:
+    environment:
+      XHTTP_REALITY_PORT: ${DOTDASH_PARAM_XHTTP_REALITY_PORT:-8443}
