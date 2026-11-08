@@ -57,7 +57,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: morzecrew/bundle-ci
-          ref: c9c8b09ad97ae2e622ae0bff2969074e67b83145 # bundle-ci#30
+          ref: 64db868a6a80495d10c9dd5e3f1ea53d60f6aa99 # v0.9.2
           path: .bundle-ci
           persist-credentials: false
 
