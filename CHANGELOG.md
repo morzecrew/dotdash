@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- An optional second proxy for IPv6 (`upstream6_host`, with its own credentials), for an upstream that leaves over IPv4 only: destinations with an IPv6 address, sites with both included, leave through it, and the rest through the first. Neither falls back to the other, and `doctor` names the one that fails.
+
 ## [0.2.0] - 2026-11-08
 
 ### Added

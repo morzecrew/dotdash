@@ -7,13 +7,15 @@ directly whatever its config says. The gate carries what has to cross:
   - in: the public TLS port, and under their profiles UDP/53 for the DNS
     tunnel and xhttp_reality_port, to Xray, byte for byte (dokodemo-door);
   - out: Xray's SOCKS hop to the upstream proxy, which the gate dials with
-    the upstream's credentials. Xray never holds them.
+    the upstream's credentials, and with upstream6_host a second hop (1081)
+    to the IPv6 proxy, with its own. Xray never holds either.
 
 Nothing else is routed: the freedom outbound carries only the public inbounds,
 whose destination is fixed to Xray, and everything else is blocked.
 */ -}}
 {{- $withXdns := or (eq .Profile "xdns") (eq .Profile "xdns-xhttp-reality") -}}
 {{- $xhttpReality := or (eq .Profile "xhttp-reality") (eq .Profile "xdns-xhttp-reality") -}}
+{{- $v6 := ne .Parameters.upstream6_host "none" -}}
 {{- /* Two services cannot publish one host port; refused here, so the apply
 stops before anything is replaced. The template language has no fail: required
 fails on its empty value with the message. */ -}}
@@ -36,6 +38,10 @@ fails on its empty value with the message. */ -}}
 {{- end }}
     {"tag": "egress", "listen": "0.0.0.0", "port": 1080, "protocol": "socks",
      "settings": {"auth": "noauth", "udp": {{ and (eq (print .Parameters.upstream_udp) "true") (eq .Parameters.upstream_protocol "socks") }}}}
+{{- if $v6 }},
+    {"tag": "egress6", "listen": "0.0.0.0", "port": 1081, "protocol": "socks",
+     "settings": {"auth": "noauth", "udp": false}}
+{{- end }}
   ],
   "outbounds": [
     {
@@ -53,12 +59,30 @@ fails on its empty value with the message. */ -}}
     },
     {"tag": "inside", "protocol": "freedom"},
     {"tag": "block", "protocol": "blackhole"}
+{{- if $v6 }},
+    {
+      "tag": "upstream6",
+      "protocol": "{{ .Parameters.upstream6_protocol }}",
+      "settings": {
+        "address": "{{ .Parameters.upstream6_host }}",
+        "port": {{ .Parameters.upstream6_port }},
+        "user": {"$file": "/run/secrets/upstream6_username"},
+        "pass": {"$file": "/run/secrets/upstream6_password"}
+      }
+{{- if eq (print .Parameters.upstream6_tls) "true" }},
+      "streamSettings": {"security": "tls", "tlsSettings": {"serverName": "{{ .Parameters.upstream6_host }}"}}
+{{- end }}
+    }
+{{- end }}
   ],
   "routing": {
     "domainStrategy": "AsIs",
     "rules": [
       {"inboundTag": ["public-tls"{{ if $withXdns }}, "public-dns"{{ end }}{{ if $xhttpReality }}, "public-xhttp-reality"{{ end }}], "outboundTag": "inside"},
       {"inboundTag": ["egress"], "outboundTag": "upstream"},
+{{- if $v6 }}
+      {"inboundTag": ["egress6"], "outboundTag": "upstream6"},
+{{- end }}
       {"network": "tcp,udp", "outboundTag": "block"}
     ]
   }

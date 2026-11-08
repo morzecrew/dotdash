@@ -149,6 +149,32 @@ before: `installation.profile=xdns` with the DNS tunnel, or `sudo morzer
 config unset installation.profile` without. Do that before rolling back to a
 release that has no such profile, which morzer otherwise refuses.
 
+### IPv6 through a second proxy (optional)
+
+Most residential and ISP proxies leave over IPv4 only, so sites see no IPv6
+(`exit-check` says "IPv6 unavailable"). A second proxy for IPv6, such as a
+static IPv6 proxy bought on its own, can carry it. Every destination with an
+IPv6 address then leaves through it, sites that have both included, and the
+rest through `upstream_host`. Neither falls back to the other: with the IPv6
+proxy down, IPv6 destinations fail.
+
+```sh
+sudo morzer secret set upstream6_username
+sudo morzer secret set upstream6_password
+sudo morzer config set upstream6_host=v6.proxy.example upstream6_port=1080   # also upstream6_protocol=http, upstream6_tls=true if it needs them
+sudo morzer task run exit-check --output
+```
+
+Set the two secrets first: until then they hold generated placeholders, which
+the proxy refuses. This server reaches the proxy over IPv4, so it needs no IPv6
+of its own. The egress health check then also fetches `healthcheck6_url`
+through the proxy, and `doctor` names the proxy that fails. The split needs
+`resolve=gateway`, the default, which knows each destination's addresses; with
+`resolve=upstream` only IPv6 literals take it. Two proxies from different
+providers leave from different networks, which `exit-check` reports as a
+mismatch: a site reached over both can tell, though one with both is reached
+over IPv6 alone. `sudo morzer config unset upstream6_host` turns it off.
+
 ### CDN (optional)
 
 The XHTTP link also works through a CDN that proxies HTTP/2 to
@@ -381,6 +407,10 @@ confuse each other's backups. A `file://` target needs no `--credentials-file`.
 | `upstream_host`, `upstream_port` | required | upstream proxy |
 | `upstream_tls` | `false` | connect to the upstream over TLS |
 | `upstream_udp` | `false` | relay UDP via a SOCKS5 upstream with UDP ASSOCIATE; otherwise UDP is dropped |
+| `upstream6_host` | `none` | a second proxy for IPv6: destinations with an IPv6 address leave through it |
+| `upstream6_port` | `1080` | its port |
+| `upstream6_protocol` | `socks` | `socks` or `http`; credentials in `upstream6_username`, `upstream6_password` |
+| `upstream6_tls` | `false` | connect to it over TLS |
 | `https_port` | `443` | host port for REALITY and the site |
 | `xdns_domain` | `t` | delegated tunnel zone (`xdns` profile); a name with no dot is under the domain |
 | `xdns_bind` | `0.0.0.0` | host address for UDP/53 |
@@ -389,6 +419,7 @@ confuse each other's backups. A `file://` target needs no `--credentials-file`.
 | `log_level` | `error` | Xray error log; access log is always off. `warning` and below name the destinations of failed connections |
 | `healthcheck_url` | `https://www.gstatic.com/generate_204` | fetched through the upstream by the healthcheck |
 | `healthcheck_expect` | `.*` | regular expression the healthcheck response must match, such as the exit IP |
+| `healthcheck6_url` | `http://api6.ipify.org` | with `upstream6_host`, an IPv6-only URL the healthcheck also fetches, through it |
 | `resolve` | `gateway` | who turns hostnames into addresses: `gateway`, this server over `dns_resolver`, so the upstream sees addresses only; `upstream`, the upstream, which then sees every hostname |
 | `dns_resolver` | `https://1.1.1.1/dns-query` | the DNS-over-HTTPS server `resolve=gateway` asks, through the upstream, and `client-config`'s Xray config asks through the tunnel; `https://` only |
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (Caddy's own CA, for a machine the internet cannot reach) |
