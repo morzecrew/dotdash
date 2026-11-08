@@ -4,8 +4,10 @@
 #
 #   - Xray's traffic leaves through the upstream only: two outbounds, the
 #     upstream (a SOCKS hop to the gate, with no credentials) and block, no
-#     freedom anywhere, no DNS of its own, names resolved by the upstream, and
-#     the upstream the explicit last routing rule;
+#     freedom anywhere, and the upstream the explicit last routing rule;
+#   - names are resolved either by the upstream (no DNS in Xray, names passed
+#     on), or here over DoH routed through the upstream, with the upstream
+#     handed addresses only (ForceIP, never UseIP's fallback to the name);
 #   - every VLESS inbound demands a listed client and VLESS decryption, no
 #     XHTTP inbound sets a flow, and anything else listens on loopback only;
 #   - the gate forwards its public inbounds to Xray only, carries Xray's hop
@@ -52,8 +54,20 @@ violations=$(jq '
       "the upstream outbound is not a SOCKS hop to the gate without credentials"),
     check(.outbounds[1].protocol == "blackhole"; "the block outbound is not a blackhole"),
     check([.. | objects | .protocol? // empty] | index("freedom") == null; "a freedom outbound sends traffic out directly"),
-    check((.routing.domainStrategy // "AsIs") == "AsIs"; "Xray resolves names itself (domainStrategy \(.routing.domainStrategy))"),
-    check(has("dns") | not; "Xray has a DNS section of its own"),
+    ((.outbounds[0].targetStrategy // "AsIs") | ascii_downcase) as $target
+    | (if has("dns") then
+        # resolve=gateway: DoH only, routed (not "+local"), and the upstream
+        # handed addresses only, never the name as a fallback.
+        check([.dns.servers[]? | if type == "string" then . else .address end] as $s
+          | ($s | length) > 0 and ($s | all(startswith("https://")));
+          "Xray asks DNS other than DoH through the upstream (\([.dns.servers[]? | if type == "string" then . else .address end]))"),
+        check($target | startswith("forceip");
+          "Xray resolves names, but the upstream outbound can still hand it a name (targetStrategy \($target))")
+      else
+        # resolve=upstream: names go to the upstream as they are.
+        check((.routing.domainStrategy // "AsIs") == "AsIs"; "Xray resolves names with no DNS of its own (domainStrategy \(.routing.domainStrategy))"),
+        check($target == "asis"; "the upstream outbound resolves names with no DNS of Xray'"'"'s own (targetStrategy \($target))")
+      end),
     check(.routing.rules[-1] == {network: "tcp,udp", outboundTag: "upstream"}; "the last routing rule does not name the upstream"),
     check($extra == []; "unexpected inbounds: \($extra)"),
     (.inbounds[]? | select(.protocol == "vless") |

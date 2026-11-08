@@ -227,6 +227,17 @@ as transitions over time. See morzer's
 sudo morzer config set metrics.textfile=/var/lib/prometheus/node-exporter
 ```
 
+**What the upstream sees.** It carries every connection, so it sees the
+addresses and ports they go to, and when and how much. It does not see
+hostnames: this server resolves them over DNS-over-HTTPS (`dns_resolver`),
+which itself goes out through the upstream, and hands the upstream addresses
+only; a name that cannot be resolved fails rather than going out as a name.
+The DNS-over-HTTPS server sees the names instead, from the exit's address. The
+name a client's TLS sends in the clear (SNI) can be hidden only by the client,
+with Encrypted Client Hello (Chrome or Firefox with DNS-over-HTTPS, for sites
+that support it), and plain HTTP shows everything. `resolve=upstream` hands the
+upstream the hostnames, as dotdash did before 0.2.0.
+
 **Checking the exit.** `exit-check` asks, through the upstream as client
 traffic goes, which IPv4 and IPv6 addresses sites see, and from which network
 (ASN) and country. It changes nothing.
@@ -323,6 +334,8 @@ confuse each other's backups. A `file://` target needs no `--credentials-file`.
 | `log_level` | `error` | Xray error log; access log is always off. `warning` and below name the destinations of failed connections |
 | `healthcheck_url` | `https://www.gstatic.com/generate_204` | fetched through the upstream by the healthcheck |
 | `healthcheck_expect` | `.*` | regular expression the healthcheck response must match, such as the exit IP |
+| `resolve` | `gateway` | who turns hostnames into addresses: `gateway`, this server over `dns_resolver`, so the upstream sees addresses only; `upstream`, the upstream, which then sees every hostname |
+| `dns_resolver` | `https://1.1.1.1/dns-query` | the DNS-over-HTTPS server `resolve=gateway` asks, through the upstream; `https://` only |
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (Caddy's own CA, for a machine the internet cannot reach) |
 | `site_dir` | `/srv/dotdash` | host directory of your own cover site |
 | `servers` | `self` | servers sharing these keys, comma-separated, for client configs; `self` is this one |

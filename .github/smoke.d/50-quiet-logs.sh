@@ -20,7 +20,7 @@ fi
 # its URI, the secret path in it.
 for port in 11080 11081; do
   for _ in 1 2 3; do
-    curl -s -o /dev/null --max-time 0.3 --socks5-hostname "127.0.0.1:${port}" http://target:8000/blob || true
+    curl -s -o /dev/null --max-time 0.3 --socks5-hostname "127.0.0.1:${port}" http://11.99.0.10:8000/blob || true
   done
 done
 sleep 1
@@ -48,5 +48,5 @@ leak "a share link" "vless://"
 # The image prints its settings at start, healthcheck_url among them: the
 # operator's own choice, here the same target the clients fetch.
 logs=$(grep -v '^\[envconf\]' <<<"${logs}" || true)
-leak "a destination's name (the rig's target)" "target:8000"
+leak "a destination (the rig's target)" "11.99.0.10:8000"
 echo "50-quiet-logs.sh: no secret and no destination in $(wc -l <<<"${logs}") log lines"

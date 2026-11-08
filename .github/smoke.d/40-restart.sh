@@ -9,7 +9,7 @@ set -euo pipefail
 sudo morzer restart xray >/dev/null || die "morzer restart xray failed"
 for port in 11080 11081; do
   curl -fsS -o /dev/null --max-time 15 --retry 5 --retry-delay 2 --retry-all-errors \
-    --socks5-hostname "127.0.0.1:${port}" http://target:8000/ \
+    --socks5-hostname "127.0.0.1:${port}" http://11.99.0.10:8000/ \
     || die "the client on ${port} did not come back after Xray restarted"
 done
 echo "40-restart.sh: clients reconnect after Xray restarts"

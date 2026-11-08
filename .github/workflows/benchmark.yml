@@ -75,7 +75,7 @@ jobs:
           REHEARSE_INIT_ARGS: >-
             --domain dotdash.test --set upstream_host=upstream.rig.invalid
             --set upstream_port=18080 --set upstream_protocol=http
-            --set healthcheck_url=http://target:8000/ --set cert_issuer=internal
+            --set healthcheck_url=http://11.99.0.10:8000/ --set cert_issuer=internal
             --profile xdns
         run: |
           bash .bundle-ci/scripts/rehearse.sh --keep
