@@ -1,9 +1,14 @@
 #!/bin/sh
-# Prints what each client needs, or only the client named in $1. The output is
-# credentials: anyone holding it can use this server, so send it only over a
-# channel you would send a password on.
+# Prints what each client needs, or only the client named in $1. With
+# subscriptions on, that is its subscription URL alone; --full, before the
+# name, adds its links and Xray config. The output is credentials: anyone
+# holding it can use this server, so send it only over a channel you would
+# send a password on.
 set -eu
 : "${DOMAIN:?}" "${HTTPS_PORT:?}"
+full=false
+[ "${1:-}" != --full ] || { full=true; shift; }
+[ "${SUBSCRIPTION:-false}" = true ] || full=true
 want=${1:-}
 # A tunnel zone with no dot is a name under the domain, as in the template.
 case ${XDNS_DOMAIN:-} in '' | *.*) ;; *) XDNS_DOMAIN=${XDNS_DOMAIN}.${DOMAIN} ;; esac
@@ -81,6 +86,7 @@ client() { # <id> <label>
     # As subscription.sh names the device's file.
     token=$(printf '%s:%s' "$(cat /run/secrets/subscription_key)" "$1" | sha256sum | cut -c1-32)
     if [ "${HTTPS_PORT}" = 443 ]; then at=; else at=":${HTTPS_PORT}"; fi
+    $full || { printf 'https://%s%s/%s\n\n' "${DOMAIN}" "$at" "$token"; return 0; }
     cat <<EOF
 Subscription, for the app to fetch these links from and refresh them after a
 revocation or a key rotation (as secret as the links):
@@ -130,6 +136,12 @@ $(outbounds "$1")$([ -z "${XDNS_DOMAIN:-}" ] || printf ',\n%s' "$(xdns_outbound 
 EOF
 }
 
+$full || cat <<EOF
+Subscription URLs, one per device, for v2rayN, v2rayNG, Hiddify, Happ or
+Streisand to fetch its links from and refresh them; --full prints the links
+and the Xray config too.
+
+EOF
 # One client per line, "<uuid> [name]"; blank lines and "#" comments skipped,
 # as the image reads it. $1 names one client, or gives its uuid.
 found=
@@ -141,7 +153,7 @@ while read -r id name _ || [ -n "${id:-}" ]; do
 done </run/secrets/vless_clients
 [ -n "$found" ] || { echo "no client named '$want' in vless_clients" >&2; exit 1; }
 
-[ -n "${XDNS_DOMAIN:-}" ] || exit 0
+$full && [ -n "${XDNS_DOMAIN:-}" ] || exit 0
 cat <<EOF
 The config's "xdns" outbound, the DNS tunnel, is slow, for networks where only
 DNS works. Replace its resolver with one the network allows; DoH

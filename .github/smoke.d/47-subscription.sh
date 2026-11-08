@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Subscriptions (the subscription parameter). With it on, each device's URL,
-# which client-config prints, serves exactly that device's links, base64; a
-# guessed URL gets the site's own 404; a device whose line is deleted loses its
-# URL, and a device added gets one, each as soon as the secret is set;
-# rotating subscription_key moves every URL; and with it off, none answers.
+# Subscriptions (the subscription parameter). With it on, client-config prints
+# each device's URL alone, which serves exactly the links --full prints,
+# base64; a guessed URL gets the site's own 404; a device whose line is deleted
+# loses its URL, and a device added gets one, each as soon as the secret is
+# set; rotating subscription_key moves every URL; and with it off, none answers.
 # After 45-revocation.sh, so the links served are those of its rotated keys.
 # No URL or link is printed: a failure names the step, not the credentials.
 # shellcheck source=/dev/null
@@ -31,8 +31,8 @@ status() { # <url>: the status code alone
 url_of() { # [client]: the subscription URL client-config prints for it
   sudo morzer task run client-config --output ${1:+-- "$1"} | grep -m1 -E "^https://${domain}/[0-9a-f]{32}\$" || true
 }
-links_of() { # [client]: its vless:// links
-  sudo morzer task run client-config --output ${1:+-- "$1"} | grep '^vless://' || true
+links_of() { # [client]: its vless:// links, which --full prints
+  sudo morzer task run client-config --output -- --full ${1:+"$1"} | grep '^vless://' || true
 }
 restore() {
   [ -z "${before:-}" ] || printf '%s\n' "${before}" | sudo morzer secret set vless_clients >/dev/null 2>&1 || true
@@ -44,10 +44,12 @@ trap restore EXIT
 sudo morzer config set subscription=true >/dev/null || die "could not turn subscriptions on"
 url=$(url_of)
 [ -n "${url}" ] || die "client-config prints no subscription URL with the parameter on"
+! grep -q '^vless://' <<<"$(sudo morzer task run client-config --output)" \
+  || die "client-config prints links beside the subscription URL without --full"
 served=$(fetch "${url}" | base64 -d 2>/dev/null || true)
 [ -n "${served}" ] || die "the subscription URL serves nothing"
 [ "${served}" = "$(links_of)" ] || die "the subscription does not serve the links client-config prints"
-echo "${0##*/}: a device's subscription URL serves exactly its links"
+echo "${0##*/}: client-config prints a device's URL alone, and it serves exactly its links"
 
 guess="https://${domain}/$(random | cut -c1-32)"
 [ "$(status "${guess}")" = 404 ] || die "a guessed subscription URL is not a 404"

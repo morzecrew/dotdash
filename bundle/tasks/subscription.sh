@@ -18,7 +18,7 @@ if [ "${SUBSCRIPTION:-false}" = true ]; then
   while read -r id _ || [ -n "${id:-}" ]; do
     case $id in '' | '#'*) continue ;; esac
     token=$(printf '%s:%s' "$key" "$id" | sha256sum | cut -c1-32)
-    sh /task/client-config.sh "$id" | grep '^vless://' | base64 -w 0 >"$out/$token.new"
+    sh /task/client-config.sh --full "$id" | grep '^vless://' | base64 -w 0 >"$out/$token.new"
     mv "$out/$token.new" "$out/$token"
     n=$((n + 1))
   done </run/secrets/vless_clients
