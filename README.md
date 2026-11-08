@@ -332,6 +332,10 @@ morzer (`scripts/bootstrap.sh`), and no open port.
 `canary-config` names the profiles that check more: `xhttp` adds XHTTP over
 TLS, and `xhttp-reality` XHTTP with REALITY.
 
+A canary watches one server. With several (`servers`), `canary-config` also
+prints what to change for each of the others: run a canary per server, or
+move one between them with `sudo morzer config set server=<name> address=<name>`.
+
 `doctor` then fails on `health endpoints respond` when three tries in a row
 cannot fetch `probe_url` through dotdash, and each
 failing check notifies again until it is fixed. The canary is released with

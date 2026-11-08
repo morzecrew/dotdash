@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The canary's `xhttp-reality` profile checks XHTTP with REALITY beside REALITY, on the server's `xhttp_reality_port`.
 
+- With several servers (`servers`), `canary-config` also prints how to point a canary at each of the others: they share the secrets, so only `server` and `address` change.
+
 - The Xray config `client-config` prints answers the device's DNS, in an app's VPN or TUN mode, over DNS-over-HTTPS (`dns_resolver`) through the tunnel, with IPv4 addresses only: lookups no longer reach the local network's resolver or need the upstream to relay UDP. The README covers each app.
 
 ### Changed

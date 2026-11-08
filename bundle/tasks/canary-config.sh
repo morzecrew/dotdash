@@ -37,6 +37,18 @@ $(cat /run/secrets/xhttp_path)
 END
 sudo morzer apply
 EOF
+# The other servers carry the same secrets (the servers parameter), so a
+# canary for one of them differs in its server and address only.
+others=$(printf '%s\n' "${SERVERS:-self}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e '/^self$/d' | grep -vxF "${DOMAIN}" || true)
+if [ -n "$others" ]; then
+  cat <<EOF
+
+The other servers carry the same secrets. A canary watching one of them runs
+the same commands with its name as server and address, or an existing canary
+moves to it:
+EOF
+  for s in $others; do echo "  sudo morzer config set server=$s address=$s"; done
+fi
 # Set under the xhttp-reality profiles only, as for client-config.
 [ -n "${XHTTP_REALITY_PORT:-}" ] || exit 0
 cat <<EOF
