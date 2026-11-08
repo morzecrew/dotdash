@@ -110,6 +110,8 @@ services:
       # The ACME account and certificates. The image's /data/caddy is mode
       # 1777, and a fresh volume copies it, so uid 65532 can write there.
       - caddy_data:/data
+      # Each device's subscription file, which the subscription service writes.
+      - subscription:/srv/sub:ro
     tmpfs:
       - /config:uid=65532,gid=65532,mode=0700,size=8m
     secrets: [xhttp_path]
@@ -136,11 +138,12 @@ services:
     image: ${DOTDASH_IMAGE_CADDY:?set by morzer}
     profiles: [tasks]
     network_mode: none
-    environment:
+    environment: &client-env
       DOMAIN: ${DOTDASH_DOMAIN:?install with --domain}
       HTTPS_PORT: ${DOTDASH_PARAM_HTTPS_PORT:-443}
       SERVERS: ${DOTDASH_PARAM_SERVERS:-self}
       DNS_RESOLVER: ${DOTDASH_PARAM_DNS_RESOLVER:-https://1.1.1.1/dns-query}
+      SUBSCRIPTION: ${DOTDASH_PARAM_SUBSCRIPTION:-false}
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image
@@ -148,7 +151,28 @@ services:
         target: /opt/xray
         image:
           subpath: usr/local/bin
-    secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id]
+    secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, subscription_key]
+
+  # Writes each device's subscription into the subscription volume at start
+  # (tasks/subscription.sh), as client-config would print its links, and then
+  # waits; morzer restarts it when a secret or parameter it reads changes.
+  # The keys stay here: Caddy reads only the files. No network at all.
+  subscription:
+    <<: *hardened
+    image: ${DOTDASH_IMAGE_CADDY:?set by morzer}
+    network_mode: none
+    init: true
+    command: ["sh", "/task/subscription.sh"]
+    environment: *client-env
+    volumes:
+      - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
+      - type: image
+        source: ${DOTDASH_IMAGE_XRAY:?set by morzer}
+        target: /opt/xray
+        image:
+          subpath: usr/local/bin
+      - subscription:/sub
+    secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, subscription_key]
 
   # One-shot behind a profile, started only by `morzer task run exit-check`.
   # It shares Xray's network namespace, so it reaches the probe inbound on
@@ -178,6 +202,9 @@ networks:
 
 volumes:
   caddy_data: {}
+  # In memory: written at every start, and kept by nothing that outlives it.
+  subscription:
+    driver_opts: {type: tmpfs, device: tmpfs, o: "size=4m,uid=65532,gid=65532,mode=0700"}
 
 secrets:
   vless_clients:
@@ -198,3 +225,5 @@ secrets:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/reality_key
   reality_short_id:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/reality_short_id
+  subscription_key:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/subscription_key
