@@ -50,6 +50,22 @@ http://127.0.0.1:8081 {
 		import headers
 	}
 
+	# A device's subscription (the subscription parameter): 32 hex characters
+	# naming a file the subscription service wrote. Any other path, a guessed
+	# one included, gets the site and its 404.
+	@subscription {
+		path_regexp ^/[0-9a-f]{32}$
+		file {
+			root /srv/sub
+			try_files {path}
+		}
+	}
+	handle @subscription {
+		root * /srv/sub
+		header Content-Type "text/plain; charset=utf-8"
+		file_server
+	}
+
 	@xhttp path /{file./run/secrets/xhttp_path}/*
 	handle @xhttp {
 		# h2c so XHTTP stream-up/stream-one survive; no buffering either way.

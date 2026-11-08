@@ -57,7 +57,7 @@ parameters:
     type: port
     default: 443
     description: Host port of the REALITY inbound; anything without its key reaches the cover site
-    services: [gate]
+    services: [gate, subscription]
   upstream_protocol:
     type: enum
     values: [socks, http]
@@ -98,7 +98,7 @@ parameters:
     type: port
     default: 8443
     description: "Host TCP port of XHTTP with REALITY (the xhttp-reality and xdns-xhttp-reality profiles); must differ from https_port and 80"
-    services: [gate]
+    services: [gate, subscription]
   xdns_mtu:
     type: int
     default: 900
@@ -130,6 +130,12 @@ parameters:
     type: string
     default: self
     description: "Servers with these same secrets, comma-separated; self is this one. client-config prints links for each and, with more than one, a config that uses whichever answers fastest"
+    services: [subscription]
+  subscription:
+    type: bool
+    default: false
+    description: "Serve each device a subscription URL on the cover site, which client-config prints: its links, which the app refreshes, so a revocation or a key rotation reaches it without resending links. A URL is as secret as the links"
+    services: [subscription]
   site_dir:
     type: string
     default: /srv/dotdash
@@ -178,7 +184,7 @@ operations:
 
 tasks:
   client-config:
-    description: "Print client settings, for every client or the one named after --: REALITY and XHTTP links, and XHTTP with REALITY and the DNS tunnel under their profiles (output is credentials)"
+    description: "Print client settings, for every client or the one named after --: a link per transport, the full Xray config, and the subscription URL when it is on (output is credentials)"
     service: client-config
     command: ["sh", "/task/client-config.sh"]
     args: true
