@@ -22,6 +22,9 @@ runtimes:
     profiles:
       # Also checks the XHTTP path, through dotdash's cover site.
       xhttp: [compose/xhttp.yaml]
+      # XHTTP with REALITY instead, on its own port: the server's xhttp-reality
+      # profiles.
+      xhttp-reality: [compose/xhttp-reality.yaml]
     options:
       project: dotdash-canary
 
@@ -31,6 +34,9 @@ configuration:
     mode: "0644"
   - template: templates/xhttp.json.tmpl
     target: /etc/dotdash-canary/xhttp.json
+    mode: "0644"
+  - template: templates/xhttp-reality.json.tmpl
+    target: /etc/dotdash-canary/xhttp-reality.json
     mode: "0644"
 
 secrets:
@@ -60,25 +66,30 @@ parameters:
   server:
     type: string
     description: The dotdash server's domain, sent as the TLS server name
-    services: [reality, xhttp]
+    services: [reality, xhttp, xhttp-reality]
   address:
     type: string
     description: Where to connect, normally the same domain; an IP or a CDN's name also works
-    services: [reality, xhttp]
+    services: [reality, xhttp, xhttp-reality]
   port:
     type: port
     default: 443
     description: The dotdash server's https_port
     services: [reality, xhttp]
+  xhttp_reality_port:
+    type: port
+    default: 8443
+    description: The dotdash server's xhttp_reality_port (the xhttp-reality profile)
+    services: [xhttp-reality]
   reality_public_key:
     type: string
     description: The REALITY public key, the pbk of a dotdash REALITY link
-    services: [reality]
+    services: [reality, xhttp-reality]
   probe_url:
     type: string
     default: https://www.gstatic.com/generate_204
     description: What each check fetches through dotdash; any 2xx is healthy
-    services: [reality, xhttp]
+    services: [reality, xhttp, xhttp-reality]
 
 images:
   # The measure task's shell; Xray's image has none.

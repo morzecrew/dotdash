@@ -1,0 +1,14 @@
+# The xhttp-reality profile: XHTTP with REALITY too, on the server's
+# xhttp_reality_port, for a server under one of its xhttp-reality profiles.
+services:
+  xhttp-reality:
+    # By the release directory: morzer runs Compose from the release root,
+    # where a relative file is not found.
+    extends: {file: "${DOTDASH_CANARY_RELEASE_DIR:?set by morzer}/compose/compose.yaml", service: reality}
+    volumes:
+      - type: bind
+        source: /etc/dotdash-canary/xhttp-reality.json
+        target: /etc/xray/config.json
+        read_only: true
+        bind: {create_host_path: false}
+    secrets: [xhttp_path]
