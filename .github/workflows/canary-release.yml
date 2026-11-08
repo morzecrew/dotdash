@@ -19,7 +19,7 @@ jobs:
   guard:
     permissions:
       contents: read
-    uses: morzecrew/bundle-ci/.github/workflows/guard.yml@b282c8fb0c25addec4cb4f32b85b8ecb94bc9109 # v0.9.0
+    uses: morzecrew/bundle-ci/.github/workflows/guard.yml@7c7541d3844dbb4dcb3dd20a626b85ab4ec98be3 # v0.9.1
     with:
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
 
@@ -28,7 +28,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@b282c8fb0c25addec4cb4f32b85b8ecb94bc9109 # v0.9.0
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@7c7541d3844dbb4dcb3dd20a626b85ab4ec98be3 # v0.9.1
     with:
       ref: ${{ github.sha }}
       version: ${{ needs.guard.outputs.version }}
@@ -58,7 +58,7 @@ jobs:
       # The provenance publish.yml attests for the bundle.
       id-token: write
       attestations: write
-    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@b282c8fb0c25addec4cb4f32b85b8ecb94bc9109 # v0.9.0
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@7c7541d3844dbb4dcb3dd20a626b85ab4ec98be3 # v0.9.1
     with:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}
@@ -70,7 +70,7 @@ jobs:
     needs: [bundle, publish]
     permissions:
       contents: write
-    uses: morzecrew/bundle-ci/.github/workflows/github-release.yml@b282c8fb0c25addec4cb4f32b85b8ecb94bc9109 # v0.9.0
+    uses: morzecrew/bundle-ci/.github/workflows/github-release.yml@7c7541d3844dbb4dcb3dd20a626b85ab4ec98be3 # v0.9.1
     with:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}
