@@ -11,7 +11,8 @@
 # firewalld anyway, and an SSH port guessed wrong would lock you out.
 set -euo pipefail
 
-MORZER_VERSION=0.13.0
+# Renovate bumps MORZER_VERSION (renovate.json); SOPS_VERSION and its sums by hand.
+MORZER_VERSION=0.14.0
 SOPS_VERSION=3.13.3
 declare -A SOPS_SHA256=(
 	[amd64]=e5bec3346a873ae91d871550f3e698c1aad962aff462a080e40f25fde17fef6b
