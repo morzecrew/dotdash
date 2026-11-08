@@ -151,16 +151,23 @@ services:
         target: /opt/xray
         image:
           subpath: usr/local/bin
+      # The upstream's exit countries, which the subscription service writes.
+      - subscription:/sub:ro
     secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, subscription_key]
 
   # Writes each device's subscription into the subscription volume at start
   # (tasks/subscription.sh), as client-config would print its links, and then
   # waits; morzer restarts it when a secret or parameter it reads changes.
-  # The keys stay here: Caddy reads only the files. No network at all.
+  # The keys stay here: Caddy reads only the files. In Xray's network
+  # namespace, as exit-check is, to look up the exit countries for the links'
+  # names: its one way out is Xray's probe inbound, through the upstream.
   subscription:
     <<: *hardened
     image: ${DOTDASH_IMAGE_CADDY:?set by morzer}
-    network_mode: none
+    network_mode: service:xray
+    depends_on:
+      xray:
+        condition: service_healthy
     init: true
     command: ["sh", "/task/subscription.sh"]
     environment: *client-env
@@ -180,7 +187,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      start_period: 60s
 
   # One-shot behind a profile, started only by `morzer task run exit-check`.
   # It shares Xray's network namespace, so it reaches the probe inbound on

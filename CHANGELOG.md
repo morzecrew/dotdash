@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Links are named `🇩🇪 phone [reality]`, `[xhttp]` and `[xhttp+reality]`, not `dotdash-phone`: the flag of the country the upstream leaves from, a second (`🇩🇪 (! 🇹🇷)`) when IPv6 leaves from another, and none when the lookup fails. Apps show them once links are added again, or at the next subscription refresh.
+
+### Changed
+
 - With subscriptions on, `client-config` prints each device's subscription URL alone, so the output stays short; `--full` before the device's name (`-- --full phone`) adds its links and Xray config, as before. With subscriptions off it prints what it always did.
 
 - The subscription service reports healthy only once every device's subscription is written: an apply or an update waits for it, and `doctor` names the service when that never happens.

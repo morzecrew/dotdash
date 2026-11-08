@@ -10,9 +10,16 @@
 # file, and a rotated key is in every file. With the subscription parameter
 # off it leaves the directory empty. Then it marks the directory done for the
 # healthcheck (.ready, which Caddy never serves: only 32-hex names), and waits.
+#
+# First, in .country, the countries the upstream leaves from, as exit-check
+# finds them through Xray, for client-config to put in the links' names:
+# "<IPv4> <IPv6>", "-" for one not known.
 set -eu
 out=/sub
 find "$out" -mindepth 1 -delete
+checked=$(sh /task/exit-check.sh 2>/dev/null || true)
+cc() { printf '%s\n' "$checked" | sed -n "s/^IPv$1 exit  [0-9A-Fa-f.:]*  .*  \([A-Z][A-Z]\)\$/\1/p"; }
+printf '%s %s\n' "$(cc 4 | grep . || echo -)" "$(cc 6 | grep . || echo -)" >"$out/.country"
 if [ "${SUBSCRIPTION:-false}" = true ]; then
   key=$(cat /run/secrets/subscription_key)
   n=0

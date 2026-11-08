@@ -22,24 +22,46 @@ xr_port=${XHTTP_REALITY_PORT:-}
 # The DoH server the config answers the device's DNS with, through the tunnel.
 dns=${DNS_RESOLVER:-https://1.1.1.1/dns-query}
 
+# The countries the upstream leaves from, "<IPv4> <IPv6>" with "-" for one
+# not known, as the subscription service looked them up at its start. This
+# server's links carry the flag, and a second after "!" when IPv6 leaves from
+# another country.
+cc4=- cc6=-
+[ ! -r /sub/.country ] || read -r cc4 cc6 _ </sub/.country || true
+flag() { # <ISO 3166 code>: its flag, percent-encoded; nothing for anything else
+  case $1 in
+  [A-Z][A-Z]) printf '%s' "$1" | awk '{for (i = 1; i <= 2; i++)
+    printf "%%F0%%9F%%87%%%X", 165 + index("ABCDEFGHIJKLMNOPQRSTUVWXYZ", substr($0, i, 1))}' ;;
+  esac
+}
+f4=$(flag "$cc4") f6=$(flag "$cc6")
+if [ -n "$f4" ] && [ -n "$f6" ] && [ "$cc4" != "$cc6" ]; then
+  here="${f4}%20(!%20${f6})%20"
+elif [ -n "$f4$f6" ]; then
+  here="${f4:-$f6}%20"
+else
+  here=
+fi
+
 enc=$(/opt/xray/xray-entrypoint vless-encryption /run/secrets/vless_seed)
 path=$(cat /run/secrets/xhttp_path)
 sid=$(cat /run/secrets/reality_short_id)
 pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 
-links() { # <id> <label> <server>
+links() { # <id> <label> <server>: each named "<flags> <label> [<transport>]"
+  if [ "$3" = "$DOMAIN" ]; then name="${here}$2"; else name=$2; fi
   cat <<EOF
 REALITY via $3 (v2rayN, v2rayNG, Hiddify, Happ, Streisand):
-vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&flow=xtls-rprx-vision&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&type=tcp#dotdash-$2
+vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&flow=xtls-rprx-vision&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&type=tcp#${name}%20%5Breality%5D
 
 XHTTP over TLS via $3 (for a CDN in front: replace the address with the CDN's name):
-vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&security=tls&sni=$3&host=$3&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=auto#dotdash-xhttp-$2
+vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&security=tls&sni=$3&host=$3&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=auto#${name}%20%5Bxhttp%5D
 
 EOF
   [ -n "$xr_port" ] || return 0
   cat <<EOF
 XHTTP with REALITY via $3, on port ${xr_port} (clients built on Xray-core: v2rayN, v2rayNG):
-vless://$1@$3:${xr_port}?encryption=${enc}&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&type=xhttp&path=%2F${path}&mode=auto#dotdash-xhttp-reality-$2
+vless://$1@$3:${xr_port}?encryption=${enc}&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&type=xhttp&path=%2F${path}&mode=auto#${name}%20%5Bxhttp%2Breality%5D
 
 EOF
 }
