@@ -21,9 +21,11 @@ proxy credentials. `example.com` below is your domain.
 
 **1. DNS**: `example.com  A  <server IP>`.
 
-**2. Server**: open 80/tcp and 443/tcp (80 is for the certificate). Docker's
-published ports bypass ufw and firewalld, so the host firewall guards only the
-rest, SSH included: allow keys only (`PasswordAuthentication no`). On a fresh
+**2. Server**: open 80/tcp and 443/tcp (80 is for the certificate) in the
+cloud provider's firewall or security group, if it has one; a Google Cloud VM,
+for one, lets in only what a VPC firewall rule allows. Docker's published
+ports bypass ufw and firewalld, so the host firewall guards only the rest, SSH
+included: allow keys only (`PasswordAuthentication no`). On a fresh
 Debian or Ubuntu server, `scripts/bootstrap.sh` installs everything above but
 the domain and credentials, turns on security updates, and sets SSH to keys
 only once an authorized key exists:
@@ -133,7 +135,9 @@ TLS, on a port of its own (`xhttp_reality_port`, 8443 unless set). It suits a
 network that lets another port through better than 443; it is not faster or
 harder to block by design, and a canary's `measure` shows how it does from a
 given network. Clients built on Xray-core take it, such as v2rayN and v2rayNG.
-Open the port and switch to the profile that adds it:
+Open the port in the cloud provider's firewall, as 443 was (on Google Cloud,
+a VPC firewall rule for tcp:8443; without it the link just times out), and
+switch to the profile that adds it:
 
 ```sh
 sudo morzer config set installation.profile=xhttp-reality        # with the DNS tunnel: xdns-xhttp-reality
