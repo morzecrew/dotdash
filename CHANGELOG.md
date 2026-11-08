@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Unattended updates apply releases again, and `morzer rollback` works again, both of which 0.4.0 turned off for its own change of the upstream settings. An update from 0.3.x is still refused until the `upstream` secret is set.
 
+- `bootstrap.sh` is served from the documentation site: `curl -fsSLO https://morzecrew.github.io/dotdash/bootstrap.sh`. The documentation itself moved from the README to <https://morzecrew.github.io/dotdash/>, one version per release.
+
+### Fixed
+
+- `bootstrap.sh` installs morzer 0.14.0, which both bundles require. It installed 0.13.0, so `init` on a freshly prepared host refused the release until `morzer self-update`.
+
 ## [0.4.0] - 2026-11-08
 
 ### Changed
