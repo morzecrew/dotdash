@@ -1,7 +1,9 @@
 # The xhttp profile: the XHTTP path too, through dotdash's cover site.
 services:
   xhttp:
-    extends: {file: compose.yaml, service: reality}
+    # By the release directory: morzer runs Compose from the release root,
+    # where a relative file is not found.
+    extends: {file: "${DOTDASH_CANARY_RELEASE_DIR:?set by morzer}/compose/compose.yaml", service: reality}
     volumes:
       - type: bind
         source: /etc/dotdash-canary/xhttp.json
