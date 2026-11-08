@@ -34,7 +34,13 @@ compatibility:
   # The manager this bundle is verified and rehearsed with, and the first that
   # reads `database: none`.
   min_manager_version: "0.14.0"
-  rollback_safe: true
+  # False for this release alone, the one that replaced upstream_host,
+  # upstream_port and their secrets with the upstream secret: an update drops
+  # the old values, so 0.3.x could not start again. morzer then refuses
+  # `rollback` from it, pointing at the pre-update backup, and never applies
+  # it unattended, since `upstream` has to be set by hand first. The next
+  # release sets it back to true.
+  rollback_safe: false
   # No database, which an unattended update needs declared.
   database: none
 
@@ -62,18 +68,8 @@ parameters:
     type: enum
     values: [socks, http]
     default: socks
-    description: Protocol of the ISP/residential proxy every client connection leaves through
+    description: Protocol of the ISP/residential proxy every client connection leaves through, which the upstream secret names as user:pass@host:port
     services: [xray, gate]
-  upstream_host:
-    type: string
-    required: true
-    description: Host name or IP of the ISP/residential proxy
-    services: [gate]
-  upstream_port:
-    type: port
-    required: true
-    description: Port of the ISP/residential proxy
-    services: [gate]
   upstream_tls:
     type: bool
     default: false
@@ -84,22 +80,12 @@ parameters:
     default: false
     description: Relay client UDP through a SOCKS5 upstream that supports UDP ASSOCIATE; otherwise UDP is dropped
     services: [xray, gate]
-  upstream6_host:
-    type: string
-    default: none
-    description: "Host name or IP of a second proxy for IPv6, or none. With it, a destination that has an IPv6 address leaves through it, IPv4-only ones through upstream_host, and neither falls back to the other"
-    services: [xray, gate]
-  upstream6_port:
-    type: port
-    default: 1080
-    description: Port of the IPv6 proxy (upstream6_host)
-    services: [gate]
   upstream6_protocol:
     type: enum
-    values: [socks, http]
-    default: socks
-    description: Protocol of the IPv6 proxy (upstream6_host); its credentials are the upstream6_username and upstream6_password secrets
-    services: [gate]
+    values: [none, socks, http]
+    default: none
+    description: "Protocol of a second proxy for IPv6, which the upstream6 secret names as user:pass@host:port, or none. With one, a destination that has an IPv6 address leaves through it, IPv4-only ones through the upstream, and neither falls back to the other"
+    services: [xray, gate]
   upstream6_tls:
     type: bool
     default: false
@@ -108,7 +94,7 @@ parameters:
   healthcheck6_url:
     type: string
     default: http://api6.ipify.org
-    description: "With upstream6_host, a URL with an IPv6 address only, which the egress health check also fetches, through the IPv6 proxy; any 2xx is healthy"
+    description: "With the IPv6 proxy, a URL with an IPv6 address only, which the egress health check also fetches, through the IPv6 proxy; any 2xx is healthy"
   xdns_domain:
     type: string
     default: t
@@ -182,7 +168,7 @@ images:
   # hooks/policy reads the rendered config with it, run with no network, so
   # the host needs no jq of its own.
   jq: ghcr.io/jqlang/jq:1.8.1@sha256:4f34c6d23f4b1372ac789752cc955dc67c2ae177eb1b5860b75cdc5091ce6f91
-  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:a9a39feaeab2f83a0b76459755b9aa92d54e5f30030b5f818e322e3e5f7a8f81
+  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:c5885766b9f12bdf3986bf621ad0ea72d87dea54e0e3f80cf532939f2e4ef5cd
   caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
 
 # Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);

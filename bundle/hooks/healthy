@@ -3,7 +3,7 @@
 #
 #   cover-site  Caddy reports healthy.
 #   egress      Xray fetches healthcheck_url through the gate and the upstream,
-#               now, and with upstream6_host also healthcheck6_url, which has
+#               now, and with the IPv6 proxy also healthcheck6_url, which has
 #               an IPv6 address only, through the IPv6 proxy. When it cannot,
 #               the message names the layer that failed: the gate, a proxy's
 #               address, its credentials, the destination behind it, or an
@@ -23,20 +23,34 @@ cover_site() {
   [ "$health" = healthy ] || { echo "caddy is not healthy: ${health:-not running}" >&2; exit 1; }
 }
 
-# Asks one proxy directly, with its credentials: <family> is 4 for
-# upstream_host, 6 for upstream6_host. Prints what is wrong with it and
+# Asks one proxy directly, with its credentials: <family> is 4 for the
+# upstream secret's, 6 for upstream6's. Prints what is wrong with it and
 # returns 1, or returns 0 when it answers.
 ask_upstream() {
-  local fam=$1 p=UPSTREAM label="the upstream proxy" user=upstream_username pass=upstream_password
-  if [ "$fam" = 6 ]; then p=UPSTREAM6 label="the IPv6 proxy" user=upstream6_username pass=upstream6_password; fi
-  local hv="DOTDASH_PARAM_${p}_HOST" pv="DOTDASH_PARAM_${p}_PORT" rv="DOTDASH_PARAM_${p}_PROTOCOL" tv="DOTDASH_PARAM_${p}_TLS"
-  local host=${!hv:?} port=${!pv:?} protocol=${!rv:-socks} tls=${!tv:-false}
+  local fam=$1 p=UPSTREAM label="the upstream proxy" name=upstream
+  if [ "$fam" = 6 ]; then p=UPSTREAM6 label="the IPv6 proxy" name=upstream6; fi
+  local rv="DOTDASH_PARAM_${p}_PROTOCOL" tv="DOTDASH_PARAM_${p}_TLS"
+  local protocol=${!rv:-socks} tls=${!tv:-false}
   local url=${DOTDASH_PARAM_HEALTHCHECK_URL:-https://www.gstatic.com/generate_204}
   local secrets=${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets} err errf rc code scheme
   [ "$fam" = 4 ] || url=${DOTDASH_PARAM_HEALTHCHECK6_URL:-http://api6.ipify.org}
 
+  # "[user:pass@]host:port", split as the gate's image splits it: at the last
+  # "@", then the user up to the first ":". Neither half is ever printed.
+  local conn at userinfo='' user='' pass='' host port
+  conn=$(cat "$secrets/$name")
+  at=${conn##*@}
+  if [ "$at" != "$conn" ]; then userinfo=${conn%@*}; user=${userinfo%%:*} pass=${userinfo#*:}; fi
+  port=${at##*:} host=${at%:*}
+  if [ "$host" = "$at" ] || [ -z "$host" ] || [[ ! $port =~ ^[0-9]+$ ]]; then
+    echo "the $name secret is not \"user:pass@host:port\""
+    return 1
+  fi
+  local bare=${host#[}
+  bare=${bare%]}
+
   # shellcheck disable=SC2016 # $0 and $1 are the inner shell's
-  if ! err=$(timeout 3 bash -c 'exec 3<>"/dev/tcp/$0/$1"' "$host" "$port" 2>&1); then
+  if ! err=$(timeout 3 bash -c 'exec 3<>"/dev/tcp/$0/$1"' "$bare" "$port" 2>&1); then
     if [ -z "$err" ]; then
       echo "$label at $host:$port does not answer (no connection within 3s)"
     else
@@ -59,16 +73,15 @@ ask_upstream() {
   # The credentials go to curl on stdin, never on its command line.
   errf=$(mktemp)
   rc=0
-  code=$(printf 'proxy-user = "%s:%s"\n' \
-    "$(sed 's/[\\"]/\\&/g' "$secrets/$user")" \
-    "$(sed 's/[\\"]/\\&/g' "$secrets/$pass")" |
+  code=$({ [ -z "$userinfo" ] || printf 'proxy-user = "%s:%s"\n' \
+    "$(printf '%s' "$user" | sed 's/[\\"]/\\&/g')" "$(printf '%s' "$pass" | sed 's/[\\"]/\\&/g')"; } |
     curl -sS -o /dev/null -w '%{http_code}' --max-time 6 -K - \
       -x "$scheme://$host:$port" "$url" 2>"$errf") || rc=$?
   err=$(tr '\n' ' ' <"$errf")
   rm -f "$errf"
 
   if [ "$code" = 407 ] || [ "$rc" = 97 ] || [[ $err == *"response 407"* ]]; then
-    echo "$label at $host:$port refused the credentials ($user, $pass)"
+    echo "$label at $host:$port refused the credentials in the $name secret"
   elif [ "$rc" = 0 ] && [[ $code == [23]* ]]; then
     return 0
   elif [ "$rc" = 0 ]; then
@@ -89,7 +102,7 @@ why() {
     return ;;
   esac
   local order=4
-  if [ "${DOTDASH_PARAM_UPSTREAM6_HOST:-none}" != none ]; then
+  if [ "${DOTDASH_PARAM_UPSTREAM6_PROTOCOL:-none}" != none ]; then
     if [ "$fam" = 6 ]; then order="6 4"; else order="4 6"; fi
   fi
   local f
@@ -118,12 +131,12 @@ egress() {
   exit 1
 }
 
-# With upstream6_host: one fetch of a URL with an IPv6 address only, so it can
+# With the IPv6 proxy: one fetch of a URL with an IPv6 address only, so it can
 # leave through the IPv6 proxy alone. healthcheck_expect is about the IPv4
 # exit, so any answer will do.
 egress6() {
   local out
-  [ "${DOTDASH_PARAM_UPSTREAM6_HOST:-none}" != none ] || return 0
+  [ "${DOTDASH_PARAM_UPSTREAM6_PROTOCOL:-none}" != none ] || return 0
   if out=$(docker compose -p "$project" exec -T -e XRAY_HEALTHCHECK_TIMEOUT=6s \
     -e XRAY_HEALTHCHECK_URL="${DOTDASH_PARAM_HEALTHCHECK6_URL:-http://api6.ipify.org}" -e XRAY_HEALTHCHECK_EXPECT='.*' \
     xray /usr/local/bin/xray-entrypoint healthcheck 2>&1); then

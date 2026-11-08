@@ -57,7 +57,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: morzecrew/bundle-ci
-          ref: 7c7541d3844dbb4dcb3dd20a626b85ab4ec98be3 # v0.9.1
+          ref: c9c8b09ad97ae2e622ae0bff2969074e67b83145 # bundle-ci#30
           path: .bundle-ci
           persist-credentials: false
 
@@ -77,7 +77,8 @@ jobs:
           REHEARSE_PUBKEY: ${{ vars.MINISIGN_DEV_PUBKEY }}
           REHEARSE_MORZER_VERSION: "0.14.0"
           REHEARSE_PROBE_PATHS: ""
-          REHEARSE_OPERATOR_SECRETS: upstream_username upstream_password
+          REHEARSE_OPERATOR_SECRETS: upstream
+          # The published release's upstream_host and upstream_port, as in pr.yml.
           REHEARSE_INIT_ARGS: >-
             --domain dotdash.test --set upstream_host=upstream.rig.invalid
             --set upstream_port=18080 --set upstream_protocol=http

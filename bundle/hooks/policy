@@ -4,7 +4,7 @@
 #
 #   - Xray's traffic leaves through the upstream only: two outbounds, the
 #     upstream (a SOCKS hop to the gate, with no credentials) and block, and
-#     with upstream6_host a third, upstream6, the same hop to the gate's IPv6
+#     with upstream6_protocol a third, upstream6, the same hop to the gate's IPv6
 #     egress; no freedom anywhere, and the upstream the explicit last rule;
 #   - names are resolved either by the upstream (no DNS in Xray, names passed
 #     on), or here over DoH routed through the upstream, with the upstream

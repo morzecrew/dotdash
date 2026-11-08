@@ -37,7 +37,10 @@ jobs:
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
       components: ""
       probe-paths: ""
-      operator-secrets: upstream_username upstream_password
+      operator-secrets: upstream
+      # upstream_host and upstream_port are the published release's, from
+      # before the upstream secret, which smoke-update installs first; a
+      # release that does not declare them gets them left out (smoke.sh).
       init-args: >-
         --domain dotdash.test --set upstream_host=upstream.rig.invalid
         --set upstream_port=18080 --set upstream_protocol=http
