@@ -209,7 +209,7 @@ operations:
 
 tasks:
   client-config:
-    description: "Print client settings, for every client or the one named after --: a link per transport, the full Xray config, and the subscription URL when it is on (output is credentials)"
+    description: "Print client settings, for every client or the one named after --: a link per transport and an Xray config; with subscriptions on, the URL alone unless --full (output is credentials)"
     service: client-config
     command: ["sh", "/task/client-config.sh"]
     args: true

@@ -173,6 +173,14 @@ services:
           subpath: usr/local/bin
       - subscription:/sub
     secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, subscription_key]
+    # Healthy once every device's file is written; restarted for a changed
+    # secret or parameter, it is not until they are written again.
+    healthcheck:
+      test: ["CMD", "test", "-e", "/sub/.ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   # One-shot behind a profile, started only by `morzer task run exit-check`.
   # It shares Xray's network namespace, so it reaches the probe inbound on

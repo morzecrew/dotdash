@@ -215,10 +215,12 @@ refresh, with nothing to resend:
 
 ```sh
 sudo morzer config set subscription=true
-sudo morzer task run client-config --output -- phone   # the phone's URL, above its links
+sudo morzer task run client-config --output -- phone          # the phone's URL
+sudo morzer task run client-config --output -- --full phone   # its links and Xray config too
 ```
 
-Add the URL as a subscription in the app (v2rayN, v2rayNG, Hiddify, Happ and
+`client-config` then prints only each device's URL; `--full`, before the
+name, adds what it printed before. Add the URL as a subscription in the app (v2rayN, v2rayNG, Hiddify, Happ and
 Streisand take one) and let it update every few hours. The URL is as secret
 as the links: anyone holding it gets them, and nothing records who fetched it.
 `sudo morzer secret rotate subscription_key` moves every URL at once, for one

@@ -8,7 +8,8 @@
 # It runs at start, so again whenever morzer restarts this service for a
 # secret or parameter that changed: a device whose line was deleted loses its
 # file, and a rotated key is in every file. With the subscription parameter
-# off it leaves the directory empty. Then it waits.
+# off it leaves the directory empty. Then it marks the directory done for the
+# healthcheck (.ready, which Caddy never serves: only 32-hex names), and waits.
 set -eu
 out=/sub
 find "$out" -mindepth 1 -delete
@@ -18,7 +19,7 @@ if [ "${SUBSCRIPTION:-false}" = true ]; then
   while read -r id _ || [ -n "${id:-}" ]; do
     case $id in '' | '#'*) continue ;; esac
     token=$(printf '%s:%s' "$key" "$id" | sha256sum | cut -c1-32)
-    sh /task/client-config.sh "$id" | grep '^vless://' | base64 -w 0 >"$out/$token.new"
+    sh /task/client-config.sh --full "$id" | grep '^vless://' | base64 -w 0 >"$out/$token.new"
     mv "$out/$token.new" "$out/$token"
     n=$((n + 1))
   done </run/secrets/vless_clients
@@ -26,4 +27,5 @@ if [ "${SUBSCRIPTION:-false}" = true ]; then
 else
   echo "subscription: off"
 fi
+: >"$out/.ready"
 exec sleep 2147483647
