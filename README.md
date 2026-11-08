@@ -75,7 +75,9 @@ morzer task run client-config --output -- phone    # one
 Prints a REALITY link (v2rayN, v2rayNG, Hiddify, Happ, Streisand) and an XHTTP
 link, and one Xray config for v2rayN or v2rayNG (custom config) that uses
 whichever of the two answers fastest and, when the DNS tunnel is on, falls back
-to it only when neither does. Treat the output as a password. To scan a link
+to it only when neither does. The config checks every entry every 30 seconds,
+a small request each, so it leaves one that stops answering within about half
+a minute. Treat the output as a password. To scan a link
 with a phone, show each as a QR code in the terminal (`qrencode` package):
 
 ```sh
