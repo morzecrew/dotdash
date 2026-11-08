@@ -6,10 +6,10 @@ name: docs-dev
 
 on:
   pull_request:
-    paths: [pages/**, CHANGELOG.md, .github/workflows/docs-*.yml]
+    paths: [pages/**, CHANGELOG.md, scripts/bootstrap.sh, .github/scripts/publish-bootstrap.sh, .github/workflows/docs-*.yml]
   push:
     branches: [main]
-    paths: [pages/**, CHANGELOG.md, .github/workflows/docs-*.yml]
+    paths: [pages/**, CHANGELOG.md, scripts/bootstrap.sh, .github/scripts/publish-bootstrap.sh, .github/workflows/docs-*.yml]
   workflow_dispatch:
 
 permissions: {}
@@ -61,8 +61,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           uv run --locked mike deploy --push --branch gh-pages dev
-          # Until the first release publishes `latest`, the root would 404.
+          # Until the first release publishes `latest`, main owns the root:
+          # its redirect, and bootstrap.sh beside it.
           versions=$(uv run --locked mike list --branch gh-pages)
           if ! grep -q '\[latest\]' <<<"$versions"; then
             uv run --locked mike set-default --push --branch gh-pages dev
+            ../.github/scripts/publish-bootstrap.sh
           fi

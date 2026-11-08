@@ -1,6 +1,7 @@
 # A release's documentation. A vX.Y.Z tag publishes version X.Y on gh-pages;
 # when X.Y is the newest released minor it also takes the `latest` alias and
-# the root redirect, so a patch on an older minor refreshes that minor alone.
+# the root redirect and publishes that release's bootstrap.sh at the root, so
+# a patch on an older minor refreshes that minor alone.
 # Dispatch it on a tag to publish that tag's docs again.
 name: docs-release
 
@@ -49,6 +50,7 @@ jobs:
           if [ "$minor" = "$newest" ]; then
             uv run --locked mike deploy --push --update-aliases --branch gh-pages "$minor" latest
             uv run --locked mike set-default --push --branch gh-pages latest
+            ../.github/scripts/publish-bootstrap.sh
           else
             uv run --locked mike deploy --push --branch gh-pages "$minor"
           fi
