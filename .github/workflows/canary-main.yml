@@ -22,7 +22,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@c87702ae668b057166cb6a713fbcfd288d979a6c # v0.8.0
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@b282c8fb0c25addec4cb4f32b85b8ecb94bc9109 # v0.9.0
     with:
       ref: ${{ github.sha }}
       channel: main
@@ -50,7 +50,10 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@c87702ae668b057166cb6a713fbcfd288d979a6c # v0.8.0
+      # The provenance publish.yml attests for the bundle.
+      id-token: write
+      attestations: write
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@b282c8fb0c25addec4cb4f32b85b8ecb94bc9109 # v0.9.0
     with:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}

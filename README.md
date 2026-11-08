@@ -410,6 +410,14 @@ proxy and `cert_issuer=internal`, then connects clients over REALITY and XHTTP.
 Renovate opens a pull request when a pinned image's tag or digest moves, so the
 same smoke test gates each bump.
 
+Besides the minisign signature morzer checks, each published bundle carries
+signed build provenance, naming the commit and workflow run that built it, and
+the smoke update first proves that `morzer update` refuses a tampered copy:
+
+```sh
+gh attestation verify oci://ghcr.io/morzecrew/dotdash:<version> --owner morzecrew
+```
+
 A weekly benchmark, and any pull request that changes the pinned images or
 Xray's config, measures REALITY and XHTTP in a rig under added latency and
 packet loss (Linux netem, on the client's side only): fetch success, time to

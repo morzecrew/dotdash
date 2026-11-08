@@ -23,7 +23,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@c87702ae668b057166cb6a713fbcfd288d979a6c # v0.8.0
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@b282c8fb0c25addec4cb4f32b85b8ecb94bc9109 # v0.9.0
     with:
       ref: ${{ github.sha }}
       channel: main
@@ -50,9 +50,34 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@c87702ae668b057166cb6a713fbcfd288d979a6c # v0.8.0
+      # The provenance publish.yml attests for the bundle.
+      id-token: write
+      attestations: write
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@b282c8fb0c25addec4cb4f32b85b8ecb94bc9109 # v0.9.0
     with:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}
       channel: main
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+
+  # The command the README gives works on what was just published: the
+  # attestation is there, signed by bundle-ci's publish workflow for this
+  # commit.
+  provenance:
+    needs: [bundle, publish]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      attestations: read
+    steps:
+      - name: Verify the published bundle's provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.bundle.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh attestation verify "oci://ghcr.io/morzecrew/dotdash:${VERSION}" --owner morzecrew \
+            --signer-workflow morzecrew/bundle-ci/.github/workflows/publish.yml \
+            --source-digest "${GITHUB_SHA}" >/dev/null
+          echo "dotdash:${VERSION}: provenance verified"
