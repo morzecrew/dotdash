@@ -1,39 +1,45 @@
-# dotdash 0.1.0
+# dotdash 0.2.0
 
 ### Added
 
-- A morzer bundle for one Docker host, published as `ghcr.io/morzecrew/dotdash`: releases as `:X.Y.Z` and `:stable`, signed with the release key, and every change to main as `:main`, signed with the dev key. Requires morzer 0.13.0, Docker 28 and Compose 2.35, or later.
+- The `exit-check` task prints the IPv4 and IPv6 addresses the upstream leaves from, each with its network and country, and says whether IPv6 is unavailable or leaves from another network than IPv4. It changes nothing.
 
-- REALITY on port 443: a client holding the key reaches Xray over VLESS with Vision, and anything else reaches a Caddy cover site with a Let's Encrypt certificate. `https_port` moves both to another host port.
+- Every apply and update, and every `doctor`, checks the release's invariants against what runs: traffic leaves through the upstream only, every inbound demands a client, and only the bundle's own ports are published, by unprivileged containers. An update that breaks one is rolled back; drift fails `doctor`.
 
-- XHTTP over TLS behind one secret path of the cover site, which also works through a CDN that proxies HTTP/2 to the server.
+- An optional third transport: XHTTP under REALITY instead of TLS, on a port of its own (`xhttp_reality_port`, 8443). The `xhttp-reality` profile turns it on, `xdns-xhttp-reality` with the DNS tunnel; `client-config` then prints a third link and outbound, and the first two as before.
 
-- An optional DNS tunnel on UDP/53, VLESS over mKCP with XDNS, for networks where only DNS gets through. The `xdns` profile turns it on, at install or later; its zone is `t.<domain>` unless `xdns_domain` names another.
+- The canary's `measure` task fetches a URL through each transport N times and prints, as JSON, how many succeeded, timed out or failed, and the latency of those that succeeded.
 
-- Every inbound uses VLESS Encryption (ML-KEM-768). morzer generates every key, short id and path at install, so no secret is chosen by hand.
+- The canary's `xhttp-reality` profile checks XHTTP with REALITY beside REALITY, on the server's `xhttp_reality_port`.
 
-- All client traffic leaves through an upstream SOCKS5 or HTTP proxy you provide, optionally over TLS, with no direct fallback. UDP is relayed only through a SOCKS5 upstream that supports it (`upstream_udp`).
+- Both bundles carry signed build provenance, naming the commit and workflow run that built them. Check it with `gh attestation verify oci://ghcr.io/morzecrew/dotdash:<version> --owner morzecrew`, beside the signature morzer verifies.
 
-- Xray is healthy only while it fetches a URL through the upstream, and `doctor` fails while it cannot. With `healthcheck_expect`, a response that does not match, such as a changed exit IP, fails it too.
+- With several servers (`servers`), `canary-config` also prints how to point a canary at each of the others: they share the secrets, so only `server` and `address` change.
 
-- An apply or update succeeds only once port 443 serves the cover site with a certificate a browser trusts.
+- The Xray config `client-config` prints answers the device's DNS, in an app's VPN or TUN mode, over DNS-over-HTTPS (`dns_resolver`) through the tunnel, with IPv4 addresses only: lookups no longer reach the local network's resolver or need the upstream to relay UDP. The README covers each app.
 
-- The `client-config` task prints each device's REALITY and XHTTP links, and the DNS tunnel's outbound when it is on. With `servers` naming servers that share the keys, it prints links for each and an Xray config that uses whichever answers fastest.
+### Changed
 
-- One VLESS id per device in `vless_clients`: deleting a device's line revokes that device alone.
+- Both bundles need morzer 0.14.0 or later. `sudo morzer secret edit vless_clients` then opens the list as plain text, one client per line, and `init` needs no `--product`.
 
-- The cover site serves your own static files from `site_dir` wherever they have the requested path, and otherwise a bundled page titled with the server's domain.
+- When the way out fails, `doctor` says which layer did: the upstream proxy's address, its credentials, the destination behind it, or an exit that no longer matches `healthcheck_expect`. The health checks are now `cover-site` and `egress`.
 
-- `cert_issuer=internal` takes the certificate from Caddy's own CA instead of Let's Encrypt, for a machine the internet cannot reach.
+- Xray's `log_level` defaults to `error`. At `warning` and below it names the destinations of failed connections, which a log should not keep; set it back for debugging.
 
-- Unattended updates: the bundle declares that it keeps no database and is safe to roll back, which morzer requires before it installs a release on its own. Nightly backups include Caddy's certificates.
+- `client-config` prints one complete Xray config per device, for one server too: it uses whichever of REALITY and XHTTP answers fastest on any listed server, and the DNS tunnel only when none answers, instead of printing the tunnel's outbound alone.
 
-- The `canary-config` task prints the init command and secrets for a dotdash-canary machine acting as one of the clients.
+### Fixed
 
-- dotdash-canary, a second bundle released with dotdash as `ghcr.io/morzecrew/dotdash-canary`, for a machine inside a network you care about, such as a box at home. It connects to a dotdash server as an ordinary client and needs no open port.
+- The cover site's error answers, such as 404 and 405, no longer name the server, and carry the site's headers like its pages do. A prober could tell them apart.
 
-- The canary's health check fetches `probe_url` through dotdash over REALITY, and with the `xhttp` profile also over XHTTP, in up to three tries. `doctor` fails when all three fail, so a notify target at its default level hears that the network lost its way out.
+- The canary's `xhttp` profile applies. Its Compose file found the base file by a path relative to a directory morzer does not run Compose from, so the profile failed validation.
 
-- Services run as a non-root user in read-only containers with every capability dropped. Xray's access log is always off.
+- A failed first apply, of dotdash or the canary, no longer leaves a directory where Xray's rendered configuration goes, which made every later apply fail to render it. A missing configuration file or Caddyfile now stops the container from starting instead.
 
-- `scripts/bootstrap.sh` prepares a fresh Debian or Ubuntu server: Docker, sops, age and morzer, unattended security updates, and SSH with keys only once an authorized key exists.
+### Security
+
+- The upstream no longer learns which hostnames clients visit: this server resolves them over DNS-over-HTTPS sent through the upstream (`resolve=gateway`, the default) and hands it addresses only. A name resolving to a private address is blocked; `resolve=upstream` restores the old behaviour.
+
+- Xray has no route out of the machine. It runs on internal networks only, and a small gate container forwards the public port to it and carries its traffic to the upstream, whose credentials only the gate holds. Whatever Xray's own config says, it cannot send traffic past the upstream.
+
+- Caddy no longer writes the XHTTP path, a secret, to its log: it logs errors only, and never the request they concern, so no URI, header or client address either. An XHTTP session cut off mid-response used to log all three.
