@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Optional subscriptions (`subscription`): each device gets a URL on the cover site that serves its links, which `client-config` prints and the app refreshes by itself, so a revocation or a key rotation reaches devices without resending links. Rotating `subscription_key` moves every URL.
 
+### Changed
+
+- The Xray config `client-config` prints checks all its entries at once every 30 seconds, where it checked one a minute in turn, so it leaves an entry that stops answering within about half a minute instead of up to several minutes. That is two small requests a minute per entry.
+
 ## [0.2.0] - 2026-11-08
 
 ### Added

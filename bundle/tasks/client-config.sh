@@ -117,7 +117,7 @@ link leaves DNS to the app's own settings:
 $(outbounds "$1")$([ -z "${XDNS_DOMAIN:-}" ] || printf ',\n%s' "$(xdns_outbound "$1")"),
     {"tag": "dns-out", "protocol": "dns"}
   ],
-  "observatory": {"subjectSelector": ["dotdash-"], "probeUrl": "https://www.gstatic.com/generate_204", "probeInterval": "1m"},
+  "observatory": {"subjectSelector": ["dotdash-"], "probeUrl": "https://www.gstatic.com/generate_204", "probeInterval": "30s", "enableConcurrency": true},
   "routing": {
     "balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}${fallback}}],
     "rules": [
