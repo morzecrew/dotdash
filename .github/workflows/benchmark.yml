@@ -57,11 +57,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: morzecrew/bundle-ci
-          ref: b282c8fb0c25addec4cb4f32b85b8ecb94bc9109 # v0.9.0
+          ref: 7c7541d3844dbb4dcb3dd20a626b85ab4ec98be3 # v0.9.1
           path: .bundle-ci
           persist-credentials: false
 
+      # The job's token for tools.sh's GitHub release downloads, here and in
+      # the rehearsal, which hands it to that one command in the rig.
       - name: Install oras, and load netem
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           BIN_DIR="${RUNNER_TEMP}/bin" bash .bundle-ci/scripts/tools.sh oras
           echo "${RUNNER_TEMP}/bin" >>"${GITHUB_PATH}"
@@ -69,6 +73,7 @@ jobs:
 
       - name: Install dotdash in a rig
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           REHEARSE_PUBKEY: ${{ vars.MINISIGN_DEV_PUBKEY }}
           REHEARSE_PROBE_PATHS: ""
           REHEARSE_OPERATOR_SECRETS: upstream_username upstream_password
@@ -79,7 +84,8 @@ jobs:
             --profile xdns
         run: |
           bash .bundle-ci/scripts/rehearse.sh --keep
-          bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal \
+          # The token stays out of the rest of the rig.
+          GITHUB_TOKEN= bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal \
             sh -c 'bash /rig/smoke.sh update "$(ls /rig/dist/*.tar.zst | head -1)"'
 
       - name: Benchmark
