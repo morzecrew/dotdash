@@ -2,8 +2,8 @@
 
 A [morzer](https://github.com/morzecrew/morzer) bundle that runs an Xray gateway
 on a single Docker host: REALITY on port 443 in front of a website served by
-Caddy, an optional DNS-based entry point, and all outbound traffic routed
-through an upstream proxy you provide.
+Caddy, optional DNS-based and XHTTP-with-REALITY entry points, and all
+outbound traffic routed through an upstream proxy you provide.
 
 ## Channels
 
@@ -128,6 +128,25 @@ A zone under a domain of its own is better, such as `--set
 xdns_domain=t.example.net` delegated from `example.net`: a resolver that flags
 tunnel queries flags the domain they are under, and blocking it would take
 `example.com` with it.
+
+### XHTTP with REALITY (optional)
+
+A third link: XHTTP, as in the second, but under REALITY instead of Caddy's
+TLS, on a port of its own (`xhttp_reality_port`, 8443 unless set). It suits a
+network that lets another port through better than 443; it is not faster or
+harder to block by design, and a canary's `measure` shows how it does from a
+given network. Clients built on Xray-core take it, such as v2rayN and v2rayNG.
+Open the port and switch to the profile that adds it:
+
+```sh
+sudo morzer config set installation.profile=xhttp-reality        # with the DNS tunnel: xdns-xhttp-reality
+sudo morzer task run client-config --output
+```
+
+The first two links stay as they were. To turn it off, set the profile you had
+before: `installation.profile=xdns` with the DNS tunnel, or `sudo morzer
+config unset installation.profile` without. Do that before rolling back to a
+release that has no such profile, which morzer otherwise refuses.
 
 ### CDN (optional)
 
@@ -280,6 +299,9 @@ morzer (`scripts/bootstrap.sh`), and no open port.
    sudo morzer config set doctor.schedule='*:0/10'
    ```
 
+`canary-config` names the profiles that check more: `xhttp` adds XHTTP over
+TLS, and `xhttp-reality` XHTTP with REALITY.
+
 `doctor` then fails on `health endpoints respond` when three tries in a row
 cannot fetch `probe_url` through dotdash, and each
 failing check notifies again until it is fixed. The canary is released with
@@ -331,6 +353,7 @@ confuse each other's backups. A `file://` target needs no `--credentials-file`.
 | `xdns_domain` | `t` | delegated tunnel zone (`xdns` profile); a name with no dot is under the domain |
 | `xdns_bind` | `0.0.0.0` | host address for UDP/53 |
 | `xdns_mtu` | `900` | tunnel reply size; lower if replies get lost |
+| `xhttp_reality_port` | `8443` | host TCP port for XHTTP with REALITY (`xhttp-reality` profiles); not `https_port` or 80 |
 | `log_level` | `error` | Xray error log; access log is always off. `warning` and below name the destinations of failed connections |
 | `healthcheck_url` | `https://www.gstatic.com/generate_204` | fetched through the upstream by the healthcheck |
 | `healthcheck_expect` | `.*` | regular expression the healthcheck response must match, such as the exit IP |

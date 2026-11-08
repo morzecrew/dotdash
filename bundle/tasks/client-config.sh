@@ -11,6 +11,9 @@ case ${XDNS_DOMAIN:-} in '' | *.*) ;; *) XDNS_DOMAIN=${XDNS_DOMAIN}.${DOMAIN} ;;
 # servers parameter); self is this one.
 servers=$(printf '%s\n' "${SERVERS:-self}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e "s/^self\$/${DOMAIN}/")
 count=$(printf '%s\n' "$servers" | grep -c .)
+# Set by the xhttp-reality profiles' overlay only: XHTTP with REALITY, a third
+# link and outbound. Without it the output is what it always was.
+xr_port=${XHTTP_REALITY_PORT:-}
 
 enc=$(/opt/xray/xray-entrypoint vless-encryption /run/secrets/vless_seed)
 path=$(cat /run/secrets/xhttp_path)
@@ -26,9 +29,15 @@ XHTTP over TLS via $3 (for a CDN in front: replace the address with the CDN's na
 vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&security=tls&sni=$3&host=$3&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=auto#dotdash-xhttp-$2
 
 EOF
+  [ -n "$xr_port" ] || return 0
+  cat <<EOF
+XHTTP with REALITY via $3, on port ${xr_port} (clients built on Xray-core: v2rayN, v2rayNG):
+vless://$1@$3:${xr_port}?encryption=${enc}&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&type=xhttp&path=%2F${path}&mode=auto#dotdash-xhttp-reality-$2
+
+EOF
 }
 
-outbounds() { # <id>: a REALITY and an XHTTP outbound per server
+outbounds() { # <id>: a REALITY and an XHTTP outbound per server, and the third
   n=0
   for s in $servers; do
     n=$((n + 1))
@@ -42,6 +51,13 @@ outbounds() { # <id>: a REALITY and an XHTTP outbound per server
      "streamSettings": {"network": "xhttp", "security": "tls",
        "tlsSettings": {"serverName": "$s", "alpn": ["h2"], "fingerprint": "chrome"},
        "xhttpSettings": {"path": "/${path}", "host": "$s", "mode": "auto"}}},
+EOF
+    [ -z "$xr_port" ] || cat <<EOF
+    {"tag": "dotdash-$n-xhttp-reality", "protocol": "vless",
+     "settings": {"address": "$s", "port": ${xr_port}, "id": "$1", "encryption": "${enc}"},
+     "streamSettings": {"network": "xhttp", "security": "reality",
+       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "${pbk}", "shortId": "${sid}"},
+       "xhttpSettings": {"path": "/${path}", "mode": "auto"}}},
 EOF
   done | sed '$ s/,$//'
 }
@@ -64,6 +80,7 @@ client() { # <id> <label>
     links "$1" "$label" "$s"
   done
   if [ "$count" -gt 1 ]; then where=" on any of the servers"; else where=; fi
+  if [ -n "$xr_port" ]; then which="REALITY, XHTTP and XHTTP with REALITY"; else which="REALITY and XHTTP"; fi
   if [ -n "${XDNS_DOMAIN:-}" ]; then
     last=", and the DNS tunnel only when none answers"
     fallback=', "fallbackTag": "xdns"'
@@ -72,7 +89,7 @@ client() { # <id> <label>
   fi
   cat <<EOF
 Xray client config, for v2rayN or v2rayNG as a custom config (local SOCKS on
-10808, HTTP on 10809). It uses whichever of REALITY and XHTTP answers
+10808, HTTP on 10809). It uses whichever of ${which} answers
 fastest${where}${last}:
 {
   "inbounds": [

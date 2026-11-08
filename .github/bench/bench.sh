@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Measures REALITY and XHTTP through the installed dotdash under added latency
-# and packet loss, and prints JSON. Runs inside a bundle-ci rig after the
+# Measures REALITY, XHTTP and XHTTP with REALITY through the installed dotdash
+# under added latency and packet loss, and prints JSON. Runs inside a bundle-ci rig after the
 # bundle is installed, with .github/smoke.d/pre-apply's upstream and target;
 # the benchmark workflow sets that up. Never on a real machine: it changes
 # qdiscs, though only on its own clients' interfaces.
@@ -34,15 +34,24 @@ xray=$(docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/
 [ -n "${host}" ] && [ -n "${xray}" ] || die "no docker0 address or no Xray image in the rig"
 work=$(mktemp -d)
 
+# XHTTP with REALITY is opt-in: the rig installs the xdns profile, so this
+# switches to the one with both. A release without it measures the first two.
+transports="reality xhttp"
+if grep -qF 'xdns-xhttp-reality:' /opt/dotdash/current/manifest.yaml; then
+  morzer config set installation.profile=xdns-xhttp-reality >/dev/null || die "could not switch to xdns-xhttp-reality"
+  transports="${transports} xhttp-reality"
+fi
+
 # Clients from client-config's links, pointed at this rig's server.
 links=$(morzer task run client-config --output)
-reality=$(grep -m1 '^vless://.*security=reality' <<<"${links}") || die "client-config printed no REALITY link"
-xhttp=$(grep -m1 '^vless://.*type=xhttp' <<<"${links}") || die "client-config printed no XHTTP link"
+reality=$(grep -m1 '^vless://.*security=reality.*type=tcp' <<<"${links}") || die "client-config printed no REALITY link"
+xhttp=$(grep -m1 '^vless://.*security=tls.*type=xhttp' <<<"${links}") || die "client-config printed no XHTTP link"
+xr=$(grep -m1 '^vless://.*security=reality.*type=xhttp' <<<"${links}") || true
 param() { sed -n "s/.*[?&]$2=\([^&#]*\).*/\1/p" <<<"$1"; }
 id() { local rest=${1#vless://}; echo "${rest%%@*}"; }
 caddy=$(docker ps -q --filter label=com.docker.compose.project=dotdash --filter label=com.docker.compose.service=caddy | sed -n 1p)
 docker exec "${caddy}" cat /data/caddy/pki/authorities/local/root.crt >"${work}/root.pem"
-mkdir -p "${work}/reality" "${work}/xhttp"
+mkdir -p "${work}/reality" "${work}/xhttp" "${work}/xhttp-reality"
 jq -n --arg host "${host}" --arg id "$(id "${reality}")" --arg enc "$(param "${reality}" encryption)" \
   --arg sni "$(param "${reality}" sni)" --arg pbk "$(param "${reality}" pbk)" --arg sid "$(param "${reality}" sid)" '
   {inbounds: [{listen: "127.0.0.1", port: 1080, protocol: "socks"}],
@@ -62,10 +71,24 @@ jq -n --arg host "${host}" --arg id "$(id "${xhttp}")" --arg enc "$(param "${xht
          certificates: [{usage: "verify", certificateFile: "/ca/root.pem"}]},
        xhttpSettings: {path: $path, host: $sni, mode: "auto"}}}]}' \
   >"${work}/xhttp/client.json"
+if [ -n "${xr}" ]; then
+  port=${xr#*@} port=${port%%\?*}
+  path=$(param "${xr}" path)
+  jq -n --arg host "${host}" --argjson port "${port##*:}" --arg id "$(id "${xr}")" \
+    --arg enc "$(param "${xr}" encryption)" --arg sni "$(param "${xr}" sni)" --arg pbk "$(param "${xr}" pbk)" \
+    --arg sid "$(param "${xr}" sid)" --arg path "/${path#%2F}" '
+    {inbounds: [{listen: "127.0.0.1", port: 1080, protocol: "socks"}],
+     outbounds: [{protocol: "vless",
+       settings: {address: $host, port: $port, id: $id, encryption: $enc},
+       streamSettings: {network: "xhttp", security: "reality",
+         realitySettings: {serverName: $sni, fingerprint: "chrome", password: $pbk, shortId: $sid},
+         xhttpSettings: {path: $path, mode: "auto"}}}]}' \
+    >"${work}/xhttp-reality/client.json"
+fi
 chmod -R a+rX "${work}"
 
 declare -A pid
-for t in reality xhttp; do
+for t in ${transports}; do
   docker rm -f "bench-${t}" >/dev/null 2>&1 || true
   docker run -d --name "bench-${t}" -v "${work}/${t}:/etc/xray:ro" -v "${work}/root.pem:/ca/root.pem:ro" \
     "${xray}" >/dev/null
@@ -84,7 +107,7 @@ impair() { # <transport> <delay ms> <jitter ms> <loss %>
   [ "$4" = 0 ] || args+=(loss "$4%")
   [ ${#args[@]} -eq 0 ] || in_client "$1" tc qdisc add dev eth0 root netem "${args[@]}"
 }
-for t in reality xhttp; do
+for t in ${transports}; do
   for _ in $(seq 30); do
     [ "$(fetch "${t}" "${target}/" 5 | cut -d' ' -f1)" = 200 ] && continue 2
     sleep 1
@@ -116,7 +139,7 @@ for d in ${delays}; do
   [ "${d}" = "${delay}" ] || jitter=${d#*:}
   for loss in ${losses}; do
     log "delay ${delay}ms±${jitter}ms, loss ${loss}%"
-    for t in reality xhttp; do
+    for t in ${transports}; do
       impair "${t}" "${delay}" "${jitter}" "${loss}"
       small=$(for _ in $(seq "${requests}"); do fetch "${t}" "${target}/" 15; done | stats "${requests}")
       big=$(for _ in $(seq "${transfers}"); do fetch "${t}" "${target}/blob" 90; done | stats "${transfers}" 1048576)
@@ -127,12 +150,12 @@ for d in ${delays}; do
     done
   done
 done
-for t in reality xhttp; do impair "${t}" 0 0 0; done
+for t in ${transports}; do impair "${t}" 0 0 0; done
 
 # Unimpaired: once `morzer restart xray` returns, Xray is healthy again; how
 # long until each client gets through.
 declare -A reconnect
-for t in reality xhttp; do
+for t in ${transports}; do
   morzer restart xray >/dev/null
   start=${EPOCHREALTIME}
   until [ "$(fetch "${t}" "${target}/" 5 | cut -d' ' -f1)" = 200 ]; do
@@ -142,12 +165,14 @@ for t in reality xhttp; do
   reconnect[${t}]=$(awk -v s="${start}" -v n="${EPOCHREALTIME}" 'BEGIN { printf "%.2f", n - s }')
 done
 
-for t in reality xhttp; do docker rm -f "bench-${t}" >/dev/null; done
+for t in ${transports}; do docker rm -f "bench-${t}" >/dev/null; done
+reconnected=$(for t in ${transports}; do echo "${t} ${reconnect[${t}]}"; done |
+  jq -Rn '[inputs | split(" ") | {(.[0]): (.[1] | tonumber)}] | add')
 jq -s --arg xray "$(docker run --rm --entrypoint /usr/local/bin/xray "${xray}" version | sed -n 1p)" \
   --arg release "$(morzer status --json 2>/dev/null | jq -r '.data.current_release.version // empty' 2>/dev/null)" \
   --arg kernel "$(uname -r)" --argjson requests "${requests}" --argjson transfers "${transfers}" \
-  --argjson reality "${reconnect[reality]}" --argjson xhttp "${reconnect[xhttp]}" '
+  --argjson reconnect "${reconnected}" '
   {xray: $xray, release: $release, kernel: $kernel, requests: $requests, transfers: $transfers,
    netem: "on the client container'"'"'s egress (client to server)",
-   reconnect_after_restart_s: {reality: $reality, xhttp: $xhttp},
+   reconnect_after_restart_s: $reconnect,
    scenarios: .}' "${work}/scenarios.jsonl"

@@ -1,4 +1,5 @@
-# The xdns profile (`morzer init --profile xdns`): the DNS tunnel on UDP/53.
+# The xdns profile (`morzer init --profile xdns`), and with xhttp-reality.yaml
+# xdns-xhttp-reality: the DNS tunnel on UDP/53.
 # The inbound itself is in the Xray template, under the same profile, and the
 # gate's forward in gate.json.tmpl.
 services:

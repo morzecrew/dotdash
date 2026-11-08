@@ -29,6 +29,6 @@ jq -r --slurpfile base "${2:-/dev/null}" '
     + "| \($s.transfers.ok)/\($s.transfers.of) "
     + "| \($s.transfers.mbps_p50 // "–")\(delta($s.transfers.mbps_p50; $w.transfers.mbps_p50; ""; 1)) |"),
   "",
-  "Back through after `morzer restart xray`: REALITY \(.reconnect_after_restart_s.reality) s, XHTTP \(.reconnect_after_restart_s.xhttp) s."
+  "Back through after `morzer restart xray`: \(.reconnect_after_restart_s | to_entries | map("\(.key) \(.value) s") | join(", "))."
   + (if ($base | length) > 0 then " Changes in brackets are against the last benchmark of `main`." else "" end)
 ' "$1"
