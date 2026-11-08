@@ -162,7 +162,7 @@ images:
   # hooks/policy reads the rendered config with it, run with no network, so
   # the host needs no jq of its own.
   jq: ghcr.io/jqlang/jq:1.8.1@sha256:4f34c6d23f4b1372ac789752cc955dc67c2ae177eb1b5860b75cdc5091ce6f91
-  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:a9a39feaeab2f83a0b76459755b9aa92d54e5f30030b5f818e322e3e5f7a8f81
+  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:c5885766b9f12bdf3986bf621ad0ea72d87dea54e0e3f80cf532939f2e4ef5cd
   caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
 
 # Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);
