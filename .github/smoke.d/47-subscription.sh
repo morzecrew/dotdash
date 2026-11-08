@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Subscriptions (the subscription parameter). With it on, client-config prints
-# each device's URL alone, which serves exactly the links --full prints,
-# base64; a guessed URL gets the site's own 404; a device whose line is deleted
-# loses its URL, and a device added gets one, each as soon as the secret is
-# set; rotating subscription_key moves every URL; and with it off, none answers.
+# each device's URL alone, which serves exactly the links --full prints, base64,
+# once the subscription service reports healthy; a guessed URL gets the site's
+# own 404; a device whose line is deleted loses its URL, and a device added
+# gets one, each as soon as the secret is set; rotating subscription_key moves
+# every URL; and with it off, none answers.
 # After 45-revocation.sh, so the links served are those of its rotated keys.
 # No URL or link is printed: a failure names the step, not the credentials.
 # shellcheck source=/dev/null
@@ -34,6 +35,9 @@ url_of() { # [client]: the subscription URL client-config prints for it
 links_of() { # [client]: its vless:// links, which --full prints
   sudo morzer task run client-config --output -- --full ${1:+"$1"} | grep '^vless://' || true
 }
+health() { # the subscription service's health
+  sudo docker inspect -f '{{.State.Health.Status}}' "$(service_container subscription)" 2>/dev/null || true
+}
 restore() {
   [ -z "${before:-}" ] || printf '%s\n' "${before}" | sudo morzer secret set vless_clients >/dev/null 2>&1 || true
   sudo morzer config unset subscription >/dev/null 2>&1 || true
@@ -46,6 +50,8 @@ url=$(url_of)
 [ -n "${url}" ] || die "client-config prints no subscription URL with the parameter on"
 ! grep -q '^vless://' <<<"$(sudo morzer task run client-config --output)" \
   || die "client-config prints links beside the subscription URL without --full"
+for _ in $(seq 30); do [ "$(health)" = healthy ] && break; sleep 1; done
+[ "$(health)" = healthy ] || die "the subscription service is not healthy: $(health)"
 served=$(fetch "${url}" | base64 -d 2>/dev/null || true)
 [ -n "${served}" ] || die "the subscription URL serves nothing"
 [ "${served}" = "$(links_of)" ] || die "the subscription does not serve the links client-config prints"
