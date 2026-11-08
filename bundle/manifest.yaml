@@ -34,13 +34,12 @@ compatibility:
   # The manager this bundle is verified and rehearsed with, and the first that
   # reads `database: none`.
   min_manager_version: "0.14.0"
-  # False for this release alone, the one that replaced upstream_host,
-  # upstream_port and their secrets with the upstream secret: an update drops
-  # the old values, so 0.3.x could not start again. morzer then refuses
-  # `rollback` from it, pointing at the pre-update backup, and never applies
-  # it unattended, since `upstream` has to be set by hand first. The next
-  # release sets it back to true.
-  rollback_safe: false
+  # 0.4.0 alone declared false: it replaced upstream_host, upstream_port and
+  # their secrets with the upstream secret, and an update drops the old
+  # values, so 0.3.x could not start again. Going back from a later release
+  # to 0.4.0 or after loses nothing. An update from 0.3.x straight to a later
+  # one is still refused until `upstream` is set.
+  rollback_safe: true
   # No database, which an unattended update needs declared.
   database: none
 

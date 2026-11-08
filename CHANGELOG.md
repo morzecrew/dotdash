@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Unattended updates apply releases again, and `morzer rollback` works again, both of which 0.4.0 turned off for its own change of the upstream settings. An update from 0.3.x is still refused until the `upstream` secret is set.
+
 ## [0.4.0] - 2026-11-08
 
 ### Changed
