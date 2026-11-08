@@ -275,6 +275,33 @@ traffic inside the tunnel when the tunnel drops only if its app says so (TUN
 mode with a kill switch, or "block connections without VPN" on Android); the
 server cannot enforce it.
 
+**DNS on the device.** In an app's VPN or TUN mode the device's DNS goes to
+the app. The Xray config from `client-config` answers what reaches it on port
+53 over DNS-over-HTTPS (`dns_resolver`) through the tunnel, with IPv4 addresses
+only, and a lookup it cannot answer fails rather than going to the local
+network's resolver; CI runs it and checks that no DNS packet leaves the
+client. IPv4 only, because an app handed an IPv6 address may send it outside a
+tunnel that carries IPv4 only; this server reaches sites over IPv4 first
+anyway. A link carries no DNS settings, so with links the app's own apply. As
+of November 2026:
+
+- **v2rayNG** (Android), with the config imported as a custom config: its VPN
+  hands the device's DNS ("VPN DNS", 1.1.1.1 by default) to the config's SOCKS
+  inbound on 10808, so keep the app's SOCKS port at 10808. IPv6 is off by
+  default, and Android then blocks it rather than leaking it.
+- **v2rayN** (desktop): TUN reaches a custom config only with the profile's
+  "Socks port" set to 10808, and then answers DNS with v2rayN's own DNS
+  settings, so keep those going through the proxy. Its TUN carries no IPv6 by
+  default, and its strict route (on by default) blocks it on Windows and
+  Linux.
+- **Hiddify** reads only the outbounds of an Xray config and drops its DNS and
+  routing, so use the links. It answers DNS itself, through the proxy by
+  default.
+- **iOS:** Happ runs an Xray config as it is but sets the tunnel's DNS itself
+  ("Tunnel DNS"); its "Include all networks" keeps the rest of the traffic in
+  the tunnel. Streisand and V2Box document neither, so check them with a DNS
+  leak test site.
+
 ### Canary (optional)
 
 The server cannot tell when a network starts blocking it. The canary is a
@@ -358,7 +385,7 @@ confuse each other's backups. A `file://` target needs no `--credentials-file`.
 | `healthcheck_url` | `https://www.gstatic.com/generate_204` | fetched through the upstream by the healthcheck |
 | `healthcheck_expect` | `.*` | regular expression the healthcheck response must match, such as the exit IP |
 | `resolve` | `gateway` | who turns hostnames into addresses: `gateway`, this server over `dns_resolver`, so the upstream sees addresses only; `upstream`, the upstream, which then sees every hostname |
-| `dns_resolver` | `https://1.1.1.1/dns-query` | the DNS-over-HTTPS server `resolve=gateway` asks, through the upstream; `https://` only |
+| `dns_resolver` | `https://1.1.1.1/dns-query` | the DNS-over-HTTPS server `resolve=gateway` asks, through the upstream, and `client-config`'s Xray config asks through the tunnel; `https://` only |
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (Caddy's own CA, for a machine the internet cannot reach) |
 | `site_dir` | `/srv/dotdash` | host directory of your own cover site |
 | `servers` | `self` | servers sharing these keys, comma-separated, for client configs; `self` is this one |

@@ -14,6 +14,8 @@ count=$(printf '%s\n' "$servers" | grep -c .)
 # Set by the xhttp-reality profiles' overlay only: XHTTP with REALITY, a third
 # link and outbound. Without it the output is what it always was.
 xr_port=${XHTTP_REALITY_PORT:-}
+# The DoH server the config answers the device's DNS with, through the tunnel.
+dns=${DNS_RESOLVER:-https://1.1.1.1/dns-query}
 
 enc=$(/opt/xray/xray-entrypoint vless-encryption /run/secrets/vless_seed)
 path=$(cat /run/secrets/xhttp_path)
@@ -90,19 +92,27 @@ client() { # <id> <label>
   cat <<EOF
 Xray client config, for v2rayN or v2rayNG as a custom config (local SOCKS on
 10808, HTTP on 10809). It uses whichever of ${which} answers
-fastest${where}${last}:
+fastest${where}${last}.
+DNS the device sends on port 53, in the app's VPN or TUN mode, is answered
+over DoH (${dns}) through the tunnel, with IPv4 addresses only; a
+link leaves DNS to the app's own settings:
 {
+  "dns": {"servers": ["${dns}"], "queryStrategy": "UseIPv4", "disableFallback": true, "tag": "dns"},
   "inbounds": [
     {"listen": "127.0.0.1", "port": 10808, "protocol": "socks", "settings": {"udp": true}},
     {"listen": "127.0.0.1", "port": 10809, "protocol": "http"}
   ],
   "outbounds": [
-$(outbounds "$1")$([ -z "${XDNS_DOMAIN:-}" ] || printf ',\n%s' "$(xdns_outbound "$1")")
+$(outbounds "$1")$([ -z "${XDNS_DOMAIN:-}" ] || printf ',\n%s' "$(xdns_outbound "$1")"),
+    {"tag": "dns-out", "protocol": "dns"}
   ],
   "observatory": {"subjectSelector": ["dotdash-"], "probeUrl": "https://www.gstatic.com/generate_204", "probeInterval": "1m"},
   "routing": {
     "balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}${fallback}}],
-    "rules": [{"type": "field", "network": "tcp,udp", "balancerTag": "dotdash"}]
+    "rules": [
+      {"type": "field", "port": "53", "outboundTag": "dns-out"},
+      {"type": "field", "network": "tcp,udp", "balancerTag": "dotdash"}
+    ]
   }
 }
 

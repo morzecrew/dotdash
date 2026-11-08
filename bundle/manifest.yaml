@@ -113,7 +113,7 @@ parameters:
   dns_resolver:
     type: string
     default: https://1.1.1.1/dns-query
-    description: "The DNS-over-HTTPS server resolve=gateway asks, through the upstream; it sees the names, the upstream does not. Only https:// URLs are accepted"
+    description: "The DNS-over-HTTPS server resolve=gateway asks, through the upstream; it sees the names, the upstream does not. client-config's Xray config answers the device's DNS from it too, through the tunnel. Only https:// URLs are accepted"
     services: [xray]
   healthcheck_expect:
     type: string
