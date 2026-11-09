@@ -11,8 +11,10 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qF 'relay-config' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates it"
+# The relays parameter; a release from before morzer 0.15 had a secret
+# instead (the benchmark rehearses the published one).
+if ! sudo grep -qx '  relays:' /opt/dotdash/current/manifest.yaml; then
+  echo "${0##*/}: skipped, the installed release predates the relays parameter"
   exit 0
 fi
 
