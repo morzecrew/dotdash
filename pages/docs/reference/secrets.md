@@ -8,6 +8,7 @@ replace a generated one with `sudo morzer secret rotate <name>`.
 | --- | --- | --- |
 | `upstream` | no | the upstream proxy, `user:pass@host:port` or `host:port` |
 | `upstream6` | placeholder | the IPv6 proxy, same form; used once `upstream6_protocol` is set |
+| `relays` | placeholder | one `<host> <site> <public key> <short id> <encryption>` line per [relay](../options/relay.md), as its `relay-entry` prints it |
 | `vless_clients` | yes | one `<uuid> [name]` line per device |
 | `vless_seed` | yes | ML-KEM-768 seed the VLESS Encryption key pair derives from |
 | `reality_key` | yes | REALITY private key (x25519) |

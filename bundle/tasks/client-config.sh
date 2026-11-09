@@ -26,6 +26,13 @@ enc=$(/opt/xray/xray-entrypoint vless-encryption /run/secrets/vless_seed)
 path=$(cat /run/secrets/xhttp_path)
 sid=$(cat /run/secrets/reality_short_id)
 pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
+# The dotdash-relay machines in front of this server (the relays secret), one
+# "<host> <site> <public key> <short id> <encryption>" per line; a shorter
+# line, such as the placeholder, is not a relay.
+relays=$(while read -r h s k i e _ || [ -n "${h:-}" ]; do
+  case $h in '' | '#'*) continue ;; esac
+  if [ -n "${e:-}" ]; then echo "$h $s $k $i $e"; fi
+done </run/secrets/relays)
 
 # support-x25519mlkem768: mihomo strips the X25519MLKEM768 key share unless a
 # link asks for it, and Xray's REALITY refuses a client without it. Other
@@ -47,9 +54,36 @@ vless://$1@$3:${xr_port}?encryption=${enc}&security=reality&sni=$3&fp=chrome&pbk
 EOF
 }
 
-outbounds() { # <id>: a REALITY and an XHTTP outbound per server, and the third
+# A relay takes REALITY on 443 under its neighbour site's name, with keys of its
+# own, and carries the device on to this server as its own client.
+relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]"
+  printf '%s\n' "$relays" | while read -r h s k i e; do
+    [ -n "$h" ] || continue
+    cat <<EOF
+REALITY through the relay $h (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
+vless://$1@$h:443?encryption=$e&flow=xtls-rprx-vision&security=reality&sni=$s&fp=chrome&pbk=$k&sid=$i&support-x25519mlkem768=true&type=tcp#$2%20%5Brelay%20$h%5D
+
+EOF
+  done
+}
+
+relay_outbounds() { # <id>
   n=0
-  for s in $servers; do
+  printf '%s\n' "$relays" | while read -r h s k i e; do
+    [ -n "$h" ] || continue
+    n=$((n + 1))
+    cat <<EOF
+    {"tag": "dotdash-relay-$n", "protocol": "vless",
+     "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e", "flow": "xtls-rprx-vision"},
+     "streamSettings": {"network": "raw", "security": "reality",
+       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "$k", "shortId": "$i"}}},
+EOF
+  done
+}
+
+outbounds() { # <id>: a REALITY and an XHTTP outbound per server, the third, and the relays
+  n=0
+  { for s in $servers; do
     n=$((n + 1))
     cat <<EOF
     {"tag": "dotdash-$n-reality", "protocol": "vless",
@@ -69,7 +103,7 @@ EOF
        "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "${pbk}", "shortId": "${sid}"},
        "xhttpSettings": {"path": "/${path}", "mode": "auto"}}},
 EOF
-  done | sed '$ s/,$//'
+  done; relay_outbounds "$1"; } | sed '$ s/,$//'
 }
 
 xdns_outbound() { # <id>: the DNS tunnel, for the config's last resort
@@ -101,8 +135,10 @@ EOF
     if [ "$count" -gt 1 ]; then label="$2-$s"; else label=$2; fi
     links "$1" "$label" "$s"
   done
+  relay_links "$1" "$2"
   if [ "$count" -gt 1 ]; then where=" on any of the servers"; else where=; fi
   if [ -n "$xr_port" ]; then which="REALITY, XHTTP and XHTTP with REALITY"; else which="REALITY and XHTTP"; fi
+  [ -z "$relays" ] || which="${which}, or REALITY through a relay,"
   if [ -n "${XDNS_DOMAIN:-}" ]; then
     last=", and the DNS tunnel only when none answers"
     fallback=', "fallbackTag": "xdns"'
