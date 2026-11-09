@@ -24,6 +24,9 @@ compares them. */ -}}
     "enable": true,
     "stack": "mixed",
     "auto-route": true,
+    {{- /* TCP by an nftables redirect rather than through the TUN stack:
+    faster, and for a gateway's LAN too. */}}
+    "auto-redirect": true,
     "auto-detect-interface": true,
     "dns-hijack": ["any:53", "tcp://any:53"]
   },
@@ -33,6 +36,10 @@ compares them. */ -}}
   would without TUN, and on networks where only it answers. */}}
   "dns": {
     "enable": true,
+    {{- /* morzer wants a default for every parameter, so "off" means none. */}}
+    {{- if ne .Parameters.dns_listen "off" }}
+    "listen": "{{ .Parameters.dns_listen }}",
+    {{- end }}
     "ipv6": false,
     "enhanced-mode": "fake-ip",
     "fake-ip-range": "198.18.0.1/16",

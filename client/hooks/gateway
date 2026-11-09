@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# The gateway check, with the gateway parameter on: the tun profile's TUN
+# interface is up, the host forwards IPv4, and its firewall lets LAN traffic
+# into TUN and the replies back out. Docker sets FORWARD's policy to DROP on
+# hosts where it turned forwarding on itself, and a drop there can't be undone
+# from mihomo's own nftables table, so the two accepts go in Docker's
+# DOCKER-USER chain, which Docker leaves to the operator. Off, it passes.
+set -euo pipefail
+
+[ "${DOTDASH_CLIENT_PARAM_GATEWAY:-false}" = true ] || { echo "not this LAN's gateway (gateway=false)"; exit 0; }
+ip link show Meta >/dev/null 2>&1 \
+  || { echo "gateway is on, but there is no TUN interface: sudo morzer config set installation.profile=tun" >&2; exit 1; }
+[ "$(cat /proc/sys/net/ipv4/ip_forward)" = 1 ] \
+  || { echo "this host doesn't forward IPv4: sudo sysctl -w net.ipv4.ip_forward=1, kept in /etc/sysctl.d" >&2; exit 1; }
+if iptables -S FORWARD 2>/dev/null | grep -qx -- '-P FORWARD DROP'; then
+  missing=
+  iptables -C DOCKER-USER -o Meta -j ACCEPT 2>/dev/null || missing="${missing} -o"
+  iptables -C DOCKER-USER -i Meta -j ACCEPT 2>/dev/null || missing="${missing} -i"
+  if [ -n "${missing}" ]; then
+    echo "this host's FORWARD policy drops the LAN's traffic on its way into TUN (missing DOCKER-USER rules:${missing}):" \
+      "sudo iptables -I DOCKER-USER -o Meta -j ACCEPT; sudo iptables -I DOCKER-USER -i Meta -j ACCEPT" >&2
+    exit 1
+  fi
+fi
+echo "this LAN's gateway: TUN is up, the host forwards, and its firewall lets the LAN into TUN"
