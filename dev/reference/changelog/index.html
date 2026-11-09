@@ -1804,6 +1804,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>A client for a Linux machine or a network: <code>dotdash-client</code>, a new bundle released with dotdash, runs mihomo from one device's subscription URL, refreshed through dotdash, with a SOCKS5 and HTTP proxy port, block and direct rules, and a password once the port is published beyond the machine.</p>
 </li>
 <li>
+<p><code>dotdash-client</code>'s <code>tun</code> profile sends every connection on the machine through dotdash with no proxy settings, its containers' and IPv6 included, with DNS answered by fake addresses whose names dotdash resolves; nothing gets out around dotdash when it is out of reach.</p>
+</li>
+<li>
 <p>mihomo connects over REALITY and XHTTP with REALITY: those links now carry <code>support-x25519mlkem768=true</code>, without which mihomo leaves out the key share Xray's REALITY requires and fails with "REALITY authentication failed". Other clients pass over the parameter.</p>
 </li>
 </ul>

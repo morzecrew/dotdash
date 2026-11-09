@@ -826,6 +826,23 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Client bundle
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="././" class="md-nav__link md-nav__link--active">
         
   
@@ -841,6 +858,37 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-whole-machine-the-tun-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The whole machine: the tun profile
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1237,6 +1285,11 @@
                       
                     
                     
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
                   
                   <div class="md-sidebar__inner">
                     
@@ -1248,6 +1301,25 @@
   
     
   
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-whole-machine-the-tun-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The whole machine: the tun profile
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -1389,6 +1461,21 @@ where only dotdash gets through, such as through a <a href="../relay/">relay</a>
 only domestic addresses do; directly when that fails, as on a first start.
 It is cached, so a restart while the URL can't be reached starts on the links
 it fetched last. Relays in the subscription are links like the others.</p>
+<h2 id="the-whole-machine-the-tun-profile">The whole machine: the tun profile<a class="headerlink" href="#the-whole-machine-the-tun-profile" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>tun
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">unset</span><span class="w"> </span>installation.profile<span class="w">     </span><span class="c1"># back to the proxy port alone</span>
+</code></pre></div>
+<p>Every connection on the machine then goes through dotdash with no proxy
+settings, its Docker containers' and IPv6 included; the proxy port and the
+rules stay as they are. DNS answers with fake addresses, and the names go to
+dotdash, which resolves them; the machine's own resolver answers only for
+dotdash's server names and the direct rules. With dotdash out of reach,
+nothing gets out around it.</p>
+<p>It runs mihomo as root with <code>NET_ADMIN</code> and <code>DAC_OVERRIDE</code>, on the host's
+network, with <code>/dev/net/tun</code>: a TUN interface takes nothing less. The root
+filesystem stays read-only. Networks this machine is directly on, such as its
+LAN, stay reachable directly. The subscription and the dotdash server must be
+reachable over the machine's main interface, as they normally are.</p>
 
 
 
