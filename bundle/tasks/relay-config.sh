@@ -12,6 +12,9 @@ while read -r line_id name _ || [ -n "${line_id:-}" ]; do
   [ "$want" = "${name:-}" ] && { id=$line_id; break; }
 done </run/secrets/vless_clients
 [ -n "$id" ] || { echo "no client named '$want' in vless_clients" >&2; exit 1; }
+# Every server sharing these keys (the servers parameter), self as this one:
+# the relay uses whichever answers fastest.
+servers=$(printf '%s\n' "${SERVERS:-self}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e "s/^self\$/${DOMAIN}/" | tr '\n' ',' | sed 's/,$//')
 
 cat <<EOF
 On the relay machine, inside the country (scripts/bootstrap.sh installs what it
@@ -23,7 +26,7 @@ and anyone probing the relay gets its real handshake.
 sudo morzer init --release oci://ghcr.io/morzecrew/dotdash-relay:stable \\
   --require-signature --signing-key "\$MINISIGN_RELEASE_PUBKEY" --recovery-recipient age1… \\
   --set site=<a site next to the relay> \\
-  --set dotdash_server=${DOMAIN} --set dotdash_address=${DOMAIN} --set dotdash_port=${HTTPS_PORT} \\
+  --set dotdash_servers=${servers} --set dotdash_port=${HTTPS_PORT} \\
   --set dotdash_public_key=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 sudo morzer secret set dotdash_id <<'END'
 ${id}

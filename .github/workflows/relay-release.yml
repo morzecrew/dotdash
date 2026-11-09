@@ -44,7 +44,7 @@ jobs:
       probe-paths: ""
       operator-secrets: vless_clients dotdash_id dotdash_encryption dotdash_short_id
       init-args: >-
-        --set site=www.gstatic.com --set dotdash_server=www.gstatic.com
+        --set site=www.gstatic.com --set dotdash_servers=www.gstatic.com
         --set dotdash_address=rig.invalid --set dotdash_public_key=set-by-the-rig
       release-pubkey: ${{ vars.MINISIGN_RELEASE_PUBKEY }}
     secrets:

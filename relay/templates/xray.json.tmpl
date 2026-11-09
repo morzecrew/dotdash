@@ -1,4 +1,7 @@
 {{- $site := required "set site" .Parameters.site -}}
+{{- $servers := split "," (required "set dotdash_servers" .Parameters.dotdash_servers) -}}
+{{- $address := .Parameters.dotdash_address -}}
+{{- $pbk := required "set dotdash_public_key" .Parameters.dotdash_public_key -}}
 {
   "log": {"loglevel": "warning", "access": "none"},
   "inbounds": [
@@ -25,18 +28,31 @@
     },
     {"tag": "probe", "listen": "127.0.0.1", "port": 10809, "protocol": "http"}
   ],
-  "outbounds": [{
-    "tag": "dotdash", "protocol": "vless",
-    "settings": {
-      "address": "{{ required "set dotdash_address" .Parameters.dotdash_address }}", "port": {{ .Parameters.dotdash_port }},
-      "id": {"$file": "/run/secrets/dotdash_id"},
-      "encryption": {"$file": "/run/secrets/dotdash_encryption"},
-      "flow": "xtls-rprx-vision"
-    },
-    "streamSettings": {"network": "raw", "security": "reality", "realitySettings": {
-      "serverName": "{{ required "set dotdash_server" .Parameters.dotdash_server }}", "fingerprint": "chrome",
-      "password": "{{ required "set dotdash_public_key" .Parameters.dotdash_public_key }}",
-      "shortId": {"$file": "/run/secrets/dotdash_short_id"}
-    }}
-  }]
+  {{- /* One outbound per dotdash server, which share their keys. With
+  several, a balancer takes whichever answers fastest, so a ban on one
+  server's address doesn't cut every device off. */}}
+  "outbounds": [
+    {{- range $i, $s := $servers }}{{ if $i }},{{ end }}
+    {
+      "tag": "dotdash-{{ $i }}", "protocol": "vless",
+      "settings": {
+        "address": "{{ if and $address (eq (len $servers) 1) }}{{ $address }}{{ else }}{{ $s }}{{ end }}", "port": {{ $.Parameters.dotdash_port }},
+        "id": {"$file": "/run/secrets/dotdash_id"},
+        "encryption": {"$file": "/run/secrets/dotdash_encryption"},
+        "flow": "xtls-rprx-vision"
+      },
+      "streamSettings": {"network": "raw", "security": "reality", "realitySettings": {
+        "serverName": "{{ $s }}", "fingerprint": "chrome",
+        "password": "{{ $pbk }}",
+        "shortId": {"$file": "/run/secrets/dotdash_short_id"}
+      }}
+    }
+    {{- end }}
+  ]{{ if gt (len $servers) 1 }},
+  "observatory": {"subjectSelector": ["dotdash-"], "probeUrl": "{{ .Parameters.probe_url }}", "probeInterval": "30s", "enableConcurrency": true},
+  "routing": {
+    "balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}}],
+    "rules": [{"type": "field", "network": "tcp,udp", "balancerTag": "dotdash"}]
+  }
+  {{- end }}
 }
