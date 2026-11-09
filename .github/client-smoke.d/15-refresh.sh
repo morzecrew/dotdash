@@ -16,7 +16,8 @@ server=$(address client-rig-server)
 sub=$(address client-rig-sub)
 [ -n "${server}" ] && [ -n "${sub}" ] || die "a stand-in has no address"
 host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
-through() { sudo docker logs client-rig-sub 2>&1 | grep -cF "${server}:" || true; }
+# busybox logs an IPv4 peer as "[::ffff:172.18.0.2]:port".
+through() { sudo docker logs client-rig-sub 2>&1 | grep -cE "(^|[^0-9.])${server//./\\.}\\]?:[0-9]" || true; }
 
 before=$(through)
 printf 'http://%s:8080/sub' "${sub}" | sudo morzer secret set subscription_url >/dev/null
