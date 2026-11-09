@@ -1364,9 +1364,9 @@ HTTP/2, not a big name. <code>xray tls ping &lt;site&gt;</code> shows whether it
 Devices send its name, and anyone probing the relay gets its handshake.</p>
 </li>
 <li>
-<p>On the server, add that line to the <code>relays</code> secret, one line per relay
-   (the generated placeholder can go):</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>relays
+<p>On the server, add that line to the <code>relays</code> parameter, one line per
+   relay:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>edit<span class="w"> </span>relays
 </code></pre></div>
 <p><code>client-config</code> then prints a link per relay, <code>[relay &lt;host&gt;]</code>, and the
 Xray config falls back to the relays. Subscriptions pick them up by

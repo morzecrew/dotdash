@@ -1273,6 +1273,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#deprecated" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Deprecated
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1529,6 +1540,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Changed
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deprecated" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Deprecated
       </span>
     </span>
   </a>
@@ -1798,7 +1820,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p>A relay for networks that let only domestic addresses through: <code>dotdash-relay</code>, a new bundle released with dotdash, carries devices from a machine inside the country on to this server over port 443. The <code>relay-config</code> task prints its setup; its line in the new <code>relays</code> secret adds a link through it for every device.</p>
+<p>A relay for networks that let only domestic addresses through: <code>dotdash-relay</code>, a new bundle released with dotdash, carries devices from a machine inside the country on to this server over port 443. The <code>relay-config</code> task prints its setup; its line in the new <code>relays</code> parameter adds a link through it for every device.</p>
 </li>
 <li>
 <p>A client for a Linux machine or a network: <code>dotdash-client</code>, a new bundle released with dotdash, runs mihomo from one device's subscription URL, refreshed through dotdash, with a SOCKS5 and HTTP proxy port, block and direct rules, and a password once the port is published beyond the machine.</p>
@@ -1816,15 +1838,28 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>Every bundle of this release needs morzer 0.15.0: run <code>sudo morzer self-update</code> before updating. An older manager refuses the release and changes nothing.</p>
+</li>
+<li>
+<p>The DNS tunnel and XHTTP with REALITY run together as <code>installation.profile=xdns,xhttp-reality</code>, two profiles combined.</p>
+</li>
+<li>
+<p><code>upstream6</code> is no longer generated as a placeholder: a fresh install has none until the IPv6 proxy is turned on. An existing value is kept.</p>
+</li>
+<li>
 <p>Unattended updates apply releases again, and <code>morzer rollback</code> works again, both of which 0.4.0 turned off for its own change of the upstream settings. An update from 0.3.x is still refused until the <code>upstream</code> secret is set.</p>
 </li>
 <li>
 <p><code>bootstrap.sh</code> is served from the documentation site: <code>curl -fsSLO https://morzecrew.github.io/dotdash/bootstrap.sh</code>. The documentation itself moved from the README to <a href="https://morzecrew.github.io/dotdash/">https://morzecrew.github.io/dotdash/</a>, one version per release.</p>
 </li>
 </ul>
+<h3 id="deprecated">Deprecated<a class="headerlink" href="#deprecated" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The <code>xdns-xhttp-reality</code> profile: <code>xdns,xhttp-reality</code> deploys the same. It goes in the next release.</li>
+</ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>bootstrap.sh</code> installs morzer 0.14.0, which both bundles require. It installed 0.13.0, so <code>init</code> on a freshly prepared host refused the release until <code>morzer self-update</code>.</li>
+<li><code>bootstrap.sh</code> installs morzer 0.15.0, which the bundles require. It installed 0.13.0, so <code>init</code> on a freshly prepared host refused the release until <code>morzer self-update</code>.</li>
 </ul>
 <h2 id="040-2026-11-08">[0.4.0] - 2026-11-08<a class="headerlink" href="#040-2026-11-08" title="Permanent link">&para;</a></h2>
 <h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">&para;</a></h3>

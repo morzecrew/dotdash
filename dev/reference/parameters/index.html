@@ -1440,11 +1440,18 @@
 <td><code>self</code></td>
 <td>servers sharing these keys, comma-separated</td>
 </tr>
+<tr>
+<td><code>relays</code></td>
+<td>a comment</td>
+<td>one <code>&lt;host&gt; &lt;site&gt; &lt;public key&gt; &lt;short id&gt; &lt;encryption&gt;</code> line per <a href="../../options/relay/">relay</a>, as its <code>relay-entry</code> prints it</td>
+</tr>
 </tbody>
 </table>
 <p>Set one with <code>sudo morzer config set &lt;name&gt;=&lt;value&gt;</code>, unset it with
-<code>sudo morzer config unset &lt;name&gt;</code>. Profiles (<code>installation.profile</code>): <code>xdns</code>,
-<code>xhttp-reality</code>, <code>xdns-xhttp-reality</code>.</p>
+<code>sudo morzer config unset &lt;name&gt;</code>, edit <code>relays</code> with
+<code>sudo morzer config edit relays</code>. Profiles (<code>installation.profile</code>): <code>xdns</code>,
+<code>xhttp-reality</code>, or both as <code>xdns,xhttp-reality</code>; <code>xdns-xhttp-reality</code> does the
+same and goes in the next release.</p>
 
 
 
