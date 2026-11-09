@@ -16,7 +16,7 @@ fetch() { # <URL>: its status through the proxy port, or 000
 
 # A URL that answers 404, the direct rule, and no cached links.
 printf 'http://%s:8088/none' "${host}" | sudo morzer secret set subscription_url >/dev/null
-printf 'DOMAIN,example.com\n' | sudo morzer secret set direct_rules >/dev/null
+printf 'DOMAIN,example.com\n' | sudo morzer config set --set-file direct_rules=- >/dev/null
 home=$(sudo docker volume inspect -f '{{.Mountpoint}}' dotdash-client_home)
 sudo rm -f "${home}/proxies/dotdash.yaml"
 sudo docker restart "$(service_container mihomo)" >/dev/null
@@ -34,7 +34,7 @@ for _ in 1 2 3; do
 done
 
 printf 'http://%s:8088/sub' "${host}" | sudo morzer secret set subscription_url >/dev/null
-printf '# none\n' | sudo morzer secret set direct_rules >/dev/null
+sudo morzer config unset direct_rules >/dev/null
 for _ in $(seq 30); do
   [ "$(fetch https://www.gstatic.com/generate_204)" = 204 ] && break
   sleep 2

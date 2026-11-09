@@ -33,8 +33,9 @@ secrets:
   schema: secrets.schema.yaml
 
 compatibility:
-  # The manager this bundle is verified and rehearsed with.
-  min_manager_version: "0.14.0"
+  # The manager this bundle is verified and rehearsed with, and the first with
+  # split, which the server list needs.
+  min_manager_version: "0.15.0"
   rollback_safe: true
   # No database, which an unattended update needs declared.
   database: none
@@ -57,13 +58,23 @@ parameters:
     type: string
     description: "A site next to this machine, in its own network, that speaks TLS 1.3 and HTTP/2: devices send its name, and anyone probing port 443 gets its real handshake"
     services: [xray]
+  dotdash_servers:
+    type: string
+    description: "The dotdash servers sharing one set of keys (dotdash's servers), comma-separated domains, each sent as its TLS server name; with several, the relay uses whichever answers fastest"
+    services: [xray]
+  # Before dotdash_servers, kept so a relay set up then updates as it is: an
+  # update leaves dotdash_servers, which has no default, empty, and the
+  # template falls back to this.
   dotdash_server:
     type: string
-    description: The dotdash server's domain, sent as the TLS server name
+    default: none
+    description: "Deprecated: the one dotdash server, read only while dotdash_servers is none; set dotdash_servers instead"
     services: [xray]
   dotdash_address:
     type: string
-    description: Where to connect, normally the same domain; an IP also works
+    # morzer wants a default for every parameter it doesn't ask for at init.
+    default: none
+    description: Where to connect when dotdash_servers names one server, if not to its name, such as an IP; none reaches each server by its name
     services: [xray]
   dotdash_port:
     type: port
