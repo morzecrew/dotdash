@@ -14,7 +14,11 @@
     "dotdash": {
       "type": "http",
       "url": {"$file": "/run/secrets/subscription_url"},
-      "interval": 3600,
+      "interval": {{ .Parameters.subscription_interval }},
+      {{- /* Fetched through dotdash, so it refreshes where only dotdash gets
+      through; mihomo dials directly when that fails, as on a first start,
+      with no links yet (component/http's DialContext). */}}
+      "proxy": "dotdash",
       "path": "./proxies/dotdash.yaml",
       "health-check": {"enable": true, "url": "{{ $probe }}", "interval": 300}
     }

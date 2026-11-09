@@ -64,6 +64,11 @@ parameters:
     default: dotdash
     description: The username devices give, with the proxy_password secret, when listen is not 127.0.0.1
     services: [mihomo]
+  subscription_interval:
+    type: int
+    default: 3600
+    description: Seconds between fetches of the subscription, through dotdash where it gets through and directly otherwise
+    services: [mihomo]
   probe_url:
     type: string
     default: https://www.gstatic.com/generate_204

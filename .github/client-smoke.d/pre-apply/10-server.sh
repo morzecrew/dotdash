@@ -3,7 +3,7 @@
 # a subscription to its links. A stand-in Xray serves REALITY on the rig's port
 # 9443, with keys made here, borrowing www.gstatic.com's handshake, and lets
 # traffic straight out; busybox httpd serves a subscription of its one link on
-# 8088. The client reaches both on the rig's docker0 address. The workflows'
+# 8088, logging each request's address (15-refresh.sh reads it). The client reaches both on the rig's docker0 address. The workflows'
 # init gave smoke.sh's random secrets; this sets the subscription URL. It needs
 # the internet, which a GitHub-hosted runner has.
 # shellcheck source=/dev/null
@@ -36,7 +36,7 @@ printf 'vless://%s@%s:9443?encryption=none&flow=xtls-rprx-vision&security=realit
 chmod -R a+rX /rig/client
 sudo docker run -d --name client-rig-server -p 9443:9443 -v /rig/client/server:/etc/xray:ro "${xray}" >/dev/null
 sudo docker run -d --name client-rig-sub -p 8088:8080 -v /rig/client/www:/www:ro "${busybox}" \
-  httpd -f -p 8080 -h /www >/dev/null
+  httpd -f -v -p 8080 -h /www >/dev/null
 
 printf 'http://%s:8088/sub' "${host}" | sudo morzer secret set subscription_url >/dev/null
 # smoke-update's pre-update backup would capture nothing: no volume worth
