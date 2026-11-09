@@ -25,11 +25,13 @@ Needs Docker, sops, age and morzer (`bootstrap.sh`).
     ```
 
 The port is on 127.0.0.1 alone. For the network, publish it there; devices
-then have to give a username and password:
+then have to give a username and password, which `proxy-config` prints as
+ready proxy URLs:
 
 ```sh
-sudo morzer config set listen=0.0.0.0                 # or one address of this machine
-sudo cat /run/dotdash-client/secrets/proxy_password   # with proxy_user, dotdash by default
+sudo morzer config set listen=0.0.0.0     # or one address of this machine
+sudo morzer task run proxy-config --output -- 192.168.1.10
+sudo morzer secret rotate proxy_password  # a new password; run proxy-config again
 ```
 
 Rules are mihomo's classical rules without the target, one per line, `#`

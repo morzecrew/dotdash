@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Published beyond 127.0.0.1, the proxy port asks for proxy_user and
 # proxy_password: without them it refuses (407 over HTTP, and SOCKS5 refuses),
-# with them it gets out. Back on 127.0.0.1, it asks for nothing again.
+# with the ones proxy-config prints it gets out. Back on 127.0.0.1, it asks
+# for nothing again.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -17,8 +18,14 @@ poll() { # <want> <proxy URL> <what>
   die "$3 (last status ${code})"
 }
 
+proxy_config() { sudo morzer task run proxy-config --output -- "$@"; }
+grep -qxF socks5h://127.0.0.1:7890 <<<"$(proxy_config)" || die "on 127.0.0.1, proxy-config prints no plain SOCKS5 URL"
+
 sudo morzer config set listen=0.0.0.0 >/dev/null
-password=$(sudo cat /run/dotdash-client/secrets/proxy_password)
+url=$(proxy_config "${host}" | grep -m1 '^http://' || true)
+password=${url#http://dotdash:}
+password=${password%@"${host}":7890}
+[ -n "${password}" ] && [ "${password}" != "${url}" ] || die "on the network, proxy-config prints no http URL with the password"
 poll 407 "http://${host}:7890" "published on the network, the port does not ask for a password"
 code=$(fetch "socks5h://${host}:7890")
 [ "${code}" != 204 ] || die "published on the network, SOCKS5 gets out with no password"

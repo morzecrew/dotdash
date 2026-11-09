@@ -6,7 +6,7 @@
 # container is the health check's.
 #
 # Compose sees only what morzer gives it: DOTDASH_CLIENT_IMAGE_*,
-# DOTDASH_CLIENT_PARAM_*, DOTDASH_CLIENT_SECRETS_DIR.
+# DOTDASH_CLIENT_PARAM_*, DOTDASH_CLIENT_RELEASE_DIR, DOTDASH_CLIENT_SECRETS_DIR.
 
 services:
   mihomo:
@@ -39,6 +39,25 @@ services:
       - home:/var/lib/mihomo
     secrets: [subscription_url, block_rules, direct_rules, proxy_password]
     # No healthcheck here: hooks/healthy runs the probe itself (see there).
+
+  # One-shot behind a profile, started only by `morzer task run proxy-config`.
+  proxy-config:
+    image: ${DOTDASH_CLIENT_IMAGE_BUSYBOX:?set by morzer}
+    restart: "no"
+    profiles: [tasks]
+    network_mode: none
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    environment:
+      LISTEN: ${DOTDASH_CLIENT_PARAM_LISTEN:-127.0.0.1}
+      PORT: ${DOTDASH_CLIENT_PARAM_PORT:-7890}
+      PROXY_USER: ${DOTDASH_CLIENT_PARAM_PROXY_USER:-dotdash}
+    volumes:
+      - ${DOTDASH_CLIENT_RELEASE_DIR:?set by morzer}/tasks:/task:ro
+    secrets: [proxy_password]
 
 volumes:
   home: {}

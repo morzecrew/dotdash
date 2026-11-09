@@ -71,7 +71,17 @@ parameters:
     services: [mihomo]
 
 images:
+  # The proxy-config task's shell; mihomo's image has none.
+  busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
   mihomo: ghcr.io/morzecrew/mihomo:1.19.33@sha256:84f6ca181df09df3605e1a4b45c94fd2920afbf7e2332d1ae367ae1e12b90b84
+
+tasks:
+  proxy-config:
+    description: "Print the SOCKS5 and HTTP proxy settings devices need, with proxy_user and proxy_password once listen is not 127.0.0.1; argument: the address devices reach this machine at (output is a credential)"
+    service: proxy-config
+    command: ["sh", "/task/proxy-config.sh"]
+    args: true
+    timeout: 1m
 
 health:
   checks:
