@@ -265,6 +265,8 @@
       
         
       
+        
+      
     
     
     
@@ -562,6 +564,8 @@
       
         
       
+        
+      
     
     
     
@@ -756,6 +760,33 @@
     
   
   Several servers
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../options/relay/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Relay
 
     
   </span>
@@ -1735,7 +1766,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
-<li>mihomo connects over REALITY and XHTTP with REALITY: those links now carry <code>support-x25519mlkem768=true</code>, without which mihomo leaves out the key share Xray's REALITY requires and fails with "REALITY authentication failed". Other clients pass over the parameter.</li>
+<li>
+<p>A relay for networks that let only domestic addresses through: <code>dotdash-relay</code>, a new bundle released with dotdash, carries devices from a machine inside the country on to this server over port 443. The <code>relay-config</code> task prints its setup; its line in the new <code>relays</code> secret adds a link through it for every device.</p>
+</li>
+<li>
+<p>mihomo connects over REALITY and XHTTP with REALITY: those links now carry <code>support-x25519mlkem768=true</code>, without which mihomo leaves out the key share Xray's REALITY requires and fails with "REALITY authentication failed". Other clients pass over the parameter.</p>
+</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
