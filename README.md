@@ -39,3 +39,7 @@ The full steps, options and operations are in the
 smoke-tests every pull request; a `vX.Y.Z` tag releases both bundles. Check a
 bundle change with `morzer release verify ./bundle --render-check`. The docs
 live in [`pages/`](pages): `cd pages && uv run zensical serve`.
+
+## Licence
+
+MIT — see [LICENSE](LICENSE).
