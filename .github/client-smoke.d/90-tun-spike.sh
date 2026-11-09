@@ -57,8 +57,13 @@ attempt() { # <name> <docker run options...>: start the TUN mihomo, report, stop
   echo "  plain curl after stop: ${code}"
 }
 
-attempt root-netadmin --user 0:0 --cap-add NET_ADMIN
-attempt root-netadmin-dacread --user 0:0 --cap-add NET_ADMIN --cap-add DAC_READ_SEARCH
-attempt nonroot-netadmin --user 65532:65532 --cap-add NET_ADMIN
+# Round 1 (root with NET_ADMIN alone, then with DAC_READ_SEARCH, then 65532):
+# the secrets and the home volume are 65532's, so root needs DAC_OVERRIDE; and
+# 65532 gets no capability at all ("configure tun interface: operation not
+# permitted").
+attempt root-system --user 0:0 --cap-add NET_ADMIN --cap-add DAC_OVERRIDE
+sed -i 's/"stack": "system"/"stack": "mixed"/' "${dir}/etc/config.json" 2>/dev/null \
+  || sudo sed -i 's/"stack": "system"/"stack": "mixed"/' "${dir}/etc/config.json"
+attempt root-mixed --user 0:0 --cap-add NET_ADMIN --cap-add DAC_OVERRIDE
 echo "90-tun-spike.sh: done (a spike: read the output above)"
 exit 0
