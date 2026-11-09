@@ -1,0 +1,76 @@
+# dotdash-relay. One Xray, on port 443: devices holding this relay's keys get
+# VLESS with REALITY under the name of a site next to it, and every connection
+# goes on to the dotdash server, as one client of its own. Anything else gets
+# the site's real handshake. Nothing leaves here except to dotdash: the server
+# decides where traffic exits, as it does for its own devices.
+#
+# Compose sees only what morzer gives it: DOTDASH_RELAY_IMAGE_*,
+# DOTDASH_RELAY_PARAM_*, DOTDASH_RELAY_RELEASE_DIR, DOTDASH_RELAY_SECRETS_DIR.
+
+x-hardened: &hardened
+  user: "65532:65532"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  logging:
+    driver: local
+    options: {max-size: 10m, max-file: "3"}
+
+services:
+  xray:
+    <<: *hardened
+    image: ${DOTDASH_RELAY_IMAGE_XRAY:?set by morzer}
+    restart: unless-stopped
+    pids_limit: 256
+    mem_limit: 256m
+    environment:
+      # The config's loopback-only http inbound, which goes to dotdash like
+      # every device does.
+      XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:10809
+      XRAY_HEALTHCHECK_URL: ${DOTDASH_RELAY_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
+      XRAY_HEALTHCHECK_TIMEOUT: 7s
+    volumes:
+      # Long form, so a missing file fails the start rather than becoming a
+      # directory morzer cannot render over.
+      - type: bind
+        source: /etc/dotdash-relay/xray.json
+        target: /etc/xray/config.json
+        read_only: true
+        bind: {create_host_path: false}
+    tmpfs:
+      # Where the image writes the config with secrets resolved; never disk.
+      - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
+    secrets: [vless_clients, vless_seed, reality_key, reality_short_id, dotdash_id, dotdash_encryption, dotdash_short_id]
+    # REALITY on 443 inside too (Xray warns on any other port), as uid 65532
+    # with no capabilities.
+    sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
+    ports: ["443:443"]
+    # No healthcheck here: hooks/healthy runs the probe itself (see there).
+
+  # One-shot behind a profile, started only by `morzer task run relay-entry`.
+  relay-entry:
+    <<: *hardened
+    image: ${DOTDASH_RELAY_IMAGE_BUSYBOX:?set by morzer}
+    restart: "no"
+    profiles: [tasks]
+    network_mode: none
+    pids_limit: 64
+    environment:
+      SITE: ${DOTDASH_RELAY_PARAM_SITE:-}
+    volumes:
+      - ${DOTDASH_RELAY_RELEASE_DIR:?set by morzer}/tasks:/task:ro
+      - type: image
+        source: ${DOTDASH_RELAY_IMAGE_XRAY:?set by morzer}
+        target: /opt/xray
+        image:
+          subpath: usr/local/bin
+    secrets: [vless_seed, reality_key, reality_short_id]
+
+secrets:
+  vless_clients: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/vless_clients"}
+  vless_seed: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/vless_seed"}
+  reality_key: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/reality_key"}
+  reality_short_id: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/reality_short_id"}
+  dotdash_id: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/dotdash_id"}
+  dotdash_encryption: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/dotdash_encryption"}
+  dotdash_short_id: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/dotdash_short_id"}

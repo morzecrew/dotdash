@@ -1,0 +1,28 @@
+#!/bin/sh
+# Prints this relay's line for the dotdash server's relays secret, given the
+# address devices reach this machine at, and how a dotdash-canary inside the
+# country checks the relay: the one kind of check that sees what devices see.
+# The keys are public halves and a short id, as in any link.
+set -eu
+: "${SITE:?set site}"
+host=${1:?give the address devices reach this relay at: relay-entry -- <IP or name>}
+
+pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
+enc=$(/opt/xray/xray-entrypoint vless-encryption /run/secrets/vless_seed)
+sid=$(cat /run/secrets/reality_short_id)
+
+cat <<EOF
+On the dotdash server, add this line to the relays secret (sudo morzer secret
+edit relays; the generated placeholder can go):
+${host} ${SITE} ${pbk} ${sid} ${enc}
+
+A dotdash-canary checks this relay as it checks the server, without the xhttp
+profiles, with the vless_id of any device on the relay:
+sudo morzer config set server=${SITE} address=${host} port=443 reality_public_key=${pbk}
+sudo morzer secret set vless_encryption <<'END'
+${enc}
+END
+sudo morzer secret set reality_short_id <<'END'
+${sid}
+END
+EOF

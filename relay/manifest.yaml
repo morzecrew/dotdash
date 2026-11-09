@@ -1,0 +1,105 @@
+# yaml-language-server: $schema=https://morzecrew.github.io/morzer/schemas/selfhost-v1alpha1-manifest.json
+api_version: selfhost/v1alpha1
+kind: application-release
+
+metadata:
+  name: dotdash-relay
+  # Stamped by `morzer release build --version X`, together with VERSION.
+  version: 0.0.0
+  description: A relay inside the country, where only domestic addresses get through, that carries devices on to a dotdash server
+  vendor: morzecrew
+  release_notes: RELEASE.md
+
+providers:
+  runtime: {name: compose}
+  secrets: {name: sops-age}
+  health: {name: http}
+
+runtimes:
+  compose:
+    files:
+      - compose/compose.yaml
+    options:
+      project: dotdash-relay
+
+configuration:
+  - template: templates/xray.json.tmpl
+    target: /etc/dotdash-relay/xray.json
+    mode: "0644"
+
+secrets:
+  source: /etc/dotdash-relay/secrets.sops.yaml
+  render_to: /run/dotdash-relay/secrets
+  schema: secrets.schema.yaml
+
+compatibility:
+  # The manager this bundle is verified and rehearsed with.
+  min_manager_version: "0.14.0"
+  rollback_safe: true
+  # No database, which an unattended update needs declared.
+  database: none
+
+requirements:
+  architectures: [amd64, arm64]
+  tools:
+    docker: ">=28.0.0"
+    compose: ">=2.35.0"
+  memory: 256MiB
+  disk: 512MiB
+  # 443 alone: on networks that let only listed addresses through, other
+  # ports are cut even to those.
+  ports: ["443"]
+
+# `morzer task run relay-config -- <client>` on the dotdash server prints the
+# init command and the secrets for this machine.
+parameters:
+  site:
+    type: string
+    description: "A site next to this machine, in its own network, that speaks TLS 1.3 and HTTP/2: devices send its name, and anyone probing port 443 gets its real handshake"
+    services: [xray]
+  dotdash_server:
+    type: string
+    description: The dotdash server's domain, sent as the TLS server name
+    services: [xray]
+  dotdash_address:
+    type: string
+    description: Where to connect, normally the same domain; an IP also works
+    services: [xray]
+  dotdash_port:
+    type: port
+    default: 443
+    description: The dotdash server's https_port
+    services: [xray]
+  dotdash_public_key:
+    type: string
+    description: The dotdash server's REALITY public key, the pbk of its REALITY links
+    services: [xray]
+  probe_url:
+    type: string
+    default: https://www.gstatic.com/generate_204
+    description: What the health check fetches through dotdash; any 2xx is healthy
+    services: [xray]
+
+images:
+  # The relay-entry task's shell; Xray's image has none.
+  busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:c5885766b9f12bdf3986bf621ad0ea72d87dea54e0e3f80cf532939f2e4ef5cd
+
+tasks:
+  relay-entry:
+    description: "Print this relay's line for the dotdash server's relays secret, and how a dotdash-canary checks it; argument: the address devices reach this machine at"
+    service: relay-entry
+    command: ["sh", "/task/relay-entry.sh"]
+    args: true
+    timeout: 1m
+
+health:
+  checks:
+    # Fetches probe_url through dotdash, up to three tries, so healthy means the
+    # way on to dotdash works. Whether devices can reach this machine is not
+    # something it can see: only a device on such a network can (a canary).
+    - {name: through-dotdash, type: command, command: ["hooks/healthy"], timeout: 2m}
+
+retention:
+  releases: 3
+  backups: 3

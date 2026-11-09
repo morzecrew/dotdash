@@ -1,0 +1,43 @@
+# The relay's bundle (relay/, package dotdash-relay) for a pull request:
+# built and smoke-tested against a stand-in dotdash server, never published,
+# signed with a key made in the job. The jobs are bundle-ci's.
+name: relay-pr
+
+on:
+  pull_request:
+    paths:
+      - relay/**
+      - .github/relay-smoke.d/**
+      - .github/workflows/relay-*.yml
+
+permissions: {}
+
+concurrency:
+  group: relay-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  bundle:
+    permissions:
+      contents: read
+      packages: read
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@64db868a6a80495d10c9dd5e3f1ea53d60f6aa99 # v0.9.2
+    with:
+      morzer-version: "0.14.0"
+      ref: ${{ github.sha }}
+      version: 0.0.0-pr.${{ github.event.pull_request.number }}
+      signing: ephemeral
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+      bundle-dir: relay
+      version-paths: relay
+      package: dotdash-relay
+      smoke-hooks: .github/relay-smoke.d
+      components: ""
+      probe-paths: ""
+      operator-secrets: vless_clients dotdash_id dotdash_encryption dotdash_short_id
+      # .github/relay-smoke.d/pre-apply replaces these with the stand-in's.
+      init-args: >-
+        --set site=www.gstatic.com --set dotdash_server=www.gstatic.com
+        --set dotdash_address=rig.invalid --set dotdash_public_key=set-by-the-rig
+      # smoke-update installs the published :main first, trusting this key.
+      dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}

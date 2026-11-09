@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A relay for networks that let only domestic addresses through: `dotdash-relay`, a new bundle released with dotdash, carries devices from a machine inside the country on to this server over port 443. The `relay-config` task prints its setup; its line in the new `relays` secret adds a link through it for every device.
+
 - mihomo connects over REALITY and XHTTP with REALITY: those links now carry `support-x25519mlkem768=true`, without which mihomo leaves out the key share Xray's REALITY requires and fails with "REALITY authentication failed". Other clients pass over the parameter.
 
 ### Changed

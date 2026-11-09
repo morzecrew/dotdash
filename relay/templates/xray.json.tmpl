@@ -1,0 +1,42 @@
+{{- $site := required "set site" .Parameters.site -}}
+{
+  "log": {"loglevel": "warning", "access": "none"},
+  "inbounds": [
+    {
+      "tag": "devices",
+      "listen": "0.0.0.0",
+      "port": 443,
+      "protocol": "vless",
+      "settings": {
+        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "flow": "xtls-rprx-vision",
+        "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
+      },
+      "streamSettings": {
+        "network": "raw",
+        "security": "reality",
+        "realitySettings": {
+          "target": "{{ $site }}:443",
+          "serverNames": ["{{ $site }}"],
+          "privateKey": {"$file": "/run/secrets/reality_key"},
+          "shortIds": [{"$file": "/run/secrets/reality_short_id"}]
+        }
+      }
+    },
+    {"tag": "probe", "listen": "127.0.0.1", "port": 10809, "protocol": "http"}
+  ],
+  "outbounds": [{
+    "tag": "dotdash", "protocol": "vless",
+    "settings": {
+      "address": "{{ required "set dotdash_address" .Parameters.dotdash_address }}", "port": {{ .Parameters.dotdash_port }},
+      "id": {"$file": "/run/secrets/dotdash_id"},
+      "encryption": {"$file": "/run/secrets/dotdash_encryption"},
+      "flow": "xtls-rprx-vision"
+    },
+    "streamSettings": {"network": "raw", "security": "reality", "realitySettings": {
+      "serverName": "{{ required "set dotdash_server" .Parameters.dotdash_server }}", "fingerprint": "chrome",
+      "password": "{{ required "set dotdash_public_key" .Parameters.dotdash_public_key }}",
+      "shortId": {"$file": "/run/secrets/dotdash_short_id"}
+    }}
+  }]
+}
