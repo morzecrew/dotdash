@@ -19,7 +19,8 @@ sudo rm -rf "${dir}" && sudo mkdir -p "${dir}/etc" "${dir}/secrets"
 # at the rig's eth0 address, which the stand-in also answers on, as a real
 # dotdash server is reached over the main interface; and REJECT when empty.
 # A second stand-in, the same keys on the rig's own network (port 9444), so no
-# Docker NAT sits between an eth0-bound dial and it.
+# Docker NAT sits between an eth0-bound dial and it. It runs as 65532, which
+# TUN leaves out (exclude-uid), or its own way out would loop back in.
 xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)
 sudo mkdir -p "${dir}/standin"
 jq '.inbounds[0].port = 9444' /rig/client/server/config.json | sudo tee "${dir}/standin/config.json" >/dev/null
@@ -32,7 +33,7 @@ sudo chown 65532:65532 "${dir}/secrets/sub" && sudo chmod 0400 "${dir}/secrets/s
 jq -n '{
   mode: "rule", "log-level": "info", ipv6: false,
   tun: {enable: true, stack: "system", "auto-route": true, "auto-detect-interface": true,
-        "dns-hijack": ["any:53"], "exclude-interface": ["docker0"]},
+        "dns-hijack": ["any:53"], "exclude-interface": ["docker0"], "exclude-uid": [65532]},
   dns: {enable: true, "enhanced-mode": "fake-ip", "fake-ip-range": "198.18.0.1/16",
         nameserver: ["https://1.1.1.1/dns-query"], "proxy-server-nameserver": ["1.1.1.1"]},
   "proxy-providers": {dotdash: {type: "file", path: "/run/secrets/sub"}},
