@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-10
+
 ### Added
 
 - Every bundle ships the key it is signed with, so `morzer init` needs no `--signing-key`: it prints the key, trusts it, and requires every later release to be signed by it. `--signing-key` still checks even the first release against the repository's.
