@@ -1807,6 +1807,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p><code>dotdash-client</code>'s <code>tun</code> profile sends every connection on the machine through dotdash with no proxy settings, its containers' and IPv6 included, with DNS answered by fake addresses whose names dotdash resolves; nothing gets out around dotdash when it is out of reach.</p>
 </li>
 <li>
+<p>Under <code>tun</code>, <code>dotdash-client</code> can be its LAN's gateway: devices that use it as theirs go through dotdash too. <code>gateway=true</code> has <code>doctor</code> check that the host forwards the LAN into TUN, naming the two <code>DOCKER-USER</code> rules a <code>FORWARD</code> policy of <code>DROP</code> needs, and <code>dns_listen</code> answers the LAN's DNS.</p>
+</li>
+<li>
 <p>mihomo connects over REALITY and XHTTP with REALITY: those links now carry <code>support-x25519mlkem768=true</code>, without which mihomo leaves out the key share Xray's REALITY requires and fails with "REALITY authentication failed". Other clients pass over the parameter.</p>
 </li>
 </ul>

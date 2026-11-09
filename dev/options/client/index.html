@@ -884,6 +884,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="The whole machine: the tun profile">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-gateway-for-the-lan" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A gateway for the LAN
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1317,6 +1334,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="The whole machine: the tun profile">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-gateway-for-the-lan" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A gateway for the LAN
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1476,6 +1510,25 @@ network, with <code>/dev/net/tun</code>: a TUN interface takes nothing less. The
 filesystem stays read-only. Networks this machine is directly on, such as its
 LAN, stay reachable directly. The subscription and the dotdash server must be
 reachable over the machine's main interface, as they normally are.</p>
+<h3 id="a-gateway-for-the-lan">A gateway for the LAN<a class="headerlink" href="#a-gateway-for-the-lan" title="Permanent link">&para;</a></h3>
+<p>Under <code>tun</code>, the machine can be its LAN's gateway: devices whose gateway is its
+address go through dotdash too, with nothing to set up on them. Hand that
+gateway out from the main router's DHCP, or set it on each device.</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">gateway</span><span class="o">=</span><span class="nb">true</span><span class="w">                 </span><span class="c1"># doctor checks the host for it</span>
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">dns_listen</span><span class="o">=</span><span class="m">192</span>.168.1.10:53<span class="w">   </span><span class="c1"># this machine's LAN address, if devices use it for DNS</span>
+</code></pre></div>
+<p>Docker sets the host's <code>FORWARD</code> policy to <code>DROP</code> on many machines, which drops
+the LAN's traffic before TUN sees it (dropped, never sent around dotdash).
+Two rules in Docker's <code>DOCKER-USER</code> chain let it through; <code>doctor</code> names them
+while they're missing:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>iptables<span class="w"> </span>-I<span class="w"> </span>DOCKER-USER<span class="w"> </span>-o<span class="w"> </span>Meta<span class="w"> </span>-j<span class="w"> </span>ACCEPT
+sudo<span class="w"> </span>iptables<span class="w"> </span>-I<span class="w"> </span>DOCKER-USER<span class="w"> </span>-i<span class="w"> </span>Meta<span class="w"> </span>-j<span class="w"> </span>ACCEPT
+</code></pre></div>
+<p>They don't outlive a reboot by themselves: add them to whatever restores the
+host's firewall, or to a systemd unit that runs after <code>docker.service</code>.</p>
+<p>The gateway handed out by DHCP is IPv4's. A main router that also advertises
+IPv6 gives devices a second way out, around this machine: turn IPv6 off on the
+LAN, or on the devices.</p>
 
 
 
