@@ -45,5 +45,7 @@ sudo morzer task run client-config --output -- --full phone    # plus links and 
 - Add the URL as a subscription in the app (v2rayN, v2rayNG, Hiddify, Happ,
   Streisand) and refresh every few hours: revocations and key rotations reach
   devices with nothing to resend.
+- mihomo reads the URL as an `http` proxy provider; its REALITY links ask for
+  the key share Xray's REALITY requires (`support-x25519mlkem768=true`).
 - A URL is as secret as the links. `sudo morzer secret rotate subscription_key`
   moves every URL; any other path gets the site's 404.
