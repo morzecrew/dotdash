@@ -35,11 +35,12 @@ sudo morzer secret rotate proxy_password  # a new password; run proxy-config aga
 ```
 
 Rules are mihomo's classical rules without the target, one per line, `#`
-for comments. `block_rules` refuses, `direct_rules` goes around dotdash, and
-everything else goes through it:
+for comments, in two parameters: `block_rules` refuses, `direct_rules` goes
+around dotdash, and everything else goes through it:
 
 ```sh
-sudo morzer secret edit direct_rules
+sudo morzer config edit direct_rules                    # in an editor
+sudo morzer config set --set-file direct_rules=rules.txt # or from a file
 ```
 
 ```text

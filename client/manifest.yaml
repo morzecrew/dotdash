@@ -42,8 +42,9 @@ secrets:
   schema: secrets.schema.yaml
 
 compatibility:
-  # The manager this bundle is verified and rehearsed with.
-  min_manager_version: "0.14.0"
+  # The manager this bundle is verified and rehearsed with, and the first with
+  # text parameters, which the rules are.
+  min_manager_version: "0.15.0"
   rollback_safe: true
   # No database, which an unattended update needs declared.
   database: none
@@ -85,8 +86,15 @@ parameters:
     services: [mihomo]
   dns_listen:
     type: string
-    default: "off"
-    description: "Under the tun profile, the address and port mihomo answers DNS on for the LAN, such as 192.168.1.10:53, with the same fake addresses; off for none. 0.0.0.0:53 clashes with systemd-resolved's stub"
+    description: "Under the tun profile, the address and port mihomo answers DNS on for the LAN, such as 192.168.1.10:53, with the same fake addresses; unset for none. 0.0.0.0:53 clashes with systemd-resolved's stub"
+    services: [mihomo]
+  block_rules:
+    type: text
+    description: "Destinations refused, one mihomo classical rule per line without its target, such as DOMAIN-SUFFIX,example.com; \"#\" starts a comment"
+    services: [mihomo]
+  direct_rules:
+    type: text
+    description: "Destinations reached directly, not through dotdash, one mihomo classical rule per line without its target, such as IP-CIDR,192.168.0.0/16,no-resolve; \"#\" starts a comment"
     services: [mihomo]
   probe_url:
     type: string

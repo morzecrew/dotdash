@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The client's promise: the proxy port gets out through dotdash (the stand-in,
 # pre-apply/10-server.sh); a block rule refuses its destination; a direct rule
-# reaches its destination with dotdash gone; and each rule goes back to the
-# placeholder, a comment, matching nothing.
+# reaches its destination with dotdash gone; and unset, neither does
+# anything. A "#" line is a comment.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -20,20 +20,20 @@ until_status() { # <want|!want> <what>: poll for a minute, as morzer restarts mi
   done
   die "$2 (last status ${code})"
 }
-placeholder() { printf '# none\n' | sudo morzer secret set "$1" >/dev/null; }
+unset_rules() { sudo morzer config unset "$1" >/dev/null; }
 
 until_status 204 "the proxy port does not get out through dotdash"
 
-printf 'DOMAIN-SUFFIX,gstatic.com\n' | sudo morzer secret set block_rules >/dev/null
+printf 'DOMAIN-SUFFIX,gstatic.com\n' | sudo morzer config set --set-file block_rules=- >/dev/null
 until_status '!204' "a block rule does not refuse its destination"
-placeholder block_rules
-until_status 204 "the placeholder block rules still refuse"
+unset_rules block_rules
+until_status 204 "unset block rules still refuse"
 
-printf '# through no proxy\nDOMAIN-SUFFIX,gstatic.com\n' | sudo morzer secret set direct_rules >/dev/null
+printf '# through no proxy\nDOMAIN-SUFFIX,gstatic.com\n' | sudo morzer config set --set-file direct_rules=- >/dev/null
 sudo docker stop client-rig-server >/dev/null
 until_status 204 "a direct rule's destination needs dotdash"
-placeholder direct_rules
-until_status '!204' "with the placeholder direct rules, it got out with dotdash gone"
+unset_rules direct_rules
+until_status '!204' "with direct rules unset, it got out with dotdash gone"
 sudo docker start client-rig-server >/dev/null
 until_status 204 "the proxy port does not get out once dotdash is back"
 echo "10-rules.sh: out through dotdash, a block rule refuses, a direct rule needs no dotdash"

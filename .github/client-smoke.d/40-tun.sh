@@ -50,7 +50,7 @@ sudo apk add -q iproute2 >/dev/null || die "apk add iproute2 failed"
 # Its subscription, a probe the stand-in answers, the direct rule, and no
 # cached links.
 printf 'http://%s:8089/sub' "${eth0}" | sudo morzer secret set subscription_url >/dev/null
-printf 'DOMAIN,www.gstatic.com\n' | sudo morzer secret set direct_rules >/dev/null
+printf 'DOMAIN,www.gstatic.com\n' | sudo morzer config set --set-file direct_rules=- >/dev/null
 sudo morzer config set probe_url=http://tun-target.test:8080/sub >/dev/null
 sudo rm -f "${home}/proxies/dotdash.yaml"
 sudo morzer config set installation.profile=tun >/dev/null
@@ -119,7 +119,7 @@ sudo morzer config unset installation.profile >/dev/null
 ip -o link show Meta >/dev/null 2>&1 && die "back on the base files, the TUN interface is still there"
 printf 'http://%s:8088/sub' "${host}" | sudo morzer secret set subscription_url >/dev/null
 sudo morzer config unset probe_url >/dev/null
-printf '# none\n' | sudo morzer secret set direct_rules >/dev/null
+sudo morzer config unset direct_rules >/dev/null
 sudo rm -f "${home}/proxies/dotdash.yaml"
 sudo docker restart "$(service_container mihomo)" >/dev/null
 sudo docker rm -f client-rig-tun-server client-rig-tun-sub >/dev/null
