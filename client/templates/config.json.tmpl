@@ -14,13 +14,24 @@
     "dotdash": {
       "type": "http",
       "url": {"$file": "/run/secrets/subscription_url"},
-      "interval": 3600,
+      "interval": {{ .Parameters.subscription_interval }},
+      {{- /* Fetched through the fetch group below, so it refreshes where only
+      dotdash gets through. Without a proxy here, mihomo would send the fetch
+      through the rules, into the dotdash group, which refuses while empty. */}}
+      "proxy": "fetch",
       "path": "./proxies/dotdash.yaml",
       "health-check": {"enable": true, "url": "{{ $probe }}", "interval": 300}
     }
   },
+  {{- /* An empty group falls back to COMPATIBLE, mihomo's DIRECT. So the
+  group traffic takes refuses while there are no links, as before a first
+  fetch, and nothing leaves around dotdash. The fetch group, which no rule
+  sends traffic to, keeps COMPATIBLE: the subscription goes through dotdash's
+  links when there are any, and directly when there are none. */}}
   "proxy-groups": [
-    {"name": "dotdash", "type": "url-test", "use": ["dotdash"], "url": "{{ $probe }}", "interval": 300}
+    {"name": "dotdash", "type": "url-test", "use": ["dotdash"], "url": "{{ $probe }}", "interval": 300,
+     "empty-fallback": "REJECT"},
+    {"name": "fetch", "type": "url-test", "use": ["dotdash"], "url": "{{ $probe }}", "interval": 300}
   ],
   "rule-providers": {
     "block": {"type": "file", "behavior": "classical", "format": "text", "path": "/run/secrets/block_rules"},

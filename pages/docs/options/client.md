@@ -47,8 +47,14 @@ DOMAIN-SUFFIX,example.ru
 IP-CIDR,192.168.0.0/16,no-resolve
 ```
 
+With no links at all, as on a first start that can't fetch the subscription,
+the port refuses everything but the direct rules: nothing leaves around
+dotdash by accident.
+
 Give IP rules `no-resolve`: otherwise mihomo looks up every name on this
 machine's resolver to match them, which tells that resolver what goes through
-dotdash. The subscription is cached, so a restart while the URL can't be
-reached starts on the links it fetched last. [Relays](relay.md) in the
-subscription are links like the others.
+dotdash. The subscription refreshes through dotdash, so it stays current
+where only dotdash gets through, such as through a [relay](relay.md) while
+only domestic addresses do; directly when that fails, as on a first start.
+It is cached, so a restart while the URL can't be reached starts on the links
+it fetched last. Relays in the subscription are links like the others.

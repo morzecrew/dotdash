@@ -2,10 +2,13 @@
 # What a real client machine has and this rig does not: a dotdash server and
 # a subscription to its links. A stand-in Xray serves REALITY on the rig's port
 # 9443, with keys made here, borrowing www.gstatic.com's handshake, and lets
-# traffic straight out; busybox httpd serves a subscription of its one link on
-# 8088. The client reaches both on the rig's docker0 address. The workflows'
-# init gave smoke.sh's random secrets; this sets the subscription URL. It needs
-# the internet, which a GitHub-hosted runner has.
+# traffic straight out, to the rig's private addresses too, which Xray's
+# freedom refuses VLESS traffic by default (15-refresh.sh needs them). busybox
+# httpd serves a subscription of its one link on 8088, logging each request's
+# address (15-refresh.sh reads it). The client reaches both on the rig's
+# docker0 address. The workflows' init gave smoke.sh's random secrets; this
+# sets the subscription URL. It needs the internet, which a GitHub-hosted
+# runner has.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -25,18 +28,20 @@ sid=$(openssl rand -hex 8)
 
 mkdir -p /rig/client/server /rig/client/www
 jq -n --arg id "${id}" --arg key "${private}" --arg sid "${sid}" '
-  {inbounds: [{listen: "0.0.0.0", port: 9443, protocol: "vless",
+  {log: {loglevel: "warning", access: ""},
+   inbounds: [{listen: "0.0.0.0", port: 9443, protocol: "vless",
      settings: {clients: [{id: $id, flow: "xtls-rprx-vision"}], decryption: "none"},
      streamSettings: {network: "raw", security: "reality", realitySettings:
        {target: "www.gstatic.com:443", serverNames: ["www.gstatic.com"], privateKey: $key, shortIds: [$sid]}}}],
-   outbounds: [{protocol: "freedom"}]}' >/rig/client/server/config.json
+   outbounds: [{protocol: "freedom", settings: {finalRules: [{action: "allow", ip: ["172.16.0.0/12", "192.168.0.0/16"]}]}}]}' \
+  >/rig/client/server/config.json
 # As dotdash's client-config prints a REALITY link, mihomo's key share included.
 printf 'vless://%s@%s:9443?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.gstatic.com&fp=chrome&pbk=%s&sid=%s&support-x25519mlkem768=true&type=tcp#stand-in%%20%%5Breality%%5D\n' \
   "${id}" "${host}" "${public}" "${sid}" | base64 -w0 >/rig/client/www/sub
 chmod -R a+rX /rig/client
 sudo docker run -d --name client-rig-server -p 9443:9443 -v /rig/client/server:/etc/xray:ro "${xray}" >/dev/null
 sudo docker run -d --name client-rig-sub -p 8088:8080 -v /rig/client/www:/www:ro "${busybox}" \
-  httpd -f -p 8080 -h /www >/dev/null
+  httpd -f -v -p 8080 -h /www >/dev/null
 
 printf 'http://%s:8088/sub' "${host}" | sudo morzer secret set subscription_url >/dev/null
 # smoke-update's pre-update backup would capture nothing: no volume worth
