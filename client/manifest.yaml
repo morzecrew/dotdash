@@ -1,0 +1,95 @@
+# yaml-language-server: $schema=https://morzecrew.github.io/morzer/schemas/selfhost-v1alpha1-manifest.json
+api_version: selfhost/v1alpha1
+kind: application-release
+
+metadata:
+  name: dotdash-client
+  # Stamped by `morzer release build --version X`, together with VERSION.
+  version: 0.0.0
+  description: A dotdash client for a machine or a network, a SOCKS and HTTP proxy that goes through dotdash, from one subscription URL
+  vendor: morzecrew
+  release_notes: RELEASE.md
+
+providers:
+  runtime: {name: compose}
+  secrets: {name: sops-age}
+  health: {name: http}
+
+runtimes:
+  compose:
+    files:
+      - compose/compose.yaml
+    options:
+      project: dotdash-client
+
+configuration:
+  - template: templates/config.json.tmpl
+    target: /etc/dotdash-client/config.json
+    mode: "0644"
+
+secrets:
+  source: /etc/dotdash-client/secrets.sops.yaml
+  render_to: /run/dotdash-client/secrets
+  schema: secrets.schema.yaml
+
+compatibility:
+  # The manager this bundle is verified and rehearsed with.
+  min_manager_version: "0.14.0"
+  rollback_safe: true
+  # No database, which an unattended update needs declared.
+  database: none
+
+requirements:
+  architectures: [amd64, arm64]
+  tools:
+    docker: ">=28.0.0"
+    compose: ">=2.35.0"
+  memory: 256MiB
+  disk: 512MiB
+  ports: ["{{ .Parameters.port }}"]
+
+parameters:
+  listen:
+    type: string
+    default: 127.0.0.1
+    description: "The address the proxy port is published on: 127.0.0.1 for this machine alone; anything else, such as 0.0.0.0 for the network, and devices need proxy_user and the proxy_password secret"
+    services: [mihomo]
+  port:
+    type: port
+    default: 7890
+    description: The SOCKS5 and HTTP proxy port, both on one
+    services: [mihomo]
+  proxy_user:
+    type: string
+    default: dotdash
+    description: The username devices give, with the proxy_password secret, when listen is not 127.0.0.1
+    services: [mihomo]
+  probe_url:
+    type: string
+    default: https://www.gstatic.com/generate_204
+    description: What picking the fastest link and the health check fetch through dotdash; any 2xx is healthy
+    services: [mihomo]
+
+images:
+  # The proxy-config task's shell; mihomo's image has none.
+  busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
+  mihomo: ghcr.io/morzecrew/mihomo:1.19.33@sha256:84f6ca181df09df3605e1a4b45c94fd2920afbf7e2332d1ae367ae1e12b90b84
+
+tasks:
+  proxy-config:
+    description: "Print the SOCKS5 and HTTP proxy settings devices need, with proxy_user and proxy_password once listen is not 127.0.0.1; argument: the address devices reach this machine at (output is a credential)"
+    service: proxy-config
+    command: ["sh", "/task/proxy-config.sh"]
+    args: true
+    timeout: 1m
+
+health:
+  checks:
+    # Fetches probe_url through dotdash, up to three tries. `doctor` runs it
+    # too, and fails, so a notify target hears when this machine cannot get
+    # out through dotdash.
+    - {name: through-dotdash, type: command, command: ["hooks/healthy"], timeout: 2m}
+
+retention:
+  releases: 3
+  backups: 3

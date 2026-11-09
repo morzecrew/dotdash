@@ -1,0 +1,61 @@
+# The client's dev channel: build, sign and smoke-test every change to client/
+# on main, then publish ghcr.io/morzecrew/dotdash-client:<version> and move
+# :main. The jobs are bundle-ci's.
+name: client-main
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - client/**
+      - .github/client-smoke.d/**
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: main-client
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    permissions:
+      contents: read
+      packages: read
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@64db868a6a80495d10c9dd5e3f1ea53d60f6aa99 # v0.9.2
+    with:
+      morzer-version: "0.14.0"
+      ref: ${{ github.sha }}
+      channel: main
+      signing: dev
+      # Nothing moved since the last run: the version is already published.
+      on-existing: skip
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+      bundle-dir: client
+      version-paths: client
+      package: dotdash-client
+      smoke-hooks: .github/client-smoke.d
+      components: ""
+      probe-paths: ""
+      # .github/client-smoke.d/pre-apply sets the stand-in's subscription URL.
+      operator-secrets: subscription_url
+      dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}
+    secrets:
+      minisign-key: ${{ secrets.MINISIGN_DEV_KEY }}
+
+  publish:
+    needs: bundle
+    if: needs.bundle.outputs.proceed == 'true'
+    permissions:
+      contents: read
+      packages: write
+      # The provenance publish.yml attests for the bundle.
+      id-token: write
+      attestations: write
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@64db868a6a80495d10c9dd5e3f1ea53d60f6aa99 # v0.9.2
+    with:
+      version: ${{ needs.bundle.outputs.version }}
+      archive: ${{ needs.bundle.outputs.archive }}
+      channel: main
+      package: dotdash-client
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}

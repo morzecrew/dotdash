@@ -33,13 +33,13 @@ The full steps, options and operations are in the
 | `ghcr.io/morzecrew/dotdash:X.Y.Z` | one release |
 | `ghcr.io/morzecrew/dotdash:main` | every push to `main`, dev key; may be broken |
 
-The canary and relay bundles, `dotdash-canary` and `dotdash-relay`, have the
-same tags.
+The canary, relay and client bundles, `dotdash-canary`, `dotdash-relay` and
+`dotdash-client`, have the same tags.
 
 ## Development
 
 [bundle-ci](https://github.com/morzecrew/bundle-ci) builds, signs and
-smoke-tests every pull request; a `vX.Y.Z` tag releases all three bundles. Check a
+smoke-tests every pull request; a `vX.Y.Z` tag releases all four bundles. Check a
 bundle change with `morzer release verify ./bundle --render-check`. The docs
 live in [`pages/`](pages): `cd pages && uv run zensical serve`.
 

@@ -1,0 +1,30 @@
+{{- /* Published beyond this machine, the proxy asks for a password. */ -}}
+{{- $lan := ne (default "127.0.0.1" .Parameters.listen) "127.0.0.1" -}}
+{{- $probe := required "set probe_url" .Parameters.probe_url -}}
+{
+  "mode": "rule",
+  "log-level": "warning",
+  "ipv6": false,
+  "listeners": [
+    {"name": "proxy", "type": "mixed", "listen": "0.0.0.0", "port": 7890,
+     "users": [{{ if $lan }}{"username": "{{ required "set proxy_user" .Parameters.proxy_user }}", "password": {"$file": "/run/secrets/proxy_password"}}{{ end }}]},
+    {"name": "probe", "type": "mixed", "listen": "127.0.0.1", "port": 7891, "users": []}
+  ],
+  "proxy-providers": {
+    "dotdash": {
+      "type": "http",
+      "url": {"$file": "/run/secrets/subscription_url"},
+      "interval": 3600,
+      "path": "./proxies/dotdash.yaml",
+      "health-check": {"enable": true, "url": "{{ $probe }}", "interval": 300}
+    }
+  },
+  "proxy-groups": [
+    {"name": "dotdash", "type": "url-test", "use": ["dotdash"], "url": "{{ $probe }}", "interval": 300}
+  ],
+  "rule-providers": {
+    "block": {"type": "file", "behavior": "classical", "format": "text", "path": "/run/secrets/block_rules"},
+    "direct": {"type": "file", "behavior": "classical", "format": "text", "path": "/run/secrets/direct_rules"}
+  },
+  "rules": ["RULE-SET,block,REJECT", "RULE-SET,direct,DIRECT", "MATCH,dotdash"]
+}
