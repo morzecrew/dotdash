@@ -22,6 +22,7 @@ nav = [
         "options/cdn.md",
         "options/several-servers.md",
         "options/relay.md",
+        "options/client.md",
         "options/canary.md",
     ] },
     { "Operations" = [

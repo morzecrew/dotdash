@@ -7,7 +7,7 @@
     {
       "description": "Images pinned as repo:tag@sha256: in the bundle manifests and smoke hooks",
       "customType": "regex",
-      "managerFilePatterns": ["/^(bundle|canary|relay)/manifest\\.yaml$/", "/^\\.github/smoke\\.d/.+\\.sh$/"],
+      "managerFilePatterns": ["/^(bundle|canary|relay|client)/manifest\\.yaml$/", "/^\\.github/(client-)?smoke\\.d/.+\\.sh$/"],
       "matchStrings": [
         "(?<depName>[a-z0-9.-]+\\.[a-z]+/[a-z0-9._/-]+):(?<currentValue>[A-Za-z0-9._-]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
       ],

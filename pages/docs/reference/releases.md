@@ -2,7 +2,7 @@
 
 [bundle-ci](https://github.com/morzecrew/bundle-ci) builds, signs and
 smoke-tests every pull request and push. A push to `main` publishes `:main`;
-a `vX.Y.Z` tag publishes all three bundles as `:X.Y.Z` and `:stable`, with a
+a `vX.Y.Z` tag publishes all four bundles as `:X.Y.Z` and `:stable`, with a
 GitHub release. Each bundle carries signed build provenance:
 
 ```sh

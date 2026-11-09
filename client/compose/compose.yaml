@@ -1,0 +1,50 @@
+# dotdash-client. mihomo, with a SOCKS5 and HTTP proxy port that goes out
+# through dotdash, over whichever link of the device's subscription answers
+# fastest, except what the rules refuse or send directly. It asks for
+# proxy_user and proxy_password when published beyond 127.0.0.1
+# (templates/config.json.tmpl). A second, unpublished port inside the
+# container is the health check's.
+#
+# Compose sees only what morzer gives it: DOTDASH_CLIENT_IMAGE_*,
+# DOTDASH_CLIENT_PARAM_*, DOTDASH_CLIENT_SECRETS_DIR.
+
+services:
+  mihomo:
+    image: ${DOTDASH_CLIENT_IMAGE_MIHOMO:?set by morzer}
+    restart: unless-stopped
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
+    mem_limit: 256m
+    logging:
+      driver: local
+      options: {max-size: 10m, max-file: "3"}
+    environment:
+      MIHOMO_HEALTHCHECK_PROXY: http://127.0.0.1:7891
+      MIHOMO_HEALTHCHECK_URL: ${DOTDASH_CLIENT_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
+      MIHOMO_HEALTHCHECK_TIMEOUT: 7s
+    ports: ["${DOTDASH_CLIENT_PARAM_LISTEN:-127.0.0.1}:${DOTDASH_CLIENT_PARAM_PORT:-7890}:7890"]
+    volumes:
+      # Long form, so a missing file fails the start rather than becoming a
+      # directory morzer cannot render over.
+      - type: bind
+        source: /etc/dotdash-client/config.json
+        target: /etc/mihomo/config.json
+        read_only: true
+        bind: {create_host_path: false}
+      # The subscription as last fetched, so a restart while the URL can't be
+      # reached starts on it; mihomo's cache.db; the geodata.
+      - home:/var/lib/mihomo
+    secrets: [subscription_url, block_rules, direct_rules, proxy_password]
+    # No healthcheck here: hooks/healthy runs the probe itself (see there).
+
+volumes:
+  home: {}
+
+secrets:
+  subscription_url: {file: "${DOTDASH_CLIENT_SECRETS_DIR:?set by morzer}/subscription_url"}
+  block_rules: {file: "${DOTDASH_CLIENT_SECRETS_DIR:?set by morzer}/block_rules"}
+  direct_rules: {file: "${DOTDASH_CLIENT_SECRETS_DIR:?set by morzer}/direct_rules"}
+  proxy_password: {file: "${DOTDASH_CLIENT_SECRETS_DIR:?set by morzer}/proxy_password"}

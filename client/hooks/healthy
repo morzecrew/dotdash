@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Healthy when mihomo fetches probe_url through dotdash, in up to three tries
+# so one lost request is not an alert. It probes live, so `doctor` reports the
+# way out as it is now. `doctor` gives health checks 30s in all: a try times
+# out after 7s (MIHOMO_HEALTHCHECK_TIMEOUT), so three fit with the pauses.
+set -euo pipefail
+
+project=${DOTDASH_CLIENT_COMPOSE_PROJECT:-dotdash-client}
+docker compose -p "$project" ps --format '{{.Service}}' | grep -qx mihomo \
+  || { echo "mihomo is not running" >&2; exit 1; }
+for try in 1 2 3; do
+  if out=$(docker compose -p "$project" exec -T mihomo /usr/local/bin/mihomo-entrypoint healthcheck 2>&1); then
+    exit 0
+  fi
+  [ "$try" = 3 ] || sleep 2
+done
+echo "this machine cannot reach the internet through dotdash: $out" >&2
+exit 1
