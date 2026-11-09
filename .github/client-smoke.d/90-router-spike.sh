@@ -75,13 +75,21 @@ attempt() { # <name> <auto-redirect>
   before=$(standin)
   echo "  LAN, IP literal (1.1.1.1): $(lan_curl https://1.1.1.1/); stand-in ${before} -> $(standin)"
   echo "  LAN DNS: $(sudo ip netns exec lan nslookup www.example.com 1.1.1.1 2>&1 | tail -2 | tr '\n' ' ')"
-  [ "$2" = true ] && echo "  nft tables: $(sudo nft list tables 2>&1 | tr '\n' ' ')"
+  if [ "$2" = true ]; then
+    echo "  nft tables: $(sudo nft list tables 2>&1 | tr '\n' ' ')"
+    sudo nft list table inet mihomo 2>&1 | grep -i -E 'chain |forward|accept|redirect|hook' | head -24 | sed 's/^/    nft: /'
+  fi
   echo "  FORWARD counters: $(sudo iptables -L FORWARD -v -n | head -3 | tr -s ' ' | tr '\n' ';')"
   sudo docker stop router-mihomo >/dev/null 2>&1
   sudo docker rm -f router-mihomo >/dev/null 2>&1
   sleep 2
 }
 
+# Round 1 ran with FORWARD policy ACCEPT (this rig's Docker left it): plain
+# TUN, the accept rules and auto-redirect all carried the LAN device through
+# dotdash. Round 2: DROP, as Docker sets it on many hosts.
+sudo iptables -P FORWARD DROP
+echo "FORWARD policy now: $(sudo iptables -S FORWARD | head -1)"
 attempt tun-alone false
 sudo iptables -I DOCKER-USER -i lanbr -j ACCEPT
 sudo iptables -I DOCKER-USER -o lanbr -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
@@ -90,6 +98,7 @@ sudo iptables -D DOCKER-USER -i lanbr -j ACCEPT
 sudo iptables -D DOCKER-USER -o lanbr -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 attempt auto-redirect true
 
+sudo iptables -P FORWARD ACCEPT
 sudo docker rm -f router-standin >/dev/null 2>&1
 sudo ip netns del lan >/dev/null 2>&1
 sudo ip link del lanbr >/dev/null 2>&1
