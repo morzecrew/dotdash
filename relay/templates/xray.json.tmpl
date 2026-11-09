@@ -1,5 +1,7 @@
 {{- $site := required "set site" .Parameters.site -}}
-{{- $servers := split "," (required "set dotdash_servers" .Parameters.dotdash_servers) -}}
+{{- $list := .Parameters.dotdash_servers }}{{ if not $list }}{{ $list = .Parameters.dotdash_server }}{{ end -}}
+{{- if eq $list "none" }}{{ $list = "" }}{{ end -}}
+{{- $servers := split "," (required "set dotdash_servers" $list) -}}
 {{- $address := .Parameters.dotdash_address }}{{ if eq $address "none" }}{{ $address = "" }}{{ end -}}
 {{- $pbk := required "set dotdash_public_key" .Parameters.dotdash_public_key -}}
 {

@@ -62,6 +62,14 @@ parameters:
     type: string
     description: "The dotdash servers sharing one set of keys (dotdash's servers), comma-separated domains, each sent as its TLS server name; with several, the relay uses whichever answers fastest"
     services: [xray]
+  # Before dotdash_servers, kept so a relay set up then updates as it is: an
+  # update leaves dotdash_servers, which has no default, empty, and the
+  # template falls back to this.
+  dotdash_server:
+    type: string
+    default: none
+    description: "Deprecated: the one dotdash server, read only while dotdash_servers is none; set dotdash_servers instead"
+    services: [xray]
   dotdash_address:
     type: string
     # morzer wants a default for every parameter it doesn't ask for at init.
