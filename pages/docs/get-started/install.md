@@ -23,14 +23,16 @@ Needs: a domain, a Linux host with Docker ≥ 28 and Compose ≥ 2.35, `sops`,
     ```sh
     morzer secret recipients generate-recovery-key ~/dotdash-recovery.key   # keep it off the machine
     sudo morzer init --release oci://ghcr.io/morzecrew/dotdash:stable \
-      --require-signature --signing-key "$MINISIGN_RELEASE_PUBKEY" \
       --domain example.com --recovery-recipient age1…
     # add --set upstream_protocol=http and/or --set upstream_tls=true if the proxy needs them
     sudo morzer secret set upstream    # user:pass@host:port
     sudo morzer apply
     ```
 
-    - `MINISIGN_RELEASE_PUBKEY`: `gh variable get MINISIGN_RELEASE_PUBKEY -R morzecrew/dotdash`.
+    - The release ships its signing key. `init` prints it, trusts it, and
+      requires every later release to be signed by it. To check even the first
+      release against the key published with the repository, add
+      `--signing-key "$(gh variable get MINISIGN_RELEASE_PUBKEY -R morzecrew/dotdash)"`.
     - `upstream` is `user:pass@host:port`, or `host:port` with no login. The
       password may contain `:` and `@`; an IPv6 host goes in brackets; no
       `socks5://` prefix. Changing proxy is one `secret set`, one restart.

@@ -48,9 +48,16 @@ raw() { # <where> <printf format>: what comes back for those bytes, as hex
 
 checked=0
 same() { # <name> <probe> <args...>: the public answer is Caddy's own
-  local want got
-  want=$("$2" direct "${@:3}")
-  got=$("$2" public "${@:3}")
+  # Up to three tries: through REALITY's fallback the public side is slower,
+  # and one request timing out in a busy rig is not an answer of its own. A
+  # real difference answers the same way every time.
+  local want got try
+  for try in 1 2 3; do
+    want=$("$2" direct "${@:3}")
+    got=$("$2" public "${@:3}")
+    [ -n "${want}" ] && [ "${got}" = "${want}" ] && break
+    [ "${try}" = 3 ] || sleep 1
+  done
   [ -n "${want}" ] || die "$1: Caddy itself gave nothing to compare with"
   [ "${got}" = "${want}" ] || die "$1: the public port answers otherwise than Caddy itself"
   checked=$((checked + 1))

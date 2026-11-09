@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Every bundle ships the key it is signed with, so `morzer init` needs no `--signing-key`: it prints the key, trusts it, and requires every later release to be signed by it. `--signing-key` still checks even the first release against the repository's.
+
 - A relay for networks that let only domestic addresses through: `dotdash-relay`, a new bundle released with dotdash, carries devices from a machine inside the country on to this server over port 443. The `relay-config` task prints its setup; its line in the new `relays` parameter adds a link through it for every device.
 
 - A client for a Linux machine or a network: `dotdash-client`, a new bundle released with dotdash, runs mihomo from one device's subscription URL, refreshed through dotdash, with a SOCKS5 and HTTP proxy port, block and direct rules, and a password once the port is published beyond the machine.

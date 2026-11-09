@@ -18,13 +18,13 @@ servers=$(printf '%s\n' "${SERVERS:-self}" | tr ',' '\n' | sed -e 's/^ *//' -e '
 
 cat <<EOF
 On the relay machine, inside the country (scripts/bootstrap.sh installs what it
-needs). The signing key is the dotdash repository's MINISIGN_RELEASE_PUBKEY
-variable, as for dotdash itself. For site, pick a site in the relay's own
+needs). init trusts the signing key the release ships, as for dotdash itself.
+For site, pick a site in the relay's own
 network, not a big name, that speaks TLS 1.3 and HTTP/2: devices send its name,
 and anyone probing the relay gets its real handshake.
 
 sudo morzer init --release oci://ghcr.io/morzecrew/dotdash-relay:stable \\
-  --require-signature --signing-key "\$MINISIGN_RELEASE_PUBKEY" --recovery-recipient age1… \\
+  --recovery-recipient age1… \\
   --set site=<a site next to the relay> \\
   --set dotdash_servers=${servers} --set dotdash_port=${HTTPS_PORT} \\
   --set dotdash_public_key=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)

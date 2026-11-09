@@ -16,14 +16,15 @@ curl -fsSLO https://morzecrew.github.io/dotdash/bootstrap.sh    # Docker, sops, 
 less bootstrap.sh && sudo bash bootstrap.sh
 morzer secret recipients generate-recovery-key ~/dotdash-recovery.key   # keep it off the machine
 sudo morzer init --release oci://ghcr.io/morzecrew/dotdash:stable \
-  --require-signature --signing-key "$MINISIGN_RELEASE_PUBKEY" \
   --domain example.com --recovery-recipient age1…
 sudo morzer secret set upstream    # user:pass@host:port
 sudo morzer apply
 sudo morzer task run client-config --output -- phone
 ```
 
-`MINISIGN_RELEASE_PUBKEY`: `gh variable get MINISIGN_RELEASE_PUBKEY -R morzecrew/dotdash`.
+`init` trusts the signing key the release ships, and every later release must
+be signed by it; `--signing-key` checks even the first against the repository's
+`MINISIGN_RELEASE_PUBKEY` variable.
 The full steps, options and operations are in the
 [documentation](https://morzecrew.github.io/dotdash/).
 
