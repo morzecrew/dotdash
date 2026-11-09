@@ -1376,8 +1376,9 @@ through.</p>
 </li>
 </ol>
 <p>A device added to or deleted from <code>vless_clients</code> has to change on the relay
-too: <code>relay-config</code> prints the relay's copy. The relay takes one server; with
-<a href="../several-servers/">several servers</a>, point it at the nearest. A
+too: <code>relay-config</code> prints the relay's copy. With
+<a href="../several-servers/">several servers</a>, the relay takes every one and uses
+whichever answers fastest, so a ban on one server's address doesn't cut it off. A
 <a href="../canary/">canary</a> inside the country checks a relay as it checks the server:
 <code>relay-entry</code> prints how.</p>
 <p>The official sing-box apps, Karing and NekoBox can't connect to dotdash at
