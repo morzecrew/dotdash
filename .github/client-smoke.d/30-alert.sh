@@ -12,8 +12,9 @@ if out=$(sudo morzer doctor 2>&1); then
   sudo docker start client-rig-server >/dev/null
   die "doctor passes with the server stopped"
 fi
-grep -qF 'cannot reach the internet through dotdash' <<<"${out}" \
-  || die "doctor failed, but not on the canary's check: ${out}"
+# doctor wraps long lines, so the message is matched with its spaces folded.
+tr -s '[:space:]' ' ' <<<"${out}" | grep -qF 'cannot reach the internet through dotdash' \
+  || die "doctor failed, but not on the client's check: ${out}"
 sudo docker start client-rig-server >/dev/null
 for _ in $(seq 12); do
   if out=$(sudo morzer doctor 2>&1); then
