@@ -85,8 +85,8 @@ parameters:
     services: [mihomo]
   dns_listen:
     type: string
-    default: ""
-    description: "Under the tun profile, the address and port mihomo answers DNS on for the LAN, such as 192.168.1.10:53, with the same fake addresses; empty for none. 0.0.0.0:53 clashes with systemd-resolved's stub"
+    default: "off"
+    description: "Under the tun profile, the address and port mihomo answers DNS on for the LAN, such as 192.168.1.10:53, with the same fake addresses; off for none. 0.0.0.0:53 clashes with systemd-resolved's stub"
     services: [mihomo]
   probe_url:
     type: string
