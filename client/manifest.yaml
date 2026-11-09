@@ -19,12 +19,21 @@ runtimes:
   compose:
     files:
       - compose/compose.yaml
+    profiles:
+      # Every connection on this machine through dotdash, with no proxy
+      # settings: TUN, as root with NET_ADMIN on the host's network.
+      tun: [compose/tun.yaml]
     options:
       project: dotdash-client
 
 configuration:
   - template: templates/config.json.tmpl
     target: /etc/dotdash-client/config.json
+    mode: "0644"
+  # Rendered under every profile, since templates can't see which is on; only
+  # the tun profile mounts it.
+  - template: templates/config-tun.json.tmpl
+    target: /etc/dotdash-client/config-tun.json
     mode: "0644"
 
 secrets:
