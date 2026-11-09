@@ -43,6 +43,10 @@ plain() { # <URL>: its status from the rig with no proxy, or 000
 }
 home=$(sudo docker volume inspect -f '{{.Mountpoint}}' dotdash-client_home)
 
+# ip netns, for the gateway's LAN device below; fetched now, as under TUN the
+# rig's own requests reach no further than tun-target.test.
+sudo apk add -q iproute2 >/dev/null || die "apk add iproute2 failed"
+
 # Its subscription, a probe the stand-in answers, the direct rule, and no
 # cached links.
 printf 'http://%s:8089/sub' "${eth0}" | sudo morzer secret set subscription_url >/dev/null
@@ -66,7 +70,6 @@ done
 # own address. FORWARD's policy is DROP, as Docker sets it on many hosts:
 # until the two DOCKER-USER rules are in, doctor names them, and the device
 # gets nothing rather than going around dotdash.
-sudo apk add -q iproute2 >/dev/null
 sudo ip netns add lan
 sudo ip link add lanbr type veth peer name lanif
 sudo ip link set lanif netns lan
