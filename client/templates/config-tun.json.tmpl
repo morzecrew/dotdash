@@ -36,8 +36,9 @@ compares them. */ -}}
   would without TUN, and on networks where only it answers. */}}
   "dns": {
     "enable": true,
-    {{- with .Parameters.dns_listen }}
-    "listen": "{{ . }}",
+    {{- /* morzer wants a default for every parameter, so "off" means none. */}}
+    {{- if ne .Parameters.dns_listen "off" }}
+    "listen": "{{ .Parameters.dns_listen }}",
     {{- end }}
     "ipv6": false,
     "enhanced-mode": "fake-ip",
