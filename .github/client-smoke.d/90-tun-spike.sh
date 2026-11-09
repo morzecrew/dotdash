@@ -18,7 +18,15 @@ sudo rm -rf "${dir}" && sudo mkdir -p "${dir}/etc" "${dir}/secrets"
 # stayed empty, and an empty group falls back to DIRECT. Here the links point
 # at the rig's eth0 address, which the stand-in also answers on, as a real
 # dotdash server is reached over the main interface; and REJECT when empty.
-base64 -d </rig/client/www/sub | sed "s/@${host}:/@${eth0}:/" | base64 -w0 | sudo tee "${dir}/secrets/sub" >/dev/null
+# A second stand-in, the same keys on the rig's own network (port 9444), so no
+# Docker NAT sits between an eth0-bound dial and it.
+xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)
+sudo mkdir -p "${dir}/standin"
+jq '.inbounds[0].port = 9444' /rig/client/server/config.json | sudo tee "${dir}/standin/config.json" >/dev/null
+sudo chmod -R a+rX "${dir}/standin"
+sudo docker rm -f tun-standin >/dev/null 2>&1
+sudo docker run -d --name tun-standin --network host -v "${dir}/standin:/etc/xray:ro" "${xray}" >/dev/null
+base64 -d </rig/client/www/sub | sed "s/@${host}:9443/@${eth0}:9444/" | base64 -w0 | sudo tee "${dir}/secrets/sub" >/dev/null
 # As morzer renders secrets: 0400, owned by 65532.
 sudo chown 65532:65532 "${dir}/secrets/sub" && sudo chmod 0400 "${dir}/secrets/sub"
 jq -n '{
@@ -33,7 +41,7 @@ jq -n '{
   rules: ["MATCH,dotdash"]}' | sudo tee "${dir}/etc/config.json" >/dev/null
 sudo chmod -R a+rX "${dir}/etc"
 
-standin() { sudo docker logs client-rig-server 2>&1 | grep -c ' accepted tcp:' || true; }
+standin() { sudo docker logs tun-standin 2>&1 | grep -c ' accepted tcp:' || true; }
 attempt() { # <name> <docker run options...>: start the TUN mihomo, report, stop it
   local name=$1; shift
   echo "=== spike ${name}: $*"
@@ -53,7 +61,7 @@ attempt() { # <name> <docker run options...>: start the TUN mihomo, report, stop
   code=$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' --max-time 15 https://www.gstatic.com/generate_204)
   after=$(standin)
   echo "  plain curl from the rig: ${code}; stand-in accepted ${before} -> ${after}"
-  sudo docker logs client-rig-server 2>&1 | grep ' accepted tcp:' | tail -2 | sed 's/^/  stand-in: /'
+  sudo docker logs tun-standin 2>&1 | grep ' accepted tcp:' | tail -2 | sed 's/^/  stand-in: /'
   echo "  resolver: $(nslookup www.example.com 2>&1 | tail -3 | tr '\n' ' ')"
   sudo docker rm -f tun-spike >/dev/null 2>&1
   sleep 2
@@ -71,5 +79,6 @@ attempt root-system --user 0:0 --cap-add NET_ADMIN --cap-add DAC_OVERRIDE
 sed -i 's/"stack": "system"/"stack": "mixed"/' "${dir}/etc/config.json" 2>/dev/null \
   || sudo sed -i 's/"stack": "system"/"stack": "mixed"/' "${dir}/etc/config.json"
 attempt root-mixed --user 0:0 --cap-add NET_ADMIN --cap-add DAC_OVERRIDE
+sudo docker rm -f tun-standin >/dev/null 2>&1
 echo "90-tun-spike.sh: done (a spike: read the output above)"
 exit 0
