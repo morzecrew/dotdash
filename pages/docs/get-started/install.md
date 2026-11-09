@@ -1,7 +1,7 @@
 # Install
 
 Needs: a domain, a Linux host with Docker ≥ 28 and Compose ≥ 2.35, `sops`,
-`age`, morzer ≥ 0.14.0, an upstream proxy. `example.com` is your domain.
+`age`, morzer ≥ 0.15.0, an upstream proxy. `example.com` is your domain.
 
 1. **DNS:** `example.com  A  <server IP>`.
 2. **Firewall:** open 80/tcp and 443/tcp in the cloud provider's firewall

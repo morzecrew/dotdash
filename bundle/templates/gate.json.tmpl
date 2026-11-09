@@ -16,8 +16,8 @@ directly whatever its config says. The gate carries what has to cross:
 Nothing else is routed: the freedom outbound carries only the public inbounds,
 whose destination is fixed to Xray, and everything else is blocked.
 */ -}}
-{{- $withXdns := or (eq .Profile "xdns") (eq .Profile "xdns-xhttp-reality") -}}
-{{- $xhttpReality := or (eq .Profile "xhttp-reality") (eq .Profile "xdns-xhttp-reality") -}}
+{{- $withXdns := or (has "xdns" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
+{{- $xhttpReality := or (has "xhttp-reality" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
 {{- $v6 := ne .Parameters.upstream6_protocol "none" -}}
 {{- /* Two services cannot publish one host port; refused here, so the apply
 stops before anything is replaced. The template language has no fail: required

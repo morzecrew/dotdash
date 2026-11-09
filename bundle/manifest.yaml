@@ -26,14 +26,19 @@ runtimes:
       # transports every install has. One profile per installation, so both
       # together is a profile of its own.
       xhttp-reality: [compose/xhttp-reality.yaml]
+      # Both, from before profiles combined. Deprecated: xdns,xhttp-reality
+      # does the same; it goes in the next release.
       xdns-xhttp-reality: [compose/xdns.yaml, compose/xhttp-reality.yaml]
+    # installation.profile=xdns,xhttp-reality runs both.
+    combinable: [xdns, xhttp-reality]
     options:
       project: dotdash
 
 compatibility:
   # The manager this bundle is verified and rehearsed with, and the first that
-  # reads `database: none`.
-  min_manager_version: "0.14.0"
+  # combines profiles, takes text parameters and renders an unset optional
+  # secret as an empty file.
+  min_manager_version: "0.15.0"
   # 0.4.0 alone declared false: it replaced upstream_host, upstream_port and
   # their secrets with the upstream secret, and an update drops the old
   # values, so 0.3.x could not start again. Going back from a later release
@@ -107,7 +112,7 @@ parameters:
   xhttp_reality_port:
     type: port
     default: 8443
-    description: "Host TCP port of XHTTP with REALITY (the xhttp-reality and xdns-xhttp-reality profiles); must differ from https_port and 80"
+    description: "Host TCP port of XHTTP with REALITY (the xhttp-reality profile); must differ from https_port and 80"
     services: [gate, subscription]
   xdns_mtu:
     type: int
@@ -140,6 +145,13 @@ parameters:
     type: string
     default: self
     description: "Servers with these same secrets, comma-separated; self is this one. client-config prints links for each and, with more than one, a config that uses whichever answers fastest"
+    services: [subscription]
+  relays:
+    type: text
+    # morzer wants a default for every parameter it doesn't ask for at init,
+    # so a comment, which client-config skips, that shows the line's form.
+    default: "# One relay per line, as its relay-entry task prints it: <host> <site> <public key> <short id> <encryption>"
+    description: "The dotdash-relay machines devices also reach this server through, one \"<host> <site> <public key> <short id> <encryption>\" line per relay, as a relay's relay-entry task prints it; client-config and the subscriptions add a link through each"
     services: [subscription]
   subscription:
     type: bool

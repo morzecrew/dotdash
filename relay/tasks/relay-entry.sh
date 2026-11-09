@@ -12,8 +12,8 @@ enc=$(/opt/xray/xray-entrypoint vless-encryption /run/secrets/vless_seed)
 sid=$(cat /run/secrets/reality_short_id)
 
 cat <<EOF
-On the dotdash server, add this line to the relays secret (sudo morzer secret
-edit relays; the generated placeholder can go):
+On the dotdash server, add this line to the relays parameter (sudo morzer
+config edit relays):
 ${host} ${SITE} ${pbk} ${sid} ${enc}
 
 A dotdash-canary checks this relay as it checks the server, without the xhttp

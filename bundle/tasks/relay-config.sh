@@ -46,8 +46,8 @@ END
 sudo morzer apply
 sudo morzer task run relay-entry -- <the address devices reach the relay at>
 
-Add the line relay-entry prints to this server's relays secret (sudo morzer
-secret edit relays), then send devices their links again; subscriptions pick it
-up by themselves. A device added to or deleted from vless_clients here has to
+Add the line relay-entry prints to this server's relays parameter (sudo
+morzer config edit relays), then send devices their links again; subscriptions
+pick it up by themselves. A device added to or deleted from vless_clients here has to
 change in the relay's copy too: set it there again from this output.
 EOF
