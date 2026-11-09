@@ -1,0 +1,65 @@
+{{- /* The tun profile's config (compose/tun.yaml mounts it in place of
+config.json.tmpl's): the same providers, groups and rules, plus TUN, which takes
+every connection on the machine, its containers' and IPv6 included, and DNS
+answered with fake addresses whose names go to dotdash. On the host's network,
+so the proxy port listens on the listen address itself. Keep everything but
+"ipv6", "listeners", "tun" and "dns" as in config.json.tmpl; the smoke test
+compares them. */ -}}
+{{- $lan := ne (default "127.0.0.1" .Parameters.listen) "127.0.0.1" -}}
+{{- $probe := required "set probe_url" .Parameters.probe_url -}}
+{
+  "mode": "rule",
+  "log-level": "warning",
+  {{- /* IPv6 on, so TUN routes it too and it can't leave around dotdash; DNS
+  below still answers no AAAA records, so apps mostly use IPv4. */}}
+  "ipv6": true,
+  "listeners": [
+    {"name": "proxy", "type": "mixed", "listen": "{{ default "127.0.0.1" .Parameters.listen }}", "port": {{ .Parameters.port }},
+     "users": [{{ if $lan }}{"username": "{{ required "set proxy_user" .Parameters.proxy_user }}", "password": {"$file": "/run/secrets/proxy_password"}}{{ end }}]},
+    {"name": "probe", "type": "mixed", "listen": "127.0.0.1", "port": 7891, "users": []}
+  ],
+  {{- /* auto-detect-interface binds mihomo's own connections, to dotdash and
+  for the subscription, to the main interface, outside TUN. */}}
+  "tun": {
+    "enable": true,
+    "stack": "mixed",
+    "auto-route": true,
+    "auto-detect-interface": true,
+    "dns-hijack": ["any:53", "tcp://any:53"]
+  },
+  {{- /* Fake addresses: the name itself goes to dotdash, which resolves it.
+  Nameserver lookups follow the rules, so through dotdash too; the machine's
+  own resolver answers only for dotdash's server names and direct rules, as it
+  would without TUN, and on networks where only it answers. */}}
+  "dns": {
+    "enable": true,
+    "ipv6": false,
+    "enhanced-mode": "fake-ip",
+    "fake-ip-range": "198.18.0.1/16",
+    "fake-ip-filter": ["+.lan", "+.local", "+.home.arpa"],
+    "respect-rules": true,
+    "nameserver": ["https://1.1.1.1/dns-query"],
+    "proxy-server-nameserver": ["system://"],
+    "direct-nameserver": ["system://"]
+  },
+  "proxy-providers": {
+    "dotdash": {
+      "type": "http",
+      "url": {"$file": "/run/secrets/subscription_url"},
+      "interval": {{ .Parameters.subscription_interval }},
+      "proxy": "fetch",
+      "path": "./proxies/dotdash.yaml",
+      "health-check": {"enable": true, "url": "{{ $probe }}", "interval": 300}
+    }
+  },
+  "proxy-groups": [
+    {"name": "dotdash", "type": "url-test", "use": ["dotdash"], "url": "{{ $probe }}", "interval": 300,
+     "empty-fallback": "REJECT"},
+    {"name": "fetch", "type": "url-test", "use": ["dotdash"], "url": "{{ $probe }}", "interval": 300}
+  ],
+  "rule-providers": {
+    "block": {"type": "file", "behavior": "classical", "format": "text", "path": "/run/secrets/block_rules"},
+    "direct": {"type": "file", "behavior": "classical", "format": "text", "path": "/run/secrets/direct_rules"}
+  },
+  "rules": ["RULE-SET,block,REJECT", "RULE-SET,direct,DIRECT", "MATCH,dotdash"]
+}

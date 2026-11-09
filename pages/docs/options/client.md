@@ -58,3 +58,23 @@ where only dotdash gets through, such as through a [relay](relay.md) while
 only domestic addresses do; directly when that fails, as on a first start.
 It is cached, so a restart while the URL can't be reached starts on the links
 it fetched last. Relays in the subscription are links like the others.
+
+## The whole machine: the tun profile
+
+```sh
+sudo morzer config set installation.profile=tun
+sudo morzer config unset installation.profile     # back to the proxy port alone
+```
+
+Every connection on the machine then goes through dotdash with no proxy
+settings, its Docker containers' and IPv6 included; the proxy port and the
+rules stay as they are. DNS answers with fake addresses, and the names go to
+dotdash, which resolves them; the machine's own resolver answers only for
+dotdash's server names and the direct rules. With dotdash out of reach,
+nothing gets out around it.
+
+It runs mihomo as root with `NET_ADMIN` and `DAC_OVERRIDE`, on the host's
+network, with `/dev/net/tun`: a TUN interface takes nothing less. The root
+filesystem stays read-only. Networks this machine is directly on, such as its
+LAN, stay reachable directly. The subscription and the dotdash server must be
+reachable over the machine's main interface, as they normally are.

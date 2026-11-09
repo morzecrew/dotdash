@@ -1,0 +1,23 @@
+# The tun profile: mihomo takes every connection on this machine through a TUN
+# interface, so apps need no proxy settings. That needs the host's network
+# and NET_ADMIN, which a process gets only as root: Docker gives a non-root
+# user no effective capability. DAC_OVERRIDE lets root read the secrets and
+# write the home volume, which are 65532's. Nothing else is granted: the root
+# filesystem stays read-only and no-new-privileges stays on. A stop gives
+# mihomo time to take its routes down; after a kill they linger, harmless,
+# pointing at a table the interface no longer fills.
+
+services:
+  mihomo:
+    user: "0:0"
+    cap_add: [NET_ADMIN, DAC_OVERRIDE]
+    devices: ["/dev/net/tun:/dev/net/tun"]
+    network_mode: host
+    # On the host's network the port is the listener's own (config-tun.json).
+    ports: !reset []
+    volumes:
+      - type: bind
+        source: /etc/dotdash-client/config-tun.json
+        target: /etc/mihomo/config.json
+        read_only: true
+        bind: {create_host_path: false}
