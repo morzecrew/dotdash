@@ -37,7 +37,7 @@ services:
       # The subscription as last fetched, so a restart while the URL can't be
       # reached starts on it; mihomo's cache.db; the geodata.
       - home:/var/lib/mihomo
-    secrets: [subscription_url, block_rules, direct_rules, proxy_password]
+    secrets: [subscription_url, proxy_password]
     # No healthcheck here: hooks/healthy runs the probe itself (see there).
 
   # One-shot behind a profile, started only by `morzer task run proxy-config`.
@@ -64,6 +64,4 @@ volumes:
 
 secrets:
   subscription_url: {file: "${DOTDASH_CLIENT_SECRETS_DIR:?set by morzer}/subscription_url"}
-  block_rules: {file: "${DOTDASH_CLIENT_SECRETS_DIR:?set by morzer}/block_rules"}
-  direct_rules: {file: "${DOTDASH_CLIENT_SECRETS_DIR:?set by morzer}/direct_rules"}
   proxy_password: {file: "${DOTDASH_CLIENT_SECRETS_DIR:?set by morzer}/proxy_password"}

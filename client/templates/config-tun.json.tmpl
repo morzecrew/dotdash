@@ -64,9 +64,15 @@ compares them. */ -}}
      "empty-fallback": "REJECT"},
     {"name": "fetch", "type": "url-test", "use": ["dotdash"], "url": "{{ $probe }}", "interval": 300}
   ],
+  {{- /* The rule parameters, inline: each line a classical rule without its
+  target, blank and "#" lines skipped. A rule that matches nothing
+  (never.invalid) leads each list, so every kept line can follow a comma.
+  Backslashes are doubled before quote, which escapes only quotes. */}}
   "rule-providers": {
-    "block": {"type": "file", "behavior": "classical", "format": "text", "path": "/run/secrets/block_rules"},
-    "direct": {"type": "file", "behavior": "classical", "format": "text", "path": "/run/secrets/direct_rules"}
+    "block": {"type": "inline", "behavior": "classical", "payload": ["DOMAIN,never.invalid"
+      {{- range lines .Parameters.block_rules }}{{ $l := trim . }}{{ if and $l (ne (slice $l 0 1) "#") }}, {{ quote (replace $l "\\" "\\\\") }}{{ end }}{{ end }}]},
+    "direct": {"type": "inline", "behavior": "classical", "payload": ["DOMAIN,never.invalid"
+      {{- range lines .Parameters.direct_rules }}{{ $l := trim . }}{{ if and $l (ne (slice $l 0 1) "#") }}, {{ quote (replace $l "\\" "\\\\") }}{{ end }}{{ end }}]}
   },
   "rules": ["RULE-SET,block,REJECT", "RULE-SET,direct,DIRECT", "MATCH,dotdash"]
 }
