@@ -64,7 +64,9 @@ parameters:
     services: [xray]
   dotdash_address:
     type: string
-    description: Where to connect when dotdash_servers names one server, if not to its name; an IP also works. Unset, each server is reached by its name
+    # morzer wants a default for every parameter it doesn't ask for at init.
+    default: none
+    description: Where to connect when dotdash_servers names one server, if not to its name, such as an IP; none reaches each server by its name
     services: [xray]
   dotdash_port:
     type: port

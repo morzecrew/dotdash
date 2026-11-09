@@ -1,6 +1,6 @@
 {{- $site := required "set site" .Parameters.site -}}
 {{- $servers := split "," (required "set dotdash_servers" .Parameters.dotdash_servers) -}}
-{{- $address := .Parameters.dotdash_address -}}
+{{- $address := .Parameters.dotdash_address }}{{ if eq $address "none" }}{{ $address = "" }}{{ end -}}
 {{- $pbk := required "set dotdash_public_key" .Parameters.dotdash_public_key -}}
 {
   "log": {"loglevel": "warning", "access": "none"},
