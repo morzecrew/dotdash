@@ -151,7 +151,7 @@ services:
         target: /opt/xray
         image:
           subpath: usr/local/bin
-    secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, subscription_key]
+    secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, subscription_key, relays]
 
   # Writes each device's subscription into the subscription volume at start
   # (tasks/subscription.sh), as client-config would print its links, and then
@@ -172,7 +172,7 @@ services:
         image:
           subpath: usr/local/bin
       - subscription:/sub
-    secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, subscription_key]
+    secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, subscription_key, relays]
     # Healthy once every device's file is written; restarted for a changed
     # secret or parameter, it is not until they are written again.
     healthcheck:
@@ -231,3 +231,5 @@ secrets:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/reality_short_id
   subscription_key:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/subscription_key
+  relays:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/relays

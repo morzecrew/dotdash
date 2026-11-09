@@ -211,6 +211,12 @@ tasks:
     command: ["sh", "/task/canary-config.sh"]
     args: true
     timeout: 1m
+  relay-config:
+    description: "Print the init command and secrets for a dotdash-relay machine carrying devices on to this server as the client named after -- (output is every device's credentials)"
+    service: client-config
+    command: ["sh", "/task/relay-config.sh"]
+    args: true
+    timeout: 1m
 
 health:
   checks:

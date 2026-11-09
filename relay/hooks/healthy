@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Healthy when Xray fetches probe_url through dotdash, in up to three tries so
+# one lost request is not an alert. It probes live, so `doctor` reports the way
+# on to dotdash as it is now. `doctor` gives health checks 30s in all: a try
+# times out after 7s (XRAY_HEALTHCHECK_TIMEOUT), so three fit with the pauses.
+# Whether devices can reach this machine it cannot see; a canary can.
+set -euo pipefail
+
+project=${DOTDASH_RELAY_COMPOSE_PROJECT:-dotdash-relay}
+docker compose -p "$project" ps --format '{{.Service}}' | grep -qx xray \
+  || { echo "xray is not running" >&2; exit 1; }
+for try in 1 2 3; do
+  if out=$(docker compose -p "$project" exec -T xray /usr/local/bin/xray-entrypoint healthcheck 2>&1); then
+    exit 0
+  fi
+  [ "$try" = 3 ] || sleep 2
+done
+echo "the relay cannot reach the internet through dotdash: $out" >&2
+exit 1

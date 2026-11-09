@@ -1,0 +1,78 @@
+# The relay's stable channel, released with dotdash: the same tag vX.Y.Z on
+# main builds, signs and smoke-tests that commit's relay/, publishes
+# dotdash-relay:X.Y.Z, moves :stable and attaches the archive to the tag's
+# GitHub release, whichever of this and release.yml creates it. The jobs are
+# bundle-ci's.
+name: relay-release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    permissions:
+      contents: read
+    uses: morzecrew/bundle-ci/.github/workflows/guard.yml@64db868a6a80495d10c9dd5e3f1ea53d60f6aa99 # v0.9.2
+    with:
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+
+  bundle:
+    needs: guard
+    permissions:
+      contents: read
+      packages: read
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@64db868a6a80495d10c9dd5e3f1ea53d60f6aa99 # v0.9.2
+    with:
+      morzer-version: "0.14.0"
+      ref: ${{ github.sha }}
+      version: ${{ needs.guard.outputs.version }}
+      channel: stable
+      signing: release
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+      bundle-dir: relay
+      version-paths: relay
+      package: dotdash-relay
+      smoke-hooks: .github/relay-smoke.d
+      components: ""
+      probe-paths: ""
+      operator-secrets: vless_clients dotdash_id dotdash_encryption dotdash_short_id
+      init-args: >-
+        --set site=www.gstatic.com --set dotdash_server=www.gstatic.com
+        --set dotdash_address=rig.invalid --set dotdash_public_key=set-by-the-rig
+      release-pubkey: ${{ vars.MINISIGN_RELEASE_PUBKEY }}
+    secrets:
+      minisign-key: ${{ secrets.MINISIGN_RELEASE_KEY }}
+
+  publish:
+    needs: bundle
+    if: needs.bundle.outputs.proceed == 'true'
+    permissions:
+      contents: read
+      packages: write
+      # The provenance publish.yml attests for the bundle.
+      id-token: write
+      attestations: write
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@64db868a6a80495d10c9dd5e3f1ea53d60f6aa99 # v0.9.2
+    with:
+      version: ${{ needs.bundle.outputs.version }}
+      archive: ${{ needs.bundle.outputs.archive }}
+      channel: stable
+      package: dotdash-relay
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+
+  github-release:
+    needs: [bundle, publish]
+    permissions:
+      contents: write
+    uses: morzecrew/bundle-ci/.github/workflows/github-release.yml@64db868a6a80495d10c9dd5e3f1ea53d60f6aa99 # v0.9.2
+    with:
+      version: ${{ needs.bundle.outputs.version }}
+      archive: ${{ needs.bundle.outputs.archive }}
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}

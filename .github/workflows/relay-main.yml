@@ -1,0 +1,63 @@
+# The relay's dev channel: build, sign and smoke-test every change to relay/
+# on main, then publish ghcr.io/morzecrew/dotdash-relay:<version> and move
+# :main. The jobs are bundle-ci's.
+name: relay-main
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - relay/**
+      - .github/relay-smoke.d/**
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: main-relay
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    permissions:
+      contents: read
+      packages: read
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@64db868a6a80495d10c9dd5e3f1ea53d60f6aa99 # v0.9.2
+    with:
+      morzer-version: "0.14.0"
+      ref: ${{ github.sha }}
+      channel: main
+      signing: dev
+      # Nothing moved since the last run: the version is already published.
+      on-existing: skip
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+      bundle-dir: relay
+      version-paths: relay
+      package: dotdash-relay
+      smoke-hooks: .github/relay-smoke.d
+      components: ""
+      probe-paths: ""
+      operator-secrets: vless_clients dotdash_id dotdash_encryption dotdash_short_id
+      init-args: >-
+        --set site=www.gstatic.com --set dotdash_server=www.gstatic.com
+        --set dotdash_address=rig.invalid --set dotdash_public_key=set-by-the-rig
+      dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}
+    secrets:
+      minisign-key: ${{ secrets.MINISIGN_DEV_KEY }}
+
+  publish:
+    needs: bundle
+    if: needs.bundle.outputs.proceed == 'true'
+    permissions:
+      contents: read
+      packages: write
+      # The provenance publish.yml attests for the bundle.
+      id-token: write
+      attestations: write
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@64db868a6a80495d10c9dd5e3f1ea53d60f6aa99 # v0.9.2
+    with:
+      version: ${{ needs.bundle.outputs.version }}
+      archive: ${{ needs.bundle.outputs.archive }}
+      channel: main
+      package: dotdash-relay
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}

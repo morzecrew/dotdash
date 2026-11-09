@@ -21,6 +21,7 @@ nav = [
         "options/ipv6-upstream.md",
         "options/cdn.md",
         "options/several-servers.md",
+        "options/relay.md",
         "options/canary.md",
     ] },
     { "Operations" = [

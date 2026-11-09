@@ -28,3 +28,12 @@ jobs:
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
     secrets:
       token: ${{ secrets.GH_PAT }}
+
+  relay:
+    permissions: {}
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@64db868a6a80495d10c9dd5e3f1ea53d60f6aa99 # v0.9.2
+    with:
+      package: dotdash-relay
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+    secrets:
+      token: ${{ secrets.GH_PAT }}
