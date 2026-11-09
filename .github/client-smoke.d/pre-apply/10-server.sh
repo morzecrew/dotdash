@@ -28,7 +28,8 @@ sid=$(openssl rand -hex 8)
 
 mkdir -p /rig/client/server /rig/client/www
 jq -n --arg id "${id}" --arg key "${private}" --arg sid "${sid}" '
-  {inbounds: [{listen: "0.0.0.0", port: 9443, protocol: "vless",
+  {log: {loglevel: "warning", access: ""},
+   inbounds: [{listen: "0.0.0.0", port: 9443, protocol: "vless",
      settings: {clients: [{id: $id, flow: "xtls-rprx-vision"}], decryption: "none"},
      streamSettings: {network: "raw", security: "reality", realitySettings:
        {target: "www.gstatic.com:443", serverNames: ["www.gstatic.com"], privateKey: $key, shortIds: [$sid]}}}],

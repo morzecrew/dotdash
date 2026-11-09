@@ -25,7 +25,12 @@ for _ in $(seq 30); do
   [ "$(through)" -gt "${before}" ] && break
   sleep 2
 done
-[ "$(through)" -gt "${before}" ] || die "no fetch of the subscription came through dotdash"
+if [ "$(through)" -le "${before}" ]; then
+  echo "the subscription server's log, then the stand-in server's (looking for ${server}):" >&2
+  sudo docker logs --tail 15 client-rig-sub 2>&1 | sed 's/^/  /' >&2
+  sudo docker logs --tail 15 client-rig-server 2>&1 | sed 's/^/  /' >&2
+  die "no fetch of the subscription came through dotdash"
+fi
 
 printf 'http://%s:8088/sub' "${host}" | sudo morzer secret set subscription_url >/dev/null
 sudo morzer config unset subscription_interval >/dev/null
