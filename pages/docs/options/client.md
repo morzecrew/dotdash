@@ -47,6 +47,10 @@ DOMAIN-SUFFIX,example.ru
 IP-CIDR,192.168.0.0/16,no-resolve
 ```
 
+With no links at all, as on a first start that can't fetch the subscription,
+the port refuses everything but the direct rules: nothing leaves around
+dotdash by accident.
+
 Give IP rules `no-resolve`: otherwise mihomo looks up every name on this
 machine's resolver to match them, which tells that resolver what goes through
 dotdash. The subscription is cached, so a restart while the URL can't be

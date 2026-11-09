@@ -19,8 +19,13 @@
       "health-check": {"enable": true, "url": "{{ $probe }}", "interval": 300}
     }
   },
+  {{- /* With no links, as before a first fetch, a group falls back to
+  COMPATIBLE, which is DIRECT: everything would leave around dotdash. REJECT
+  instead. The subscription still loads: mihomo dials it directly when the
+  dial through the group fails. */}}
   "proxy-groups": [
-    {"name": "dotdash", "type": "url-test", "use": ["dotdash"], "url": "{{ $probe }}", "interval": 300}
+    {"name": "dotdash", "type": "url-test", "use": ["dotdash"], "url": "{{ $probe }}", "interval": 300,
+     "empty-fallback": "REJECT"}
   ],
   "rule-providers": {
     "block": {"type": "file", "behavior": "classical", "format": "text", "path": "/run/secrets/block_rules"},
