@@ -148,6 +148,9 @@ parameters:
     services: [subscription]
   relays:
     type: text
+    # morzer wants a default for every parameter it doesn't ask for at init,
+    # so a comment, which client-config skips, that shows the line's form.
+    default: "# One relay per line, as its relay-entry task prints it: <host> <site> <public key> <short id> <encryption>"
     description: "The dotdash-relay machines devices also reach this server through, one \"<host> <site> <public key> <short id> <encryption>\" line per relay, as a relay's relay-entry task prints it; client-config and the subscriptions add a link through each"
     services: [subscription]
   subscription:
