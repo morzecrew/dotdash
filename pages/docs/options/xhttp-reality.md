@@ -1,7 +1,7 @@
 # XHTTP with REALITY
 
 A third link on its own port (`xhttp_reality_port`, 8443), for a network that
-passes another port better than 443. Xray-core clients only (v2rayN, v2rayNG).
+passes another port better than 443. Xray-core clients (v2rayN, v2rayNG) and mihomo.
 Open the port in the provider's firewall, then:
 
 ```sh

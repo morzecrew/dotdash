@@ -27,10 +27,13 @@ path=$(cat /run/secrets/xhttp_path)
 sid=$(cat /run/secrets/reality_short_id)
 pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 
+# support-x25519mlkem768: mihomo strips the X25519MLKEM768 key share unless a
+# link asks for it, and Xray's REALITY refuses a client without it. Other
+# clients look up the parameters they know and pass over this one.
 links() { # <id> <label> <server>: each named "<label> [<transport>]"
   cat <<EOF
-REALITY via $3 (v2rayN, v2rayNG, Hiddify, Happ, Streisand):
-vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&flow=xtls-rprx-vision&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&type=tcp#$2%20%5Breality%5D
+REALITY via $3 (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
+vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&flow=xtls-rprx-vision&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=tcp#$2%20%5Breality%5D
 
 XHTTP over TLS via $3 (for a CDN in front: replace the address with the CDN's name):
 vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&security=tls&sni=$3&host=$3&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=auto#$2%20%5Bxhttp%5D
@@ -38,8 +41,8 @@ vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&security=tls&sni=$3&host=$3&alpn=h
 EOF
   [ -n "$xr_port" ] || return 0
   cat <<EOF
-XHTTP with REALITY via $3, on port ${xr_port} (clients built on Xray-core: v2rayN, v2rayNG):
-vless://$1@$3:${xr_port}?encryption=${enc}&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&type=xhttp&path=%2F${path}&mode=auto#$2%20%5Bxhttp%2Breality%5D
+XHTTP with REALITY via $3, on port ${xr_port} (v2rayN, v2rayNG, mihomo):
+vless://$1@$3:${xr_port}?encryption=${enc}&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=xhttp&path=%2F${path}&mode=auto#$2%20%5Bxhttp%2Breality%5D
 
 EOF
 }
