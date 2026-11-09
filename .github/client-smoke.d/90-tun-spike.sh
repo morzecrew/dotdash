@@ -11,20 +11,25 @@ set -uo pipefail
 mihomo=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/mihomo | sed -n 1p)
 host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
 dir=/rig/tun
+eth0=$(ip -4 -o addr show eth0 | awk '{ sub("/.*", "", $4); print $4 }')
 sudo rm -rf "${dir}" && sudo mkdir -p "${dir}/etc" "${dir}/secrets"
-printf 'http://%s:8088/sub' "${host}" | sudo tee "${dir}/secrets/subscription_url" >/dev/null
+# Round 2: TUN binds mihomo's own dials to eth0 (auto-detect-interface), so the
+# subscription and the stand-in on docker0 were out of its reach, its group
+# stayed empty, and an empty group falls back to DIRECT. Here the links point
+# at the rig's eth0 address, which the stand-in also answers on, as a real
+# dotdash server is reached over the main interface; and REJECT when empty.
+base64 -d </rig/client/www/sub | sed "s/@${host}:/@${eth0}:/" | base64 -w0 | sudo tee "${dir}/secrets/sub" >/dev/null
 # As morzer renders secrets: 0400, owned by 65532.
-sudo chown 65532:65532 "${dir}/secrets/subscription_url" && sudo chmod 0400 "${dir}/secrets/subscription_url"
+sudo chown 65532:65532 "${dir}/secrets/sub" && sudo chmod 0400 "${dir}/secrets/sub"
 jq -n '{
   mode: "rule", "log-level": "info", ipv6: false,
   tun: {enable: true, stack: "system", "auto-route": true, "auto-detect-interface": true,
         "dns-hijack": ["any:53"], "exclude-interface": ["docker0"]},
   dns: {enable: true, "enhanced-mode": "fake-ip", "fake-ip-range": "198.18.0.1/16",
         nameserver: ["https://1.1.1.1/dns-query"], "proxy-server-nameserver": ["1.1.1.1"]},
-  "proxy-providers": {dotdash: {type: "http", url: {"$file": "/run/secrets/subscription_url"},
-    interval: 3600, path: "./proxies/dotdash.yaml", proxy: "dotdash"}},
+  "proxy-providers": {dotdash: {type: "file", path: "/run/secrets/sub"}},
   "proxy-groups": [{name: "dotdash", type: "url-test", use: ["dotdash"],
-    url: "https://www.gstatic.com/generate_204", interval: 300}],
+    url: "https://www.gstatic.com/generate_204", interval: 300, "empty-fallback": "REJECT"}],
   rules: ["MATCH,dotdash"]}' | sudo tee "${dir}/etc/config.json" >/dev/null
 sudo chmod -R a+rX "${dir}/etc"
 
@@ -36,7 +41,7 @@ attempt() { # <name> <docker run options...>: start the TUN mihomo, report, stop
   sudo docker volume rm -f tun-spike-home >/dev/null 2>&1
   sudo docker run -d --name tun-spike --network host --read-only --security-opt no-new-privileges:true \
     --cap-drop ALL --device /dev/net/tun -v tun-spike-home:/var/lib/mihomo \
-    -v "${dir}/etc:/etc/mihomo:ro" -v "${dir}/secrets/subscription_url:/run/secrets/subscription_url:ro" \
+    -v "${dir}/etc:/etc/mihomo:ro" -v "${dir}/secrets/sub:/run/secrets/sub:ro" \
     "$@" "${mihomo}" >/dev/null || { echo "  run refused"; return; }
   sleep 8
   echo "  state: $(sudo docker inspect -f '{{.State.Status}} exit={{.State.ExitCode}}' tun-spike)"
@@ -57,6 +62,7 @@ attempt() { # <name> <docker run options...>: start the TUN mihomo, report, stop
   echo "  plain curl after stop: ${code}"
 }
 
+# Round 3: the TUN mihomo's links on eth0, REJECT when empty; both stacks.
 # Round 1 (root with NET_ADMIN alone, then with DAC_READ_SEARCH, then 65532):
 # the secrets and the home volume are 65532's, so root needs DAC_OVERRIDE; and
 # 65532 gets no capability at all ("configure tun interface: operation not
