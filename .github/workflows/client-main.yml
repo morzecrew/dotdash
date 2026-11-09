@@ -22,12 +22,14 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@64db868a6a80495d10c9dd5e3f1ea53d60f6aa99 # v0.9.2
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@96969fd2ea37e5117f67353dae43c85c761597d0 # v0.10.0
     with:
       morzer-version: "0.15.0"
       ref: ${{ github.sha }}
       channel: main
       signing: dev
+      # The key that signs, shipped as minisign.pub: init trusts it on first use.
+      ship-pubkey: true
       # Nothing moved since the last run: the version is already published.
       on-existing: skip
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
@@ -52,7 +54,7 @@ jobs:
       # The provenance publish.yml attests for the bundle.
       id-token: write
       attestations: write
-    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@64db868a6a80495d10c9dd5e3f1ea53d60f6aa99 # v0.9.2
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@96969fd2ea37e5117f67353dae43c85c761597d0 # v0.10.0
     with:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}

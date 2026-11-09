@@ -13,14 +13,14 @@ done </run/secrets/vless_clients
 [ -n "$id" ] || { echo "no client named '$want' in vless_clients" >&2; exit 1; }
 
 cat <<EOF
-On the canary machine (scripts/bootstrap.sh installs what it needs). The
-signing key is the dotdash repository's MINISIGN_RELEASE_PUBKEY variable, as
-for dotdash itself, and the recovery recipient can be dotdash's: with it,
-backups carry this machine's identity, which unattended updates need. Add
---profile xhttp to check the XHTTP path too.
+On the canary machine (scripts/bootstrap.sh installs what it needs). init
+trusts the signing key the release ships, as for dotdash itself, and the
+recovery recipient can be dotdash's: with it, backups carry this machine's
+identity, which unattended updates need. Add --profile xhttp to check the
+XHTTP path too.
 
 sudo morzer init --release oci://ghcr.io/morzecrew/dotdash-canary:stable \\
-  --require-signature --signing-key "\$MINISIGN_RELEASE_PUBKEY" --recovery-recipient age1… \\
+  --recovery-recipient age1… \\
   --set server=${DOMAIN} --set address=${DOMAIN} --set port=${HTTPS_PORT} \\
   --set reality_public_key=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 sudo morzer secret set vless_id <<'END'

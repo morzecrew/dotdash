@@ -13,12 +13,12 @@ Needs Docker, sops, age and morzer (`bootstrap.sh`).
     sudo morzer task run client-config --output -- home
     ```
 
-2. On the client machine (the signing key is the dotdash repository's
-   `MINISIGN_RELEASE_PUBKEY` variable, as for dotdash itself):
+2. On the client machine (`init` trusts the signing key the release ships, as
+   for dotdash itself):
 
     ```sh
     sudo morzer init --release oci://ghcr.io/morzecrew/dotdash-client:stable \
-      --require-signature --signing-key "$MINISIGN_RELEASE_PUBKEY" --recovery-recipient age1…
+      --recovery-recipient age1…
     sudo morzer secret set subscription_url    # the URL from step 1
     sudo morzer apply
     curl --proxy socks5h://127.0.0.1:7890 https://www.gstatic.com/generate_204 -w '%{http_code}\n'
