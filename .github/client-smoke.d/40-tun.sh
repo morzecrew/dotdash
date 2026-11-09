@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # The tun profile: a plain request on the machine, with no proxy settings,
-# goes through dotdash; with dotdash gone, nothing gets out directly instead;
-# and back on the base files, the machine's own routes are as before. First,
-# the two configs differ only where TUN needs them to.
+# goes through dotdash, and so does a LAN device's with this machine as its
+# gateway; with dotdash gone, nothing gets out directly instead; and back on
+# the base files, the machine's own routes are as before. First, the two
+# configs differ only where TUN needs them to.
 #
 # TUN binds mihomo's own dials to the main interface, so this stand-in sits on
 # the rig's own network, reached over eth0, with a subscription of its link
@@ -59,6 +60,50 @@ for _ in $(seq 15); do
 done
 [ "${code}" = 200 ] || die "a plain request did not go through TUN and dotdash (${code})"
 
+# A gateway. A LAN device, a network namespace behind a veth with this machine
+# as its gateway (as in the router spike, #50), first resolves with a public
+# resolver, whose queries TUN hijacks, then with dns_listen on the gateway's
+# own address. FORWARD's policy is DROP, as Docker sets it on many hosts:
+# until the two DOCKER-USER rules are in, doctor names them, and the device
+# gets nothing rather than going around dotdash.
+sudo apk add -q iproute2 >/dev/null
+sudo ip netns add lan
+sudo ip link add lanbr type veth peer name lanif
+sudo ip link set lanif netns lan
+sudo ip addr add 10.99.0.1/24 dev lanbr && sudo ip link set lanbr up
+sudo ip netns exec lan ip addr add 10.99.0.2/24 dev lanif
+sudo ip netns exec lan ip link set lanif up && sudo ip netns exec lan ip link set lo up
+sudo ip netns exec lan ip route add default via 10.99.0.1
+sudo mkdir -p /etc/netns/lan && echo 'nameserver 1.1.1.1' | sudo tee /etc/netns/lan/resolv.conf >/dev/null
+lan() { # <URL>: its status from the LAN device, or 000
+  sudo ip netns exec lan curl -s -o /dev/null -w '%{http_code}' --noproxy '*' --max-time 10 "$1" || true
+}
+lan_gets() { # <what>: poll for the LAN device reaching tun-target.test
+  for _ in $(seq 15); do [ "$(lan http://tun-target.test:8080/sub)" = 200 ] && return 0; sleep 2; done
+  die "$1"
+}
+policy=$(sudo iptables -S FORWARD | sed -n 's/^-P FORWARD //p')
+sudo iptables -P FORWARD DROP
+sudo morzer config set gateway=true >/dev/null
+out=$(sudo morzer doctor 2>&1) && die "doctor passes as a gateway whose FORWARD drops the LAN"
+tr -s '[:space:]' ' ' <<<"${out}" | grep -qF 'DOCKER-USER -o Meta -j ACCEPT' \
+  || die "doctor failed, but not naming the DOCKER-USER rules: ${out}"
+[ "$(lan http://tun-target.test:8080/sub)" != 200 ] || die "with FORWARD dropping the LAN, the device still got through"
+sudo iptables -I DOCKER-USER -o Meta -j ACCEPT
+sudo iptables -I DOCKER-USER -i Meta -j ACCEPT
+out=$(sudo morzer doctor 2>&1) || die "doctor fails as a gateway with the rules in: ${out}"
+lan_gets "with the rules in, the LAN device did not get through TUN and dotdash"
+sudo morzer config set dns_listen=10.99.0.1:53 >/dev/null
+echo 'nameserver 10.99.0.1' | sudo tee /etc/netns/lan/resolv.conf >/dev/null
+lan_gets "resolving with dns_listen on the gateway, the LAN device did not get through"
+sudo morzer config unset dns_listen >/dev/null
+sudo morzer config unset gateway >/dev/null
+sudo iptables -D DOCKER-USER -o Meta -j ACCEPT
+sudo iptables -D DOCKER-USER -i Meta -j ACCEPT
+sudo iptables -P FORWARD "${policy}"
+sudo ip netns del lan
+sudo ip link del lanbr 2>/dev/null || true
+
 sudo docker stop client-rig-tun-server >/dev/null
 for _ in 1 2 3; do
   code=$(plain https://example.com/)
@@ -76,4 +121,4 @@ sudo rm -f "${home}/proxies/dotdash.yaml"
 sudo docker restart "$(service_container mihomo)" >/dev/null
 sudo docker rm -f client-rig-tun-server client-rig-tun-sub >/dev/null
 [ "$(plain https://www.gstatic.com/generate_204)" = 204 ] || die "back on the base files, the rig's own requests don't get out"
-echo "40-tun.sh: under tun, plain requests go through dotdash and never around it; back to the base files cleanly"
+echo "40-tun.sh: under tun, plain requests, the machine's and a LAN's, go through dotdash and never around it; back to the base files cleanly"
