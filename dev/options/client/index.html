@@ -1460,10 +1460,10 @@ Needs Docker, sops, age and morzer (<code>bootstrap.sh</code>).</p>
 </code></pre></div>
 </li>
 <li>
-<p>On the client machine (the signing key is the dotdash repository's
-   <code>MINISIGN_RELEASE_PUBKEY</code> variable, as for dotdash itself):</p>
+<p>On the client machine (<code>init</code> trusts the signing key the release ships, as
+   for dotdash itself):</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>init<span class="w"> </span>--release<span class="w"> </span>oci://ghcr.io/morzecrew/dotdash-client:stable<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--require-signature<span class="w"> </span>--signing-key<span class="w"> </span><span class="s2">"</span><span class="nv">$MINISIGN_RELEASE_PUBKEY</span><span class="s2">"</span><span class="w"> </span>--recovery-recipient<span class="w"> </span>age1…
+<span class="w">  </span>--recovery-recipient<span class="w"> </span>age1…
 sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>subscription_url<span class="w">    </span><span class="c1"># the URL from step 1</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>apply
 curl<span class="w"> </span>--proxy<span class="w"> </span>socks5h://127.0.0.1:7890<span class="w"> </span>https://www.gstatic.com/generate_204<span class="w"> </span>-w<span class="w"> </span><span class="s1">'%{http_code}\n'</span>

@@ -1347,14 +1347,16 @@ morzer's timers do not look in <code>~/.local/bin</code>.</p>
 <p><strong>Deploy:</strong></p>
 <div class="highlight"><pre><span></span><code>morzer<span class="w"> </span>secret<span class="w"> </span>recipients<span class="w"> </span>generate-recovery-key<span class="w"> </span>~/dotdash-recovery.key<span class="w">   </span><span class="c1"># keep it off the machine</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>init<span class="w"> </span>--release<span class="w"> </span>oci://ghcr.io/morzecrew/dotdash:stable<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--require-signature<span class="w"> </span>--signing-key<span class="w"> </span><span class="s2">"</span><span class="nv">$MINISIGN_RELEASE_PUBKEY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--domain<span class="w"> </span>example.com<span class="w"> </span>--recovery-recipient<span class="w"> </span>age1…
 <span class="c1"># add --set upstream_protocol=http and/or --set upstream_tls=true if the proxy needs them</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>upstream<span class="w">    </span><span class="c1"># user:pass@host:port</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>apply
 </code></pre></div>
 <ul>
-<li><code>MINISIGN_RELEASE_PUBKEY</code>: <code>gh variable get MINISIGN_RELEASE_PUBKEY -R morzecrew/dotdash</code>.</li>
+<li>The release ships its signing key. <code>init</code> prints it, trusts it, and
+  requires every later release to be signed by it. To check even the first
+  release against the key published with the repository, add
+  <code>--signing-key "$(gh variable get MINISIGN_RELEASE_PUBKEY -R morzecrew/dotdash)"</code>.</li>
 <li><code>upstream</code> is <code>user:pass@host:port</code>, or <code>host:port</code> with no login. The
   password may contain <code>:</code> and <code>@</code>; an IPv6 host goes in brackets; no
   <code>socks5://</code> prefix. Changing proxy is one <code>secret set</code>, one restart.</li>

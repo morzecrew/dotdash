@@ -1820,6 +1820,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>Every bundle ships the key it is signed with, so <code>morzer init</code> needs no <code>--signing-key</code>: it prints the key, trusts it, and requires every later release to be signed by it. <code>--signing-key</code> still checks even the first release against the repository's.</p>
+</li>
+<li>
 <p>A relay for networks that let only domestic addresses through: <code>dotdash-relay</code>, a new bundle released with dotdash, carries devices from a machine inside the country on to this server over port 443. The <code>relay-config</code> task prints its setup; its line in the new <code>relays</code> parameter adds a link through it for every device.</p>
 </li>
 <li>
