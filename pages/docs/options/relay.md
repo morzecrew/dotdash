@@ -39,8 +39,9 @@ there.
     through.
 
 A device added to or deleted from `vless_clients` has to change on the relay
-too: `relay-config` prints the relay's copy. The relay takes one server; with
-[several servers](several-servers.md), point it at the nearest. A
+too: `relay-config` prints the relay's copy. With
+[several servers](several-servers.md), the relay takes every one and uses
+whichever answers fastest, so a ban on one server's address doesn't cut it off. A
 [canary](canary.md) inside the country checks a relay as it checks the server:
 `relay-entry` prints how.
 
