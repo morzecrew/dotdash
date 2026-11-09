@@ -38,8 +38,8 @@ hands that proxy IPv6 addresses only (ForceIPv6) and the first IPv4 only
 (ForceIPv4). Neither falls back to the other. With resolve=upstream only IPv6
 literals match. IPv6 UDP is blocked: the hop to it carries none. */ -}}
 {{- $v6 := ne .Parameters.upstream6_protocol "none" -}}
-{{- $withXdns := or (eq .Profile "xdns") (eq .Profile "xdns-xhttp-reality") -}}
-{{- $xhttpReality := or (eq .Profile "xhttp-reality") (eq .Profile "xdns-xhttp-reality") -}}
+{{- $withXdns := or (has "xdns" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
+{{- $xhttpReality := or (has "xhttp-reality" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
 {{- $xdns := .Parameters.xdns_domain -}}
 {{- if not (contains $xdns ".") }}{{ $xdns = printf "%s.%s" $xdns $domain }}{{ end -}}
 {

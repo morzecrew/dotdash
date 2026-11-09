@@ -3,11 +3,12 @@
 # it. CI installs the xdns profile, and a published release that declares
 # neither of these, so this switches to them at runtime and back:
 #
-# 1. xdns-xhttp-reality: client-config adds a third link and outbound, with no
-#    flow, and prints the first two links as before; a client from the new
-#    link gets through on 8443, and so do 10-clients.sh's REALITY, XHTTP and
-#    DNS-tunnel clients; one with a wrong id, public key or short id does not;
-#    with the upstream stopped, nothing gets through it.
+# 1. xdns,xhttp-reality, two profiles combined: client-config adds a third
+#    link and outbound, with no flow, and prints the first two links as before;
+#    a client from the new link gets through on 8443, and so do
+#    10-clients.sh's REALITY, XHTTP and DNS-tunnel clients. The deprecated
+#    xdns-xhttp-reality deploys the same. One with a wrong id, public key or
+#    short id does not get through; with the upstream stopped, nothing does.
 # 2. xhttp-reality, on a port of its own: 53 is no longer published, the link
 #    names the new port and works there, and 8443 is shut. xhttp_reality_port
 #    equal to https_port or 80 is refused, and the deployment keeps serving.
@@ -67,8 +68,8 @@ before=$(links)
 ! grep -q 'security=reality.*type=xhttp' <<<"${before}" || die "client-config prints XHTTP with REALITY under the xdns profile"
 ! published 8443 tcp || die "8443 is published under the xdns profile"
 
-# 1. Both optional transports.
-set_config installation.profile=xdns-xhttp-reality
+# 1. Both optional transports, as two profiles combined.
+set_config installation.profile=xdns,xhttp-reality
 after=$(links)
 grep -vxFf <(printf '%s\n' "${after}") <(printf '%s\n' "${before}") >/dev/null \
   && die "a link printed before changed once XHTTP with REALITY was added"
@@ -83,13 +84,19 @@ full_config | jq -e '
     and ([.outbounds[] | select(.tag | endswith("-reality") and (endswith("-xhttp-reality") | not))
       | .settings.flow] == ["xtls-rprx-vision"])' >/dev/null \
   || die "client-config's Xray config has no right XHTTP with REALITY outbound beside REALITY's"
-published 53 udp || die "the DNS tunnel is not published under xdns-xhttp-reality"
+published 53 udp || die "the DNS tunnel is not published under xdns,xhttp-reality"
 client xhttp-reality 11086 "${xr}"
 gets_through 11086 || die "no answer through XHTTP with REALITY on 8443"
 for p in 11080 11081 11082; do
-  gets_through "${p}" || die "the client on ${p} no longer gets through under xdns-xhttp-reality"
+  gets_through "${p}" || die "the client on ${p} no longer gets through under xdns,xhttp-reality"
 done
-echo "15-xhttp-reality.sh: xdns-xhttp-reality adds a third link, no flow, that works beside the others"
+echo "15-xhttp-reality.sh: xdns,xhttp-reality adds a third link, no flow, that works beside the others"
+# The single profile it replaces, deprecated, still deploys the same.
+set_config installation.profile=xdns-xhttp-reality
+[ "$(links)" = "${after}" ] || die "xdns-xhttp-reality prints other links than xdns,xhttp-reality"
+{ published 53 udp && published 8443 tcp; } || die "xdns-xhttp-reality no longer publishes both"
+gets_through 11086 || die "XHTTP with REALITY gets nothing under xdns-xhttp-reality"
+echo "15-xhttp-reality.sh: the deprecated xdns-xhttp-reality still deploys the same"
 
 wrong_pbk=$(sudo docker run --rm "${xray}" x25519 | sed -n 's/^Password (PublicKey): //p')
 [ -n "${wrong_pbk}" ] || die "xray x25519 printed no public key"

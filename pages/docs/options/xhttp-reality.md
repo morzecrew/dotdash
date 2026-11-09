@@ -5,7 +5,7 @@ passes another port better than 443. Xray-core clients (v2rayN, v2rayNG) and mih
 Open the port in the provider's firewall, then:
 
 ```sh
-sudo morzer config set installation.profile=xhttp-reality   # with the DNS tunnel: xdns-xhttp-reality
+sudo morzer config set installation.profile=xhttp-reality   # with the DNS tunnel: xdns,xhttp-reality
 ```
 
 Off: set the previous profile (`xdns`) or

@@ -25,11 +25,11 @@ there.
     HTTP/2, not a big name. `xray tls ping <site>` shows whether it does.
     Devices send its name, and anyone probing the relay gets its handshake.
 
-2. On the server, add that line to the `relays` secret, one line per relay
-   (the generated placeholder can go):
+2. On the server, add that line to the `relays` parameter, one line per
+   relay:
 
     ```sh
-    sudo morzer secret edit relays
+    sudo morzer config edit relays
     ```
 
     `client-config` then prints a link per relay, `[relay <host>]`, and the

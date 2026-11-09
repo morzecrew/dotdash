@@ -144,6 +144,7 @@ services:
       SERVERS: ${DOTDASH_PARAM_SERVERS:-self}
       DNS_RESOLVER: ${DOTDASH_PARAM_DNS_RESOLVER:-https://1.1.1.1/dns-query}
       SUBSCRIPTION: ${DOTDASH_PARAM_SUBSCRIPTION:-false}
+      RELAYS: ${DOTDASH_PARAM_RELAYS:-}
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image
@@ -151,7 +152,7 @@ services:
         target: /opt/xray
         image:
           subpath: usr/local/bin
-    secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, subscription_key, relays]
+    secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, subscription_key]
 
   # Writes each device's subscription into the subscription volume at start
   # (tasks/subscription.sh), as client-config would print its links, and then
@@ -172,7 +173,7 @@ services:
         image:
           subpath: usr/local/bin
       - subscription:/sub
-    secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, subscription_key, relays]
+    secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, subscription_key]
     # Healthy once every device's file is written; restarted for a changed
     # secret or parameter, it is not until they are written again.
     healthcheck:
@@ -231,5 +232,3 @@ secrets:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/reality_short_id
   subscription_key:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/subscription_key
-  relays:
-    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/relays

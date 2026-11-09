@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- A relay for networks that let only domestic addresses through: `dotdash-relay`, a new bundle released with dotdash, carries devices from a machine inside the country on to this server over port 443. The `relay-config` task prints its setup; its line in the new `relays` secret adds a link through it for every device.
+- A relay for networks that let only domestic addresses through: `dotdash-relay`, a new bundle released with dotdash, carries devices from a machine inside the country on to this server over port 443. The `relay-config` task prints its setup; its line in the new `relays` parameter adds a link through it for every device.
 
 - A client for a Linux machine or a network: `dotdash-client`, a new bundle released with dotdash, runs mihomo from one device's subscription URL, refreshed through dotdash, with a SOCKS5 and HTTP proxy port, block and direct rules, and a password once the port is published beyond the machine.
 
@@ -21,13 +21,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Every bundle of this release needs morzer 0.15.0: run `sudo morzer self-update` before updating. An older manager refuses the release and changes nothing.
+
+- The DNS tunnel and XHTTP with REALITY run together as `installation.profile=xdns,xhttp-reality`, two profiles combined.
+
+- `upstream6` is no longer generated as a placeholder: a fresh install has none until the IPv6 proxy is turned on. An existing value is kept.
+
 - Unattended updates apply releases again, and `morzer rollback` works again, both of which 0.4.0 turned off for its own change of the upstream settings. An update from 0.3.x is still refused until the `upstream` secret is set.
 
 - `bootstrap.sh` is served from the documentation site: `curl -fsSLO https://morzecrew.github.io/dotdash/bootstrap.sh`. The documentation itself moved from the README to <https://morzecrew.github.io/dotdash/>, one version per release.
 
+### Deprecated
+
+- The `xdns-xhttp-reality` profile: `xdns,xhttp-reality` deploys the same. It goes in the next release.
+
 ### Fixed
 
-- `bootstrap.sh` installs morzer 0.14.0, which both bundles require. It installed 0.13.0, so `init` on a freshly prepared host refused the release until `morzer self-update`.
+- `bootstrap.sh` installs morzer 0.15.0, which the bundles require. It installed 0.13.0, so `init` on a freshly prepared host refused the release until `morzer self-update`.
 
 ## [0.4.0] - 2026-11-08
 

@@ -37,7 +37,10 @@ work=$(mktemp -d)
 # XHTTP with REALITY is opt-in: the rig installs the xdns profile, so this
 # switches to the one with both. A release without it measures the first two.
 transports="reality xhttp"
-if grep -qF 'xdns-xhttp-reality:' /opt/dotdash/current/manifest.yaml; then
+if grep -qF 'combinable:' /opt/dotdash/current/manifest.yaml; then
+  morzer config set installation.profile=xdns,xhttp-reality >/dev/null || die "could not switch to xdns,xhttp-reality"
+  transports="${transports} xhttp-reality"
+elif grep -qF 'xdns-xhttp-reality:' /opt/dotdash/current/manifest.yaml; then
   morzer config set installation.profile=xdns-xhttp-reality >/dev/null || die "could not switch to xdns-xhttp-reality"
   transports="${transports} xhttp-reality"
 fi

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Relays (the relays secret, filled from dotdash-relay's relay-entry task).
-# With the generated placeholder, client-config prints no relay link and its
+# Relays (the relays parameter, filled from dotdash-relay's relay-entry task).
+# With none set, client-config prints no relay link and its
 # config no relay outbound. With two relay lines and a comment, every device
 # gets a REALITY link per relay, to the relay's host on 443 under its site,
 # with its keys and the device's own id, and the config an outbound per relay
-# in the balancer. A placeholder again removes them. dotdash-relay's own smoke
+# in the balancer. Unsetting it removes them. dotdash-relay's own smoke
 # test proves a device gets through a relay.
 # No link is printed: a failure names the step, not the credentials.
 # shellcheck source=/dev/null
@@ -24,15 +24,15 @@ outbound_tags() { awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p 
   jq -r '.outbounds[].tag' | grep '^dotdash-relay-' || true; }
 
 text=$(out)
-[ -z "$(relay_links "${text}")" ] || die "client-config prints relay links with the placeholder"
-[ -z "$(outbound_tags "${text}")" ] || die "the config has relay outbounds with the placeholder"
+[ -z "$(relay_links "${text}")" ] || die "client-config prints relay links with no relays set"
+[ -z "$(outbound_tags "${text}")" ] || die "the config has relay outbounds with no relays set"
 # One id per device, however many servers the links cover.
 ids=$(grep '^vless://.*%5Breality%5D' <<<"${text}" | while read -r l; do id "$l"; done | sort -u)
 devices=$(grep -c . <<<"${ids}")
 
 printf '# two relays\n%s\n\n%s\n' \
   "relay-a.test site-a.test pbkA 0011223344556677 mlkem.a" \
-  "198.51.100.7 site-b.test pbkB 8899aabbccddeeff mlkem.b" | sudo morzer secret set relays >/dev/null
+  "198.51.100.7 site-b.test pbkB 8899aabbccddeeff mlkem.b" | sudo morzer config set --set-file relays=- >/dev/null
 text=$(out)
 links=$(relay_links "${text}")
 [ "$(grep -c . <<<"${links}")" = $((2 * devices)) ] \
@@ -52,6 +52,6 @@ done <<<"${links}"
 [ "$(outbound_tags "${text}" | sort -u | tr '\n' ' ')" = "dotdash-relay-1 dotdash-relay-2 " ] \
   || die "the config lacks an outbound per relay"
 
-openssl rand -hex 16 | sudo morzer secret set relays >/dev/null
-[ -z "$(relay_links "$(out)")" ] || die "relay links remain with a placeholder again"
-echo "46-relays.sh: a link and an outbound per relay and device, none with the placeholder"
+sudo morzer config unset relays >/dev/null
+[ -z "$(relay_links "$(out)")" ] || die "relay links remain once relays is unset"
+echo "46-relays.sh: a link and an outbound per relay and device, none with relays unset"

@@ -26,13 +26,13 @@ enc=$(/opt/xray/xray-entrypoint vless-encryption /run/secrets/vless_seed)
 path=$(cat /run/secrets/xhttp_path)
 sid=$(cat /run/secrets/reality_short_id)
 pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
-# The dotdash-relay machines in front of this server (the relays secret), one
-# "<host> <site> <public key> <short id> <encryption>" per line; a shorter
-# line, such as the placeholder, is not a relay.
-relays=$(while read -r h s k i e _ || [ -n "${h:-}" ]; do
+# The dotdash-relay machines in front of this server (the relays parameter),
+# one "<host> <site> <public key> <short id> <encryption>" per line; blank
+# lines, "#" comments and shorter lines are not relays.
+relays=$(printf '%s\n' "${RELAYS:-}" | while read -r h s k i e _; do
   case $h in '' | '#'*) continue ;; esac
   if [ -n "${e:-}" ]; then echo "$h $s $k $i $e"; fi
-done </run/secrets/relays)
+done)
 
 # support-x25519mlkem768: mihomo strips the X25519MLKEM768 key share unless a
 # link asks for it, and Xray's REALITY refuses a client without it. Other
