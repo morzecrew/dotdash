@@ -1,0 +1,18 @@
+# The mkcp profile: VLESS over mKCP, on a host UDP port of its own (kcp_port).
+# The inbound is in the Xray template under the same profile, and the gate's
+# forward in gate.json.tmpl.
+services:
+  # Published by the gate, which forwards it to Xray's inbound on 8447.
+  gate:
+    ports:
+      - "${DOTDASH_PARAM_KCP_PORT:-8447}:8447/udp"
+
+  # Set under this profile only, not from the parameter, which has a default
+  # either way: with it, client-config prints the mKCP link, and the
+  # subscriptions carry it.
+  client-config:
+    environment:
+      KCP_PORT: ${DOTDASH_PARAM_KCP_PORT:-8447}
+  subscription:
+    environment:
+      KCP_PORT: ${DOTDASH_PARAM_KCP_PORT:-8447}

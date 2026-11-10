@@ -14,6 +14,8 @@
 | `xdns_bind` | `0.0.0.0` | host address for UDP/53 |
 | `xdns_mtu` | `900` | tunnel reply size; lower it if replies get lost |
 | `xhttp_reality_port` | `8443` | port for XHTTP with REALITY; not `https_port` or 80 |
+| `kcp_port` | `8447` | UDP port for [mKCP](mkcp.md); not 53 with the DNS tunnel |
+| `kcp_header` | `srtp` | what mKCP's packets start with: `dtls`, `srtp`, `utp`, `wechat`, `wireguard` or `none` |
 | `log_level` | `error` | Xray error log; `warning` and below name failed destinations |
 | `healthcheck_url` | `https://www.gstatic.com/generate_204` | fetched through the upstream |
 | `healthcheck_expect` | `.*` | regex the response must match, such as the exit IP |
@@ -31,6 +33,6 @@
 Set one with `sudo morzer config set <name>=<value>`, unset it with
 `sudo morzer config unset <name>`, edit `relays` or `pools` with
 `sudo morzer config edit <name>`. Profiles (`installation.profile`): `xdns`,
-`xhttp-reality`, `openvpn` (for an [OpenVPN upstream](tunnel-upstream.md)),
+`xhttp-reality`, `mkcp`, `openvpn` (for an [OpenVPN upstream](tunnel-upstream.md)),
 combined with commas, such as `xdns,xhttp-reality`; `xdns-xhttp-reality` does the
 same and goes in 0.6.0.

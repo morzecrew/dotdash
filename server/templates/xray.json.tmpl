@@ -14,6 +14,11 @@ The xhttp-reality profiles add XHTTP under REALITY instead of TLS, on a port of
 its own (8443 here, xhttp_reality_port outside): same keys, same fallback to
 Caddy. No flow on it, as on any XHTTP inbound: Vision is for RAW only.
 
+The mkcp profile adds VLESS over mKCP on UDP (8447 here, kcp_port outside):
+no TLS underneath, so another protocol family for the network to block. Its
+packets are AES-128-GCM under kcp_seed, then dressed in kcp_header; a client
+must name both, in that order, as a link's seed and headerType do.
+
 There is no direct (freedom) outbound: if the upstream proxy is down, traffic
 stops rather than leaving from this server's own IP. Nor could there be one:
 this container sits on internal networks only, and its one way out is the
@@ -44,6 +49,7 @@ carries TCP; a proxy carries UDP only as SOCKS5 with upstream_udp. */ -}}
 {{- $udp := or $tunnel (and (eq (print .Parameters.upstream_udp) "true") (eq .Parameters.upstream_protocol "socks")) -}}
 {{- $withXdns := or (has "xdns" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
 {{- $xhttpReality := or (has "xhttp-reality" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
+{{- $kcp := has "mkcp" .Profiles -}}
 {{- $xdns := .Parameters.xdns_domain -}}
 {{- if not (contains $xdns ".") }}{{ $xdns = printf "%s.%s" $xdns $domain }}{{ end -}}
 {
@@ -109,6 +115,28 @@ carries TCP; a proxy carries UDP only as SOCKS5 with upstream_udp. */ -}}
           "shortIds": [{"$file": "/run/secrets/reality_short_id"}]
         },
         "xhttpSettings": {"path": {"$file": "/run/secrets/xhttp_path"}, "mode": "auto"}
+      },
+      "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
+    },
+{{- end }}
+{{- if $kcp }}
+    {
+      "tag": "kcp",
+      "listen": "0.0.0.0",
+      "port": 8447,
+      "protocol": "vless",
+      "settings": {
+        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
+      },
+      "streamSettings": {
+        "network": "kcp",
+        "finalmask": {"udp": [
+          {"type": "mkcp-legacy", "settings": {"value": {"$file": "/run/secrets/kcp_seed"}}}
+{{- if ne .Parameters.kcp_header "none" }},
+          {"type": "mkcp-legacy", "settings": {"header": "{{ .Parameters.kcp_header }}"}}
+{{- end }}
+        ]}
       },
       "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
     },

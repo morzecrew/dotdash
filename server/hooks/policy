@@ -16,8 +16,8 @@
 #     and blocks everything else;
 #   - Xray is on internal networks only, so it has no route out at all, and
 #     publishes nothing; the gate publishes only https_port and, where it
-#     forwards them, 53 for the DNS tunnel and xhttp_reality_port, and Caddy
-#     only 80;
+#     forwards them, 53 for the DNS tunnel, xhttp_reality_port and kcp_port,
+#     and Caddy only 80;
 #   - every container runs unprivileged: no added capability, read-only, uid
 #     65532, not on the host's network.
 #
@@ -40,6 +40,7 @@ gate=${DOTDASH_GATE_CONFIG:-/etc/dotdash/gate.json}
 release=${DOTDASH_RELEASE_DIR:?}
 https_port=${DOTDASH_PARAM_HTTPS_PORT:-443}
 xhttp_reality_port=${DOTDASH_PARAM_XHTTP_REALITY_PORT:-8443}
+kcp_port=${DOTDASH_PARAM_KCP_PORT:-8447}
 jq_image=$(sed -n 's/^  jq: *//p' "${release}/manifest.yaml")
 [ -n "${jq_image}" ] || { echo "policy: the release pins no jq image" >&2; exit 1; }
 docker image inspect "${jq_image}" >/dev/null 2>&1 || docker pull -q "${jq_image}" >/dev/null
@@ -52,7 +53,7 @@ jq() { # <filter> <file>: the filter's output, or why the file does not parse
 
 violations=$(jq '
   [.outbounds[]?.tag] as $tags
-  | ([.inbounds[]?.tag] - ["reality", "xhttp", "xhttp-reality", "xdns", "probe"]) as $extra
+  | ([.inbounds[]?.tag] - ["reality", "xhttp", "xhttp-reality", "kcp", "xdns", "probe"]) as $extra
   | check($tags == ["upstream", "block"] or $tags == ["upstream", "block", "upstream6"];
       "the outbounds are \($tags), not upstream and block (and upstream6)"),
     (.outbounds[2]? // empty |
@@ -88,7 +89,7 @@ violations=$(jq '
       check(.listen == "127.0.0.1"; "inbound \(.tag) (\(.protocol)) listens beyond loopback"))
   ' "${config}")
 violations+=$'\n'$(jq '
-  ["public-tls", "public-dns", "public-xhttp-reality"] as $public
+  ["public-tls", "public-dns", "public-xhttp-reality", "public-kcp"] as $public
   | ([.inbounds[]?.tag] - $public - ["egress", "egress6"]) as $extra
   | [.routing.rules[]? | select(.outboundTag == "inside") | .inboundTag // ["(any)"] | .[]] as $inward
   | check($extra == []; "the gate has unexpected inbounds: \($extra)"),
@@ -119,8 +120,8 @@ violations+=$'\n'$(jq '
 # Fields split on |, not spaces: read collapses empty fields between spaces,
 # and a container with no user set has one.
 format='{{index .Config.Labels "com.docker.compose.service"}}|{{.HostConfig.Privileged}}|{{.HostConfig.ReadonlyRootfs}}|{{.Config.User}}|{{.HostConfig.NetworkMode}}|{{json .HostConfig.CapAdd}}|{{range $p, $b := .HostConfig.PortBindings}}{{range $b}}{{$p}}={{.HostIp}}:{{.HostPort}};{{end}}{{end}}'
-# The DNS tunnel's 53/udp, and xhttp_reality_port, are expected only where the
-# gate forwards them.
+# The DNS tunnel's 53/udp, xhttp_reality_port and kcp_port are expected only
+# where the gate forwards them.
 forwards() { grep -q "\"tag\": *\"$1\"" "${gate}"; }
 while IFS='|' read -r name privileged readonly user network caps ports; do
   [ -n "${name}" ] || continue
@@ -145,6 +146,8 @@ while IFS='|' read -r name privileged readonly user network caps ports; do
     gate/5353/udp=*:53) forwards public-dns || violations+=$'\n'"the gate publishes 53/udp with no DNS tunnel configured" ;;
     gate/8443/tcp=*:"${xhttp_reality_port}") forwards public-xhttp-reality ||
       violations+=$'\n'"the gate publishes ${xhttp_reality_port}/tcp with no XHTTP with REALITY configured" ;;
+    gate/8447/udp=*:"${kcp_port}") forwards public-kcp ||
+      violations+=$'\n'"the gate publishes ${kcp_port}/udp with no mKCP configured" ;;
     *) violations+=$'\n'"${name} publishes ${binding%%=*} on ${binding#*=}, which nothing should" ;;
     esac
   done

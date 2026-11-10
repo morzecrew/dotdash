@@ -33,9 +33,12 @@ runtimes:
       # which the gate dials with upstream_protocol=openvpn: Xray has no
       # OpenVPN of its own.
       openvpn: [compose/openvpn.yaml]
+      # VLESS over mKCP on kcp_port: UDP, no TLS underneath, its packets
+      # encrypted under kcp_seed and dressed in a kcp_header.
+      mkcp: [compose/mkcp.yaml]
     # installation.profile=xdns,xhttp-reality runs both; any of them with
     # openvpn, such as xdns,openvpn, adds the OpenVPN upstream.
-    combinable: [xdns, xhttp-reality, openvpn]
+    combinable: [xdns, xhttp-reality, openvpn, mkcp]
     options:
       project: dotdash
 
@@ -63,8 +66,8 @@ requirements:
   disk: 2GiB
   # TCP only. UDP/53 for the DNS tunnel is not checked here: on a host whose
   # systemd-resolved stub holds 127.0.0.53:53, set xdns_bind to the public IP.
-  # Nor is xhttp_reality_port: these fields see the parameters, not the
-  # profile, and a default install must not need it free.
+  # Nor are xhttp_reality_port and kcp_port: these fields see the parameters,
+  # not the profile, and a default install must not need them free.
   ports: ["80", "{{ .Parameters.https_port }}"]
 
 parameters:
@@ -130,6 +133,17 @@ parameters:
     default: 8443
     description: "Host TCP port of XHTTP with REALITY (the xhttp-reality profile); must differ from https_port and 80"
     services: [gate, subscription]
+  kcp_port:
+    type: port
+    default: 8447
+    description: "Host UDP port of VLESS over mKCP (the mkcp profile); must not be 53 with the DNS tunnel on"
+    services: [gate, subscription]
+  kcp_header:
+    type: enum
+    values: [none, dtls, srtp, utp, wechat, wireguard]
+    default: srtp
+    description: "What mKCP's packets start with, to pass for another protocol (the mkcp profile): a DTLS or SRTP record as in a call, uTP, a WeChat video call, WireGuard; none sends the encrypted packets bare. Devices take a change from new links or their subscription"
+    services: [xray, subscription]
   xdns_mtu:
     type: int
     default: 900

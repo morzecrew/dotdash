@@ -20,6 +20,7 @@ nav = [
             "server/cover-site.md",
             "server/dns-tunnel.md",
             "server/xhttp-reality.md",
+            "server/mkcp.md",
             "server/ipv6-upstream.md",
             "server/backup-upstream.md",
             "server/tunnel-upstream.md",

@@ -19,7 +19,8 @@ Per device it prints:
 
 - an XHTTP link and a REALITY link, `phone [xhttp]` and `phone [reality]`,
   for each server; `phone [xhttp+reality]` with
-  [XHTTP with REALITY](xhttp-reality.md) on; and `phone [relay <host>]` for
+  [XHTTP with REALITY](xhttp-reality.md) on; `phone [kcp]` with
+  [mKCP](mkcp.md) on; and `phone [relay <host>]` for
   each [relay](../relay/index.md), with `phone [relay <host> xhttp]` before it
   through a relay with a site of its own. XHTTP comes first everywhere: an
   app tends to try the first link, and REALITY over raw TCP is the transport
