@@ -2022,10 +2022,13 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
 </code></pre></div>
 <p>Per device it prints:</p>
 <ul>
-<li>a REALITY link and an XHTTP link, <code>phone [reality]</code> and <code>phone [xhttp]</code>,
+<li>an XHTTP link and a REALITY link, <code>phone [xhttp]</code> and <code>phone [reality]</code>,
   for each server; <code>phone [xhttp+reality]</code> with
   <a href="../xhttp-reality/">XHTTP with REALITY</a> on; and <code>phone [relay &lt;host&gt;]</code> for
-  each <a href="../../relay/">relay</a>;</li>
+  each <a href="../../relay/">relay</a>, with <code>phone [relay &lt;host&gt; xhttp]</code> before it
+  through a relay with a site of its own. XHTTP comes first everywhere: an
+  app tends to try the first link, and REALITY over raw TCP is the transport
+  blocked most often;</li>
 <li>an Xray config for v2rayN or v2rayNG (as a custom config) that uses
   whichever link answers fastest, drops a dead one within about 30 s, and
   falls back to the <a href="../dns-tunnel/">DNS tunnel</a> when it is on.</li>
