@@ -1,0 +1,74 @@
+# Devices
+
+Each device has its own id, a `<uuid> [name]` line in the `vless_clients`
+secret. `init` creates the first; add one per device:
+
+```sh
+uuidgen                                          # a new id
+sudo EDITOR=nano morzer secret edit vless_clients  # add "<uuid> phone"; Xray restarts on save
+```
+
+## Links and the Xray config
+
+```sh
+sudo morzer task run client-config --output             # every device
+sudo morzer task run client-config --output -- phone    # one
+```
+
+Per device it prints:
+
+- a REALITY link and an XHTTP link, `phone [reality]` and `phone [xhttp]`,
+  for each server; `phone [xhttp+reality]` with
+  [XHTTP with REALITY](xhttp-reality.md) on; and `phone [relay <host>]` for
+  each [relay](../relay/index.md);
+- an Xray config for v2rayN or v2rayNG (as a custom config) that uses
+  whichever link answers fastest, drops a dead one within about 30 s, and
+  falls back to the [DNS tunnel](dns-tunnel.md) when it is on.
+
+!!! warning "The output is a password"
+    Anyone holding a device's links can use the server as that device.
+
+As QR codes in the terminal, with `qrencode`:
+
+```sh
+sudo morzer task run client-config --output -- phone | grep '^vless://' |
+  while read -r link; do qrencode -t ansiutf8 "$link"; done
+```
+
+How each app handles DNS: [DNS on devices](device-dns.md).
+
+## Subscriptions
+
+With subscriptions on, each device gets one URL instead, and fetches its
+links from it:
+
+```sh
+sudo morzer config set subscription=true
+sudo morzer task run client-config --output -- phone           # its URL only
+sudo morzer task run client-config --output -- --full phone    # plus links and the Xray config
+```
+
+- Add the URL as a subscription in the app (v2rayN, v2rayNG, Hiddify, Happ,
+  Streisand) and refresh every few hours: revocations, key rotations and new
+  relays then reach devices with nothing to resend.
+- mihomo reads the URL as an `http` proxy provider; the
+  [client bundle](../client/index.md) runs it on a Linux machine for you.
+- A URL is as secret as the links. `sudo morzer secret rotate subscription_key`
+  moves every URL; any other path gets the site's 404.
+
+The official sing-box apps, Karing and NekoBox can't connect to dotdash: they
+lack VLESS Encryption and the key share Xray's REALITY requires.
+
+## Revoking a device
+
+Delete its line from `vless_clients`. A revoked device still knows the
+shared keys; to hide the server from it too, rotate them and resend links
+(subscriptions pick them up):
+
+```sh
+sudo morzer secret rotate reality_key
+sudo morzer secret rotate vless_seed
+```
+
+With [relays](../relay/index.md) or [several servers](several-servers.md),
+change their copies too.

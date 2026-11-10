@@ -1,23 +1,48 @@
 # dotdash
 
-A [morzer](https://github.com/morzecrew/morzer) bundle for one Docker host:
-Xray REALITY on 443 in front of a Caddy cover site, an optional DNS tunnel
-and XHTTP with REALITY, and all traffic out through your upstream proxy.
+dotdash gets devices in a censored network out to the open internet through
+a server of yours abroad. It comes as four
+[morzer](https://github.com/morzecrew/morzer) bundles, released together from
+one tag:
 
-- **[Install](get-started/install.md)** a server, then
-  **[connect devices](get-started/clients.md)**.
-- **[Options](options/cover-site.md)**: your own cover site, a DNS tunnel,
-  another port, an IPv6 proxy, a CDN, several servers, a canary.
-- **[Operations](operations/index.md)**: updates, alerts, backups, and
-  [what leaks where](operations/leaks.md).
+![The four bundles: devices, a relay, a client and a canary inside the country connect to the dotdash server abroad, which leaves only through your upstream proxy](assets/diagrams/overview.light.svg#only-light)
+![The four bundles: devices, a relay, a client and a canary inside the country connect to the dotdash server abroad, which leaves only through your upstream proxy](assets/diagrams/overview.dark.svg#only-dark)
+
+| Bundle | Runs on | What it does |
+| --- | --- | --- |
+| **[dotdash](server/index.md)** | a server abroad | Xray REALITY on 443 in front of a cover site; everything leaves through your upstream proxy |
+| **[dotdash-relay](relay/index.md)** | a machine inside the country | carries devices on to the server while only domestic addresses get through |
+| **[dotdash-client](client/index.md)** | a Linux machine on the client side | a proxy port, the whole machine, or a whole LAN through dotdash |
+| **[dotdash-canary](canary/index.md)** | a machine inside the country | connects as a device would, and alerts when it can't get through |
+
+Start with the server: the other three connect to it, and its tasks print
+their setup.
+
+## What every machine needs
+
+Docker ≥ 28 with Compose ≥ 2.35, `sops`, `age`, and morzer ≥ 0.15.0. On a
+fresh Debian or Ubuntu machine, `bootstrap.sh` installs them, turns on
+security updates, and sets SSH to keys only:
+
+```sh
+curl -fsSLO https://morzecrew.github.io/dotdash/bootstrap.sh
+less bootstrap.sh && sudo bash bootstrap.sh
+```
+
+Installing morzer by hand: `install.sh --dir /usr/local/bin`. `sudo` and
+morzer's timers don't look in `~/.local/bin`.
+
+Every bundle ships the key it is signed with: `morzer init` prints it,
+trusts it, and requires every later release to be signed by it.
 
 ## Releases
 
 | Tag | |
 | --- | --- |
-| `ghcr.io/morzecrew/dotdash:stable` | releases (`vX.Y.Z` tags), release key |
-| `ghcr.io/morzecrew/dotdash:X.Y.Z` | one release |
-| `ghcr.io/morzecrew/dotdash:main` | every push to `main`, dev key; may be broken |
+| `ghcr.io/morzecrew/<bundle>:stable` | the newest release (`vX.Y.Z` tags), release key |
+| `ghcr.io/morzecrew/<bundle>:X.Y.Z` | one release |
+| `ghcr.io/morzecrew/<bundle>:main` | every push to `main`, dev key; may be broken |
 
-These docs are versioned with the releases: the version menu shows each
-released minor, and `dev` follows `main`.
+`<bundle>` is `dotdash`, `dotdash-relay`, `dotdash-client` or
+`dotdash-canary`. These docs are versioned with the releases: the version
+menu shows each released minor, and `dev` follows `main`.

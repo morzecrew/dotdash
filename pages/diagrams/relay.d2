@@ -1,0 +1,30 @@
+# A relay inside the country, carrying devices on to the dotdash servers.
+# Rendered by render.sh.
+direction: down
+
+inside: Inside the country {
+  style.stroke-dash: 4
+
+  phone: Phone\nwith a relay link
+  probe: A probe
+  relay: dotdash-relay {
+    label: "dotdash-relay\na domestic address,\nits own keys"
+  }
+  site: "A site next to the relay\n(the site parameter)"
+
+  phone -> relay: "443, under\nthe site's name"
+  probe -> relay {style.stroke-dash: 4}
+  relay -> site: "a probe gets\nits handshake" {style.stroke-dash: 4}
+}
+
+abroad: Abroad {
+  a: dotdash\na.example.com
+  b: dotdash\nb.example.com
+}
+
+upstream: "Your upstream proxy,\nthen the internet"
+
+inside.relay -> abroad.a: "as one client,\nthe fastest server"
+inside.relay -> abroad.b {style.stroke-dash: 4}
+abroad.a -> upstream
+abroad.b -> upstream

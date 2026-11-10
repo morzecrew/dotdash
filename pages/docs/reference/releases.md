@@ -23,3 +23,8 @@ publishes `X.Y` and, for the newest minor, moves `latest` and the root to it.
 ```sh
 cd pages && uv run zensical serve    # http://localhost:8047
 ```
+
+The diagrams are [d2](https://d2lang.com) sources in `pages/diagrams`,
+rendered once for the light scheme and once for the dark one into
+`pages/docs/assets/diagrams`. The build doesn't run d2: after changing a
+`.d2` file, run `pages/diagrams/render.sh` and commit the SVGs.

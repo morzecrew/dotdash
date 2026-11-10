@@ -1,5 +1,10 @@
 # Operations
 
+Updates, alerts, backups and `doctor` work the same on
+[relay](../relay/operations.md), [client](../client/index.md) and
+[canary](../canary/index.md) machines; only the update channel names another
+bundle.
+
 | Task | Command |
 | --- | --- |
 | Update by hand | `sudo morzer update --stage && sudo morzer update --to <version>` |

@@ -1,0 +1,30 @@
+# Inside one dotdash server: who listens, who holds what, the one way out.
+# Rendered by render.sh.
+direction: down
+
+device: Device\nwith a dotdash link
+probe: A probe\nor a browser
+
+host: dotdash server {
+  gate: gate {
+    label: "gate\n443/tcp, and 53/udp, 8443/tcp\nholds the upstream's credentials"
+  }
+  xray: Xray {
+    label: "Xray\nREALITY, XHTTP, DNS tunnel\nno route out of its own"
+  }
+  caddy: Caddy {
+    label: "Caddy\ncover site and certificate,\nsubscription URLs"
+  }
+
+  gate <-> xray
+  xray -> caddy: not a client
+  caddy -> xray: XHTTP
+}
+
+upstream: Your upstream proxy
+internet: Internet {shape: cloud}
+
+device -> host.gate
+probe -> host.gate {style.stroke-dash: 4}
+host.gate -> upstream: the only way out
+upstream -> internet

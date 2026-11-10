@@ -1,7 +1,7 @@
 [project]
 site_name = "dotdash"
 site_url = "https://morzecrew.github.io/dotdash/"
-site_description = "A morzer bundle: Xray REALITY in front of a cover site, all traffic out through your upstream proxy"
+site_description = "Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary"
 site_author = "Lev Litvinov"
 copyright = "&copy; 2026 Lev Litvinov and contributors"
 
@@ -10,30 +10,46 @@ repo_name = "dotdash"
 
 nav = [
     { "Home" = "index.md" },
-    { "Get started" = [
-        "get-started/install.md",
-        "get-started/clients.md",
+    { "Server" = [
+        "server/index.md",
+        "server/install.md",
+        "server/devices.md",
+        "server/device-dns.md",
+        { "Options" = [
+            "server/cover-site.md",
+            "server/dns-tunnel.md",
+            "server/xhttp-reality.md",
+            "server/ipv6-upstream.md",
+            "server/cdn.md",
+            "server/several-servers.md",
+        ] },
+        { "Operations" = [
+            "server/operations.md",
+            "server/leaks.md",
+            "server/move-server.md",
+        ] },
+        { "Reference" = [
+            "server/parameters.md",
+            "server/secrets.md",
+        ] },
     ] },
-    { "Options" = [
-        "options/cover-site.md",
-        "options/dns-tunnel.md",
-        "options/xhttp-reality.md",
-        "options/ipv6-upstream.md",
-        "options/cdn.md",
-        "options/several-servers.md",
-        "options/relay.md",
-        "options/client.md",
-        "options/canary.md",
+    { "Relay" = [
+        "relay/index.md",
+        "relay/install.md",
+        "relay/operations.md",
+        "relay/reference.md",
     ] },
-    { "Operations" = [
-        "operations/index.md",
-        "operations/leaks.md",
-        "operations/device-dns.md",
-        "operations/move-server.md",
+    { "Client" = [
+        "client/index.md",
+        "client/network.md",
+        "client/rules.md",
+        "client/tun.md",
+        "client/reference.md",
     ] },
-    { "Reference" = [
-        "reference/parameters.md",
-        "reference/secrets.md",
+    { "Canary" = [
+        "canary/index.md",
+    ] },
+    { "Releases" = [
         "reference/releases.md",
         "reference/changelog.md",
     ] },
