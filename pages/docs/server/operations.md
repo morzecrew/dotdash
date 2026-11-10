@@ -24,7 +24,7 @@ From `:stable`, nightly at 03:30.
 
 ```sh
 sudo morzer config set update.check=true
-sudo morzer config set update.channel=oci://ghcr.io/morzecrew/dotdash:stable
+sudo morzer config set update.channel=oci://ghcr.io/morzecrew/dotdash-server:stable
 sudo morzer config set update.auto_apply=true
 ```
 

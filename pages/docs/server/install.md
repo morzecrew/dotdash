@@ -30,7 +30,7 @@ stands for your domain throughout.
 5. **Deploy:**
 
     ```sh
-    sudo morzer init --release oci://ghcr.io/morzecrew/dotdash:stable \
+    sudo morzer init --release oci://ghcr.io/morzecrew/dotdash-server:stable \
       --domain example.com --recovery-recipient age1…
     sudo morzer secret set upstream    # user:pass@host:port
     sudo morzer apply

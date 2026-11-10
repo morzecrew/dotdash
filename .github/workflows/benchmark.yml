@@ -5,7 +5,7 @@
 #
 # The rig is bundle-ci's rehearsal (rehearse.sh): it installs the published
 # :main with the smoke hooks' stand-in upstream and target, then this tree's
-# bundle goes on top, and .github/bench/bench.sh measures it.
+# server bundle goes on top, and .github/bench/bench.sh measures it.
 name: benchmark
 
 on:
@@ -27,8 +27,8 @@ on:
         default: "0 2 5"
   pull_request:
     paths:
-      - bundle/manifest.yaml
-      - bundle/templates/**
+      - server/manifest.yaml
+      - server/templates/**
       - .github/bench/**
       - .github/workflows/benchmark.yml
 
@@ -76,6 +76,12 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           REHEARSE_PUBKEY: ${{ vars.MINISIGN_DEV_PUBKEY }}
           REHEARSE_MORZER_VERSION: "0.15.1"
+          REHEARSE_BUNDLE_DIR: server
+          # The smoke hooks' pre-apply alone, for the rig's stand-in upstream
+          # and target: the hooks themselves would run against the published
+          # :main the rehearsal installs first, and bench.sh makes its own
+          # clients. smoke-install runs every hook on this tree's bundle.
+          REHEARSE_HOOKS: .bench-hooks
           REHEARSE_PROBE_PATHS: ""
           REHEARSE_OPERATOR_SECRETS: upstream
           # The published release's upstream_host and upstream_port, as in pr.yml.
@@ -85,7 +91,12 @@ jobs:
             --set healthcheck_url=http://11.99.0.10:8000/ --set cert_issuer=internal
             --profile xdns
         run: |
-          bash .bundle-ci/scripts/rehearse.sh --keep
+          mkdir -p .bench-hooks && cp -R .github/smoke.d/pre-apply .bench-hooks/
+          # ponytail: the old package until dotdash-server:main is published;
+          # drop the fallback once the dotdash package is deleted.
+          from=ghcr.io/morzecrew/dotdash-server:main
+          oras manifest fetch "${from}" >/dev/null 2>&1 || from=ghcr.io/morzecrew/dotdash:main
+          bash .bundle-ci/scripts/rehearse.sh --from "${from}" --keep
           # The token stays out of the rest of the rig.
           GITHUB_TOKEN= bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal \
             sh -c 'bash /rig/smoke.sh update "$(ls /rig/dist/*.tar.zst | head -1)"'

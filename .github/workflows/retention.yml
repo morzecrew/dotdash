@@ -16,6 +16,7 @@ jobs:
     permissions: {}
     uses: morzecrew/bundle-ci/.github/workflows/retention.yml@96969fd2ea37e5117f67353dae43c85c761597d0 # v0.10.0
     with:
+      package: dotdash-server
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
     secrets:
       token: ${{ secrets.GH_PAT }}
