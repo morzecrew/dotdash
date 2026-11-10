@@ -6,7 +6,7 @@ name: images
 
 on:
   pull_request:
-    paths: [bundle/manifest.yaml, canary/manifest.yaml, relay/manifest.yaml, client/manifest.yaml, .github/smoke.d/**, .github/client-smoke.d/**]
+    paths: [server/manifest.yaml, canary/manifest.yaml, relay/manifest.yaml, client/manifest.yaml, .github/smoke.d/**, .github/client-smoke.d/**]
 
 permissions: {}
 
@@ -31,7 +31,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          refs=$(grep -ohE 'ghcr\.io/morzecrew/[a-z0-9._/-]+:[A-Za-z0-9._-]+@sha256:[a-f0-9]{64}' bundle/manifest.yaml canary/manifest.yaml relay/manifest.yaml client/manifest.yaml .github/smoke.d/*.sh .github/client-smoke.d/pre-apply/*.sh | sort -u)
+          refs=$(grep -ohE 'ghcr\.io/morzecrew/[a-z0-9._/-]+:[A-Za-z0-9._-]+@sha256:[a-f0-9]{64}' server/manifest.yaml canary/manifest.yaml relay/manifest.yaml client/manifest.yaml .github/smoke.d/*.sh .github/client-smoke.d/pre-apply/*.sh | sort -u)
           [ -n "${refs}" ] || { echo "::error::the manifests pin no ghcr.io/morzecrew image"; exit 1; }
           for ref in ${refs}; do
             repo=${ref%%:*} digest=${ref##*@}

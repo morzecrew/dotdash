@@ -41,7 +41,7 @@ The canary, relay and client bundles, `dotdash-canary`, `dotdash-relay` and
 
 [bundle-ci](https://github.com/morzecrew/bundle-ci) builds, signs and
 smoke-tests every pull request; a `vX.Y.Z` tag releases all four bundles. Check a
-bundle change with `morzer release verify ./bundle --render-check`. The docs
+bundle change with `morzer release verify ./server --render-check`. The docs
 live in [`pages/`](pages): `cd pages && uv run zensical serve`.
 
 ## Licence

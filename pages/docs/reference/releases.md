@@ -11,7 +11,7 @@ gh attestation verify oci://ghcr.io/morzecrew/dotdash:<version> --owner morzecre
 
 A weekly benchmark measures REALITY and XHTTP under added latency and loss;
 it informs and never gates. Check a bundle change with
-`morzer release verify ./bundle --render-check`.
+`morzer release verify ./server --render-check`.
 
 ## Documentation
 
