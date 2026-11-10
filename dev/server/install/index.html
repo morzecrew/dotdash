@@ -651,6 +651,8 @@
       
         
       
+        
+      
     
     
     
@@ -794,6 +796,33 @@
     
   
   IPv6 through a second proxy
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tunnel-upstream/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  WireGuard or OpenVPN upstream
 
     
   </span>
@@ -1830,7 +1859,9 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>apply
 </code></pre></div>
 <ul>
 <li>Add <code>--set upstream_protocol=http</code> for an HTTP proxy, and
-  <code>--set upstream_tls=true</code> if it takes TLS. The default is SOCKS5.</li>
+  <code>--set upstream_tls=true</code> if it takes TLS. The default is SOCKS5. For
+  a WireGuard or OpenVPN exit instead, see
+  <a href="../tunnel-upstream/">WireGuard or OpenVPN upstream</a>.</li>
 <li><code>upstream</code> is <code>user:pass@host:port</code>, or <code>host:port</code> with no login. The
   password may contain <code>:</code> and <code>@</code>; an IPv6 host goes in brackets; no
   <code>socks5://</code> prefix. Changing proxy later is one <code>secret set</code> and one

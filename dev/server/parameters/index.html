@@ -641,6 +641,8 @@
       
         
       
+        
+      
     
     
     
@@ -784,6 +786,33 @@
     
   
   IPv6 through a second proxy
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tunnel-upstream/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  WireGuard or OpenVPN upstream
 
     
   </span>
@@ -1837,7 +1866,7 @@
 <tr>
 <td><code>upstream_protocol</code></td>
 <td><code>socks</code></td>
-<td><code>socks</code> or <code>http</code>; the proxy is the <code>upstream</code> secret</td>
+<td><code>socks</code> or <code>http</code>, the proxy in <code>upstream</code>; <code>wireguard</code> or <code>openvpn</code>, a <a href="../tunnel-upstream/">tunnel</a> from <code>upstream_wireguard</code> or <code>upstream_openvpn</code></td>
 </tr>
 <tr>
 <td><code>upstream_tls</code></td>
@@ -1847,7 +1876,7 @@
 <tr>
 <td><code>upstream_udp</code></td>
 <td><code>false</code></td>
-<td>relay UDP via a SOCKS5 upstream with UDP ASSOCIATE; otherwise dropped</td>
+<td>relay UDP via a SOCKS5 upstream with UDP ASSOCIATE; otherwise dropped. A tunnel always carries UDP</td>
 </tr>
 <tr>
 <td><code>upstream6_protocol</code></td>
@@ -1944,7 +1973,8 @@
 <p>Set one with <code>sudo morzer config set &lt;name&gt;=&lt;value&gt;</code>, unset it with
 <code>sudo morzer config unset &lt;name&gt;</code>, edit <code>relays</code> with
 <code>sudo morzer config edit relays</code>. Profiles (<code>installation.profile</code>): <code>xdns</code>,
-<code>xhttp-reality</code>, or both as <code>xdns,xhttp-reality</code>; <code>xdns-xhttp-reality</code> does the
+<code>xhttp-reality</code>, <code>openvpn</code> (for an <a href="../tunnel-upstream/">OpenVPN upstream</a>),
+combined with commas, such as <code>xdns,xhttp-reality</code>; <code>xdns-xhttp-reality</code> does the
 same and goes in 0.6.0.</p>
 
 
