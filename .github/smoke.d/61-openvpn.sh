@@ -11,7 +11,7 @@
 #   and vpn has no default route around the tunnel;
 # - with the server stopped, nothing gets through, and doctor names the
 #   OpenVPN tunnel;
-# - one config set goes back to the proxy and the xdns profile CI installs.
+# - upstream_protocol=http, then the xdns profile CI installs, go back.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -59,7 +59,8 @@ sudo docker run -d --name dotdash-rig-ovpn --network dotdash-rig --cap-add NET_A
 restore() {
   sudo docker rm -f dotdash-rig-ovpnclient >/dev/null 2>&1 || true
   sudo docker start dotdash-rig-upstream >/dev/null 2>&1 || true
-  sudo morzer config set installation.profile=xdns upstream_protocol=http >/dev/null 2>&1 || true
+  sudo morzer config set upstream_protocol=http >/dev/null 2>&1 || true
+  sudo morzer config set installation.profile=xdns >/dev/null 2>&1 || true
   sudo docker rm -f dotdash-rig-ovpn >/dev/null 2>&1 || true
 }
 trap restore EXIT
@@ -106,7 +107,12 @@ reaches "${target}" || die "the proxy stopped carrying traffic once upstream_ope
 echo "${0##*/}: upstream_openvpn set, and the proxy still the upstream"
 
 sudo docker stop dotdash-rig-upstream >/dev/null
-sudo morzer config set installation.profile=xdns,openvpn upstream_protocol=openvpn >/dev/null ||
+# A setting and a parameter are set apart, the profile first: vpn starts
+# while the gate still dials the proxy, then the gate moves to it.
+sudo morzer config set installation.profile=xdns,openvpn >/dev/null ||
+  die "could not turn on the openvpn profile with the proxy still the upstream"
+reaches "${target}" || die "the proxy stopped carrying traffic once the openvpn profile was on"
+sudo morzer config set upstream_protocol=openvpn >/dev/null ||
   die "could not switch to the OpenVPN upstream (its health check failed?)"
 reaches "${target}" || die "a client does not reach the target through the OpenVPN upstream"
 sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the OpenVPN server answering: $(doctor)"
@@ -121,8 +127,9 @@ sudo docker start dotdash-rig-ovpn >/dev/null
 echo "${0##*/}: with the server stopped, nothing gets through, and doctor names the tunnel"
 
 sudo docker start dotdash-rig-upstream >/dev/null
-sudo morzer config set installation.profile=xdns upstream_protocol=http >/dev/null ||
-  die "could not switch back to the proxy"
+sudo morzer config set upstream_protocol=http >/dev/null || die "could not switch back to the proxy"
+reaches "${target}" || die "a client does not reach the target back on the proxy, with the profile still on"
+sudo morzer config set installation.profile=xdns >/dev/null || die "could not drop the openvpn profile"
 reaches "${target}" || die "a client does not reach the target back on the proxy"
 [ -z "$(service_container vpn 2>/dev/null || true)" ] || die "vpn still runs after the openvpn profile was dropped"
-echo "${0##*/}: one config set goes back to the proxy and the xdns profile"
+echo "${0##*/}: upstream_protocol=http, then the xdns profile, go back to the proxy"

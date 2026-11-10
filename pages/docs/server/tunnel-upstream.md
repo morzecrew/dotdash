@@ -4,7 +4,8 @@ Instead of a SOCKS5 or HTTP proxy, the upstream can be a WireGuard or an
 OpenVPN exit: your own router at home abroad, say, or a VPN provider. The
 client config the exit gives you goes in a secret of its own, and all traffic
 leaves through that tunnel. The proxy in `upstream` stays where it is, so
-switching between the two is one `config set` either way.
+the proxy carries traffic until the moment the tunnel takes over, and going
+back needs nothing set again.
 
 A tunnel carries UDP and, if the exit has it, IPv6, so it needs neither
 `upstream_udp` nor the [second proxy for IPv6](ipv6-upstream.md). It resolves
@@ -57,15 +58,16 @@ password
 </auth-user-pass>
 ```
 
-OpenVPN runs in a container of its own, which the `openvpn` profile adds:
+OpenVPN runs in a container of its own, which the `openvpn` profile adds.
+Turn the profile on first: the container starts while the proxy still
+carries traffic, and the second step moves the traffic to it.
 
 ```sh
 sudo morzer secret set upstream_openvpn < client.ovpn
-sudo morzer config set installation.profile=openvpn upstream_protocol=openvpn
+sudo morzer config set installation.profile=openvpn    # with others, all of them: xdns,openvpn
+sudo morzer config set upstream_protocol=openvpn
 sudo morzer task run exit-check --output
 ```
-
-With other profiles, list them all: `installation.profile=xdns,openvpn`.
 
 - Before OpenVPN starts, its container's default route is replaced by routes
   to the servers in the config, so nothing leaves around the tunnel, even
@@ -85,6 +87,6 @@ With other profiles, list them all: `installation.profile=xdns,openvpn`.
 The proxy in `upstream` is still there:
 
 ```sh
-sudo morzer config set upstream_protocol=socks                                  # or http
-sudo morzer config set installation.profile=xdns upstream_protocol=socks       # from OpenVPN: the profiles you had
+sudo morzer config set upstream_protocol=socks           # or http
+sudo morzer config unset installation.profile           # from OpenVPN, then: or the profiles you had, such as xdns
 ```

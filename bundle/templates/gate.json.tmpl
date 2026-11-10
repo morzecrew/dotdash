@@ -33,7 +33,7 @@ whose destination is fixed to Xray, and everything else is blocked.
 {{- $udp := or $tunnel (and (eq (print .Parameters.upstream_udp) "true") (eq $proto "socks")) -}}
 {{- if and $tunnel $v6 }}{{ required (printf "upstream_protocol=%s carries IPv6 itself: unset upstream6_protocol" $proto) "" }}{{ end }}
 {{- if and $tunnel (ne .Parameters.resolve "gateway") }}{{ required (printf "upstream_protocol=%s resolves no names: set resolve=gateway" $proto) "" }}{{ end }}
-{{- if and (eq $proto "openvpn") (not (has "openvpn" .Profiles)) }}{{ required "upstream_protocol=openvpn needs the openvpn profile, which runs the OpenVPN client: sudo morzer config set installation.profile=openvpn (with others: xdns,openvpn)" "" }}{{ end }}
+{{- if and (eq $proto "openvpn") (not (has "openvpn" .Profiles)) }}{{ required "upstream_protocol=openvpn needs the openvpn profile, which runs the OpenVPN client: first sudo morzer config set installation.profile=openvpn (with others: xdns,openvpn), then upstream_protocol=openvpn" "" }}{{ end }}
 {{- /* Two services cannot publish one host port; refused here, so the apply
 stops before anything is replaced. The template language has no fail: required
 fails on its empty value with the message. */ -}}

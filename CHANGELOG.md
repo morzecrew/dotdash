@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The upstream can be an OpenVPN exit: `upstream_protocol=openvpn` with the new `openvpn` profile takes the client config in the new `upstream_openvpn` secret. Its container drops its default route before OpenVPN starts, so nothing leaves around the tunnel, which `apply` and `doctor` check.
 
-- A tunnel's config has a secret of its own, so it is set while the proxy is still the upstream, and switching between a proxy and a tunnel is one `config set` either way.
+- A tunnel's config has a secret of its own, so it is set while the proxy is still the upstream, and the switch never leaves the gate without a working upstream: one `config set` for WireGuard, the profile and then the protocol for OpenVPN.
 
 ### Changed
 
