@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The command `relay-config` prints for the relay machine's last step, `relay-entry`, now includes `--output`; without it morzer ran the task and showed nothing, not the line the `relays` parameter needs.
+
 ## [0.5.0] - 2026-11-10
 
 ### Added
