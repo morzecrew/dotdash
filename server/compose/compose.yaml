@@ -69,7 +69,7 @@ services:
         bind: {create_host_path: false}
     tmpfs:
       - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
-    secrets: [upstream, upstream6, upstream_wireguard]
+    secrets: [upstream, upstream6, upstream_backup, upstream_wireguard]
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
     ports:
       - "${DOTDASH_PARAM_HTTPS_PORT:-443}:443/tcp"
@@ -227,6 +227,8 @@ secrets:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream
   upstream6:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream6
+  upstream_backup:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream_backup
   upstream_wireguard:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream_wireguard
   upstream_openvpn:

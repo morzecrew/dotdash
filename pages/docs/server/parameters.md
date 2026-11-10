@@ -7,6 +7,8 @@
 | `upstream_udp` | `false` | relay UDP via a SOCKS5 upstream with UDP ASSOCIATE; otherwise dropped. A tunnel always carries UDP |
 | `upstream6_protocol` | `none` | `socks` or `http` turns on the IPv6 proxy, the `upstream6` secret |
 | `upstream6_tls` | `false` | TLS to the IPv6 proxy |
+| `upstream_backup_protocol` | `none` | `socks` or `http` turns on the [backup proxy](backup-upstream.md), the `upstream_backup` secret |
+| `upstream_backup_tls` | `false` | TLS to the backup proxy |
 | `https_port` | `443` | host port for REALITY and the site |
 | `xdns_domain` | `t` | tunnel zone (`xdns`); a name with no dot is under the domain |
 | `xdns_bind` | `0.0.0.0` | host address for UDP/53 |
