@@ -1,0 +1,14 @@
+# The mkcp profile: mKCP too, on the server's kcp_port, for a server under its
+# mkcp profile.
+services:
+  mkcp:
+    # By the release directory: morzer runs Compose from the release root,
+    # where a relative file is not found.
+    extends: {file: "${DOTDASH_CANARY_RELEASE_DIR:?set by morzer}/compose/compose.yaml", service: reality}
+    volumes:
+      - type: bind
+        source: /etc/dotdash-canary/mkcp.json
+        target: /etc/xray/config.json
+        read_only: true
+        bind: {create_host_path: false}
+    secrets: [kcp_seed]
