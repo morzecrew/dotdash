@@ -1814,8 +1814,8 @@
 a server of yours abroad. It comes as four
 <a href="https://github.com/morzecrew/morzer">morzer</a> bundles, released together from
 one tag:</p>
-<p><img alt="The four bundles: devices, a relay, a client and a canary inside the country connect to the dotdash server abroad, which leaves only through your upstream proxy" src="assets/diagrams/overview.light.svg#only-light" />
-<img alt="The four bundles: devices, a relay, a client and a canary inside the country connect to the dotdash server abroad, which leaves only through your upstream proxy" src="assets/diagrams/overview.dark.svg#only-dark" /></p>
+<p><img alt="The four bundles: phones, the client and the canary inside the country reach the dotdash server abroad directly, or through the relay while only domestic addresses get through; the server leaves only through your upstream proxy" src="assets/diagrams/overview.light.svg#only-light" />
+<img alt="The four bundles: phones, the client and the canary inside the country reach the dotdash server abroad directly, or through the relay while only domestic addresses get through; the server leaves only through your upstream proxy" src="assets/diagrams/overview.dark.svg#only-dark" /></p>
 <table>
 <thead>
 <tr>
@@ -1833,7 +1833,7 @@ one tag:</p>
 <tr>
 <td><strong><a href="relay/">dotdash-relay</a></strong></td>
 <td>a machine inside the country</td>
-<td>carries devices on to the server while only domestic addresses get through</td>
+<td>carries phones, clients and canaries on to the server while only domestic addresses get through</td>
 </tr>
 <tr>
 <td><strong><a href="client/">dotdash-client</a></strong></td>
@@ -1847,8 +1847,8 @@ one tag:</p>
 </tr>
 </tbody>
 </table>
-<p>Start with the server: the other three connect to it, and its tasks print
-their setup.</p>
+<p>Start with the server: its tasks print the other three's setup. The client
+and the canary reach it as phones do, directly or through a relay.</p>
 <h2 id="what-every-machine-needs">What every machine needs<a class="headerlink" href="#what-every-machine-needs" title="Permanent link">&para;</a></h2>
 <p>Docker ≥ 28 with Compose ≥ 2.35, <code>sops</code>, <code>age</code>, and morzer ≥ 0.15.0. On a
 fresh Debian or Ubuntu machine, <code>bootstrap.sh</code> installs them, turns on
