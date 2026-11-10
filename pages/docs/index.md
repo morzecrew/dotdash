@@ -5,18 +5,18 @@ a server of yours abroad. It comes as four
 [morzer](https://github.com/morzecrew/morzer) bundles, released together from
 one tag:
 
-![The four bundles: devices, a relay, a client and a canary inside the country connect to the dotdash server abroad, which leaves only through your upstream proxy](assets/diagrams/overview.light.svg#only-light)
-![The four bundles: devices, a relay, a client and a canary inside the country connect to the dotdash server abroad, which leaves only through your upstream proxy](assets/diagrams/overview.dark.svg#only-dark)
+![The four bundles: phones, the client and the canary inside the country reach the dotdash server abroad directly, or through the relay while only domestic addresses get through; the server leaves only through your upstream proxy](assets/diagrams/overview.light.svg#only-light)
+![The four bundles: phones, the client and the canary inside the country reach the dotdash server abroad directly, or through the relay while only domestic addresses get through; the server leaves only through your upstream proxy](assets/diagrams/overview.dark.svg#only-dark)
 
 | Bundle | Runs on | What it does |
 | --- | --- | --- |
 | **[dotdash](server/index.md)** | a server abroad | Xray REALITY on 443 in front of a cover site; everything leaves through your upstream proxy |
-| **[dotdash-relay](relay/index.md)** | a machine inside the country | carries devices on to the server while only domestic addresses get through |
+| **[dotdash-relay](relay/index.md)** | a machine inside the country | carries phones, clients and canaries on to the server while only domestic addresses get through |
 | **[dotdash-client](client/index.md)** | a Linux machine on the client side | a proxy port, the whole machine, or a whole LAN through dotdash |
 | **[dotdash-canary](canary/index.md)** | a machine inside the country | connects as a device would, and alerts when it can't get through |
 
-Start with the server: the other three connect to it, and its tasks print
-their setup.
+Start with the server: its tasks print the other three's setup. The client
+and the canary reach it as phones do, directly or through a relay.
 
 ## What every machine needs
 

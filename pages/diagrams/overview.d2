@@ -1,17 +1,24 @@
-# The four bundles and where each runs. Rendered by render.sh.
+# The four bundles and where each runs. Every client side reaches the server
+# directly, or through a relay while only domestic addresses get through
+# (dashed). Rendered by render.sh.
 direction: down
 
 inside: Inside the censored country {
   style.stroke-dash: 4
 
-  phone: Phone or laptop\nwith a dotdash link
-
+  phone: Phone or laptop\nwith dotdash links
   devices: LAN devices\nwith no app
   client: dotdash-client\na Linux machine
+  canary: dotdash-canary\nalerts when blocked
   devices -> client: proxy port\nor gateway
 
-  relay: dotdash-relay\na domestic address
-  canary: dotdash-canary\nalerts when blocked
+  relay: dotdash-relay {
+    label: "dotdash-relay\na domestic address, for when\nonly those get through"
+  }
+
+  phone -> relay {style.stroke-dash: 4}
+  client -> relay {style.stroke-dash: 4}
+  canary -> relay {style.stroke-dash: 4}
 }
 
 abroad: Abroad {
@@ -21,10 +28,9 @@ abroad: Abroad {
 upstream: Your upstream proxy
 internet: Internet {shape: cloud}
 
-inside.phone -> abroad.server: REALITY, XHTTP,\nDNS tunnel
-inside.phone -> inside.relay: only domestic\naddresses get through {style.stroke-dash: 4}
-inside.relay -> abroad.server
+inside.phone -> abroad.server
 inside.client -> abroad.server
-inside.canary -> abroad.server: test connections {style.stroke-dash: 4}
+inside.canary -> abroad.server
+inside.relay -> abroad.server
 abroad.server -> upstream: the only way out
 upstream -> internet
