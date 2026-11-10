@@ -36,6 +36,24 @@ borrowed site, whose DNS is someone else's. */ -}}
     },
     {"tag": "probe", "listen": "127.0.0.1", "port": 10809, "protocol": "http"}
     {{- if $own }},
+    {{- /* XHTTP behind the relay's own site, which routes xhttp_path here
+    over h2c, as the server's site does: the same devices, the same VLESS
+    Encryption, on to dotdash like REALITY. On the project's network, never
+    published. */}}
+    {
+      "tag": "devices-xhttp",
+      "listen": "0.0.0.0",
+      "port": 8080,
+      "protocol": "vless",
+      "settings": {
+        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
+      },
+      "streamSettings": {
+        "network": "xhttp",
+        "xhttpSettings": {"path": {"$file": "/run/secrets/xhttp_path"}, "mode": "auto"}
+      }
+    },
     {{- /* Caddy's way to the dotdash servers, for devices' subscriptions:
     on the project's network, which nothing but Caddy shares, and never
     published. */}}

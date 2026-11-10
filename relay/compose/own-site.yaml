@@ -19,6 +19,8 @@ services:
       CERT_ISSUER: ${DOTDASH_RELAY_PARAM_CERT_ISSUER:-acme}
     # SUBSCRIPTION_UPSTREAMS, the dotdash servers' HTTPS (templates/caddy.env.tmpl).
     env_file: /etc/dotdash-relay/caddy.env
+    # The path it routes to Xray's XHTTP inbound.
+    secrets: [xhttp_path]
     # 80 and 443 inside, as uid 65532 with no capabilities.
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
     volumes:

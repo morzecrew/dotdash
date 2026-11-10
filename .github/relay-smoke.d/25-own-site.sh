@@ -13,6 +13,8 @@
 # - a subscription path goes on to the dotdash servers through the relay's
 #   tunnel, any other path stays the relay's site, and relay-entry marks the
 #   line own-site;
+# - with the XHTTP path relay-entry adds, a device gets out over XHTTP behind
+#   the relay's site, under its certificate;
 # - dropping the profile brings back the borrowed site, and devices on it.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
@@ -29,7 +31,7 @@ set_config() { sudo morzer config set "$@" >/dev/null || die "config set $* fail
 
 restore() {
   sudo morzer config unset installation.profile >/dev/null 2>&1 || true
-  sudo docker rm -f relay-rig-own >/dev/null 2>&1 || true
+  sudo docker rm -f relay-rig-own relay-rig-xhttp >/dev/null 2>&1 || true
 }
 trap restore EXIT
 
@@ -90,6 +92,31 @@ if sudo grep -q SUBSCRIPTION_UPSTREAMS /opt/dotdash-relay/current/caddy/Caddyfil
   ! grep -qF 'Error 404 (Not Found)!!1' <<<"${other}" || die "a path that is no subscription went on to the servers"
   [ "$(awk '{ print $6 }' <<<"$(entry)")" = own-site ] || die "relay-entry does not mark the line own-site: $(entry | cut -d' ' -f1,2,6)"
   echo "${0##*/}: a subscription path reaches the servers through the tunnel, and relay-entry marks the line own-site"
+fi
+
+if sudo jq -e '[.inbounds[].tag] | index("devices-xhttp")' /etc/dotdash-relay/xray.json >/dev/null; then
+  read -r _ site _ _ enc own path _ <<<"$(entry)"
+  [ "${own}" = own-site ] && [ -n "${path}" ] || die "relay-entry gives no XHTTP path under own-site: $(entry | cut -d' ' -f1,2,6)"
+  # The CA beside the config, not in it: the image refuses a file in
+  # /etc/xray that is not JSON.
+  mkdir -p /rig/relay/xhttp /rig/relay/xhttp-ca
+  sudo docker exec "$(service_container caddy)" cat /data/caddy/pki/authorities/local/root.crt |
+    tee /rig/relay/xhttp-ca/root.pem >/dev/null
+  jq -n --arg site "${site}" --arg enc "${enc}" --arg path "/${path}" --arg id "$(cat /rig/relay/device)" '
+    {inbounds: [{listen: "127.0.0.1", port: 18084, protocol: "http"}],
+     outbounds: [{protocol: "vless",
+       settings: {address: "127.0.0.1", port: 443, id: $id, encryption: $enc},
+       streamSettings: {network: "xhttp", security: "tls",
+         tlsSettings: {serverName: $site, alpn: ["h2"], fingerprint: "chrome",
+           certificates: [{usage: "verify", certificateFile: "/ca/root.pem"}]},
+         xhttpSettings: {path: $path, host: $site, mode: "auto"}}}]}' >/rig/relay/xhttp/config.json
+  chmod -R a+rX /rig/relay/xhttp /rig/relay/xhttp-ca
+  sudo docker rm -f relay-rig-xhttp >/dev/null 2>&1 || true
+  sudo docker run -d --name relay-rig-xhttp --network host -v /rig/relay/xhttp:/etc/xray:ro \
+    -v /rig/relay/xhttp-ca:/ca:ro "${xray}" >/dev/null
+  gets_out 18084 || die "a device did not get out over XHTTP behind the relay's site: $(sudo docker logs relay-rig-xhttp 2>&1 | tail -2)"
+  sudo docker rm -f relay-rig-xhttp >/dev/null
+  echo "${0##*/}: a device gets out over XHTTP behind the relay's site, with the path relay-entry gives"
 fi
 
 sudo morzer config unset installation.profile >/dev/null || die "could not drop the own-site profile"

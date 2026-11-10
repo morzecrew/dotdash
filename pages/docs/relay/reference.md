@@ -22,7 +22,8 @@ Set one with `sudo morzer config set <name>=<value>`.
 domain (`--domain` at `init`, or `installation.domains`), and REALITY hands it
 every connection without the relay's keys. It publishes port 80 too, for the
 certificate. The site also serves devices their subscriptions, fetched from
-the servers through the relay's tunnel. See
+the servers through the relay's tunnel, and XHTTP on the secret path
+`xhttp_path`, which `init` generates. See
 [Set up a relay](install.md#1-pick-the-site).
 
 ## Secrets

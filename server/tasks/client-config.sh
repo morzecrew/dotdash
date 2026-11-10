@@ -27,12 +27,14 @@ path=$(cat /run/secrets/xhttp_path)
 sid=$(cat /run/secrets/reality_short_id)
 pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # The dotdash-relay machines in front of this server (the relays parameter),
-# one "<host> <site> <public key> <short id> <encryption> [own-site]" per
-# line; blank lines, "#" comments and shorter lines are not relays. own-site:
-# the site is the relay's own, which fetches subscriptions from here.
-relays=$(printf '%s\n' "${RELAYS:-}" | while read -r h s k i e o _; do
+# one "<host> <site> <public key> <short id> <encryption> [own-site [<xhttp
+# path>]]" per line; blank lines, "#" comments and shorter lines are not
+# relays. own-site: the site is the relay's own, which fetches subscriptions
+# from here and, given its path, routes XHTTP to the relay's Xray.
+relays=$(printf '%s\n' "${RELAYS:-}" | while read -r h s k i e o p _; do
   case $h in '' | '#'*) continue ;; esac
-  if [ -n "${e:-}" ]; then echo "$h $s $k $i $e ${o:-}"; fi
+  if [ "${o:-}" != own-site ]; then o='' p=''; fi
+  if [ -n "${e:-}" ]; then echo "$h $s $k $i $e ${o:--} ${p:--}"; fi
 done)
 # The own-site relays' domains, where a device inside the country fetches its
 # subscription.
@@ -70,12 +72,18 @@ EOF
 
 # A relay takes REALITY on 443 under its neighbour site's name, with keys of its
 # own, and carries the device on to this server as its own client.
-relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]"
-  printf '%s\n' "$relays" | while read -r h s k i e _; do
+relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]", and "[relay <host> xhttp]" through an own-site one
+  printf '%s\n' "$relays" | while read -r h s k i e _ p; do
     [ -n "$h" ] || continue
     cat <<EOF
 REALITY through the relay $h (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
 vless://$1@$h:443?encryption=$e&flow=xtls-rprx-vision&security=reality&sni=$s&fp=chrome&pbk=$k&sid=$i&support-x25519mlkem768=true&type=tcp#$2%20%5Brelay%20$h%5D
+
+EOF
+    [ "$p" != - ] || continue
+    cat <<EOF
+XHTTP over TLS through the relay $h, behind its own site (v2rayN, v2rayNG, Happ):
+vless://$1@$h:443?encryption=$e&security=tls&sni=$s&host=$s&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=auto#$2%20%5Brelay%20$h%20xhttp%5D
 
 EOF
   done
@@ -109,7 +117,7 @@ EOF
 
 relay_outbounds() { # <id>
   n=0
-  printf '%s\n' "$relays" | while read -r h s k i e _; do
+  printf '%s\n' "$relays" | while read -r h s k i e _ p; do
     [ -n "$h" ] || continue
     n=$((n + 1))
     cat <<EOF
@@ -117,6 +125,14 @@ relay_outbounds() { # <id>
      "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e", "flow": "xtls-rprx-vision"},
      "streamSettings": {"network": "raw", "security": "reality",
        "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "$k", "shortId": "$i"}}},
+EOF
+    [ "$p" != - ] || continue
+    cat <<EOF
+    {"tag": "dotdash-relay-$n-xhttp", "protocol": "vless",
+     "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e"},
+     "streamSettings": {"network": "xhttp", "security": "tls",
+       "tlsSettings": {"serverName": "$s", "alpn": ["h2"], "fingerprint": "chrome"},
+       "xhttpSettings": {"path": "/$p", "host": "$s", "mode": "auto"}}},
 EOF
   done
 }

@@ -54,6 +54,23 @@ done <<<"${links}"
 [ "$(outbound_tags "${text}" | sort -u | tr '\n' ' ')" = "dotdash-relay-1 dotdash-relay-2 " ] \
   || die "the config lacks an outbound per relay"
 
+# An own-site relay that gives its XHTTP path: an XHTTP link through it too,
+# over TLS under its site with its path and encryption, and an outbound.
+if sudo grep -q 'dotdash-relay-\$n-xhttp' /opt/dotdash/current/tasks/client-config.sh; then
+  printf '%s\n' "198.51.100.8 relay-c.test pbkC 0123456789abcdef mlkem.c own-site 00112233445566778899aabbccddeeff" |
+    sudo morzer config set --set-file relays=- >/dev/null
+  text=$(out)
+  xlinks=$(grep '^vless://.*%5Brelay%20198.51.100.8%20xhttp%5D' <<<"${text}" || true)
+  [ "$(grep -c . <<<"${xlinks}")" = "${devices}" ] || die "expected an XHTTP link through the own-site relay for each device"
+  l=$(head -1 <<<"${xlinks}")
+  got="$(param "$l" security) $(param "$l" type) $(param "$l" sni) $(param "$l" host) $(param "$l" path) $(param "$l" encryption)"
+  [ "${got}" = "tls xhttp relay-c.test relay-c.test %2F00112233445566778899aabbccddeeff mlkem.c" ] ||
+    die "the XHTTP link through the relay is not TLS under its site with its path and encryption: ${got}"
+  [ "$(outbound_tags "${text}" | sort -u | tr '\n' ' ')" = "dotdash-relay-1 dotdash-relay-1-xhttp " ] ||
+    die "the config lacks an XHTTP outbound through the own-site relay"
+  echo "46-relays.sh: an own-site relay with its path adds an XHTTP link and outbound through it"
+fi
+
 sudo morzer config unset relays >/dev/null
 [ -z "$(relay_links "$(out)")" ] || die "relay links remain once relays is unset"
 echo "46-relays.sh: a link and an outbound per relay and device, none with relays unset"
