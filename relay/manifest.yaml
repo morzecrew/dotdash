@@ -19,6 +19,10 @@ runtimes:
   compose:
     files:
       - compose/compose.yaml
+    profiles:
+      # A site of the relay's own, under its own domain, as REALITY's target,
+      # instead of a borrowed one (site): see compose/own-site.yaml.
+      own-site: [compose/own-site.yaml]
     options:
       project: dotdash-relay
 
@@ -48,16 +52,31 @@ requirements:
   memory: 256MiB
   disk: 512MiB
   # 443 alone: on networks that let only listed addresses through, other
-  # ports are cut even to those.
+  # ports are cut even to those. The own-site profile also publishes 80, for
+  # its certificate, which these fields cannot see.
   ports: ["443"]
 
 # `morzer task run relay-config -- <client>` on the dotdash server prints the
 # init command and the secrets for this machine.
 parameters:
+  # Required unless the own-site profile, whose site is the relay's own.
   site:
     type: string
-    description: "A site next to this machine, in its own network, that speaks TLS 1.3 and HTTP/2: devices send its name, and anyone probing port 443 gets its real handshake"
+    default: none
+    description: "Without the own-site profile, a site next to this machine, in its own network, that speaks TLS 1.3 and HTTP/2: devices send its name, and anyone probing port 443 gets its real handshake. With it, unused: the relay's own domain is the site"
     services: [xray]
+  # No services: Caddy runs under the own-site profile alone, and morzer's
+  # restart of a service behind an inactive profile fails (morzer#324). A
+  # change takes a full apply.
+  site_dir:
+    type: string
+    default: /srv/dotdash-relay
+    description: "With the own-site profile, the host directory of your own site, served in place of the bundled page; files must be readable by uid 65532"
+  cert_issuer:
+    type: enum
+    values: [acme, internal]
+    default: acme
+    description: "With the own-site profile, where its certificate comes from: acme is Let's Encrypt, over port 80; internal is Caddy's own CA, for a machine the internet cannot reach"
   dotdash_servers:
     type: string
     description: "The dotdash servers sharing one set of keys (dotdash's servers), comma-separated domains, each sent as its TLS server name; with several, the relay uses whichever answers fastest"
@@ -95,6 +114,8 @@ images:
   # The relay-entry task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
   xray: ghcr.io/morzecrew/xray:26.10.31@sha256:996f30a2cb6f65e1121b599afcebb1d3cb669f0ba3f22fe16c2ac9b7c6693527
+  # The own-site profile's site; dotdash's own.
+  caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
 
 tasks:
   relay-entry:
@@ -110,6 +131,8 @@ health:
     # way on to dotdash works. Whether devices can reach this machine is not
     # something it can see: only a device on such a network can (a canary).
     - {name: through-dotdash, type: command, command: ["hooks/healthy"], timeout: 2m}
+    # With the own-site profile, Caddy, the site probes meet, is healthy.
+    - {name: cover-site, type: command, command: ["hooks/cover-site"], timeout: 10s}
 
 retention:
   releases: 3

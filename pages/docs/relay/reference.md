@@ -6,13 +6,22 @@ Set one with `sudo morzer config set <name>=<value>`.
 
 | Name | Default | |
 | --- | --- | --- |
-| `site` | none, given at `init` | a site next to the relay, in its own network, on TLS 1.3 and HTTP/2: devices send its name, and probes get its handshake |
+| `site` | `none` | without the `own-site` profile, a site next to the relay, in its own network, on TLS 1.3 and HTTP/2: devices send its name, and probes get its handshake |
+| `site_dir` | `/srv/dotdash-relay` | with `own-site`, your own pages, served in place of the bundled one; readable by uid 65532 |
+| `cert_issuer` | `acme` | with `own-site`, `acme` (Let's Encrypt, over port 80) or `internal` (Caddy's own CA, for a machine the internet can't reach) |
 | `dotdash_servers` | none, given at `init` | the dotdash servers sharing one set of keys, comma-separated domains; the relay uses whichever answers fastest |
 | `dotdash_port` | `443` | the servers' `https_port` |
 | `dotdash_public_key` | none, given at `init` | the servers' REALITY public key, the `pbk` of their links |
 | `dotdash_address` | `none` | where to connect when `dotdash_servers` names one server, such as its IP; `none` reaches each server by its name |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what the health check fetches through dotdash; any 2xx is healthy |
 | `dotdash_server` | `none` | deprecated: the one server, read only while `dotdash_servers` is unset |
+
+## Profiles
+
+`installation.profile=own-site`: the relay serves a site of its own under its
+domain (`--domain` at `init`, or `installation.domains`), and REALITY hands it
+every connection without the relay's keys. It publishes port 80 too, for the
+certificate. See [Set up a relay](install.md#1-pick-the-site).
 
 ## Secrets
 

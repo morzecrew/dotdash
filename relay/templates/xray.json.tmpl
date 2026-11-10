@@ -1,4 +1,10 @@
-{{- $site := required "set site" .Parameters.site -}}
+{{- /* REALITY's target: under the own-site profile the relay's own site,
+Caddy, under the relay's own domain, whose DNS is this machine; otherwise the
+borrowed site, whose DNS is someone else's. */ -}}
+{{- $own := has "own-site" .Profiles -}}
+{{- $site := .Parameters.site -}}
+{{- if $own }}{{ $site = required "the own-site profile needs a domain: sudo morzer config set installation.domains=relay.example.ru" .Installation.Domain }}
+{{- else if eq $site "none" }}{{ $site = required "set site, a site next to the relay, or use the own-site profile with a domain of the relay's own" "" }}{{ end -}}
 {{- $list := .Parameters.dotdash_servers }}{{ if not $list }}{{ $list = .Parameters.dotdash_server }}{{ end -}}
 {{- if eq $list "none" }}{{ $list = "" }}{{ end -}}
 {{- $servers := split "," (required "set dotdash_servers" $list) -}}
@@ -21,7 +27,7 @@
         "network": "raw",
         "security": "reality",
         "realitySettings": {
-          "target": "{{ $site }}:443",
+          "target": "{{ if $own }}caddy{{ else }}{{ $site }}{{ end }}:443",
           "serverNames": ["{{ $site }}"],
           "privateKey": {"$file": "/run/secrets/reality_key"},
           "shortIds": [{"$file": "/run/secrets/reality_short_id"}]

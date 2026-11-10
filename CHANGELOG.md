@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A relay can serve a site of its own: with a domain pointing at it and the new `own-site` profile, devices send the relay's own name, and a prober meets a real site with a certificate for that name, so the name and the address agree as for any site. `relay-config` offers it first; a borrowed site (`site`) still works.
+
+### Added
+
 - The upstream can be a WireGuard exit: `upstream_protocol=wireguard` takes the wg-quick client config in the new `upstream_wireguard` secret, such as a home router's or a VPN provider's, and the gate runs Xray's own WireGuard with no extra privilege. It carries UDP, and IPv6 when the exit has it.
 
 - The upstream can be an OpenVPN exit: `upstream_protocol=openvpn` with the new `openvpn` profile takes the client config in the new `upstream_openvpn` secret. Its container drops its default route before OpenVPN starts, so nothing leaves around the tunnel, which `apply` and `doctor` check.
