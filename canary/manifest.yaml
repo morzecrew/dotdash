@@ -25,6 +25,8 @@ runtimes:
       # XHTTP with REALITY instead, on its own port: the server's xhttp-reality
       # profiles.
       xhttp-reality: [compose/xhttp-reality.yaml]
+      # mKCP instead, on its own UDP port: the server's mkcp profile.
+      mkcp: [compose/mkcp.yaml]
     options:
       project: dotdash-canary
 
@@ -37,6 +39,9 @@ configuration:
     mode: "0644"
   - template: templates/xhttp-reality.json.tmpl
     target: /etc/dotdash-canary/xhttp-reality.json
+    mode: "0644"
+  - template: templates/mkcp.json.tmpl
+    target: /etc/dotdash-canary/mkcp.json
     mode: "0644"
 
 secrets:
@@ -66,11 +71,11 @@ parameters:
   server:
     type: string
     description: The dotdash server's domain, sent as the TLS server name
-    services: [reality, xhttp, xhttp-reality]
+    services: [reality, xhttp, xhttp-reality, mkcp]
   address:
     type: string
     description: Where to connect, normally the same domain; an IP or a CDN's name also works
-    services: [reality, xhttp, xhttp-reality]
+    services: [reality, xhttp, xhttp-reality, mkcp]
   port:
     type: port
     default: 443
@@ -81,6 +86,17 @@ parameters:
     default: 8443
     description: The dotdash server's xhttp_reality_port (the xhttp-reality profile)
     services: [xhttp-reality]
+  kcp_port:
+    type: port
+    default: 8447
+    description: The dotdash server's kcp_port (the mkcp profile)
+    services: [mkcp]
+  kcp_header:
+    type: enum
+    values: [none, dtls, srtp, utp, wechat, wireguard]
+    default: srtp
+    description: The dotdash server's kcp_header (the mkcp profile)
+    services: [mkcp]
   reality_public_key:
     type: string
     description: The REALITY public key, the pbk of a dotdash REALITY link
@@ -89,7 +105,7 @@ parameters:
     type: string
     default: https://www.gstatic.com/generate_204
     description: What each check fetches through dotdash; any 2xx is healthy
-    services: [reality, xhttp, xhttp-reality]
+    services: [reality, xhttp, xhttp-reality, mkcp]
 
 images:
   # The measure task's shell; Xray's image has none.

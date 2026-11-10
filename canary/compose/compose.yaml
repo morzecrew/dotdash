@@ -71,3 +71,4 @@ secrets:
   vless_encryption: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/vless_encryption"}
   reality_short_id: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/reality_short_id"}
   xhttp_path: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/xhttp_path"}
+  kcp_seed: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/kcp_seed"}

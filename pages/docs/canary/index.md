@@ -35,6 +35,7 @@ By default the canary checks REALITY on 443. Profiles add a transport:
 | --- | --- |
 | `--profile xhttp` | XHTTP, through the server's cover site |
 | `--profile xhttp-reality` | [XHTTP with REALITY](../server/xhttp-reality.md), on its own port |
+| `--profile mkcp` | [mKCP](../server/mkcp.md), on its own UDP port |
 
 Each check fetches `probe_url` through dotdash, in up to three tries.
 
@@ -70,6 +71,8 @@ relay's address no longer gets through for devices.
 | `address` | none, given at `init` | where to connect: normally the same domain; an IP, a CDN's name, or a relay's address |
 | `port` | `443` | the server's `https_port` |
 | `xhttp_reality_port` | `8443` | the server's `xhttp_reality_port` |
+| `kcp_port` | `8447` | the server's `kcp_port` |
+| `kcp_header` | `srtp` | the server's `kcp_header` |
 | `reality_public_key` | none, given at `init` | the REALITY public key, the `pbk` of a link |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what each check fetches through dotdash; any 2xx is healthy |
 
@@ -78,6 +81,7 @@ relay's address no longer gets through for devices.
 | `vless_id` | the canary's id, its line in the server's `vless_clients` |
 | `vless_encryption` | the `encryption=` value of a link |
 | `reality_short_id` | the `sid=` value of a REALITY link |
+| `kcp_seed` | the `seed=` value of an mKCP link, for `--profile mkcp` |
 | `xhttp_path` | the `path=` value of an XHTTP link, without the leading `%2F` |
 
 | Task | |
