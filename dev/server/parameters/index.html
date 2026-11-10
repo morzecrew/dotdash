@@ -2054,11 +2054,16 @@
 <td>a comment</td>
 <td>one <code>&lt;host&gt; &lt;site&gt; &lt;public key&gt; &lt;short id&gt; &lt;encryption&gt;</code> line per <a href="../../relay/install/">relay</a>, as its <code>relay-entry</code> prints it</td>
 </tr>
+<tr>
+<td><code>pools</code></td>
+<td>a comment</td>
+<td>one <code>&lt;pool&gt; &lt;member&gt;...</code> line per <a href="../devices/#pools">pool</a>, the members device names, relay hosts and CDN hosts</td>
+</tr>
 </tbody>
 </table>
 <p>Set one with <code>sudo morzer config set &lt;name&gt;=&lt;value&gt;</code>, unset it with
-<code>sudo morzer config unset &lt;name&gt;</code>, edit <code>relays</code> with
-<code>sudo morzer config edit relays</code>. Profiles (<code>installation.profile</code>): <code>xdns</code>,
+<code>sudo morzer config unset &lt;name&gt;</code>, edit <code>relays</code> or <code>pools</code> with
+<code>sudo morzer config edit &lt;name&gt;</code>. Profiles (<code>installation.profile</code>): <code>xdns</code>,
 <code>xhttp-reality</code>, <code>openvpn</code> (for an <a href="../tunnel-upstream/">OpenVPN upstream</a>),
 combined with commas, such as <code>xdns,xhttp-reality</code>; <code>xdns-xhttp-reality</code> does the
 same and goes in 0.6.0.</p>

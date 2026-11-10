@@ -2519,6 +2519,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>Pools, so a leaked device no longer gives away every relay and CDN host: the new <code>pools</code> parameter takes one <code>&lt;pool&gt; &lt;member&gt;...</code> line per pool, the members device names, relay hosts and CDN hosts. <code>client-config</code> and the subscriptions give a device in a pool its pools' relays and CDN hosts and those in no pool; a device in none still gets them all, and a member that names nothing is reported.</p>
+</li>
+<li>
 <p>XHTTP through a relay with a site of its own: the site routes a secret path, the new <code>xhttp_path</code> secret, to the relay's Xray, <code>relay-entry</code> adds the path to the relay's line, and <code>client-config</code> and the subscriptions add an <code>[relay … xhttp]</code> link and outbound. The relay needs morzer 0.15.1.</p>
 </li>
 <li>

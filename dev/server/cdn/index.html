@@ -2142,7 +2142,8 @@ keep a CDN as one way among several, and expect the account to be closed.</p>
 <ul>
 <li><strong>Spread over CDNs and accounts.</strong> <code>cdn_hosts</code> takes several names, and the
   Xray config passes over one that stops answering. Don't put every device
-  behind one account.</li>
+  behind one account: <a href="../devices/#pools">pools</a> give each group of devices
+  its own CDN hosts.</li>
 <li><strong>Serve a real site at the origin</strong> (<a href="../cover-site/">cover site</a>). It is
   what the CDN fetches and what a provider's reviewer sees. Operators report
   that accounts with a live, visited site behind them last longer than
