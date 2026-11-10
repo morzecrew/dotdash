@@ -44,6 +44,7 @@ health() { # the subscription service's health
   sudo docker inspect -f '{{.State.Health.Status}}' "$(service_container subscription)" 2>/dev/null || true
 }
 restore() {
+  sudo morzer config unset relays >/dev/null 2>&1 || true
   [ -z "${before:-}" ] || printf '%s\n' "${before}" | sudo morzer secret set vless_clients >/dev/null 2>&1 || true
   sudo morzer config unset subscription >/dev/null 2>&1 || true
 }
@@ -63,6 +64,26 @@ served=$(fetch "${url}" | base64 -d 2>/dev/null || true)
 [ -n "${served}" ] || die "the subscription URL serves nothing"
 [ "${served}" = "$(links_of)" ] || die "the subscription does not serve the links client-config prints"
 echo "${0##*/}: client-config prints a device's URL alone, and it serves exactly its links"
+
+if sudo grep -q 'Cache-Control no-store' /opt/dotdash/current/caddy/Caddyfile; then
+  grep -qix 'cache-control: no-store' <<<"$(headers "${url}")" || die "a subscription is served without Cache-Control: no-store"
+  echo "${0##*/}: a subscription is served no-store, so nothing between keeps a copy"
+fi
+
+# An own-site relay fetches the subscription for devices inside the country:
+# client-config adds that URL, the same token, under the server's; a relay on
+# a borrowed site, without the mark, gets none.
+if sudo grep -q sub_through /opt/dotdash/current/tasks/client-config.sh; then
+  printf '%s\n%s\n' "relay-a.test site-a.test pbkA 0011223344556677 mlkem.a" \
+    "198.51.100.7 relay-b.test pbkB 8899aabbccddeeff mlkem.b own-site" | sudo morzer config set --set-file relays=- >/dev/null
+  text=$(sudo morzer task run client-config --output)
+  [ "$(grep -m1 '^https://' <<<"${text}")" = "${url}" ] || die "the server's URL is no longer the first a device gets"
+  grep -qx "through the relay relay-b.test: https://relay-b.test/${url##*/}" <<<"${text}" ||
+    die "client-config prints no URL through the own-site relay"
+  ! grep -q 'site-a.test' <<<"${text}" || die "a relay on a borrowed site got a subscription URL"
+  sudo morzer config unset relays >/dev/null
+  echo "${0##*/}: an own-site relay adds the same subscription through it; a borrowed site, none"
+fi
 
 guess="https://${domain}/$(random | cut -c1-32)"
 [ "$(status "${guess}")" = 404 ] || die "a guessed subscription URL is not a 404"

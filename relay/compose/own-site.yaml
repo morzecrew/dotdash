@@ -17,6 +17,8 @@ services:
     environment:
       DOMAIN: ${DOTDASH_RELAY_DOMAIN:?the own-site profile needs a domain, set with installation.domains}
       CERT_ISSUER: ${DOTDASH_RELAY_PARAM_CERT_ISSUER:-acme}
+    # SUBSCRIPTION_UPSTREAMS, the dotdash servers' HTTPS (templates/caddy.env.tmpl).
+    env_file: /etc/dotdash-relay/caddy.env
     # 80 and 443 inside, as uid 65532 with no capabilities.
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
     volumes:
@@ -44,10 +46,12 @@ services:
       retries: 3
       start_period: 5s
 
-  # The line it prints names the relay's own domain as the site.
+  # The line it prints names the relay's own domain as the site, and marks
+  # the relay as serving it, subscriptions included.
   relay-entry:
     environment:
       SITE: ${DOTDASH_RELAY_DOMAIN:?the own-site profile needs a domain}
+      OWN_SITE: "true"
 
 volumes:
   caddy_data: {}

@@ -48,6 +48,28 @@ http://127.0.0.1:8081 {
 		import headers
 	}
 
+	# A device's subscription, 32 hex characters as the server names it,
+	# fetched from the dotdash servers through this relay's own tunnel: Xray's
+	# subscriptions inbound, which dotdash carries as it carries devices. A
+	# device that reaches only this machine still refreshes its links, and
+	# nothing between it and the server reads them. The first server that
+	# answers serves it; the servers share their keys, so any has the file.
+	# The device's address stays here.
+	@subscription path_regexp ^/[0-9a-f]{32}$
+	handle @subscription {
+		reverse_proxy {$SUBSCRIPTION_UPSTREAMS} {
+			lb_policy first
+			lb_try_duration 15s
+			fail_duration 30s
+			header_up -X-Forwarded-For
+			header_up -X-Forwarded-Host
+			header_up -X-Forwarded-Proto
+			transport http {
+				network_proxy url http://xray:10810
+			}
+		}
+	}
+
 	# The operator's site (site_dir) wherever it has the file; otherwise the
 	# bundled page, titled with the domain so no two machines serve one body.
 	@own file {

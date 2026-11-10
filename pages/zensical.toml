@@ -10,6 +10,7 @@ repo_name = "dotdash"
 
 nav = [
     { "Home" = "index.md" },
+    { "Before a shutdown" = "shutdown.md" },
     { "Server" = [
         "server/index.md",
         "server/install.md",

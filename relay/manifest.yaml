@@ -30,6 +30,10 @@ configuration:
   - template: templates/xray.json.tmpl
     target: /etc/dotdash-relay/xray.json
     mode: "0644"
+  # The servers the own-site profile's Caddy fetches subscriptions from.
+  - template: templates/caddy.env.tmpl
+    target: /etc/dotdash-relay/caddy.env
+    mode: "0644"
 
 secrets:
   source: /etc/dotdash-relay/secrets.sops.yaml

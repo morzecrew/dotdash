@@ -37,8 +37,10 @@ sudo morzer config set installation.profile=own-site
 sudo morzer task run relay-entry --output -- 198.51.100.7
 ```
 
-The site in the line changes, so replace the relay's line in the server's
-`relays`, and send devices their links again (subscriptions pick them up).
+The site in the line changes and the line gains `own-site`, so replace the
+relay's line in the server's `relays`, and send devices their links again
+(subscriptions pick them up), with the subscription URL through the relay for
+those inside the country.
 `sudo morzer config unset installation.profile` goes back to the borrowed
 site.
 
@@ -51,6 +53,10 @@ the keys:
 ```sh
 sudo morzer config set dotdash_servers=example.com,b.example.com
 ```
+
+Under `own-site`, `sudo morzer apply` afterwards: the site fetches
+subscriptions from these servers, and only an apply restarts it with the new
+list.
 
 ## Watching it
 

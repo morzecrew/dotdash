@@ -27,12 +27,16 @@ path=$(cat /run/secrets/xhttp_path)
 sid=$(cat /run/secrets/reality_short_id)
 pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # The dotdash-relay machines in front of this server (the relays parameter),
-# one "<host> <site> <public key> <short id> <encryption>" per line; blank
-# lines, "#" comments and shorter lines are not relays.
-relays=$(printf '%s\n' "${RELAYS:-}" | while read -r h s k i e _; do
+# one "<host> <site> <public key> <short id> <encryption> [own-site]" per
+# line; blank lines, "#" comments and shorter lines are not relays. own-site:
+# the site is the relay's own, which fetches subscriptions from here.
+relays=$(printf '%s\n' "${RELAYS:-}" | while read -r h s k i e o _; do
   case $h in '' | '#'*) continue ;; esac
-  if [ -n "${e:-}" ]; then echo "$h $s $k $i $e"; fi
+  if [ -n "${e:-}" ]; then echo "$h $s $k $i $e ${o:-}"; fi
 done)
+# The own-site relays' domains, where a device inside the country fetches its
+# subscription.
+sub_relays=$(printf '%s\n' "$relays" | awk '$6 == "own-site" { print $2 }')
 
 # The domestic CDNs in front of this server (the cdn_hosts parameter), each
 # fronting https://${DOMAIN}.
@@ -67,7 +71,7 @@ EOF
 # A relay takes REALITY on 443 under its neighbour site's name, with keys of its
 # own, and carries the device on to this server as its own client.
 relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]"
-  printf '%s\n' "$relays" | while read -r h s k i e; do
+  printf '%s\n' "$relays" | while read -r h s k i e _; do
     [ -n "$h" ] || continue
     cat <<EOF
 REALITY through the relay $h (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
@@ -105,7 +109,7 @@ EOF
 
 relay_outbounds() { # <id>
   n=0
-  printf '%s\n' "$relays" | while read -r h s k i e; do
+  printf '%s\n' "$relays" | while read -r h s k i e _; do
     [ -n "$h" ] || continue
     n=$((n + 1))
     cat <<EOF
@@ -153,19 +157,32 @@ xdns_outbound() { # <id>: the DNS tunnel, for the config's last resort
 EOF
 }
 
+sub_through() { # <token>: the same subscription through each own-site relay
+  for r in $sub_relays; do
+    printf 'through the relay %s: https://%s/%s\n' "$r" "$r" "$1"
+  done
+}
+
 client() { # <id> <label>
   echo "== $2 =="
   if [ "${SUBSCRIPTION:-false}" = true ]; then
     # As subscription.sh names the device's file.
     token=$(printf '%s:%s' "$(cat /run/secrets/subscription_key)" "$1" | sha256sum | cut -c1-32)
     if [ "${HTTPS_PORT}" = 443 ]; then at=; else at=":${HTTPS_PORT}"; fi
-    $full || { printf 'https://%s%s/%s\n\n' "${DOMAIN}" "$at" "$token"; return 0; }
+    if ! $full; then
+      printf 'https://%s%s/%s\n' "${DOMAIN}" "$at" "$token"
+      sub_through "$token"
+      echo
+      return 0
+    fi
     cat <<EOF
 Subscription, for the app to fetch these links from and refresh them after a
 revocation or a key rotation (as secret as the links):
 https://${DOMAIN}${at}/${token}
-
 EOF
+    sub_through "$token"
+    [ -z "$sub_relays" ] || echo "An app takes one: a device inside the country gets one through a relay."
+    echo
   fi
   for s in $servers; do
     if [ "$count" -gt 1 ]; then label="$2-$s"; else label=$2; fi

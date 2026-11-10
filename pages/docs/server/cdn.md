@@ -55,6 +55,13 @@ in v2rayN and v2rayNG.
 The CDN ends one TLS connection and opens another, so it sees the requests'
 paths and headers. VLESS Encryption keeps what they carry from it.
 
+Don't give devices their subscription URL through the CDN
+(`https://cdn.example.ru/<token>`), although it would answer. The CDN would
+read it in the clear: every link, the device's keys, every relay and CDN name.
+One request from the state to the provider would then list every way in. A
+[relay with its own site](../relay/install.md#6-devices) serves the
+subscription inside the country with nothing in between reading it.
+
 ## A foreign CDN, against IP blocking
 
 The XHTTP link works through a CDN that proxies HTTP/2 to
