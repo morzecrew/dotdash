@@ -2,6 +2,7 @@
 Caddy, under the relay's own domain, whose DNS is this machine; otherwise the
 borrowed site, whose DNS is someone else's. */ -}}
 {{- $own := has "own-site" .Profiles -}}
+{{- $kcp := has "mkcp" .Profiles -}}
 {{- $site := .Parameters.site -}}
 {{- if $own }}{{ $site = required "the own-site profile needs a domain: sudo morzer config set installation.domains=relay.example.ru" .Installation.Domain }}
 {{- else if eq $site "none" }}{{ $site = required "set site, a site next to the relay, or use the own-site profile with a domain of the relay's own" "" }}{{ end -}}
@@ -35,6 +36,30 @@ borrowed site, whose DNS is someone else's. */ -}}
       }
     },
     {"tag": "probe", "listen": "127.0.0.1", "port": 10809, "protocol": "http"}
+    {{- if $kcp }},
+    {{- /* mKCP on UDP, published as kcp_port: the same devices, the same VLESS
+    Encryption, on to dotdash like REALITY. AES-128-GCM under kcp_seed, then
+    kcp_header, in that order, as devices' links name them. */}}
+    {
+      "tag": "devices-kcp",
+      "listen": "0.0.0.0",
+      "port": 8447,
+      "protocol": "vless",
+      "settings": {
+        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
+      },
+      "streamSettings": {
+        "network": "kcp",
+        "finalmask": {"udp": [
+          {"type": "mkcp-legacy", "settings": {"value": {"$file": "/run/secrets/kcp_seed"}}}
+          {{- if ne .Parameters.kcp_header "none" }},
+          {"type": "mkcp-legacy", "settings": {"header": "{{ .Parameters.kcp_header }}"}}
+          {{- end }}
+        ]}
+      }
+    }
+    {{- end }}
     {{- if $own }},
     {{- /* XHTTP behind the relay's own site, which routes xhttp_path here
     over h2c, as the server's site does: the same devices, the same VLESS
