@@ -11,10 +11,12 @@ whose address does get through, and carries devices on to the server.
 
 ## How it works
 
-- Devices connect to the relay on 443 with REALITY, under the name of a site
-  next to it: its `site` parameter, a real site in the relay's own network.
-  To the network, the connection looks like one to that site.
-- Anyone probing the relay's 443 gets that site's real TLS handshake.
+- Devices connect to the relay on 443 with REALITY, under the name of a
+  site: best, the relay's own, a domain pointing at it and a site it serves
+  (the `own-site` profile); or a real site next to it, borrowed (its `site`
+  parameter). To the network, the connection looks like one to that site.
+- Anyone probing the relay's 443 without its keys meets that site: its own,
+  with a certificate for its name, or the borrowed site's real handshake.
 - The relay has keys of its own, and its own copy of the devices allowed in.
   A device uses the same id as on the server, with a separate link per relay,
   `phone [relay <host>]`.

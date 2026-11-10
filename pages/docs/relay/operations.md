@@ -26,6 +26,22 @@ END
 | The relay's own keys (`secret rotate` on the relay) | Run `relay-entry` again, replace the relay's line in the server's `relays`, and send devices their links again (subscriptions pick them up). |
 | The relay's address | The same: `relay-entry -- <new address>`, then replace the line. |
 
+## A site of its own, later
+
+A relay set up with a borrowed site moves to one of its own in place. Point a
+domain at it and open port 80, then:
+
+```sh
+sudo morzer config set installation.domains=relay.example.ru
+sudo morzer config set installation.profile=own-site
+sudo morzer task run relay-entry --output -- 198.51.100.7
+```
+
+The site in the line changes, so replace the relay's line in the server's
+`relays`, and send devices their links again (subscriptions pick them up).
+`sudo morzer config unset installation.profile` goes back to the borrowed
+site.
+
 ## Servers
 
 The relay goes to every server in `dotdash_servers` and uses whichever

@@ -1,0 +1,66 @@
+# The relay's own site (the own-site profile). Native expansion only: {$DOMAIN}
+# from the environment when the Caddyfile is adapted.
+#
+# Port 443 here is reached only through Xray's REALITY inbound, which hands it
+# every connection that does not carry the relay's key, so a prober meets this
+# site, under a name whose DNS is this machine's. Port 80 is published
+# directly, for the ACME HTTP-01 challenge and the redirect to HTTPS.
+{
+	admin off
+	# Errors only, and never the request they concern: its headers and
+	# address identify whoever sent it. No access log either.
+	log default {
+		output stderr
+		format filter {
+			wrap json
+			fields {
+				request delete
+			}
+		}
+		level ERROR
+	}
+	# acme: Let's Encrypt. internal: Caddy's own CA, for a machine the
+	# internet cannot reach, such as a CI rig (the cert_issuer parameter).
+	cert_issuer {$CERT_ISSUER}
+	servers {
+		protocols h1 h2
+	}
+}
+
+# The container healthcheck's: loopback, plain HTTP, never published.
+http://127.0.0.1:8081 {
+	bind 127.0.0.1
+	respond /healthz 200
+}
+
+(headers) {
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+}
+
+{$DOMAIN} {
+	import headers
+	handle_errors {
+		import headers
+	}
+
+	# The operator's site (site_dir) wherever it has the file; otherwise the
+	# bundled page, titled with the domain so no two machines serve one body.
+	@own file {
+		root /srv/own
+		try_files {path} {path}/index.html
+	}
+	handle @own {
+		root * /srv/own
+		file_server
+	}
+	handle {
+		root * /srv/default
+		templates
+		file_server
+	}
+}
