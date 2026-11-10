@@ -33,7 +33,7 @@ jobs:
       packages: read
     uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@96969fd2ea37e5117f67353dae43c85c761597d0 # v0.10.0
     with:
-      morzer-version: "0.15.0"
+      morzer-version: "0.15.1"
       ref: ${{ github.sha }}
       version: ${{ needs.guard.outputs.version }}
       channel: stable
