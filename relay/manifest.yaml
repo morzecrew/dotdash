@@ -86,6 +86,12 @@ parameters:
     default: dtls
     description: "What mKCP's packets start with (the mkcp profile), as the server's kcp_header; relay-entry carries it to the server's relays line"
     services: [xray]
+  kcp_open:
+    type: enum
+    values: [none, quic]
+    default: none
+    description: "An opener in front of mKCP (the mkcp profile), as the server's kcp_open: quic sends a QUIC-Initial-shaped packet before the flow; relay-entry carries it to the server's relays line, so devices' links through this relay match"
+    services: [xray]
   # No services: Caddy runs under the own-site profile alone, and morzer's
   # restart of a service behind an inactive profile fails (morzer#324). A
   # change takes a full apply.

@@ -92,6 +92,25 @@ if sudo grep -q 'dotdash-relay-\$n-kcp' /opt/dotdash/current/tasks/client-config
         {type: "mkcp-legacy", settings: {header: "dtls"}}]}}' >/dev/null ||
     die "the config lacks an mKCP outbound through the relay with its port and masks"
   echo "46-relays.sh: a relay with mKCP adds an mKCP link and outbound through it"
+
+  # The same relay advertising the QUIC opener (a fourth kcp= field): the relay
+  # link drops headerType and seed for the whole mask list in fm=, that list
+  # carries the noise mask, and so does the outbound.
+  if sudo grep -q 'kopen=' /opt/dotdash/current/tasks/client-config.sh; then
+    printf '%s\n' "198.51.100.9 site-d.test pbkD 0011223344556677 mlkem.d kcp=9447,dtls,00112233445566778899aabbccddeeff,quic" |
+      sudo morzer config set --set-file relays=- >/dev/null
+    text=$(out)
+    l=$(grep -m1 '^vless://.*%5Brelay%20198.51.100.9%20kcp%5D' <<<"${text}") || die "no opener relay mKCP link"
+    { [ -z "$(param "$l" headerType)" ] && [ -z "$(param "$l" seed)" ] && [ -n "$(param "$l" fm)" ]; } \
+      || die "the opener relay mKCP link does not carry the mask in fm="
+    printf '%s' "$(param "$l" fm)" \
+      | sed 's/%7B/{/g;s/%7D/}/g;s/%22/"/g;s/%3A/:/g;s/%2C/,/g;s/%5B/[/g;s/%5D/]/g;s/%20/ /g;s/%25/%/g' \
+      | jq -e '.udp | map(.type) | index("noise")' >/dev/null || die "the opener relay link's fm= has no noise mask"
+    awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"${text}" | jq -e '
+      [.outbounds[] | select(.tag == "dotdash-relay-1-kcp")][0].streamSettings.finalmask.udp
+      | map(.type) | index("noise")' >/dev/null || die "the opener relay mKCP outbound lacks the noise mask"
+    echo "46-relays.sh: a relay advertising the opener carries the mask in fm= through it"
+  fi
 fi
 
 sudo morzer config unset relays >/dev/null

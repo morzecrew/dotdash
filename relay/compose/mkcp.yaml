@@ -12,3 +12,4 @@ services:
     environment:
       KCP_PORT: ${DOTDASH_RELAY_PARAM_KCP_PORT:-8447}
       KCP_HEADER: ${DOTDASH_RELAY_PARAM_KCP_HEADER:-dtls}
+      KCP_OPEN: ${DOTDASH_RELAY_PARAM_KCP_OPEN:-none}

@@ -20,8 +20,12 @@ sid=$(cat /run/secrets/reality_short_id)
 if [ "${OWN_SITE:-}" = true ]; then own=" own-site $(cat /run/secrets/xhttp_path)"; else own=; fi
 # mkcp: this relay serves mKCP too, so client-config gives each device an mKCP
 # link through it. Last on the line, where a server from before it reads no
-# field.
-if [ -n "${KCP_PORT:-}" ]; then kcp=" kcp=${KCP_PORT},${KCP_HEADER:-dtls},$(cat /run/secrets/kcp_seed)"; else kcp=; fi
+# field. With kcp_open=quic a fourth field names the opener, so the device's
+# link carries the matching finalmask noise mask.
+if [ -n "${KCP_PORT:-}" ]; then
+  kcp=" kcp=${KCP_PORT},${KCP_HEADER:-dtls},$(cat /run/secrets/kcp_seed)"
+  [ "${KCP_OPEN:-none}" != quic ] || kcp="${kcp},quic"
+else kcp=; fi
 
 cat <<EOF
 On the dotdash server, add this line to the relays parameter (sudo morzer
