@@ -2548,6 +2548,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>A QUIC-shaped opener in front of mKCP, for networks that let QUIC out: the new <code>kcp_open</code> parameter (<code>quic</code>) adds a finalmask <code>noise</code> mask that sends a QUIC-Initial-shaped packet before the flow, on the server, the relays (a fourth <code>kcp=</code> field on <code>relay-entry</code>'s line carries it) and the canary. <code>client-config</code> and the subscriptions give such a link the whole mask list in <code>fm=</code> in place of <code>headerType</code> and <code>seed</code>, for v2rayN and v2rayNG. The opener is a fixed shape, off unless set; measure it on a canary before relying on it.</p>
+</li>
+<li>
 <p>The canary's <code>measure</code> adds throughput: three downloads of the new <code>download_url</code> parameter (1 MB from speed.cloudflare.com unless set, <code>https://</code> only, <code>none</code> to skip) through each transport, with how many completed and the median Mbit/s.</p>
 </li>
 <li>
