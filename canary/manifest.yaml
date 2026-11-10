@@ -119,7 +119,7 @@ images:
 
 tasks:
   measure:
-    description: "Measure each transport through dotdash: N fetches (20 unless given), with success rate, timeouts and latency, and three downloads of download_url with the median Mbit/s, as JSON; arguments: [count] [url] [timeout]"
+    description: "Measure each transport through dotdash as JSON: N fetches (20 unless given) for success and latency, 3 downloads of download_url for Mbit/s; arguments: [count] [url] [timeout]"
     service: measure
     command: ["sh", "/task/measure.sh"]
     args: true
