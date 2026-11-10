@@ -1,0 +1,14 @@
+# The mkcp profile: VLESS over mKCP on a host UDP port of its own (kcp_port),
+# carried on to dotdash like REALITY. The inbound is in the Xray template
+# under the same profile.
+services:
+  xray:
+    ports:
+      - "${DOTDASH_RELAY_PARAM_KCP_PORT:-8447}:8447/udp"
+
+  # Set under this profile only: with it, relay-entry ends the line with the
+  # relay's mKCP port, header and seed.
+  relay-entry:
+    environment:
+      KCP_PORT: ${DOTDASH_RELAY_PARAM_KCP_PORT:-8447}
+      KCP_HEADER: ${DOTDASH_RELAY_PARAM_KCP_HEADER:-srtp}

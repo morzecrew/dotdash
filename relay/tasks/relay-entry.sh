@@ -18,11 +18,15 @@ sid=$(cat /run/secrets/reality_short_id)
 # subscriptions from the server and routes the XHTTP path to Xray, so
 # client-config gives each device that URL and an XHTTP link through it.
 if [ "${OWN_SITE:-}" = true ]; then own=" own-site $(cat /run/secrets/xhttp_path)"; else own=; fi
+# mkcp: this relay serves mKCP too, so client-config gives each device an mKCP
+# link through it. Last on the line, where a server from before it reads no
+# field.
+if [ -n "${KCP_PORT:-}" ]; then kcp=" kcp=${KCP_PORT},${KCP_HEADER:-srtp},$(cat /run/secrets/kcp_seed)"; else kcp=; fi
 
 cat <<EOF
 On the dotdash server, add this line to the relays parameter (sudo morzer
 config edit relays):
-${host} ${SITE} ${pbk} ${sid} ${enc}${own}
+${host} ${SITE} ${pbk} ${sid} ${enc}${own}${kcp}
 
 A dotdash-canary checks this relay as it checks the server, without the xhttp
 profiles, with the vless_id of any device on the relay:

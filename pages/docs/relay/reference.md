@@ -14,6 +14,8 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `dotdash_public_key` | none, given at `init` | the servers' REALITY public key, the `pbk` of their links |
 | `dotdash_address` | `none` | where to connect when `dotdash_servers` names one server, such as its IP; `none` reaches each server by its name |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what the health check fetches through dotdash; any 2xx is healthy |
+| `kcp_port` | `8447` | with `mkcp`, the UDP port devices reach the relay's mKCP on |
+| `kcp_header` | `srtp` | with `mkcp`, what its packets start with, as the server's [`kcp_header`](../server/mkcp.md) |
 | `dotdash_server` | `none` | deprecated: the one server, read only while `dotdash_servers` is unset |
 
 ## Profiles
@@ -25,6 +27,14 @@ certificate. The site also serves devices their subscriptions, fetched from
 the servers through the relay's tunnel, and XHTTP on the secret path
 `xhttp_path`, which `init` generates. See
 [Set up a relay](install.md#1-pick-the-site).
+
+`installation.profile=mkcp` (with a site of its own: `own-site,mkcp`): the
+relay serves [mKCP](../server/mkcp.md) on UDP `kcp_port` too, under its own
+`kcp_seed`, and carries it on to the servers like REALITY. `relay-entry` then
+ends the relay's line with `kcp=<port>,<header>,<seed>`, from which the server
+gives each device a `[relay <host> kcp]` link. Open the UDP port in the
+provider's firewall, and replace the relay's line on the server after turning
+it on.
 
 ## Secrets
 
@@ -40,6 +50,7 @@ the servers through the relay's tunnel, and XHTTP on the secret path
 | `vless_seed` | yes | the seed the relay's VLESS Encryption key pair derives from |
 | `reality_key` | yes | the relay's REALITY private key |
 | `reality_short_id` | yes | the relay's REALITY short id |
+| `kcp_seed` | yes | the key the relay's mKCP packets are encrypted under, with `mkcp` |
 
 ## Tasks
 

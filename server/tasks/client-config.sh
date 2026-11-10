@@ -27,8 +27,10 @@ kcp_port=${KCP_PORT:-}
 kcp_header=${KCP_HEADER:-srtp}
 kcp_seed=
 [ -z "$kcp_port" ] || kcp_seed=$(cat /run/secrets/kcp_seed)
-kcp_masks="{\"type\": \"mkcp-legacy\", \"settings\": {\"value\": \"${kcp_seed}\"}}"
-[ "$kcp_header" = none ] || kcp_masks="${kcp_masks}, {\"type\": \"mkcp-legacy\", \"settings\": {\"header\": \"${kcp_header}\"}}"
+kcp_masks() { # <seed> <header>: an mKCP outbound's finalmask list
+  printf '{"type": "mkcp-legacy", "settings": {"value": "%s"}}' "$1"
+  [ "$2" = none ] || printf ', {"type": "mkcp-legacy", "settings": {"header": "%s"}}' "$2"
+}
 # The DoH server the config answers the device's DNS with, through the tunnel.
 dns=${DNS_RESOLVER:-https://1.1.1.1/dns-query}
 
@@ -38,13 +40,26 @@ sid=$(cat /run/secrets/reality_short_id)
 pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # The dotdash-relay machines in front of this server (the relays parameter),
 # one "<host> <site> <public key> <short id> <encryption> [own-site [<xhttp
-# path>]]" per line; blank lines, "#" comments and shorter lines are not
-# relays. own-site: the site is the relay's own, which fetches subscriptions
-# from here and, given its path, routes XHTTP to the relay's Xray.
-all_relays=$(printf '%s\n' "${RELAYS:-}" | while read -r h s k i e o p _; do
-  case $h in '' | '#'*) continue ;; esac
-  if [ "${o:-}" != own-site ]; then o='' p=''; fi
-  if [ -n "${e:-}" ]; then echo "$h $s $k $i $e ${o:--} ${p:--}"; fi
+# path>]] [kcp=<port>,<header>,<seed>]" per line; blank lines, "#" comments
+# and shorter lines are not relays. own-site: the site is the relay's own,
+# which fetches subscriptions from here and, given its path, routes XHTTP to
+# the relay's Xray. kcp=: the relay serves mKCP on that UDP port too. Each
+# becomes "<host> <site> <key> <sid> <enc> <own-site|-> <path|-> <kcp|->".
+all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
+  case $line in '' | '#'*) continue ;; esac
+  c=- rest=
+  for f in $line; do
+    case $f in kcp=*) c=${f#kcp=} ;; *) rest="$rest $f" ;; esac
+  done
+  # shellcheck disable=SC2086 # one field per word
+  set -- $rest
+  case $c in - | [0-9]*,[a-z]*,[0-9a-f]*) ;; *)
+    echo "relays: the kcp= field of $1 is not <port>,<header>,<seed>; no mKCP link through it" >&2
+    c=- ;;
+  esac
+  o=${6:-} p=${7:-}
+  if [ "$o" != own-site ]; then o='' p=''; fi
+  if [ -n "${5:-}" ]; then echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $c"; fi
 done)
 
 # The domestic CDNs in front of this server (the cdn_hosts parameter), each
@@ -116,8 +131,8 @@ EOF
 
 # A relay takes REALITY on 443 under its neighbour site's name, with keys of its
 # own, and carries the device on to this server as its own client.
-relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]", and "[relay <host> xhttp]" through an own-site one
-  printf '%s\n' "$relays" | while read -r h s k i e _ p; do
+relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]", "[relay <host> xhttp]" before it through an own-site one, "[relay <host> kcp]" after it with mKCP
+  printf '%s\n' "$relays" | while read -r h s k i e _ p c; do
     [ -n "$h" ] || continue
     [ "$p" = - ] || cat <<EOF
 XHTTP over TLS through the relay $h, behind its own site (v2rayN, v2rayNG, Happ):
@@ -127,6 +142,13 @@ EOF
     cat <<EOF
 REALITY through the relay $h (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
 vless://$1@$h:443?encryption=$e&flow=xtls-rprx-vision&security=reality&sni=$s&fp=chrome&pbk=$k&sid=$i&support-x25519mlkem768=true&type=tcp#$2%20%5Brelay%20$h%5D
+
+EOF
+    [ "$c" != - ] || continue
+    kh=${c#*,}
+    cat <<EOF
+mKCP through the relay $h, on UDP port ${c%%,*} (v2rayN, v2rayNG):
+vless://$1@$h:${c%%,*}?encryption=$e&type=kcp&headerType=${kh%%,*}&seed=${c##*,}#$2%20%5Brelay%20$h%20kcp%5D
 
 EOF
   done
@@ -160,7 +182,7 @@ EOF
 
 relay_outbounds() { # <id>
   n=0
-  printf '%s\n' "$relays" | while read -r h s k i e _ p; do
+  printf '%s\n' "$relays" | while read -r h s k i e _ p c; do
     [ -n "$h" ] || continue
     n=$((n + 1))
     cat <<EOF
@@ -169,13 +191,19 @@ relay_outbounds() { # <id>
      "streamSettings": {"network": "raw", "security": "reality",
        "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "$k", "shortId": "$i"}}},
 EOF
-    [ "$p" != - ] || continue
-    cat <<EOF
+    [ "$p" = - ] || cat <<EOF
     {"tag": "dotdash-relay-$n-xhttp", "protocol": "vless",
      "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e"},
      "streamSettings": {"network": "xhttp", "security": "tls",
        "tlsSettings": {"serverName": "$s", "alpn": ["h2"], "fingerprint": "chrome"},
        "xhttpSettings": {"path": "/$p", "host": "$s", "mode": "auto"}}},
+EOF
+    [ "$c" != - ] || continue
+    kh=${c#*,}
+    cat <<EOF
+    {"tag": "dotdash-relay-$n-kcp", "protocol": "vless",
+     "settings": {"address": "$h", "port": ${c%%,*}, "id": "$1", "encryption": "$e"},
+     "streamSettings": {"network": "kcp", "finalmask": {"udp": [$(kcp_masks "${c##*,}" "${kh%%,*}")]}}},
 EOF
   done
 }
@@ -205,7 +233,7 @@ EOF
     [ -z "$kcp_port" ] || cat <<EOF
     {"tag": "dotdash-$n-kcp", "protocol": "vless",
      "settings": {"address": "$s", "port": ${kcp_port}, "id": "$1", "encryption": "${enc}"},
-     "streamSettings": {"network": "kcp", "finalmask": {"udp": [${kcp_masks}]}}},
+     "streamSettings": {"network": "kcp", "finalmask": {"udp": [$(kcp_masks "$kcp_seed" "$kcp_header")]}}},
 EOF
   done; relay_outbounds "$1"; cdn_outbounds "$1"; } | sed '$ s/,$//'
 }
@@ -257,7 +285,7 @@ EOF
   if [ "$count" -gt 1 ]; then where=" on any of the servers"; else where=; fi
   if [ -n "$xr_port" ]; then which="REALITY, XHTTP and XHTTP with REALITY"; else which="REALITY and XHTTP"; fi
   [ -z "$kcp_port" ] || which="${which}, or mKCP,"
-  [ -z "$relays" ] || which="${which}, or REALITY through a relay,"
+  [ -z "$relays" ] || which="${which}, or a relay,"
   [ -z "$cdns" ] || which="${which}, or XHTTP through a CDN,"
   if [ -n "${XDNS_DOMAIN:-}" ]; then
     last=", and the DNS tunnel only when none answers"

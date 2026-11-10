@@ -71,6 +71,29 @@ if sudo grep -q 'dotdash-relay-\$n-xhttp' /opt/dotdash/current/tasks/client-conf
   echo "46-relays.sh: an own-site relay with its path adds an XHTTP link and outbound through it"
 fi
 
+# A relay with mKCP (its relay-entry ends the line with kcp=<port>,<header>,
+# <seed>): an mKCP link through it too, to its port with its header and seed,
+# and an outbound with the same masks.
+if sudo grep -q 'dotdash-relay-\$n-kcp' /opt/dotdash/current/tasks/client-config.sh; then
+  printf '%s\n' "198.51.100.9 site-d.test pbkD 0011223344556677 mlkem.d kcp=9447,dtls,00112233445566778899aabbccddeeff" |
+    sudo morzer config set --set-file relays=- >/dev/null
+  text=$(out)
+  klinks=$(grep '^vless://.*%5Brelay%20198.51.100.9%20kcp%5D' <<<"${text}" || true)
+  [ "$(grep -c . <<<"${klinks}")" = "${devices}" ] || die "expected an mKCP link through the relay for each device"
+  l=$(head -1 <<<"${klinks}")
+  got="$(param "$l" type) $(param "$l" headerType) $(param "$l" seed) $(param "$l" encryption)"
+  [ "${got}" = "kcp dtls 00112233445566778899aabbccddeeff mlkem.d" ] && [[ $l == *@198.51.100.9:9447\?* ]] ||
+    die "the mKCP link through the relay is not to its port with its header, seed and encryption: ${got}"
+  awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"${text}" | jq -e '
+    [.outbounds[] | select(.tag == "dotdash-relay-1-kcp")] as $k
+    | ($k | length) == 1 and $k[0].settings.port == 9447 and $k[0].settings.address == "198.51.100.9"
+      and $k[0].streamSettings == {network: "kcp", finalmask: {udp: [
+        {type: "mkcp-legacy", settings: {value: "00112233445566778899aabbccddeeff"}},
+        {type: "mkcp-legacy", settings: {header: "dtls"}}]}}' >/dev/null ||
+    die "the config lacks an mKCP outbound through the relay with its port and masks"
+  echo "46-relays.sh: a relay with mKCP adds an mKCP link and outbound through it"
+fi
+
 sudo morzer config unset relays >/dev/null
 [ -z "$(relay_links "$(out)")" ] || die "relay links remain once relays is unset"
 echo "46-relays.sh: a link and an outbound per relay and device, none with relays unset"

@@ -23,6 +23,11 @@ runtimes:
       # A site of the relay's own, under its own domain, as REALITY's target,
       # instead of a borrowed one (site): see compose/own-site.yaml.
       own-site: [compose/own-site.yaml]
+      # VLESS over mKCP on kcp_port, as the server's mkcp profile: UDP, its
+      # packets encrypted under kcp_seed and dressed in kcp_header.
+      mkcp: [compose/mkcp.yaml]
+    # installation.profile=own-site,mkcp runs both.
+    combinable: [own-site, mkcp]
     options:
       project: dotdash-relay
 
@@ -69,6 +74,17 @@ parameters:
     type: string
     default: none
     description: "Without the own-site profile, a site next to this machine, in its own network, that speaks TLS 1.3 and HTTP/2: devices send its name, and anyone probing port 443 gets its real handshake. With it, unused: the relay's own domain is the site"
+    services: [xray]
+  kcp_port:
+    type: port
+    default: 8447
+    description: "Host UDP port devices reach this relay's mKCP on (the mkcp profile)"
+    services: [xray]
+  kcp_header:
+    type: enum
+    values: [none, dtls, srtp, utp, wechat, wireguard]
+    default: srtp
+    description: "What mKCP's packets start with (the mkcp profile), as the server's kcp_header; relay-entry carries it to the server's relays line"
     services: [xray]
   # No services: Caddy runs under the own-site profile alone, and morzer's
   # restart of a service behind an inactive profile fails (morzer#324). A
