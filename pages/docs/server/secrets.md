@@ -18,6 +18,8 @@ replace a generated one with `sudo morzer secret rotate <name>`.
 | `reality_short_id` | yes | REALITY short id clients present alongside the key |
 | `xhttp_path` | yes | secret path Caddy routes to Xray's XHTTP inbound |
 | `subscription_key` | yes | key the subscription URLs derive from |
+| `kcp_seed` | yes | key [mKCP](mkcp.md)'s packets are encrypted under |
 
 Rotating `vless_seed`, `reality_key`, `reality_short_id` or `xhttp_path`
-changes every link: resend them, or let subscriptions pick it up.
+changes every link, and `kcp_seed` the mKCP links: resend them, or let
+subscriptions pick it up.

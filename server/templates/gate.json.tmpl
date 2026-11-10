@@ -5,7 +5,8 @@ anything beyond the other containers, so it cannot send traffic anywhere
 directly whatever its config says. The gate carries what has to cross:
 
   - in: the public TLS port, and under their profiles UDP/53 for the DNS
-    tunnel and xhttp_reality_port, to Xray, byte for byte (dokodemo-door);
+    tunnel, xhttp_reality_port and kcp_port, to Xray, byte for byte
+    (dokodemo-door);
   - out: Xray's SOCKS hop to the upstream proxy, which the gate dials with
     the upstream secret's address and credentials, and with
     upstream6_protocol a second hop (1081) to the IPv6 proxy, with its own.
@@ -35,6 +36,7 @@ whose destination is fixed to Xray, and everything else is blocked.
 */ -}}
 {{- $withXdns := or (has "xdns" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
 {{- $xhttpReality := or (has "xhttp-reality" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
+{{- $kcp := has "mkcp" .Profiles -}}
 {{- $v6 := ne .Parameters.upstream6_protocol "none" -}}
 {{- $backup := ne .Parameters.upstream_backup_protocol "none" -}}
 {{- $proto := .Parameters.upstream_protocol -}}
@@ -50,6 +52,7 @@ fails on its empty value with the message. */ -}}
 {{- if eq .Parameters.xhttp_reality_port .Parameters.https_port }}{{ required "xhttp_reality_port must differ from https_port" "" }}{{ end }}
 {{- if eq .Parameters.xhttp_reality_port "80" }}{{ required "xhttp_reality_port must not be 80, which Caddy publishes for ACME" "" }}{{ end }}
 {{- end }}
+{{- if and $kcp $withXdns (eq .Parameters.kcp_port "53") }}{{ required "kcp_port must not be 53, which the DNS tunnel publishes" "" }}{{ end }}
 {
   "log": {"loglevel": "{{ .Parameters.log_level }}", "access": "none", "dnsLog": false},
   "inbounds": [
@@ -62,6 +65,10 @@ fails on its empty value with the message. */ -}}
 {{- if $xhttpReality }}
     {"tag": "public-xhttp-reality", "listen": "0.0.0.0", "port": 8443, "protocol": "dokodemo-door",
      "settings": {"address": "xray", "port": 8443, "network": "tcp"}},
+{{- end }}
+{{- if $kcp }}
+    {"tag": "public-kcp", "listen": "0.0.0.0", "port": 8447, "protocol": "dokodemo-door",
+     "settings": {"address": "xray", "port": 8447, "network": "udp"}},
 {{- end }}
     {"tag": "egress", "listen": "0.0.0.0", "port": 1080, "protocol": "socks",
      "settings": {"auth": "noauth", "udp": {{ $udp }}}}
@@ -117,7 +124,7 @@ fails on its empty value with the message. */ -}}
     "balancers": [{"tag": "egress", "selector": ["upstream"], "fallbackTag": "backup", "strategy": {"type": "random"}}],
 {{- end }}
     "rules": [
-      {"inboundTag": ["public-tls"{{ if $withXdns }}, "public-dns"{{ end }}{{ if $xhttpReality }}, "public-xhttp-reality"{{ end }}], "outboundTag": "inside"},
+      {"inboundTag": ["public-tls"{{ if $withXdns }}, "public-dns"{{ end }}{{ if $xhttpReality }}, "public-xhttp-reality"{{ end }}{{ if $kcp }}, "public-kcp"{{ end }}], "outboundTag": "inside"},
       {"inboundTag": ["egress"], {{ if $backup }}"balancerTag": "egress"{{ else }}"outboundTag": "upstream"{{ end }}},
 {{- if $v6 }}
       {"inboundTag": ["egress6"], "outboundTag": "ipv6"},

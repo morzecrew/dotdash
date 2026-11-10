@@ -19,6 +19,16 @@ count=$(printf '%s\n' "$servers" | grep -c .)
 # Set by the xhttp-reality profiles' overlay only: XHTTP with REALITY, a third
 # link and outbound. Without it the output is what it always was.
 xr_port=${XHTTP_REALITY_PORT:-}
+# Set by the mkcp profile's overlay only: VLESS over mKCP, on UDP, a link and
+# outbound per server after the others. Its packets are encrypted under the
+# seed, then start with the header; a client lists both, in that order, as
+# v2rayN and v2rayNG do from a link's seed and headerType.
+kcp_port=${KCP_PORT:-}
+kcp_header=${KCP_HEADER:-srtp}
+kcp_seed=
+[ -z "$kcp_port" ] || kcp_seed=$(cat /run/secrets/kcp_seed)
+kcp_masks="{\"type\": \"mkcp-legacy\", \"settings\": {\"value\": \"${kcp_seed}\"}}"
+[ "$kcp_header" = none ] || kcp_masks="${kcp_masks}, {\"type\": \"mkcp-legacy\", \"settings\": {\"header\": \"${kcp_header}\"}}"
 # The DoH server the config answers the device's DNS with, through the tunnel.
 dns=${DNS_RESOLVER:-https://1.1.1.1/dns-query}
 
@@ -97,6 +107,11 @@ REALITY via $3 (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
 vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&flow=xtls-rprx-vision&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=tcp#$2%20%5Breality%5D
 
 EOF
+  [ -z "$kcp_port" ] || cat <<EOF
+mKCP via $3, on UDP port ${kcp_port} (v2rayN, v2rayNG):
+vless://$1@$3:${kcp_port}?encryption=${enc}&type=kcp&headerType=${kcp_header}&seed=${kcp_seed}#$2%20%5Bkcp%5D
+
+EOF
 }
 
 # A relay takes REALITY on 443 under its neighbour site's name, with keys of its
@@ -165,7 +180,7 @@ EOF
   done
 }
 
-outbounds() { # <id>: a REALITY and an XHTTP outbound per server, the third, the relays, the CDNs
+outbounds() { # <id>: a REALITY and an XHTTP outbound per server, the third, mKCP, the relays, the CDNs
   n=0
   { for s in $servers; do
     n=$((n + 1))
@@ -186,6 +201,11 @@ EOF
      "streamSettings": {"network": "xhttp", "security": "reality",
        "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "${pbk}", "shortId": "${sid}"},
        "xhttpSettings": {"path": "/${path}", "mode": "auto"}}},
+EOF
+    [ -z "$kcp_port" ] || cat <<EOF
+    {"tag": "dotdash-$n-kcp", "protocol": "vless",
+     "settings": {"address": "$s", "port": ${kcp_port}, "id": "$1", "encryption": "${enc}"},
+     "streamSettings": {"network": "kcp", "finalmask": {"udp": [${kcp_masks}]}}},
 EOF
   done; relay_outbounds "$1"; cdn_outbounds "$1"; } | sed '$ s/,$//'
 }
@@ -236,6 +256,7 @@ EOF
   cdn_links "$1" "$2"
   if [ "$count" -gt 1 ]; then where=" on any of the servers"; else where=; fi
   if [ -n "$xr_port" ]; then which="REALITY, XHTTP and XHTTP with REALITY"; else which="REALITY and XHTTP"; fi
+  [ -z "$kcp_port" ] || which="${which}, or mKCP,"
   [ -z "$relays" ] || which="${which}, or REALITY through a relay,"
   [ -z "$cdns" ] || which="${which}, or XHTTP through a CDN,"
   if [ -n "${XDNS_DOMAIN:-}" ]; then

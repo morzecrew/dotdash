@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- VLESS over mKCP, an opt-in UDP transport for networks that block the TCP ones: the new `mkcp` profile serves it on `kcp_port` (8447/udp), its packets encrypted under the new `kcp_seed` secret and starting with a fake `kcp_header` (`srtp` unless set). `client-config` and the subscriptions add a `[kcp]` link and outbound per server, for v2rayN and v2rayNG.
+
 - Pools, so a leaked device no longer gives away every relay and CDN host: the new `pools` parameter takes one `<pool> <member>...` line per pool, the members device names, relay hosts and CDN hosts. `client-config` and the subscriptions give a device in a pool its pools' relays and CDN hosts and those in no pool; a device in none still gets them all, and a member that names nothing is reported.
 
 - XHTTP through a relay with a site of its own: the site routes a secret path, the new `xhttp_path` secret, to the relay's Xray, `relay-entry` adds the path to the relay's line, and `client-config` and the subscriptions add an `[relay … xhttp]` link and outbound. The relay needs morzer 0.15.1.
