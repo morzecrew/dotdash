@@ -144,6 +144,12 @@ parameters:
     default: dtls
     description: "What mKCP's packets start with, to pass for another protocol (the mkcp profile): dtls a DTLS 1.2 record header, as WebRTC and VPNs send; wireguard a WireGuard data header; utp, wechat, or srtp (Xray's own, which does not start as RTP does); none sends the encrypted packets bare. Devices take a change from new links or their subscription"
     services: [xray, subscription]
+  kcp_open:
+    type: enum
+    values: [none, quic]
+    default: none
+    description: "An opener in front of mKCP (the mkcp profile): quic sends a QUIC-Initial-shaped packet (finalmask noise) before the flow, so a network that lets QUIC out sees the start as QUIC; none sends nothing extra. Both ends must match, so devices take a change from new links (carried as fm=) or their subscription. The opener is a fixed shape; measure it on a canary before relying on it"
+    services: [xray, subscription]
   xdns_mtu:
     type: int
     default: 900
@@ -181,7 +187,7 @@ parameters:
     # morzer wants a default for every parameter it doesn't ask for at init,
     # so a comment, which client-config skips, that shows the line's form.
     default: "# One relay per line, as its relay-entry task prints it: <host> <site> <public key> <short id> <encryption>"
-    description: "The dotdash-relay machines devices also reach this server through, one \"<host> <site> <public key> <short id> <encryption> [own-site]\" line per relay, as a relay's relay-entry task prints it, ending with own-site <xhttp path> and kcp=<port>,<header>,<seed> where the relay serves them; client-config and the subscriptions add a link through each, and client-config the subscription URL through each own-site relay"
+    description: "The dotdash-relay machines devices also reach this server through, one \"<host> <site> <public key> <short id> <encryption> [own-site]\" line per relay, as a relay's relay-entry task prints it, ending with own-site <xhttp path> and kcp=<port>,<header>,<seed>[,<open>] where the relay serves them (the <open> field names its mKCP opener, quic, when it runs one); client-config and the subscriptions add a link through each, and client-config the subscription URL through each own-site relay"
     services: [subscription]
   cdn_hosts:
     type: string

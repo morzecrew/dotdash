@@ -25,11 +25,25 @@ xr_port=${XHTTP_REALITY_PORT:-}
 # v2rayN and v2rayNG do from a link's seed and headerType.
 kcp_port=${KCP_PORT:-}
 kcp_header=${KCP_HEADER:-dtls}
+kcp_open=${KCP_OPEN:-none}
 kcp_seed=
 [ -z "$kcp_port" ] || kcp_seed=$(cat /run/secrets/kcp_seed)
-kcp_masks() { # <seed> <header>: an mKCP outbound's finalmask list
+# kcp_open=quic: a finalmask noise mask sends a QUIC-Initial-shaped packet
+# before the flow. headerType cannot carry it, so such a link gives the whole
+# mask list in fm= (url-encoded JSON) in place of seed and headerType, and the
+# outbound appends the mask to its list. The packet is a fixed shape; tune it
+# on a canary.
+# ponytail: a static opener is replayable; a per-device or rotated shape if DPI starts matching it.
+kcp_noise='{"type": "noise", "settings": {"noise": [{"type": "hex", "packet": "c300000001088394c8f03e5157080000449e00000002", "delay": "0-0"}]}}'
+kcp_masks() { # <seed> <header> [open]: an mKCP outbound's finalmask list
   printf '{"type": "mkcp-legacy", "settings": {"value": "%s"}}' "$1"
   [ "$2" = none ] || printf ', {"type": "mkcp-legacy", "settings": {"header": "%s"}}' "$2"
+  [ "${3:-none}" != quic ] || printf ', %s' "$kcp_noise"
+}
+fm_enc() { # <seed> <header> <open>: the finalmask object, url-encoded for a link's fm=
+  printf '{"udp": [%s]}' "$(kcp_masks "$1" "$2" "$3")" | sed \
+    -e 's/%/%25/g' -e 's/{/%7B/g' -e 's/}/%7D/g' -e 's/"/%22/g' \
+    -e 's/:/%3A/g' -e 's/,/%2C/g' -e 's/\[/%5B/g' -e 's/\]/%5D/g' -e 's/ /%20/g'
 }
 # The DoH server the config answers the device's DNS with, through the tunnel.
 dns=${DNS_RESOLVER:-https://1.1.1.1/dns-query}
@@ -40,10 +54,11 @@ sid=$(cat /run/secrets/reality_short_id)
 pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # The dotdash-relay machines in front of this server (the relays parameter),
 # one "<host> <site> <public key> <short id> <encryption> [own-site [<xhttp
-# path>]] [kcp=<port>,<header>,<seed>]" per line; blank lines, "#" comments
-# and shorter lines are not relays. own-site: the site is the relay's own,
-# which fetches subscriptions from here and, given its path, routes XHTTP to
-# the relay's Xray. kcp=: the relay serves mKCP on that UDP port too. Each
+# path>]] [kcp=<port>,<header>,<seed>[,<open>]]" per line; blank lines, "#"
+# comments and shorter lines are not relays. own-site: the site is the relay's
+# own, which fetches subscriptions from here and, given its path, routes XHTTP
+# to the relay's Xray. kcp=: the relay serves mKCP on that UDP port too, with
+# the opener <open> (quic) if it names one. Each
 # becomes "<host> <site> <key> <sid> <enc> <own-site|-> <path|-> <kcp|->".
 all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   case $line in '' | '#'*) continue ;; esac
@@ -53,8 +68,8 @@ all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   done
   # shellcheck disable=SC2086 # one field per word
   set -- $rest
-  case $c in - | [0-9]*,[a-z]*,[0-9a-f]*) ;; *)
-    echo "relays: the kcp= field of $1 is not <port>,<header>,<seed>; no mKCP link through it" >&2
+  case $c in - | [0-9]*,[a-z]*,[0-9a-f]* | [0-9]*,[a-z]*,[0-9a-f]*,[a-z]*) ;; *)
+    echo "relays: the kcp= field of $1 is not <port>,<header>,<seed>[,<open>]; no mKCP link through it" >&2
     c=- ;;
   esac
   o=${6:-} p=${7:-}
@@ -122,11 +137,17 @@ REALITY via $3 (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
 vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&flow=xtls-rprx-vision&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=tcp#$2%20%5Breality%5D
 
 EOF
-  [ -z "$kcp_port" ] || cat <<EOF
+  if [ -n "$kcp_port" ] && [ "$kcp_open" = quic ]; then cat <<EOF
+mKCP via $3, on UDP port ${kcp_port}, QUIC-shaped opening (v2rayN, v2rayNG):
+vless://$1@$3:${kcp_port}?encryption=${enc}&type=kcp&fm=$(fm_enc "$kcp_seed" "$kcp_header" quic)#$2%20%5Bkcp%5D
+
+EOF
+  elif [ -n "$kcp_port" ]; then cat <<EOF
 mKCP via $3, on UDP port ${kcp_port} (v2rayN, v2rayNG):
 vless://$1@$3:${kcp_port}?encryption=${enc}&type=kcp&headerType=${kcp_header}&seed=${kcp_seed}#$2%20%5Bkcp%5D
 
 EOF
+  fi
 }
 
 # A relay takes REALITY on 443 under its neighbour site's name, with keys of its
@@ -145,12 +166,19 @@ vless://$1@$h:443?encryption=$e&flow=xtls-rprx-vision&security=reality&sni=$s&fp
 
 EOF
     [ "$c" != - ] || continue
-    kh=${c#*,}
-    cat <<EOF
-mKCP through the relay $h, on UDP port ${c%%,*} (v2rayN, v2rayNG):
-vless://$1@$h:${c%%,*}?encryption=$e&type=kcp&headerType=${kh%%,*}&seed=${c##*,}#$2%20%5Brelay%20$h%20kcp%5D
+    kport=${c%%,*}; r=${c#*,}; kheader=${r%%,*}; r2=${r#*,}; kseed=${r2%%,*}
+    kopen=none; case $r2 in *,*) kopen=${r2#*,} ;; esac
+    if [ "$kopen" = quic ]; then cat <<EOF
+mKCP through the relay $h, on UDP port ${kport}, QUIC-shaped opening (v2rayN, v2rayNG):
+vless://$1@$h:${kport}?encryption=$e&type=kcp&fm=$(fm_enc "$kseed" "$kheader" quic)#$2%20%5Brelay%20$h%20kcp%5D
 
 EOF
+    else cat <<EOF
+mKCP through the relay $h, on UDP port ${kport} (v2rayN, v2rayNG):
+vless://$1@$h:${kport}?encryption=$e&type=kcp&headerType=${kheader}&seed=${kseed}#$2%20%5Brelay%20$h%20kcp%5D
+
+EOF
+    fi
   done
 }
 
@@ -199,11 +227,12 @@ EOF
        "xhttpSettings": {"path": "/$p", "host": "$s", "mode": "auto"}}},
 EOF
     [ "$c" != - ] || continue
-    kh=${c#*,}
+    kport=${c%%,*}; r=${c#*,}; kheader=${r%%,*}; r2=${r#*,}; kseed=${r2%%,*}
+    kopen=none; case $r2 in *,*) kopen=${r2#*,} ;; esac
     cat <<EOF
     {"tag": "dotdash-relay-$n-kcp", "protocol": "vless",
-     "settings": {"address": "$h", "port": ${c%%,*}, "id": "$1", "encryption": "$e"},
-     "streamSettings": {"network": "kcp", "finalmask": {"udp": [$(kcp_masks "${c##*,}" "${kh%%,*}")]}}},
+     "settings": {"address": "$h", "port": ${kport}, "id": "$1", "encryption": "$e"},
+     "streamSettings": {"network": "kcp", "finalmask": {"udp": [$(kcp_masks "$kseed" "$kheader" "$kopen")]}}},
 EOF
   done
 }
@@ -233,7 +262,7 @@ EOF
     [ -z "$kcp_port" ] || cat <<EOF
     {"tag": "dotdash-$n-kcp", "protocol": "vless",
      "settings": {"address": "$s", "port": ${kcp_port}, "id": "$1", "encryption": "${enc}"},
-     "streamSettings": {"network": "kcp", "finalmask": {"udp": [$(kcp_masks "$kcp_seed" "$kcp_header")]}}},
+     "streamSettings": {"network": "kcp", "finalmask": {"udp": [$(kcp_masks "$kcp_seed" "$kcp_header" "$kcp_open")]}}},
 EOF
   done; relay_outbounds "$1"; cdn_outbounds "$1"; } | sed '$ s/,$//'
 }
