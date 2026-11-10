@@ -29,8 +29,13 @@ runtimes:
       # Both, from before profiles combined. Deprecated: xdns,xhttp-reality
       # does the same; it goes in the next release.
       xdns-xhttp-reality: [compose/xdns.yaml, compose/xhttp-reality.yaml]
-    # installation.profile=xdns,xhttp-reality runs both.
-    combinable: [xdns, xhttp-reality]
+      # An OpenVPN client (vpn) and a SOCKS hop in its namespace (vpn-socks),
+      # which the gate dials with upstream_protocol=openvpn: Xray has no
+      # OpenVPN of its own.
+      openvpn: [compose/openvpn.yaml]
+    # installation.profile=xdns,xhttp-reality runs both; any of them with
+    # openvpn, such as xdns,openvpn, adds the OpenVPN upstream.
+    combinable: [xdns, xhttp-reality, openvpn]
     options:
       project: dotdash
 
@@ -70,9 +75,9 @@ parameters:
     services: [gate, subscription]
   upstream_protocol:
     type: enum
-    values: [socks, http]
+    values: [socks, http, wireguard, openvpn]
     default: socks
-    description: Protocol of the ISP/residential proxy every client connection leaves through, which the upstream secret names as user:pass@host:port
+    description: "How every client connection leaves: socks or http, a proxy the upstream secret names as user:pass@host:port; wireguard, a WireGuard exit, from the wg-quick client config in upstream_wireguard; openvpn, an OpenVPN exit, from the client config in upstream_openvpn, which needs the openvpn profile. A tunnel carries UDP and IPv6 itself, so it takes neither upstream6_protocol nor resolve=upstream"
     services: [xray, gate]
   upstream_tls:
     type: bool
@@ -82,7 +87,7 @@ parameters:
   upstream_udp:
     type: bool
     default: false
-    description: Relay client UDP through a SOCKS5 upstream that supports UDP ASSOCIATE; otherwise UDP is dropped
+    description: Relay client UDP through a SOCKS5 upstream that supports UDP ASSOCIATE; otherwise UDP is dropped. A wireguard or openvpn upstream always carries UDP
     services: [xray, gate]
   upstream6_protocol:
     type: enum
@@ -179,8 +184,11 @@ images:
   # hooks/policy reads the rendered config with it, run with no network, so
   # the host needs no jq of its own.
   jq: ghcr.io/jqlang/jq:1.8.1@sha256:4f34c6d23f4b1372ac789752cc955dc67c2ae177eb1b5860b75cdc5091ce6f91
-  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:c5885766b9f12bdf3986bf621ad0ea72d87dea54e0e3f80cf532939f2e4ef5cd
+  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:996f30a2cb6f65e1121b599afcebb1d3cb669f0ba3f22fe16c2ac9b7c6693527
   caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
+  # The openvpn profile's OpenVPN client, whose kill switch drops the default
+  # routes before anything runs (platform-images, images/openvpn).
+  openvpn: ghcr.io/morzecrew/openvpn:2.6.20@sha256:effaeb50a48f60aa40838c423c211b44e7443b6e2f22c8a5edb40adffb9a976d
 
 # Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);
 # its content is JSON, which is also YAML. Secrets are not in it: it holds
@@ -191,6 +199,10 @@ configuration:
     mode: "0644"
   - template: templates/gate.json.tmpl
     target: /etc/dotdash/gate.json
+    mode: "0644"
+  # Rendered under every profile; only the openvpn profile mounts it.
+  - template: templates/vpn-socks.json.tmpl
+    target: /etc/dotdash/vpn-socks.json
     mode: "0644"
 
 secrets:

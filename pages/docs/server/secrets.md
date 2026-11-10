@@ -1,12 +1,15 @@
 # Secrets
 
-`init` generates every secret except `upstream` and `upstream6`. Set one with
+`init` generates every secret except the upstreams: `upstream`, `upstream6`,
+`upstream_wireguard` and `upstream_openvpn`. Set one with
 `sudo morzer secret set <name>`, edit with `sudo morzer secret edit <name>`,
 replace a generated one with `sudo morzer secret rotate <name>`.
 
 | Name | Generated | |
 | --- | --- | --- |
-| `upstream` | no | the upstream proxy, `user:pass@host:port` or `host:port` |
+| `upstream` | no | the upstream proxy, `user:pass@host:port` or `host:port`, for `socks` and `http` |
+| `upstream_wireguard` | no | a WireGuard exit's wg-quick client config, for `upstream_protocol=wireguard` ([tunnels](tunnel-upstream.md)) |
+| `upstream_openvpn` | no | an OpenVPN exit's client config, keys inline, for `upstream_protocol=openvpn` |
 | `upstream6` | no | the IPv6 proxy, same form; needed once `upstream6_protocol` is set |
 | `vless_clients` | yes | one `<uuid> [name]` line per device |
 | `vless_seed` | yes | ML-KEM-768 seed the VLESS Encryption key pair derives from |

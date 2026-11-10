@@ -1,0 +1,27 @@
+{{- /*
+The SOCKS hop of the openvpn profile, in the OpenVPN client's namespace, where
+the only route out is the tunnel: the gate dials it at vpn:1080, and its one
+direct outbound sends what it is given into the tunnel. Private destinations
+are blocked, so it cannot reach the egress network's other containers. A
+loopback HTTP inbound is the healthcheck's probe, which proves the tunnel
+carries traffic, not only that it is up. Rendered under every profile, as
+templates cannot drop a file; only the openvpn profile mounts it.
+*/ -}}
+{
+  "log": {"loglevel": "{{ .Parameters.log_level }}", "access": "none", "dnsLog": false},
+  "inbounds": [
+    {"tag": "egress", "listen": "0.0.0.0", "port": 1080, "protocol": "socks",
+     "settings": {"auth": "noauth", "udp": true}},
+    {"tag": "probe", "listen": "127.0.0.1", "port": 10809, "protocol": "http"}
+  ],
+  "outbounds": [
+    {"tag": "tunnel", "protocol": "freedom"},
+    {"tag": "block", "protocol": "blackhole"}
+  ],
+  "routing": {
+    "rules": [
+      {"ip": ["geoip:private"], "outboundTag": "block"},
+      {"network": "tcp,udp", "outboundTag": "tunnel"}
+    ]
+  }
+}

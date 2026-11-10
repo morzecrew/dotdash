@@ -2,9 +2,9 @@
 
 | Name | Default | |
 | --- | --- | --- |
-| `upstream_protocol` | `socks` | `socks` or `http`; the proxy is the `upstream` secret |
+| `upstream_protocol` | `socks` | `socks` or `http`, the proxy in `upstream`; `wireguard` or `openvpn`, a [tunnel](tunnel-upstream.md) from `upstream_wireguard` or `upstream_openvpn` |
 | `upstream_tls` | `false` | TLS to the upstream |
-| `upstream_udp` | `false` | relay UDP via a SOCKS5 upstream with UDP ASSOCIATE; otherwise dropped |
+| `upstream_udp` | `false` | relay UDP via a SOCKS5 upstream with UDP ASSOCIATE; otherwise dropped. A tunnel always carries UDP |
 | `upstream6_protocol` | `none` | `socks` or `http` turns on the IPv6 proxy, the `upstream6` secret |
 | `upstream6_tls` | `false` | TLS to the IPv6 proxy |
 | `https_port` | `443` | host port for REALITY and the site |
@@ -27,5 +27,6 @@
 Set one with `sudo morzer config set <name>=<value>`, unset it with
 `sudo morzer config unset <name>`, edit `relays` with
 `sudo morzer config edit relays`. Profiles (`installation.profile`): `xdns`,
-`xhttp-reality`, or both as `xdns,xhttp-reality`; `xdns-xhttp-reality` does the
+`xhttp-reality`, `openvpn` (for an [OpenVPN upstream](tunnel-upstream.md)),
+combined with commas, such as `xdns,xhttp-reality`; `xdns-xhttp-reality` does the
 same and goes in 0.6.0.

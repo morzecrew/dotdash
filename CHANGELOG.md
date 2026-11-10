@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The upstream can be a WireGuard exit: `upstream_protocol=wireguard` takes the wg-quick client config in the new `upstream_wireguard` secret, such as a home router's or a VPN provider's, and the gate runs Xray's own WireGuard with no extra privilege. It carries UDP, and IPv6 when the exit has it.
+
+- The upstream can be an OpenVPN exit: `upstream_protocol=openvpn` with the new `openvpn` profile takes the client config in the new `upstream_openvpn` secret. Its container drops its default route before OpenVPN starts, so nothing leaves around the tunnel, which `apply` and `doctor` check.
+
+- A tunnel's config has a secret of its own, so it is set while the proxy is still the upstream, and switching between a proxy and a tunnel is one `config set` either way.
+
+### Changed
+
+- The `upstream` secret is no longer required: an installation whose upstream is a tunnel needs none. With a proxy, the egress health check still fails, naming it, while it is unset.
+
 ## [0.5.1] - 2026-11-10
 
 ### Deprecated

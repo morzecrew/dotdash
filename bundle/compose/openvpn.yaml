@@ -1,0 +1,73 @@
+# The openvpn profile, for upstream_protocol=openvpn: Xray has no OpenVPN, so
+# an OpenVPN client (vpn) holds the tunnel and a SOCKS hop in its namespace
+# (vpn-socks) is what the gate dials, at vpn:1080 on the egress network.
+# vpn's image swaps the default route for host routes to the servers in the
+# config before openvpn starts, so nothing in that namespace has a way out
+# but the tunnel, on the first start too (platform-images, images/openvpn).
+# hooks/policy checks that it has no default route around the tunnel.
+services:
+  vpn:
+    image: ${DOTDASH_IMAGE_OPENVPN:?set by morzer}
+    restart: unless-stopped
+    # Root, the one container here that is: openvpn needs NET_ADMIN for its
+    # tun device and routes, which a non-root user cannot use, and the kill
+    # switch needs it for its own. Its secret is root's, so nothing more.
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN]
+    devices: ["/dev/net/tun:/dev/net/tun"]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    environment:
+      OPENVPN_CONFIG: /run/secrets/upstream_openvpn
+    secrets: [upstream_openvpn]
+    # egress alone: not on inside, beside Xray.
+    networks: [egress]
+    mem_limit: 128m
+    logging:
+      driver: local
+      options: {max-size: 10m, max-file: "3"}
+    healthcheck:
+      # Passes while traffic is routed into the tunnel; vpn-socks proves that
+      # the tunnel carries it.
+      test: ["CMD", "/usr/local/bin/openvpn-entrypoint", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  vpn-socks:
+    image: ${DOTDASH_IMAGE_XRAY:?set by morzer}
+    restart: unless-stopped
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
+    network_mode: service:vpn
+    environment:
+      XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:10809
+      XRAY_HEALTHCHECK_URL: ${DOTDASH_PARAM_HEALTHCHECK_URL:-https://www.gstatic.com/generate_204}
+    volumes:
+      - type: bind
+        source: /etc/dotdash/vpn-socks.json
+        target: /etc/xray/config.json
+        bind: {create_host_path: false}
+    tmpfs:
+      - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
+    # Once the tunnel is up: vpn's image deletes its default route first
+    # thing, and joining after its healthcheck passes leaves no moment at all
+    # with a way out but the tunnel.
+    depends_on:
+      vpn:
+        condition: service_healthy
+    mem_limit: 256m
+    logging:
+      driver: local
+      options: {max-size: 10m, max-file: "3"}
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/xray-entrypoint", "healthcheck"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 30s

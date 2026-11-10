@@ -37,7 +37,9 @@ stands for your domain throughout.
     ```
 
     - Add `--set upstream_protocol=http` for an HTTP proxy, and
-      `--set upstream_tls=true` if it takes TLS. The default is SOCKS5.
+      `--set upstream_tls=true` if it takes TLS. The default is SOCKS5. For
+      a WireGuard or OpenVPN exit instead, see
+      [WireGuard or OpenVPN upstream](tunnel-upstream.md).
     - `upstream` is `user:pass@host:port`, or `host:port` with no login. The
       password may contain `:` and `@`; an IPv6 host goes in brackets; no
       `socks5://` prefix. Changing proxy later is one `secret set` and one
