@@ -2013,7 +2013,9 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w">
 </table>
 <p>Each check fetches <code>probe_url</code> through dotdash, in up to three tries.</p>
 <p>To measure rather than check, <code>measure</code> runs each transport a number of
-times and prints the success rate, timeouts and latency as JSON:</p>
+times and prints the success rate, timeouts and latency as JSON, then
+downloads <code>download_url</code> three times through each and adds the median
+Mbit/s:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>measure<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span><span class="m">50</span>
 </code></pre></div>
 <h2 id="several-servers-and-relays">Several servers, and relays<a class="headerlink" href="#several-servers-and-relays" title="Permanent link">&para;</a></h2>
@@ -2078,6 +2080,11 @@ relay's address no longer gets through for devices.</p>
 <td><code>probe_url</code></td>
 <td><code>https://www.gstatic.com/generate_204</code></td>
 <td>what each check fetches through dotdash; any 2xx is healthy</td>
+</tr>
+<tr>
+<td><code>download_url</code></td>
+<td><code>https://speed.cloudflare.com/__down?bytes=1000000</code></td>
+<td>what <code>measure</code> downloads for its Mbit/s, <code>https://</code> only; <code>none</code> skips the downloads</td>
 </tr>
 </tbody>
 </table>
