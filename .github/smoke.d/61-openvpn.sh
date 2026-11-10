@@ -67,6 +67,13 @@ body() { # <url>: through 10-clients.sh's REALITY client; the body, or nothing
   curl -s --max-time 20 --retry 2 --retry-delay 2 --socks5-hostname 127.0.0.1:11080 "$1" 2>/dev/null || true
 }
 doctor() { { sudo morzer doctor 2>&1 || true; } | tr -s ' \n' ' '; }
+# Up to 30 s: secret set returns once the gate restarts, before it serves,
+# and curl does not retry a refused connection.
+reaches() { # <url>: whether a client gets the target's "ok"
+  local _
+  for _ in $(seq 15); do [ "$(body "$1")" = ok ] && return 0; sleep 2; done
+  return 1
+}
 
 {
   printf 'client\ndev tun\nproto udp\nremote %s 1194\nnobind\nremote-cert-tls server\nverb 3\n' "${host}"
@@ -74,13 +81,13 @@ doctor() { { sudo morzer doctor 2>&1 || true; } | tr -s ' \n' ' '; }
     "$(cat "${pki}/ca.crt")" "$(cat "${pki}/client.crt")" "$(cat "${pki}/client.key")"
 } | sudo morzer secret set upstream_openvpn >/dev/null ||
   die "setting upstream_openvpn while the proxy is the upstream failed"
-[ "$(body "${target}")" = ok ] || die "the proxy stopped carrying traffic once upstream_openvpn was set"
+reaches "${target}" || die "the proxy stopped carrying traffic once upstream_openvpn was set"
 echo "${0##*/}: upstream_openvpn set, and the proxy still the upstream"
 
 sudo docker stop dotdash-rig-upstream >/dev/null
 sudo morzer config set installation.profile=xdns,openvpn upstream_protocol=openvpn >/dev/null ||
   die "could not switch to the OpenVPN upstream (its health check failed?)"
-[ "$(body "${target}")" = ok ] || die "a client does not reach the target through the OpenVPN upstream"
+reaches "${target}" || die "a client does not reach the target through the OpenVPN upstream"
 sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the OpenVPN server answering: $(doctor)"
 route=$(sudo docker exec "$(service_container vpn)" ip -4 route show default || true)
 case ${route} in '' | *" dev tun"*) ;; *) die "vpn has a default route around the tunnel: ${route}" ;; esac
@@ -95,6 +102,6 @@ echo "${0##*/}: with the server stopped, nothing gets through, and doctor names 
 sudo docker start dotdash-rig-upstream >/dev/null
 sudo morzer config set installation.profile=xdns upstream_protocol=http >/dev/null ||
   die "could not switch back to the proxy"
-[ "$(body "${target}")" = ok ] || die "a client does not reach the target back on the proxy"
+reaches "${target}" || die "a client does not reach the target back on the proxy"
 [ -z "$(service_container vpn 2>/dev/null || true)" ] || die "vpn still runs after the openvpn profile was dropped"
 echo "${0##*/}: one config set goes back to the proxy and the xdns profile"

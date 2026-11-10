@@ -50,18 +50,25 @@ body() { # <url>: through 10-clients.sh's REALITY client; the body, or nothing
   curl -s --max-time 20 --retry 2 --retry-delay 2 --socks5-hostname 127.0.0.1:11080 "$1" 2>/dev/null || true
 }
 doctor() { { sudo morzer doctor 2>&1 || true; } | tr -s ' \n' ' '; }
+# Up to 30 s: secret set returns once the gate restarts, before it serves,
+# and curl does not retry a refused connection.
+reaches() { # <url>: whether a client gets the target's "ok"
+  local _
+  for _ in $(seq 15); do [ "$(body "$1")" = ok ] && return 0; sleep 2; done
+  return 1
+}
 
 # A provider's export: a DNS line, which the gate leaves out.
 printf '[Interface]\nPrivateKey = %s\nAddress = 10.34.0.3/32\nDNS = 1.1.1.1\n\n[Peer]\nPublicKey = %s\nEndpoint = %s:51820\nAllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 25\n' \
   "${client_key}" "${peer_pub}" "${host}" | sudo morzer secret set upstream_wireguard >/dev/null ||
   die "setting upstream_wireguard while the proxy is the upstream failed"
-[ "$(body "${target}")" = ok ] || die "the proxy stopped carrying traffic once upstream_wireguard was set"
+reaches "${target}" || die "the proxy stopped carrying traffic once upstream_wireguard was set"
 echo "${0##*/}: upstream_wireguard set, and the proxy still the upstream"
 
 sudo docker stop dotdash-rig-upstream >/dev/null
 sudo morzer config set upstream_protocol=wireguard >/dev/null ||
   die "could not switch to the WireGuard upstream (its health check failed?)"
-[ "$(body "${target}")" = ok ] || die "a client does not reach the target through the WireGuard upstream"
+reaches "${target}" || die "a client does not reach the target through the WireGuard upstream"
 sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the WireGuard peer answering: $(doctor)"
 echo "${0##*/}: with the proxy stopped, the WireGuard upstream carries the health check and a client"
 
@@ -74,5 +81,5 @@ echo "${0##*/}: with the peer stopped, nothing gets through, and doctor names it
 
 sudo docker start dotdash-rig-upstream >/dev/null
 sudo morzer config set upstream_protocol=http >/dev/null || die "could not switch back to the proxy"
-[ "$(body "${target}")" = ok ] || die "a client does not reach the target back on the proxy"
+reaches "${target}" || die "a client does not reach the target back on the proxy"
 echo "${0##*/}: upstream_protocol=http is one config set back to the proxy"
