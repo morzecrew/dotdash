@@ -50,10 +50,22 @@ EOF
   for s in $others; do echo "  sudo morzer config set server=$s address=$s"; done
 fi
 # Set under the xhttp-reality profiles only, as for client-config.
-[ -n "${XHTTP_REALITY_PORT:-}" ] || exit 0
-cat <<EOF
+if [ -n "${XHTTP_REALITY_PORT:-}" ]; then
+  cat <<EOF
 
 This server also serves XHTTP with REALITY: init with --profile xhttp-reality
 --set xhttp_reality_port=${XHTTP_REALITY_PORT}, in place of --profile xhttp, to
 check that path beside REALITY.
+EOF
+fi
+# Set under the mkcp profile only, as for client-config.
+[ -n "${KCP_PORT:-}" ] || exit 0
+cat <<EOF
+
+This server also serves mKCP: init with --profile mkcp --set kcp_port=${KCP_PORT}
+--set kcp_header=${KCP_HEADER:-srtp}, in place of another profile, and set its
+seed before the apply, to check that path beside REALITY:
+sudo morzer secret set kcp_seed <<'END'
+$(cat /run/secrets/kcp_seed)
+END
 EOF
