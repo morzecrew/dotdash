@@ -59,10 +59,14 @@ services:
       - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
     # Once the tunnel is up: vpn's image deletes its default route first
     # thing, and joining after its healthcheck passes leaves no moment at all
-    # with a way out but the tunnel.
+    # with a way out but the tunnel. restart: a restart of vpn gives it a new
+    # network namespace, and Compose then restarts this after it, into the new
+    # one; without it, this keeps the old namespace, cut off from the tunnel,
+    # and restarting both at once races and fails.
     depends_on:
       vpn:
         condition: service_healthy
+        restart: true
     mem_limit: 256m
     logging:
       driver: local

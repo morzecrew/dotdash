@@ -80,8 +80,7 @@ sudo morzer task run exit-check --output
 - The config can't run scripts, or send OpenVPN's log anywhere but
   `docker logs`.
 - The servers' addresses are looked up when the container starts. A provider
-  that moves its server is reached again after
-  `sudo morzer restart vpn vpn-socks`.
+  that moves its server is reached again after `sudo morzer restart vpn`.
 
 ## Back to a proxy
 

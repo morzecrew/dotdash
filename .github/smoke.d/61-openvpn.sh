@@ -11,8 +11,8 @@
 #   and vpn has no default route around the tunnel;
 # - with the server stopped, nothing gets through, and doctor names the
 #   OpenVPN tunnel;
-# - a new config while OpenVPN runs restarts vpn and vpn-socks, and traffic
-#   flows again;
+# - a new config while OpenVPN runs restarts vpn, and vpn-socks after it in
+#   vpn's new network namespace, and traffic flows again;
 # - upstream_protocol=http, then the xdns profile CI installs, go back.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
@@ -134,8 +134,8 @@ client_config() { # [verb]: the client's config, inline keys
     "$(cat "${pki}/ca.crt")" "$(cat "${pki}/client.crt")" "$(cat "${pki}/client.key")"
 }
 
-# morzer restarts neither vpn nor vpn-socks, the secret's services, while the
-# profile is off (0.15.1), so this succeeds.
+# morzer restarts nothing for the secret while the profile is off (0.15.1),
+# so this succeeds though it declares vpn.
 client_config | sudo morzer secret set upstream_openvpn >/dev/null ||
   die "setting upstream_openvpn while the proxy is the upstream failed"
 reaches "${target}" || die "the proxy stopped carrying traffic once upstream_openvpn was set"
@@ -166,11 +166,11 @@ sudo docker start dotdash-rig-ovpn >/dev/null
 echo "${0##*/}: with the server stopped, nothing gets through, and doctor names the tunnel"
 
 # A new config while OpenVPN runs takes effect when set: secret set restarts
-# vpn, and vpn-socks after it, into vpn's new network namespace. Releases
-# before morzer 0.15.1 declared no services for the secret (the rehearsal
-# runs these hooks on the published :main first).
+# vpn, and Compose restarts vpn-socks after it, into vpn's new network
+# namespace. Releases before morzer 0.15.1 declared no services for the
+# secret (the rehearsal runs these hooks on the published :main first).
 if sudo sed -n '/^  - name: upstream_openvpn$/,/^  - name:/p' /opt/dotdash/current/secrets.schema.yaml |
-  grep -q '^    services: \[vpn, vpn-socks\]$'; then
+  grep -q '^    services: \[vpn\]$'; then
   started() { sudo docker inspect -f '{{.State.StartedAt}}' "$(service_container "$1")"; }
   vpn_started=$(started vpn)
   socks_started=$(started vpn-socks)
@@ -179,11 +179,14 @@ if sudo sed -n '/^  - name: upstream_openvpn$/,/^  - name:/p' /opt/dotdash/curre
     { tunnel_logs; die "changing upstream_openvpn while OpenVPN runs failed"; }
   [ "$(started vpn)" != "${vpn_started}" ] || die "vpn did not restart when upstream_openvpn changed"
   [ "$(started vpn-socks)" != "${socks_started}" ] || die "vpn-socks did not restart when upstream_openvpn changed"
+  # By the processes' namespaces, from here: Xray's image has no shell.
+  netns() { sudo readlink "/proc/$(sudo docker inspect -f '{{.State.Pid}}' "$(service_container "$1")")/ns/net"; }
+  [ "$(netns vpn)" = "$(netns vpn-socks)" ] || die "vpn-socks is not in vpn's network namespace after the restart"
   reaches "${target}" || { tunnel_logs; die "a client does not reach the target after upstream_openvpn changed"; }
   route=$(sudo docker exec "$(service_container vpn)" ip -4 route show default || true)
   case ${route} in '' | *" dev tun"*) ;; *) die "vpn has a default route around the tunnel after its restart: ${route}" ;; esac
   kill "${watcher}" 2>/dev/null || true
-  echo "${0##*/}: a new config while OpenVPN runs restarts vpn and vpn-socks, and a client gets through"
+  echo "${0##*/}: a new config while OpenVPN runs restarts vpn, vpn-socks joins it again, and a client gets through"
 else
   echo "${0##*/}: skipped the change while OpenVPN runs: the installed release restarts nothing on upstream_openvpn"
 fi
