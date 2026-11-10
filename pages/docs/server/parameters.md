@@ -22,7 +22,7 @@
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (offline machines) |
 | `site_dir` | `/srv/dotdash` | your own cover site |
 | `servers` | `self` | servers sharing these keys, comma-separated |
-| `relays` | a comment | one `<host> <site> <public key> <short id> <encryption>` line per [relay](../options/relay.md), as its `relay-entry` prints it |
+| `relays` | a comment | one `<host> <site> <public key> <short id> <encryption>` line per [relay](../relay/install.md), as its `relay-entry` prints it |
 
 Set one with `sudo morzer config set <name>=<value>`, unset it with
 `sudo morzer config unset <name>`, edit `relays` with

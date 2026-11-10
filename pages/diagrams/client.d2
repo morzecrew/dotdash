@@ -1,0 +1,23 @@
+# dotdash-client: the ways traffic reaches mihomo, and where it goes from there.
+# Rendered by render.sh.
+direction: down
+
+apps: "Apps set to use\na SOCKS5 or HTTP proxy"
+gw: "LAN devices whose\ngateway is this machine\n(tun, gateway=true)"
+
+machine: Client machine {
+  own: "Its own connections\n(the tun profile)"
+  mihomo: mihomo {
+    label: "mihomo\nblock_rules, direct_rules,\nthe subscription's fastest link"
+  }
+  own -> mihomo: TUN
+}
+
+apps -> machine.mihomo: port 7890
+gw -> machine.mihomo: TUN
+
+dotdash: dotdash server\nor a relay
+direct: Direct {shape: cloud}
+
+machine.mihomo -> dotdash: everything else
+machine.mihomo -> direct: direct_rules {style.stroke-dash: 4}

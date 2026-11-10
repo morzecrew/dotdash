@@ -1,0 +1,48 @@
+# Relay
+
+Some networks inside the country let only domestic addresses through: mobile
+networks do this during shutdowns, with an allowlist. A device there can't
+reach a dotdash server abroad at all. The `dotdash-relay` bundle
+(`ghcr.io/morzecrew/dotdash-relay`) runs on a machine inside the country,
+whose address does get through, and carries devices on to the server.
+
+![A phone connects to the relay inside the country on 443 under the name of a site next to it; the relay carries it on to whichever dotdash server answers fastest](../assets/diagrams/relay.light.svg#only-light)
+![A phone connects to the relay inside the country on 443 under the name of a site next to it; the relay carries it on to whichever dotdash server answers fastest](../assets/diagrams/relay.dark.svg#only-dark)
+
+## How it works
+
+- Devices connect to the relay on 443 with REALITY, under the name of a site
+  next to it: its `site` parameter, a real site in the relay's own network.
+  To the network, the connection looks like one to that site.
+- Anyone probing the relay's 443 gets that site's real TLS handshake.
+- The relay has keys of its own, and its own copy of the devices allowed in.
+  A device uses the same id as on the server, with a separate link per relay,
+  `phone [relay <host>]`.
+- The relay goes on to the server as one client of its own, a line in the
+  server's `vless_clients`. With [several servers](../server/several-servers.md),
+  it uses whichever answers fastest, so a ban on one address doesn't cut it off.
+- Nothing leaves the relay except to dotdash: traffic still exits through
+  the server's upstream proxy.
+
+It can also help where home and mobile lines slow down TLS to foreign
+hosting: devices then reach only a domestic address, and the relay's own
+link to the server runs from its hosting network, which the slowdown may not
+reach.
+
+## Before you start
+
+- **The relay's address must get through.** Whether one does depends on the
+  network, the provider and the day. Test it from a SIM on such a network
+  before relying on it.
+- On those networks only 443 and TCP get through: the
+  [DNS tunnel](../server/dns-tunnel.md) is no use there.
+- **Devices need the relay links before a shutdown.** An app can't refresh a
+  subscription from the server's site while only domestic addresses get
+  through.
+- The machine needs Docker, sops, age and morzer
+  ([`bootstrap.sh`](../index.md#what-every-machine-needs)), and port 443 free.
+- The official sing-box apps, Karing and NekoBox can't connect to dotdash,
+  relay or not: they lack VLESS Encryption and the key share Xray's REALITY
+  requires.
+
+Next: [set one up](install.md).
