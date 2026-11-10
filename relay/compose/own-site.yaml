@@ -1,0 +1,53 @@
+# The own-site profile: the relay serves a site of its own, under its own
+# domain (installation.domains), with a certificate Caddy obtains. REALITY
+# hands Caddy every connection without the relay's key, so a prober meets a
+# real site under a name whose DNS is this machine's, where the borrowed site
+# of the plain relay sits at another address. Caddy's ACME exchange is the one
+# thing that leaves this machine other than to dotdash.
+services:
+  caddy:
+    image: ${DOTDASH_RELAY_IMAGE_CADDY:?set by morzer}
+    restart: unless-stopped
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 128m
+    environment:
+      DOMAIN: ${DOTDASH_RELAY_DOMAIN:?the own-site profile needs a domain, set with installation.domains}
+      CERT_ISSUER: ${DOTDASH_RELAY_PARAM_CERT_ISSUER:-acme}
+    # 80 and 443 inside, as uid 65532 with no capabilities.
+    sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
+    volumes:
+      - type: bind
+        source: ${DOTDASH_RELAY_RELEASE_DIR:?set by morzer}/caddy/Caddyfile
+        target: /etc/caddy/Caddyfile
+        read_only: true
+        bind: {create_host_path: false}
+      - ${DOTDASH_RELAY_RELEASE_DIR:?set by morzer}/site:/srv/default:ro
+      - ${DOTDASH_RELAY_PARAM_SITE_DIR:-/srv/dotdash-relay}:/srv/own:ro
+      # The ACME account and certificates. The image's /data/caddy is mode
+      # 1777, and a fresh volume copies it, so uid 65532 can write there.
+      - caddy_data:/data
+    tmpfs:
+      - /config:uid=65532,gid=65532,mode=0700,size=8m
+    ports:
+      - "80:80/tcp"
+    logging:
+      driver: local
+      options: {max-size: 10m, max-file: "3"}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # The line it prints names the relay's own domain as the site.
+  relay-entry:
+    environment:
+      SITE: ${DOTDASH_RELAY_DOMAIN:?the own-site profile needs a domain}
+
+volumes:
+  caddy_data: {}

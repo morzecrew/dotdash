@@ -9,8 +9,26 @@ relay prints the one line the server needs back:
 
 ## 1. Pick the site
 
-The relay borrows the name of a site next to it: devices send that name, and
-probes get that site's handshake. Pick one that is:
+Devices send the name of a site, and anyone probing the relay without its
+keys meets that site. Two ways:
+
+**A site of the relay's own** (recommended). A domain whose DNS points at the
+relay, and the `own-site` profile: the relay serves a site under that name,
+with a certificate from Let's Encrypt. To the network the name and the
+address agree, as they do for any real site. It needs:
+
+- a domain, `relay.example.ru`, with an `A` record for the relay's address;
+- port 80 open as well as 443, for the certificate;
+- in step 3, `--domain relay.example.ru --profile own-site` in place of
+  `--set site=…`.
+
+Your own pages go in `/srv/dotdash-relay` (the `site_dir` parameter); without
+them it serves a plain bundled page titled with the domain.
+
+**A site next to the relay.** No domain needed: the relay borrows the name of
+a real site, and probes get that site's own handshake. But that name's DNS
+points at the site, not the relay, and a censor that compares the two can
+tell. Pick one that is:
 
 - in the relay's own network, the same hosting provider or nearby, not a big
   name served from somewhere else;
@@ -46,7 +64,9 @@ morzer secret recipients generate-recovery-key ~/relay-recovery.key   # keep it 
 ```
 
 Then run what step 2 printed, with your site and the recovery key's
-`age1…` filled in. It has this shape:
+`age1…` filled in. It has this shape, here with a borrowed site; for a site of
+the relay's own, replace `--set site=…` with `--domain relay.example.ru
+--profile own-site`:
 
 ```sh
 sudo morzer init --release oci://ghcr.io/morzecrew/dotdash-relay:stable \

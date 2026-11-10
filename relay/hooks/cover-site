@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# The own-site profile's site: Caddy, which REALITY hands every probe, reports
+# healthy. Without the profile the relay borrows a site and has none of its
+# own to check, so it passes.
+set -euo pipefail
+
+case ",${DOTDASH_RELAY_PROFILE:-}," in
+*,own-site,*) ;;
+*) echo "no site of its own: the relay borrows one (the own-site profile is off)"; exit 0 ;;
+esac
+project=${DOTDASH_RELAY_COMPOSE_PROJECT:-dotdash-relay}
+health=$(docker compose -p "$project" ps --format '{{.Service}}={{.Health}}' | sed -n 's/^caddy=//p')
+[ "$health" = healthy ] || { echo "caddy, the relay's own site, is not healthy: ${health:-not running}" >&2; exit 1; }
+echo "the relay's own site is up"

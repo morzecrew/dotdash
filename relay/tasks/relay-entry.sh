@@ -5,6 +5,9 @@
 # The keys are public halves and a short id, as in any link.
 set -eu
 : "${SITE:?set site}"
+# The parameter's default, with the own-site profile off; the profile sets
+# SITE to the relay's domain.
+[ "${SITE}" != none ] || { echo "set site, or use the own-site profile with a domain of the relay's own" >&2; exit 1; }
 host=${1:?give the address devices reach this relay at: relay-entry -- <IP or name>}
 
 pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
