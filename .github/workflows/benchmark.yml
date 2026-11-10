@@ -77,6 +77,11 @@ jobs:
           REHEARSE_PUBKEY: ${{ vars.MINISIGN_DEV_PUBKEY }}
           REHEARSE_MORZER_VERSION: "0.15.1"
           REHEARSE_BUNDLE_DIR: server
+          # The smoke hooks' pre-apply alone, for the rig's stand-in upstream
+          # and target: the hooks themselves would run against the published
+          # :main the rehearsal installs first, and bench.sh makes its own
+          # clients. smoke-install runs every hook on this tree's bundle.
+          REHEARSE_HOOKS: .bench-hooks
           REHEARSE_PROBE_PATHS: ""
           REHEARSE_OPERATOR_SECRETS: upstream
           # The published release's upstream_host and upstream_port, as in pr.yml.
@@ -86,6 +91,7 @@ jobs:
             --set healthcheck_url=http://11.99.0.10:8000/ --set cert_issuer=internal
             --profile xdns
         run: |
+          mkdir -p .bench-hooks && cp -R .github/smoke.d/pre-apply .bench-hooks/
           bash .bundle-ci/scripts/rehearse.sh --keep
           # The token stays out of the rest of the rig.
           GITHUB_TOKEN= bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal \
