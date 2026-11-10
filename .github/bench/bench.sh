@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Measures REALITY, XHTTP and XHTTP with REALITY through the installed dotdash
-# under added latency and packet loss, and prints JSON. Runs inside a bundle-ci rig after the
+# Measures REALITY, XHTTP, XHTTP with REALITY and mKCP through the installed
+# dotdash under added latency and packet loss, and prints JSON. Runs inside a bundle-ci rig after the
 # bundle is installed, with .github/smoke.d/pre-apply's upstream and target;
 # the benchmark workflow sets that up. Never on a real machine: it changes
 # qdiscs, though only on its own clients' interfaces.
@@ -34,12 +34,17 @@ xray=$(docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/
 [ -n "${host}" ] && [ -n "${xray}" ] || die "no docker0 address or no Xray image in the rig"
 work=$(mktemp -d)
 
-# XHTTP with REALITY is opt-in: the rig installs the xdns profile, so this
-# switches to the one with both. A release without it measures the first two.
+# XHTTP with REALITY and mKCP are opt-in: the rig installs the xdns profile, so
+# this adds theirs. A release without them measures the first two.
 transports="reality xhttp"
 if grep -qF 'combinable:' /opt/dotdash/current/manifest.yaml; then
-  morzer config set installation.profile=xdns,xhttp-reality >/dev/null || die "could not switch to xdns,xhttp-reality"
+  profile=xdns,xhttp-reality
   transports="${transports} xhttp-reality"
+  if grep -qF 'mkcp: [compose/mkcp.yaml]' /opt/dotdash/current/manifest.yaml; then
+    profile="${profile},mkcp"
+    transports="${transports} mkcp"
+  fi
+  morzer config set "installation.profile=${profile}" >/dev/null || die "could not switch to ${profile}"
 elif grep -qF 'xdns-xhttp-reality:' /opt/dotdash/current/manifest.yaml; then
   morzer config set installation.profile=xdns-xhttp-reality >/dev/null || die "could not switch to xdns-xhttp-reality"
   transports="${transports} xhttp-reality"
@@ -50,11 +55,12 @@ links=$(morzer task run client-config --output)
 reality=$(grep -m1 '^vless://.*security=reality.*type=tcp' <<<"${links}") || die "client-config printed no REALITY link"
 xhttp=$(grep -m1 '^vless://.*security=tls.*type=xhttp' <<<"${links}") || die "client-config printed no XHTTP link"
 xr=$(grep -m1 '^vless://.*security=reality.*type=xhttp' <<<"${links}") || true
+kcp=$(grep -m1 '^vless://.*type=kcp' <<<"${links}") || true
 param() { sed -n "s/.*[?&]$2=\([^&#]*\).*/\1/p" <<<"$1"; }
 id() { local rest=${1#vless://}; echo "${rest%%@*}"; }
 caddy=$(docker ps -q --filter label=com.docker.compose.project=dotdash --filter label=com.docker.compose.service=caddy | sed -n 1p)
 docker exec "${caddy}" cat /data/caddy/pki/authorities/local/root.crt >"${work}/root.pem"
-mkdir -p "${work}/reality" "${work}/xhttp" "${work}/xhttp-reality"
+mkdir -p "${work}/reality" "${work}/xhttp" "${work}/xhttp-reality" "${work}/mkcp"
 jq -n --arg host "${host}" --arg id "$(id "${reality}")" --arg enc "$(param "${reality}" encryption)" \
   --arg sni "$(param "${reality}" sni)" --arg pbk "$(param "${reality}" pbk)" --arg sid "$(param "${reality}" sid)" '
   {inbounds: [{listen: "127.0.0.1", port: 1080, protocol: "socks"}],
@@ -87,6 +93,18 @@ if [ -n "${xr}" ]; then
          realitySettings: {serverName: $sni, fingerprint: "chrome", password: $pbk, shortId: $sid},
          xhttpSettings: {path: $path, mode: "auto"}}}]}' \
     >"${work}/xhttp-reality/client.json"
+fi
+if [ -n "${kcp}" ]; then
+  port=${kcp#*@} port=${port%%\?*}
+  jq -n --arg host "${host}" --argjson port "${port##*:}" --arg id "$(id "${kcp}")" \
+    --arg enc "$(param "${kcp}" encryption)" --arg seed "$(param "${kcp}" seed)" --arg header "$(param "${kcp}" headerType)" '
+    {inbounds: [{listen: "127.0.0.1", port: 1080, protocol: "socks"}],
+     outbounds: [{protocol: "vless",
+       settings: {address: $host, port: $port, id: $id, encryption: $enc},
+       streamSettings: {network: "kcp", finalmask: {udp:
+         ([{type: "mkcp-legacy", settings: {value: $seed}}]
+          + (if $header == "none" then [] else [{type: "mkcp-legacy", settings: {header: $header}}] end))}}}]}' \
+    >"${work}/mkcp/client.json"
 fi
 chmod -R a+rX "${work}"
 
