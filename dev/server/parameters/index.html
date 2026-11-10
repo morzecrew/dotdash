@@ -687,6 +687,8 @@
       
         
       
+        
+      
     
     
     
@@ -803,6 +805,33 @@
     
   
   XHTTP with REALITY
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mkcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  mKCP
 
     
   </span>
@@ -1995,6 +2024,16 @@
 <td>port for XHTTP with REALITY; not <code>https_port</code> or 80</td>
 </tr>
 <tr>
+<td><code>kcp_port</code></td>
+<td><code>8447</code></td>
+<td>UDP port for <a href="../mkcp/">mKCP</a>; not 53 with the DNS tunnel</td>
+</tr>
+<tr>
+<td><code>kcp_header</code></td>
+<td><code>srtp</code></td>
+<td>what mKCP's packets start with: <code>dtls</code>, <code>srtp</code>, <code>utp</code>, <code>wechat</code>, <code>wireguard</code> or <code>none</code></td>
+</tr>
+<tr>
 <td><code>log_level</code></td>
 <td><code>error</code></td>
 <td>Xray error log; <code>warning</code> and below name failed destinations</td>
@@ -2064,7 +2103,7 @@
 <p>Set one with <code>sudo morzer config set &lt;name&gt;=&lt;value&gt;</code>, unset it with
 <code>sudo morzer config unset &lt;name&gt;</code>, edit <code>relays</code> or <code>pools</code> with
 <code>sudo morzer config edit &lt;name&gt;</code>. Profiles (<code>installation.profile</code>): <code>xdns</code>,
-<code>xhttp-reality</code>, <code>openvpn</code> (for an <a href="../tunnel-upstream/">OpenVPN upstream</a>),
+<code>xhttp-reality</code>, <code>mkcp</code>, <code>openvpn</code> (for an <a href="../tunnel-upstream/">OpenVPN upstream</a>),
 combined with commas, such as <code>xdns,xhttp-reality</code>; <code>xdns-xhttp-reality</code> does the
 same and goes in 0.6.0.</p>
 
