@@ -31,7 +31,8 @@ address: [what leaks where](leaks.md).
    - [XHTTP with REALITY](xhttp-reality.md) on another port;
    - a [second proxy for IPv6](ipv6-upstream.md);
    - a [WireGuard or OpenVPN exit](tunnel-upstream.md) instead of a proxy;
-   - a [CDN](cdn.md) in front of XHTTP;
+   - a [CDN](cdn.md) in front of XHTTP: a domestic one for allowlists, or a
+     foreign one against IP blocking;
    - [several servers](several-servers.md) sharing one set of keys.
 4. [Operations](operations.md): updates, alerts, backups, and
    [moving to a new server](move-server.md).

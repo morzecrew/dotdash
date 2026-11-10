@@ -158,6 +158,11 @@ parameters:
     default: "# One relay per line, as its relay-entry task prints it: <host> <site> <public key> <short id> <encryption>"
     description: "The dotdash-relay machines devices also reach this server through, one \"<host> <site> <public key> <short id> <encryption>\" line per relay, as a relay's relay-entry task prints it; client-config and the subscriptions add a link through each"
     services: [subscription]
+  cdn_hosts:
+    type: string
+    default: none
+    description: "Domestic CDN names devices reach this server through, comma-separated, each fronting https://<domain> as its origin; client-config and the subscriptions add an XHTTP link through each, shaped for such CDNs: packet-up, uploads by GET with the data in headers. none for none"
+    services: [subscription]
   subscription:
     type: bool
     default: false

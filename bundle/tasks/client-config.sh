@@ -34,6 +34,16 @@ relays=$(printf '%s\n' "${RELAYS:-}" | while read -r h s k i e _; do
   if [ -n "${e:-}" ]; then echo "$h $s $k $i $e"; fi
 done)
 
+# The domestic CDNs in front of this server (the cdn_hosts parameter), each
+# fronting https://${DOMAIN}.
+cdns=$(printf '%s\n' "${CDN_HOSTS:-none}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e '/^none$/d')
+# Their edges take GET alone and no request body (Yandex has answered 413 to
+# any since 2026-09-28), so a device uploads in packet-up GETs with the data in
+# headers. The server's inbound reads that as it is: its placement is auto. The
+# link's extra is the five keys a phone's importer was seen to take, with
+# uplinkChunkSize a string; this is it percent-encoded.
+cdn_extra='%7B%22scMaxEachPostBytes%22%3A32768%2C%22scMinPostsIntervalMs%22%3A10%2C%22uplinkChunkSize%22%3A%2216384%22%2C%22uplinkDataPlacement%22%3A%22header%22%2C%22uplinkHTTPMethod%22%3A%22GET%22%7D'
+
 # support-x25519mlkem768: mihomo strips the X25519MLKEM768 key share unless a
 # link asks for it, and Xray's REALITY refuses a client without it. Other
 # clients look up the parameters they know and pass over this one.
@@ -67,6 +77,32 @@ EOF
   done
 }
 
+cdn_links() { # <id> <label>: one per CDN, named "<label> [cdn <host>]"
+  for h in $cdns; do
+    cat <<EOF
+XHTTP through the CDN $h (v2rayN, v2rayNG, Happ):
+vless://$1@$h:443?encryption=${enc}&security=tls&sni=$h&host=$h&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=packet-up&extra=${cdn_extra}#$2%20%5Bcdn%20$h%5D
+
+EOF
+  done
+}
+
+cdn_outbounds() { # <id>
+  n=0
+  for h in $cdns; do
+    n=$((n + 1))
+    cat <<EOF
+    {"tag": "dotdash-cdn-$n", "protocol": "vless",
+     "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "${enc}"},
+     "streamSettings": {"network": "xhttp", "security": "tls",
+       "tlsSettings": {"serverName": "$h", "alpn": ["h2"], "fingerprint": "chrome"},
+       "xhttpSettings": {"path": "/${path}", "host": "$h", "mode": "packet-up",
+         "uplinkHTTPMethod": "GET", "uplinkDataPlacement": "header", "uplinkChunkSize": 16384,
+         "scMaxEachPostBytes": 32768, "scMinPostsIntervalMs": 10}}},
+EOF
+  done
+}
+
 relay_outbounds() { # <id>
   n=0
   printf '%s\n' "$relays" | while read -r h s k i e; do
@@ -81,7 +117,7 @@ EOF
   done
 }
 
-outbounds() { # <id>: a REALITY and an XHTTP outbound per server, the third, and the relays
+outbounds() { # <id>: a REALITY and an XHTTP outbound per server, the third, the relays, the CDNs
   n=0
   { for s in $servers; do
     n=$((n + 1))
@@ -103,7 +139,7 @@ EOF
        "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "${pbk}", "shortId": "${sid}"},
        "xhttpSettings": {"path": "/${path}", "mode": "auto"}}},
 EOF
-  done; relay_outbounds "$1"; } | sed '$ s/,$//'
+  done; relay_outbounds "$1"; cdn_outbounds "$1"; } | sed '$ s/,$//'
 }
 
 xdns_outbound() { # <id>: the DNS tunnel, for the config's last resort
@@ -136,9 +172,11 @@ EOF
     links "$1" "$label" "$s"
   done
   relay_links "$1" "$2"
+  cdn_links "$1" "$2"
   if [ "$count" -gt 1 ]; then where=" on any of the servers"; else where=; fi
   if [ -n "$xr_port" ]; then which="REALITY, XHTTP and XHTTP with REALITY"; else which="REALITY and XHTTP"; fi
   [ -z "$relays" ] || which="${which}, or REALITY through a relay,"
+  [ -z "$cdns" ] || which="${which}, or XHTTP through a CDN,"
   if [ -n "${XDNS_DOMAIN:-}" ]; then
     last=", and the DNS tunnel only when none answers"
     fallback=', "fallbackTag": "xdns"'
