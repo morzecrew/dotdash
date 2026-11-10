@@ -40,7 +40,9 @@ By default the canary checks REALITY on 443. Profiles add a transport:
 Each check fetches `probe_url` through dotdash, in up to three tries.
 
 To measure rather than check, `measure` runs each transport a number of
-times and prints the success rate, timeouts and latency as JSON:
+times and prints the success rate, timeouts and latency as JSON, then
+downloads `download_url` three times through each and adds the median
+Mbit/s:
 
 ```sh
 sudo morzer task run measure --output -- 50
@@ -75,6 +77,7 @@ relay's address no longer gets through for devices.
 | `kcp_header` | `dtls` | the server's `kcp_header` |
 | `reality_public_key` | none, given at `init` | the REALITY public key, the `pbk` of a link |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what each check fetches through dotdash; any 2xx is healthy |
+| `download_url` | `https://speed.cloudflare.com/__down?bytes=1000000` | what `measure` downloads for its Mbit/s, `https://` only; `none` skips the downloads |
 
 | Secret | |
 | --- | --- |

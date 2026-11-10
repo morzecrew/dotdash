@@ -52,6 +52,7 @@ services:
     pids_limit: 64
     environment:
       PROBE_URL: ${DOTDASH_CANARY_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
+      DOWNLOAD_URL: ${DOTDASH_CANARY_PARAM_DOWNLOAD_URL:-https://speed.cloudflare.com/__down?bytes=1000000}
     volumes:
       - ${DOTDASH_CANARY_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image
