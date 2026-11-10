@@ -61,4 +61,5 @@ hour), through dotdash, so it stays current where only dotdash gets through,
 such as through a [relay](../relay/index.md) while only domestic addresses
 do. When that fails, as on a first start, it fetches directly. It keeps the
 last copy, so a restart while the URL is out of reach starts on the links it
-fetched last. Relays in the subscription are links like the others.
+fetched last. Relays in the subscription are links like the others: while
+only a relay gets through, the client goes through it.
