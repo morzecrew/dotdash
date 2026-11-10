@@ -57,6 +57,7 @@ sudo docker run -d --name dotdash-rig-ovpn --network dotdash-rig --cap-add NET_A
     --push "redirect-gateway def1" --keepalive 5 15 --verb 3' >/dev/null
 
 restore() {
+  kill "${watcher:-}" 2>/dev/null || true
   sudo docker rm -f dotdash-rig-ovpnclient >/dev/null 2>&1 || true
   sudo docker start dotdash-rig-upstream >/dev/null 2>&1 || true
   sudo morzer config set upstream_protocol=http >/dev/null 2>&1 || true
@@ -89,16 +90,33 @@ body() { # <url>: through this hook's REALITY client; the body, or nothing
   curl -s --max-time 20 --retry 2 --retry-delay 2 --socks5-hostname 127.0.0.1:11097 "$1" 2>/dev/null || true
 }
 doctor() { { sudo morzer doctor 2>&1 || true; } | tr -s ' \n' ' '; }
-# What the tunnel's containers and the stand-in said, before a die: a failed
-# apply rolls back and removes them before the diagnose step looks.
+# The tunnel's containers, watched while an apply runs: a failed one rolls
+# back and removes them before the diagnose step looks. watch_tunnel starts
+# it, tunnel_logs stops it and prints what was seen, with the stand-in's log.
+watch_tunnel() {
+  (
+    while :; do
+      for svc in vpn vpn-socks; do
+        c=$(sudo docker ps -aq --filter "label=com.docker.compose.service=${svc}" | sed -n 1p)
+        [ -n "${c}" ] || continue
+        {
+          sudo docker inspect -f '{{.State.Status}} exit={{.State.ExitCode}} {{.State.Error}} health={{if .State.Health}}{{.State.Health.Status}} {{range .State.Health.Log}}[{{.ExitCode}}: {{.Output}}]{{end}}{{end}}' "${c}"
+          sudo docker logs --tail 25 "${c}" 2>&1 | grep -vE 'Note:|library versions'
+        } >"${pki}/${svc}.seen" 2>&1 || true
+      done
+      sleep 3
+    done
+  ) &
+  watcher=$!
+}
 tunnel_logs() {
-  local c
-  # One query per service: Docker ANDs repeated label filters.
-  for c in $(sudo docker ps -aq --filter label=com.docker.compose.service=vpn) \
-    $(sudo docker ps -aq --filter label=com.docker.compose.service=vpn-socks) dotdash-rig-ovpn; do
-    echo "--- $(sudo docker inspect -f '{{.Name}}' "${c}" 2>/dev/null)" >&2
-    sudo docker logs --tail 15 "${c}" 2>&1 | grep -vE 'Note:|library versions' >&2 || true
+  kill "${watcher}" 2>/dev/null || true
+  local f
+  for f in "${pki}"/vpn.seen "${pki}"/vpn-socks.seen; do
+    [ -e "${f}" ] && { echo "--- ${f##*/}" >&2; cat "${f}" >&2; }
   done
+  echo "--- the stand-in server" >&2
+  sudo docker logs --tail 15 dotdash-rig-ovpn 2>&1 | grep -vE 'Note:|library versions' >&2 || true
 }
 # Up to 30 s: secret set returns once the gate restarts, before it serves,
 # and curl does not retry a refused connection.
@@ -120,6 +138,7 @@ echo "${0##*/}: upstream_openvpn set, and the proxy still the upstream"
 sudo docker stop dotdash-rig-upstream >/dev/null
 # A setting and a parameter are set apart, the profile first: vpn starts
 # while the gate still dials the proxy, then the gate moves to it.
+watch_tunnel
 sudo morzer config set installation.profile=xdns,openvpn >/dev/null ||
   { tunnel_logs; die "could not turn on the openvpn profile with the proxy still the upstream"; }
 reaches "${target}" || die "the proxy stopped carrying traffic once the openvpn profile was on"
@@ -129,6 +148,7 @@ reaches "${target}" || { tunnel_logs; die "a client does not reach the target th
 sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the OpenVPN server answering: $(doctor)"
 route=$(sudo docker exec "$(service_container vpn)" ip -4 route show default || true)
 case ${route} in '' | *" dev tun"*) ;; *) die "vpn has a default route around the tunnel: ${route}" ;; esac
+kill "${watcher}" 2>/dev/null || true
 echo "${0##*/}: with the proxy stopped, the OpenVPN upstream carries the health check and a client"
 
 sudo docker stop dotdash-rig-ovpn >/dev/null
