@@ -2457,7 +2457,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>The upstream can be a WireGuard exit: <code>upstream_protocol=wireguard</code> takes the wg-quick client config in the new <code>upstream_wireguard</code> secret, such as a home router's or a VPN provider's, and the gate runs Xray's own WireGuard with no extra privilege. It carries UDP, and IPv6 when the exit has it.</p>
 </li>
 <li>
-<p>The upstream can be an OpenVPN exit: <code>upstream_protocol=openvpn</code> with the new <code>openvpn</code> profile takes the client config in the new <code>upstream_openvpn</code> secret. Its container drops its default route before OpenVPN starts, so nothing leaves around the tunnel, which <code>apply</code> and <code>doctor</code> check.</p>
+<p>The upstream can be an OpenVPN exit: <code>upstream_protocol=openvpn</code> with the new <code>openvpn</code> profile takes the client config in the new <code>upstream_openvpn</code> secret, and a new config takes effect when set. Its container drops its default route before OpenVPN starts, so nothing leaves around the tunnel.</p>
 </li>
 <li>
 <p>A tunnel's config has a secret of its own, so it is set while the proxy is still the upstream, and the switch never leaves the gate without a working upstream: one <code>config set</code> for WireGuard, the profile and then the protocol for OpenVPN.</p>
@@ -2465,7 +2465,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
-<li>The <code>upstream</code> secret is no longer required: an installation whose upstream is a tunnel needs none. With a proxy, the egress health check still fails, naming it, while it is unset.</li>
+<li>
+<p>The server needs morzer 0.15.1: update morzer before updating dotdash.</p>
+</li>
+<li>
+<p>The <code>upstream</code> secret is no longer required: an installation whose upstream is a tunnel needs none. With a proxy, the egress health check still fails, naming it, while it is unset.</p>
+</li>
 </ul>
 <h2 id="051-2026-11-10">[0.5.1] - 2026-11-10<a class="headerlink" href="#051-2026-11-10" title="Permanent link">&para;</a></h2>
 <h3 id="deprecated">Deprecated<a class="headerlink" href="#deprecated" title="Permanent link">&para;</a></h3>

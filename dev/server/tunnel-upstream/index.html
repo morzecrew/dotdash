@@ -2043,8 +2043,10 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
   route around the tunnel.</li>
 <li>It runs as root with <code>NET_ADMIN</code> and <code>/dev/net/tun</code>, the one container here
   that does: OpenVPN takes nothing less.</li>
-<li>A new config in <code>upstream_openvpn</code> while OpenVPN runs takes effect after
-  <code>sudo morzer restart vpn</code>.</li>
+<li>A new config in <code>upstream_openvpn</code> while OpenVPN runs takes effect at
+  once: setting it restarts OpenVPN.</li>
+<li>If OpenVPN exits, its container starts it again within a minute, and
+  nothing leaves while it is down.</li>
 <li>The config can't run scripts, or send OpenVPN's log anywhere but
   <code>docker logs</code>.</li>
 <li>The servers' addresses are looked up when the container starts. A provider
