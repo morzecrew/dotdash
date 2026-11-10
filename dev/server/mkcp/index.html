@@ -1981,8 +1981,10 @@ provider's firewall, then:</p>
 <li><strong>Clients:</strong> v2rayN and v2rayNG. mihomo has no mKCP: it treats the link as
   TCP, which never answers, and its health check skips it. sing-box apps
   can't use it either.</li>
-<li><strong><code>kcp_header</code>:</strong> <code>srtp</code> by default, a call's media packets. <code>dtls</code>,
-  <code>utp</code>, <code>wechat</code>, <code>wireguard</code>, or <code>none</code> for bare encrypted packets. No
+<li><strong><code>kcp_header</code>:</strong> <code>dtls</code> by default: each packet starts as a DTLS 1.2
+  record, as WebRTC calls and some VPNs send. <code>wireguard</code> starts it as
+  WireGuard data; <code>utp</code> and <code>wechat</code> as those; <code>srtp</code> is Xray's own, which
+  doesn't start as real RTP does; <code>none</code> sends bare encrypted packets. No
   header is known to pass everywhere: if one is blocked, try another, then
   let devices refresh their subscription or send them new links.</li>
 <li><strong>Bandwidth:</strong> mKCP resends lost packets eagerly, so on a lossy line it
