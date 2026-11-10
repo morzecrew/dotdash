@@ -1694,8 +1694,30 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="[Unreleased]">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#051-2026-11-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        [0.5.1] - 2026-11-10
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.5.1] - 2026-11-10">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#deprecated" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Deprecated
+      </span>
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
@@ -1748,7 +1770,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#deprecated" class="md-nav__link">
+  <a href="#deprecated_1" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Deprecated
@@ -1996,8 +2018,30 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="[Unreleased]">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#051-2026-11-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        [0.5.1] - 2026-11-10
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.5.1] - 2026-11-10">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#deprecated" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Deprecated
+      </span>
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
@@ -2050,7 +2094,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#deprecated" class="md-nav__link">
+  <a href="#deprecated_1" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Deprecated
@@ -2316,6 +2360,11 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="051-2026-11-10">[0.5.1] - 2026-11-10<a class="headerlink" href="#051-2026-11-10" title="Permanent link">&para;</a></h2>
+<h3 id="deprecated">Deprecated<a class="headerlink" href="#deprecated" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The <code>xdns-xhttp-reality</code> profile goes in 0.6.0, not in this patch release as 0.5.0 announced: removing it would break a server still set to it. <code>xdns,xhttp-reality</code> deploys the same; switch before 0.6.0 with <code>sudo morzer config set installation.profile=xdns,xhttp-reality</code>.</li>
+</ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>The command <code>relay-config</code> prints for the relay machine's last step, <code>relay-entry</code>, now includes <code>--output</code>; without it morzer ran the task and showed nothing, not the line the <code>relays</code> parameter needs.</li>
@@ -2360,7 +2409,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p><code>bootstrap.sh</code> is served from the documentation site: <code>curl -fsSLO https://morzecrew.github.io/dotdash/bootstrap.sh</code>. The documentation itself moved from the README to <a href="https://morzecrew.github.io/dotdash/">https://morzecrew.github.io/dotdash/</a>, one version per release.</p>
 </li>
 </ul>
-<h3 id="deprecated">Deprecated<a class="headerlink" href="#deprecated" title="Permanent link">&para;</a></h3>
+<h3 id="deprecated_1">Deprecated<a class="headerlink" href="#deprecated_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>The <code>xdns-xhttp-reality</code> profile: <code>xdns,xhttp-reality</code> deploys the same. It goes in the next release.</li>
 </ul>
