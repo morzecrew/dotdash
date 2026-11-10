@@ -2081,7 +2081,8 @@
 domain (<code>--domain</code> at <code>init</code>, or <code>installation.domains</code>), and REALITY hands it
 every connection without the relay's keys. It publishes port 80 too, for the
 certificate. The site also serves devices their subscriptions, fetched from
-the servers through the relay's tunnel. See
+the servers through the relay's tunnel, and XHTTP on the secret path
+<code>xhttp_path</code>, which <code>init</code> generates. See
 <a href="../install/#1-pick-the-site">Set up a relay</a>.</p>
 <h2 id="secrets">Secrets<a class="headerlink" href="#secrets" title="Permanent link">&para;</a></h2>
 <p><code>init</code> generates the relay's own keys; the rest come from the server's

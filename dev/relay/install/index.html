@@ -2140,8 +2140,9 @@ id and encryption, plus the commands a <a href="../../canary/">canary</a> needs 
 check this relay:</p>
 <div class="highlight"><pre><span></span><code>198.51.100.7 site.example.ru &lt;public key&gt; &lt;short id&gt; &lt;encryption&gt;
 </code></pre></div>
-<p>Under <code>own-site</code>, the site is the relay's domain and the line ends with
-<code>own-site</code>: the relay also serves devices their subscriptions (step 6).</p>
+<p>Under <code>own-site</code>, the site is the relay's domain, and the line ends with
+<code>own-site</code> and the relay's XHTTP path. The relay then also serves devices
+their subscriptions and XHTTP (step 6).</p>
 <h2 id="5-on-the-server-add-the-line-to-relays">5. On the server: add the line to <code>relays</code><a class="headerlink" href="#5-on-the-server-add-the-line-to-relays" title="Permanent link">&para;</a></h2>
 <p>One line per relay:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>edit<span class="w"> </span>relays
@@ -2149,7 +2150,9 @@ check this relay:</p>
 <h2 id="6-devices">6. Devices<a class="headerlink" href="#6-devices" title="Permanent link">&para;</a></h2>
 <p><code>client-config</code> now prints a <code>[relay 198.51.100.7]</code> link for every device,
 and the Xray config falls back to the relays when the server itself is out of
-reach. Subscriptions pick the link up by themselves; otherwise resend the
+reach. Under <code>own-site</code>, a <code>[relay 198.51.100.7 xhttp]</code> link joins it: XHTTP
+over TLS behind the relay's site, for networks that block REALITY over raw
+TCP, the transport blocked most often since early 2026. Subscriptions pick the link up by themselves; otherwise resend the
 links. Do it now, while devices can still reach the server.</p>
 <p>With subscriptions on and a relay under <code>own-site</code>, each device also gets
 its subscription through the relay:</p>
