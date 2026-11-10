@@ -2,7 +2,7 @@
 # The mkcp profile: the relay serves VLESS over mKCP on kcp_port (8447/udp)
 # and carries it on to dotdash like REALITY.
 #
-# - relay-entry ends the line with kcp=8447,srtp,<the relay's seed>;
+# - relay-entry ends the line with kcp=8447,dtls,<the relay's seed>;
 # - a listed device with that port, header and seed gets out through the
 #   relay and the stand-in server; one with a wrong seed does not;
 # - dropping the profile shuts the port, and relay-entry's line loses the field.
@@ -48,13 +48,13 @@ status() { # <port> [retries]: probe_url's status through that device, or 000
 [[ $(entry) != *kcp=* ]] || die "relay-entry prints a kcp= field without the mkcp profile"
 sudo morzer config set installation.profile=mkcp >/dev/null || die "could not switch to the mkcp profile"
 field=$(grep -o 'kcp=[^ ]*' <<<"$(entry)") || die "relay-entry printed no kcp= field under mkcp"
-[[ ${field} =~ ^kcp=8447,srtp,[0-9a-f]{32}$ ]] || die "relay-entry's kcp= field is not 8447, srtp and a 32-hex seed"
+[[ ${field} =~ ^kcp=8447,dtls,[0-9a-f]{32}$ ]] || die "relay-entry's kcp= field is not 8447, dtls and a 32-hex seed"
 seed=${field##*,}
 
-device kcp 18091 8447 "${seed}" srtp
+device kcp 18091 8447 "${seed}" dtls
 code=$(status 18091)
 [ "${code}" = 204 ] || die "a listed device got ${code} over mKCP through the relay, not 204"
-device kcp-wrong 18092 8447 "$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')" srtp
+device kcp-wrong 18092 8447 "$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')" dtls
 code=$(status 18092 0)
 [ "${code}" != 204 ] || die "a device with a wrong seed got through the relay's mKCP"
 echo "30-mkcp.sh: under mkcp a device gets out over mKCP through the relay; a wrong seed does not"

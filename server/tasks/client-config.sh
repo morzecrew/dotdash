@@ -24,7 +24,7 @@ xr_port=${XHTTP_REALITY_PORT:-}
 # seed, then start with the header; a client lists both, in that order, as
 # v2rayN and v2rayNG do from a link's seed and headerType.
 kcp_port=${KCP_PORT:-}
-kcp_header=${KCP_HEADER:-srtp}
+kcp_header=${KCP_HEADER:-dtls}
 kcp_seed=
 [ -z "$kcp_port" ] || kcp_seed=$(cat /run/secrets/kcp_seed)
 kcp_masks() { # <seed> <header>: an mKCP outbound's finalmask list

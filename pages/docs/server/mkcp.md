@@ -16,8 +16,10 @@ Each device gets a `phone [kcp]` link and an outbound in the Xray config.
 - **Clients:** v2rayN and v2rayNG. mihomo has no mKCP: it treats the link as
   TCP, which never answers, and its health check skips it. sing-box apps
   can't use it either.
-- **`kcp_header`:** `srtp` by default, a call's media packets. `dtls`,
-  `utp`, `wechat`, `wireguard`, or `none` for bare encrypted packets. No
+- **`kcp_header`:** `dtls` by default: each packet starts as a DTLS 1.2
+  record, as WebRTC calls and some VPNs send. `wireguard` starts it as
+  WireGuard data; `utp` and `wechat` as those; `srtp` is Xray's own, which
+  doesn't start as real RTP does; `none` sends bare encrypted packets. No
   header is known to pass everywhere: if one is blocked, try another, then
   let devices refresh their subscription or send them new links.
 - **Bandwidth:** mKCP resends lost packets eagerly, so on a lossy line it

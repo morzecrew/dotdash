@@ -15,7 +15,7 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `dotdash_address` | `none` | where to connect when `dotdash_servers` names one server, such as its IP; `none` reaches each server by its name |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what the health check fetches through dotdash; any 2xx is healthy |
 | `kcp_port` | `8447` | with `mkcp`, the UDP port devices reach the relay's mKCP on |
-| `kcp_header` | `srtp` | with `mkcp`, what its packets start with, as the server's [`kcp_header`](../server/mkcp.md) |
+| `kcp_header` | `dtls` | with `mkcp`, what its packets start with, as the server's [`kcp_header`](../server/mkcp.md) |
 | `dotdash_server` | `none` | deprecated: the one server, read only while `dotdash_servers` is unset |
 
 ## Profiles

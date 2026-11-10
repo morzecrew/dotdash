@@ -63,7 +63,7 @@ fi
 cat <<EOF
 
 This server also serves mKCP: init with --profile mkcp --set kcp_port=${KCP_PORT}
---set kcp_header=${KCP_HEADER:-srtp}, in place of another profile, and set its
+--set kcp_header=${KCP_HEADER:-dtls}, in place of another profile, and set its
 seed before the apply, to check that path beside REALITY:
 sudo morzer secret set kcp_seed <<'END'
 $(cat /run/secrets/kcp_seed)

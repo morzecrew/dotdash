@@ -11,4 +11,4 @@ services:
   relay-entry:
     environment:
       KCP_PORT: ${DOTDASH_RELAY_PARAM_KCP_PORT:-8447}
-      KCP_HEADER: ${DOTDASH_RELAY_PARAM_KCP_HEADER:-srtp}
+      KCP_HEADER: ${DOTDASH_RELAY_PARAM_KCP_HEADER:-dtls}

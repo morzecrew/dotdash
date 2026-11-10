@@ -21,7 +21,7 @@ if [ "${OWN_SITE:-}" = true ]; then own=" own-site $(cat /run/secrets/xhttp_path
 # mkcp: this relay serves mKCP too, so client-config gives each device an mKCP
 # link through it. Last on the line, where a server from before it reads no
 # field.
-if [ -n "${KCP_PORT:-}" ]; then kcp=" kcp=${KCP_PORT},${KCP_HEADER:-srtp},$(cat /run/secrets/kcp_seed)"; else kcp=; fi
+if [ -n "${KCP_PORT:-}" ]; then kcp=" kcp=${KCP_PORT},${KCP_HEADER:-dtls},$(cat /run/secrets/kcp_seed)"; else kcp=; fi
 
 cat <<EOF
 On the dotdash server, add this line to the relays parameter (sudo morzer

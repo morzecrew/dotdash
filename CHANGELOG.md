@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- VLESS over mKCP, an opt-in UDP transport for networks that block the TCP ones: the new `mkcp` profile serves it on `kcp_port` (8447/udp), its packets encrypted under the new `kcp_seed` secret and starting with a fake `kcp_header` (`srtp` unless set). `client-config` and the subscriptions add a `[kcp]` link and outbound per server, for v2rayN and v2rayNG.
+- VLESS over mKCP, an opt-in UDP transport for networks that block the TCP ones: the new `mkcp` profile serves it on `kcp_port` (8447/udp), its packets encrypted under the new `kcp_seed` secret and starting with a fake `kcp_header` (`dtls` unless set, a DTLS 1.2 record header). `client-config` and the subscriptions add a `[kcp]` link and outbound per server, for v2rayN and v2rayNG.
 
 - mKCP on relays: the relay's `mkcp` profile (`own-site,mkcp` with its own site) serves it on `kcp_port` under its own `kcp_seed`, `relay-entry` ends its line with `kcp=<port>,<header>,<seed>`, and `client-config` and the subscriptions add a `[relay <host> kcp]` link and outbound through it. A server from before reads no such field.
 
