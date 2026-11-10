@@ -52,6 +52,16 @@ in v2rayN and v2rayNG.
     subnets of their own. Test from a SIM on the networks you care about,
     keep a CDN as one way among several, and expect the account to be closed.
 
+To make losing an account cheap:
+
+- **Spread over CDNs and accounts.** `cdn_hosts` takes several names, and the
+  Xray config passes over one that stops answering. Don't put every device
+  behind one account.
+- **Serve a real site at the origin** ([cover site](cover-site.md)). It is
+  what the CDN fetches and what a provider's reviewer sees. Operators report
+  that accounts with a live, visited site behind them last longer than
+  those fronting the bundled page.
+
 The CDN ends one TLS connection and opens another, so it sees the requests'
 paths and headers. VLESS Encryption keeps what they carry from it.
 

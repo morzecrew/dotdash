@@ -85,11 +85,12 @@ generates its own keys at `init`.
 
 ## 4. On the relay: its line
 
-Give `relay-entry` the address devices reach the relay at, its public IP or a
-name pointing at it:
+Give `relay-entry` the address devices reach the relay at. With a domain, give
+the domain: links then name it, and [moving the relay](operations.md#move-a-relay)
+needs only a DNS change. Without one, give the relay's public IP:
 
 ```sh
-sudo morzer task run relay-entry --output -- 198.51.100.7
+sudo morzer task run relay-entry --output -- relay.example.ru   # or 198.51.100.7
 ```
 
 It prints one line for the server, its own address, site, public key, short

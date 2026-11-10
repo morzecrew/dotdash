@@ -51,7 +51,7 @@ done </run/secrets/vless_clients
 cat <<EOF
 END
 sudo morzer apply
-sudo morzer task run relay-entry --output -- <the address devices reach the relay at>
+sudo morzer task run relay-entry --output -- <the relay's domain, or its IP without one>
 
 Add the line relay-entry prints to this server's relays parameter (sudo
 morzer config edit relays), then send devices their links again; subscriptions
