@@ -41,9 +41,10 @@ secrets:
   schema: secrets.schema.yaml
 
 compatibility:
-  # The manager this bundle is verified and rehearsed with, and the first with
-  # split, which the server list needs.
-  min_manager_version: "0.15.0"
+  # The manager this bundle is verified and rehearsed with, and the first that
+  # restarts only the services the active profiles define after a secret
+  # change, which xhttp_path's caddy needs.
+  min_manager_version: "0.15.1"
   rollback_safe: true
   # No database, which an unattended update needs declared.
   database: none

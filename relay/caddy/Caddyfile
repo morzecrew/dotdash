@@ -48,6 +48,22 @@ http://127.0.0.1:8081 {
 		import headers
 	}
 
+	# XHTTP: the secret path to Xray's XHTTP inbound, as the server's site
+	# routes its own. h2c, so stream-up and stream-one survive, and no
+	# buffering either way. The device's address stays here.
+	@xhttp path /{file./run/secrets/xhttp_path}/*
+	handle @xhttp {
+		reverse_proxy xray:8080 {
+			header_up -X-Forwarded-For
+			header_up -X-Forwarded-Host
+			header_up -X-Forwarded-Proto
+			transport http {
+				versions h2c
+			}
+			flush_interval -1
+		}
+	}
+
 	# A device's subscription, 32 hex characters as the server names it,
 	# fetched from the dotdash servers through this relay's own tunnel: Xray's
 	# subscriptions inbound, which dotdash carries as it carries devices. A

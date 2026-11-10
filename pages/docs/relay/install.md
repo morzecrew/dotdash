@@ -101,8 +101,9 @@ check this relay:
 198.51.100.7 site.example.ru <public key> <short id> <encryption>
 ```
 
-Under `own-site`, the site is the relay's domain and the line ends with
-`own-site`: the relay also serves devices their subscriptions (step 6).
+Under `own-site`, the site is the relay's domain, and the line ends with
+`own-site` and the relay's XHTTP path. The relay then also serves devices
+their subscriptions and XHTTP (step 6).
 
 ## 5. On the server: add the line to `relays`
 
@@ -116,7 +117,9 @@ sudo morzer config edit relays
 
 `client-config` now prints a `[relay 198.51.100.7]` link for every device,
 and the Xray config falls back to the relays when the server itself is out of
-reach. Subscriptions pick the link up by themselves; otherwise resend the
+reach. Under `own-site`, a `[relay 198.51.100.7 xhttp]` link joins it: XHTTP
+over TLS behind the relay's site, for networks that block REALITY over raw
+TCP, the transport blocked most often since early 2026. Subscriptions pick the link up by themselves; otherwise resend the
 links. Do it now, while devices can still reach the server.
 
 With subscriptions on and a relay under `own-site`, each device also gets

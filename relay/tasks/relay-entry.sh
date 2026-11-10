@@ -15,8 +15,9 @@ enc=$(/opt/xray/xray-entrypoint vless-encryption /run/secrets/vless_seed)
 sid=$(cat /run/secrets/reality_short_id)
 
 # own-site: this relay serves its own site under SITE, which fetches devices'
-# subscriptions from the server, so client-config gives each device that URL.
-if [ "${OWN_SITE:-}" = true ]; then own=" own-site"; else own=; fi
+# subscriptions from the server and routes the XHTTP path to Xray, so
+# client-config gives each device that URL and an XHTTP link through it.
+if [ "${OWN_SITE:-}" = true ]; then own=" own-site $(cat /run/secrets/xhttp_path)"; else own=; fi
 
 cat <<EOF
 On the dotdash server, add this line to the relays parameter (sudo morzer
