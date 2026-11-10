@@ -15,7 +15,7 @@ On a fresh Debian or Ubuntu host, with `example.com` pointing at it and
 curl -fsSLO https://morzecrew.github.io/dotdash/bootstrap.sh    # Docker, sops, age, morzer
 less bootstrap.sh && sudo bash bootstrap.sh
 morzer secret recipients generate-recovery-key ~/dotdash-recovery.key   # keep it off the machine
-sudo morzer init --release oci://ghcr.io/morzecrew/dotdash:stable \
+sudo morzer init --release oci://ghcr.io/morzecrew/dotdash-server:stable \
   --domain example.com --recovery-recipient age1…
 sudo morzer secret set upstream    # user:pass@host:port
 sudo morzer apply
@@ -30,9 +30,9 @@ The full steps, options and operations are in the
 
 | Tag | |
 | --- | --- |
-| `ghcr.io/morzecrew/dotdash:stable` | releases (`vX.Y.Z` tags), release key |
-| `ghcr.io/morzecrew/dotdash:X.Y.Z` | one release |
-| `ghcr.io/morzecrew/dotdash:main` | every push to `main`, dev key; may be broken |
+| `ghcr.io/morzecrew/dotdash-server:stable` | releases (`vX.Y.Z` tags), release key |
+| `ghcr.io/morzecrew/dotdash-server:X.Y.Z` | one release |
+| `ghcr.io/morzecrew/dotdash-server:main` | every push to `main`, dev key; may be broken |
 
 The canary, relay and client bundles, `dotdash-canary`, `dotdash-relay` and
 `dotdash-client`, have the same tags.

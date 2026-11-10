@@ -22,6 +22,7 @@ jobs:
       morzer-version: "0.15.1"
       bundle-dir: server
       version-paths: server
+      package: dotdash-server
       ref: ${{ github.sha }}
       version: 0.0.0-pr.${{ github.event.pull_request.number }}
       signing: ephemeral

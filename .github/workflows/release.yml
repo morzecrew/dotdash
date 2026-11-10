@@ -36,6 +36,7 @@ jobs:
       morzer-version: "0.15.1"
       bundle-dir: server
       version-paths: server
+      package: dotdash-server
       ref: ${{ github.sha }}
       version: ${{ needs.guard.outputs.version }}
       channel: stable
@@ -72,6 +73,7 @@ jobs:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}
       channel: stable
+      package: dotdash-server
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
 
   github-release:

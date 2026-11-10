@@ -8,7 +8,7 @@ the `A` record's TTL to 300 s or less. Devices keep their links.
 sudo morzer --product dotdash installation import --from-backup \
   --target s3://bucket/dotdash --credentials-file ./bucket.yaml \
   --identity ~/dotdash-recovery.key
-sudo morzer update oci://ghcr.io/morzecrew/dotdash:stable
+sudo morzer update oci://ghcr.io/morzecrew/dotdash-server:stable
 # optional, keeps Caddy's certificate (import prints both ids)
 sudo morzer backup fetch <backup id>
 sudo morzer restore --force --confirm <installation id> --identity ~/dotdash-recovery.key

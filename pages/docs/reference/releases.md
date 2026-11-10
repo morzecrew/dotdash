@@ -6,7 +6,7 @@ a `vX.Y.Z` tag publishes all four bundles as `:X.Y.Z` and `:stable`, with a
 GitHub release. Each bundle carries signed build provenance:
 
 ```sh
-gh attestation verify oci://ghcr.io/morzecrew/dotdash:<version> --owner morzecrew
+gh attestation verify oci://ghcr.io/morzecrew/dotdash-server:<version> --owner morzecrew
 ```
 
 A weekly benchmark measures REALITY and XHTTP under added latency and loss;

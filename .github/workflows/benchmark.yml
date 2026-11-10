@@ -92,7 +92,11 @@ jobs:
             --profile xdns
         run: |
           mkdir -p .bench-hooks && cp -R .github/smoke.d/pre-apply .bench-hooks/
-          bash .bundle-ci/scripts/rehearse.sh --keep
+          # ponytail: the old package until dotdash-server:main is published;
+          # drop the fallback once the dotdash package is deleted.
+          from=ghcr.io/morzecrew/dotdash-server:main
+          oras manifest fetch "${from}" >/dev/null 2>&1 || from=ghcr.io/morzecrew/dotdash:main
+          bash .bundle-ci/scripts/rehearse.sh --from "${from}" --keep
           # The token stays out of the rest of the rig.
           GITHUB_TOKEN= bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal \
             sh -c 'bash /rig/smoke.sh update "$(ls /rig/dist/*.tar.zst | head -1)"'

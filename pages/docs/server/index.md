@@ -1,6 +1,6 @@
 # Server
 
-The `dotdash` bundle (`ghcr.io/morzecrew/dotdash`) runs on one Docker host
+The `dotdash` bundle (`ghcr.io/morzecrew/dotdash-server`) runs on one Docker host
 outside the censored network. Devices connect to it on 443, and it sends
 their traffic on through your upstream proxy, the only way out it has.
 

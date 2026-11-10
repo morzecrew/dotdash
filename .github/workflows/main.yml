@@ -28,6 +28,7 @@ jobs:
       morzer-version: "0.15.1"
       bundle-dir: server
       version-paths: server
+      package: dotdash-server
       ref: ${{ github.sha }}
       channel: main
       signing: dev
@@ -66,6 +67,7 @@ jobs:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}
       channel: main
+      package: dotdash-server
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
 
   # The command the docs give works on what was just published: the
@@ -85,7 +87,7 @@ jobs:
           VERSION: ${{ needs.bundle.outputs.version }}
         run: |
           set -euo pipefail
-          gh attestation verify "oci://ghcr.io/morzecrew/dotdash:${VERSION}" --owner morzecrew \
+          gh attestation verify "oci://ghcr.io/morzecrew/dotdash-server:${VERSION}" --owner morzecrew \
             --signer-workflow morzecrew/bundle-ci/.github/workflows/publish.yml \
             --source-digest "${GITHUB_SHA}" >/dev/null
-          echo "dotdash:${VERSION}: provenance verified"
+          echo "dotdash-server:${VERSION}: provenance verified"
