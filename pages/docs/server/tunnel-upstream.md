@@ -75,8 +75,10 @@ sudo morzer task run exit-check --output
   route around the tunnel.
 - It runs as root with `NET_ADMIN` and `/dev/net/tun`, the one container here
   that does: OpenVPN takes nothing less.
-- A new config in `upstream_openvpn` while OpenVPN runs takes effect after
-  `sudo morzer restart vpn`.
+- A new config in `upstream_openvpn` while OpenVPN runs takes effect at
+  once: setting it restarts OpenVPN.
+- If OpenVPN exits, its container starts it again within a minute, and
+  nothing leaves while it is down.
 - The config can't run scripts, or send OpenVPN's log anywhere but
   `docker logs`.
 - The servers' addresses are looked up when the container starts. A provider
