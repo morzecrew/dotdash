@@ -100,6 +100,17 @@ parameters:
     default: false
     description: Connect to the IPv6 proxy over TLS
     services: [gate]
+  upstream_backup_protocol:
+    type: enum
+    values: [none, socks, http]
+    default: none
+    description: "Protocol of a backup proxy, which the upstream_backup secret names as user:pass@host:port, or none. With one, connections leave through the upstream while probes of healthcheck_url get through it, every 30 s, and through the backup while they don't; the exit changes with it. upstream_udp holds for the backup too"
+    services: [gate]
+  upstream_backup_tls:
+    type: bool
+    default: false
+    description: Connect to the backup proxy over TLS
+    services: [gate]
   healthcheck6_url:
     type: string
     default: http://api6.ipify.org
@@ -182,8 +193,8 @@ parameters:
   healthcheck_url:
     type: string
     default: https://www.gstatic.com/generate_204
-    description: URL Xray's healthcheck fetches through the upstream proxy; any 2xx is healthy
-    services: [xray]
+    description: URL Xray's healthcheck fetches through the upstream proxy; any 2xx is healthy. With a backup proxy, the gate probes each with it too
+    services: [xray, gate]
 
 images:
   # hooks/policy reads the rendered config with it, run with no network, so

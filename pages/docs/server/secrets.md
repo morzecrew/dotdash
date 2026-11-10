@@ -11,6 +11,7 @@ replace a generated one with `sudo morzer secret rotate <name>`.
 | `upstream_wireguard` | no | a WireGuard exit's wg-quick client config, for `upstream_protocol=wireguard` ([tunnels](tunnel-upstream.md)) |
 | `upstream_openvpn` | no | an OpenVPN exit's client config, keys inline, for `upstream_protocol=openvpn` |
 | `upstream6` | no | the IPv6 proxy, same form; needed once `upstream6_protocol` is set |
+| `upstream_backup` | no | the backup proxy, same form; needed once `upstream_backup_protocol` is set |
 | `vless_clients` | yes | one `<uuid> [name]` line per device |
 | `vless_seed` | yes | ML-KEM-768 seed the VLESS Encryption key pair derives from |
 | `reality_key` | yes | REALITY private key (x25519) |

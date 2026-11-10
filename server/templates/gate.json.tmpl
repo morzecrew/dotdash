@@ -22,12 +22,21 @@ is a SOCKS hop to vpn-socks, which shares the namespace of the OpenVPN client
 tunnel. Either carries UDP, and IPv6 if the exit has it, so neither takes
 upstream6; nor resolve=upstream, as a tunnel resolves no names.
 
+upstream_backup_protocol: a second proxy for when the upstream fails, from
+the upstream_backup secret. The egress goes to a balancer whose one candidate
+is the upstream, and whose fallback is the backup: while the observatory's
+probes of healthcheck_url get through the upstream, everything leaves there,
+so the exit stays the same; when they stop, the backup, until they get through
+again. The balancer matches tags by prefix, so the IPv6 proxy is "ipv6", never
+"upstream6".
+
 Nothing else is routed: the freedom outbound carries only the public inbounds,
 whose destination is fixed to Xray, and everything else is blocked.
 */ -}}
 {{- $withXdns := or (has "xdns" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
 {{- $xhttpReality := or (has "xhttp-reality" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
 {{- $v6 := ne .Parameters.upstream6_protocol "none" -}}
+{{- $backup := ne .Parameters.upstream_backup_protocol "none" -}}
 {{- $proto := .Parameters.upstream_protocol -}}
 {{- $tunnel := or (eq $proto "wireguard") (eq $proto "openvpn") -}}
 {{- $udp := or $tunnel (and (eq (print .Parameters.upstream_udp) "true") (eq $proto "socks")) -}}
@@ -80,7 +89,7 @@ fails on its empty value with the message. */ -}}
     {"tag": "block", "protocol": "blackhole"}
 {{- if $v6 }},
     {
-      "tag": "upstream6",
+      "tag": "ipv6",
       "protocol": "{{ .Parameters.upstream6_protocol }}",
       "settings": {"$proxy": "/run/secrets/upstream6"}
 {{- if eq (print .Parameters.upstream6_tls) "true" }},
@@ -88,14 +97,30 @@ fails on its empty value with the message. */ -}}
 {{- end }}
     }
 {{- end }}
+{{- if $backup }},
+    {
+      "tag": "backup",
+      "protocol": "{{ .Parameters.upstream_backup_protocol }}",
+      "settings": {"$proxy": "/run/secrets/upstream_backup"}
+{{- if eq (print .Parameters.upstream_backup_tls) "true" }},
+      "streamSettings": {"security": "tls"}
+{{- end }}
+    }
+{{- end }}
   ],
+{{- if $backup }}
+  "observatory": {"subjectSelector": ["upstream", "backup"], "probeUrl": "{{ .Parameters.healthcheck_url }}", "probeInterval": "30s", "enableConcurrency": true},
+{{- end }}
   "routing": {
     "domainStrategy": "AsIs",
+{{- if $backup }}
+    "balancers": [{"tag": "egress", "selector": ["upstream"], "fallbackTag": "backup", "strategy": {"type": "random"}}],
+{{- end }}
     "rules": [
       {"inboundTag": ["public-tls"{{ if $withXdns }}, "public-dns"{{ end }}{{ if $xhttpReality }}, "public-xhttp-reality"{{ end }}], "outboundTag": "inside"},
-      {"inboundTag": ["egress"], "outboundTag": "upstream"},
+      {"inboundTag": ["egress"], {{ if $backup }}"balancerTag": "egress"{{ else }}"outboundTag": "upstream"{{ end }}},
 {{- if $v6 }}
-      {"inboundTag": ["egress6"], "outboundTag": "upstream6"},
+      {"inboundTag": ["egress6"], "outboundTag": "ipv6"},
 {{- end }}
       {"network": "tcp,udp", "outboundTag": "block"}
     ]

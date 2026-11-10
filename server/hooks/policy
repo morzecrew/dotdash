@@ -12,7 +12,8 @@
 #   - every VLESS inbound demands a listed client and VLESS decryption, no
 #     XHTTP inbound sets a flow, and anything else listens on loopback only;
 #   - the gate forwards its public inbounds to Xray only, carries Xray's hop
-#     to the upstream, and blocks everything else;
+#     to the upstream, or to the backup proxy only as the upstream's fallback,
+#     and blocks everything else;
 #   - Xray is on internal networks only, so it has no route out at all, and
 #     publishes nothing; the gate publishes only https_port and, where it
 #     forwards them, 53 for the DNS tunnel and xhttp_reality_port, and Caddy
@@ -93,10 +94,17 @@ violations+=$'\n'$(jq '
   | check($extra == []; "the gate has unexpected inbounds: \($extra)"),
     (.inbounds[]? | select(.protocol == "dokodemo-door") |
       check(.settings.address == "xray"; "the gate forwards \(.tag) to \(.settings.address), not Xray")),
-    check([.outbounds[]?.tag] | . == ["upstream", "inside", "block"] or . == ["upstream", "inside", "block", "upstream6"];
+    check([.outbounds[]?.tag] | .[0:3] == ["upstream", "inside", "block"] and IN(.[3:]; [], ["ipv6"], ["backup"], ["ipv6", "backup"]);
       "the gate'"'"'s outbounds are \([.outbounds[]?.tag])"),
-    check([.outbounds[0], .outbounds[3]? // empty] | all(.protocol | IN("socks", "http", "wireguard"));
-      "the gate dials an upstream with \([.outbounds[0], .outbounds[3]? // empty | .protocol])"),
+    check([.outbounds[]? | select(.tag | IN("upstream", "ipv6", "backup"))] | all(.protocol | IN("socks", "http", "wireguard"));
+      "the gate dials an upstream with \([.outbounds[]? | select(.tag | IN("upstream", "ipv6", "backup")) | .protocol])"),
+    check([.outbounds[]? | select(.tag | IN("ipv6", "backup"))] | all(.protocol | IN("socks", "http"));
+      "the gate'"'"'s IPv6 or backup proxy is not a SOCKS or HTTP proxy"),
+    check([.outbounds[]? | select(.tag == "backup")] | all(.settings == {"$proxy": "/run/secrets/upstream_backup"});
+      "the gate'"'"'s backup proxy is not the upstream_backup secret"),
+    # The backup only ever as the upstream'"'"'s fallback, never beside it.
+    check(.routing.balancers // [] | all(. == {tag: "egress", selector: ["upstream"], fallbackTag: "backup", strategy: {type: "random"}});
+      "the gate balances its egress otherwise than the upstream, falling back to the backup"),
     # WireGuard only as the image builds it from the upstream secret, which
     # always sets noKernelTun: the gate has no capability for a kernel tun.
     check(.outbounds[0] | .protocol != "wireguard" or .settings == {"$wireguard": "/run/secrets/upstream_wireguard"};
