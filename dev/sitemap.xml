@@ -4,60 +4,84 @@
         <loc>https://morzecrew.github.io/dotdash/dev/</loc>
       </url>
       <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/get-started/clients/</loc>
+        <loc>https://morzecrew.github.io/dotdash/dev/canary/</loc>
       </url>
       <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/get-started/install/</loc>
+        <loc>https://morzecrew.github.io/dotdash/dev/client/</loc>
       </url>
       <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/operations/</loc>
+        <loc>https://morzecrew.github.io/dotdash/dev/client/network/</loc>
       </url>
       <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/operations/device-dns/</loc>
+        <loc>https://morzecrew.github.io/dotdash/dev/client/reference/</loc>
       </url>
       <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/operations/leaks/</loc>
+        <loc>https://morzecrew.github.io/dotdash/dev/client/rules/</loc>
       </url>
       <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/operations/move-server/</loc>
-      </url>
-      <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/options/canary/</loc>
-      </url>
-      <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/options/cdn/</loc>
-      </url>
-      <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/options/client/</loc>
-      </url>
-      <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/options/cover-site/</loc>
-      </url>
-      <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/options/dns-tunnel/</loc>
-      </url>
-      <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/options/ipv6-upstream/</loc>
-      </url>
-      <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/options/relay/</loc>
-      </url>
-      <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/options/several-servers/</loc>
-      </url>
-      <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/options/xhttp-reality/</loc>
+        <loc>https://morzecrew.github.io/dotdash/dev/client/tun/</loc>
       </url>
       <url>
         <loc>https://morzecrew.github.io/dotdash/dev/reference/changelog/</loc>
       </url>
       <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/reference/parameters/</loc>
-      </url>
-      <url>
         <loc>https://morzecrew.github.io/dotdash/dev/reference/releases/</loc>
       </url>
       <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/reference/secrets/</loc>
+        <loc>https://morzecrew.github.io/dotdash/dev/relay/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/relay/install/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/relay/operations/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/relay/reference/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/cdn/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/cover-site/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/device-dns/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/devices/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/dns-tunnel/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/install/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/ipv6-upstream/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/leaks/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/move-server/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/operations/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/parameters/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/secrets/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/several-servers/</loc>
+      </url>
+      <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/xhttp-reality/</loc>
       </url>
 </urlset>
