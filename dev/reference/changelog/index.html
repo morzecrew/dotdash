@@ -2551,6 +2551,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>VLESS over mKCP, an opt-in UDP transport for networks that block the TCP ones: the new <code>mkcp</code> profile serves it on <code>kcp_port</code> (8447/udp), its packets encrypted under the new <code>kcp_seed</code> secret and starting with a fake <code>kcp_header</code> (<code>srtp</code> unless set). <code>client-config</code> and the subscriptions add a <code>[kcp]</code> link and outbound per server, for v2rayN and v2rayNG.</p>
 </li>
 <li>
+<p>The canary checks mKCP with <code>--profile mkcp</code>, with the server's <code>kcp_port</code>, <code>kcp_header</code> and <code>kcp_seed</code>, which <code>canary-config</code> prints for a server under the <code>mkcp</code> profile; <code>measure</code> reports it beside REALITY.</p>
+</li>
+<li>
 <p>Pools, so a leaked device no longer gives away every relay and CDN host: the new <code>pools</code> parameter takes one <code>&lt;pool&gt; &lt;member&gt;...</code> line per pool, the members device names, relay hosts and CDN hosts. <code>client-config</code> and the subscriptions give a device in a pool its pools' relays and CDN hosts and those in no pool; a device in none still gets them all, and a member that names nothing is reported.</p>
 </li>
 <li>

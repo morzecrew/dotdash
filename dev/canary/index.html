@@ -2005,6 +2005,10 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w">
 <td><code>--profile xhttp-reality</code></td>
 <td><a href="../server/xhttp-reality/">XHTTP with REALITY</a>, on its own port</td>
 </tr>
+<tr>
+<td><code>--profile mkcp</code></td>
+<td><a href="../server/mkcp/">mKCP</a>, on its own UDP port</td>
+</tr>
 </tbody>
 </table>
 <p>Each check fetches <code>probe_url</code> through dotdash, in up to three tries.</p>
@@ -2056,6 +2060,16 @@ relay's address no longer gets through for devices.</p>
 <td>the server's <code>xhttp_reality_port</code></td>
 </tr>
 <tr>
+<td><code>kcp_port</code></td>
+<td><code>8447</code></td>
+<td>the server's <code>kcp_port</code></td>
+</tr>
+<tr>
+<td><code>kcp_header</code></td>
+<td><code>srtp</code></td>
+<td>the server's <code>kcp_header</code></td>
+</tr>
+<tr>
 <td><code>reality_public_key</code></td>
 <td>none, given at <code>init</code></td>
 <td>the REALITY public key, the <code>pbk</code> of a link</td>
@@ -2086,6 +2100,10 @@ relay's address no longer gets through for devices.</p>
 <tr>
 <td><code>reality_short_id</code></td>
 <td>the <code>sid=</code> value of a REALITY link</td>
+</tr>
+<tr>
+<td><code>kcp_seed</code></td>
+<td>the <code>seed=</code> value of an mKCP link, for <code>--profile mkcp</code></td>
 </tr>
 <tr>
 <td><code>xhttp_path</code></td>
