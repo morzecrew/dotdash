@@ -43,6 +43,9 @@
         <loc>https://morzecrew.github.io/dotdash/dev/server/</loc>
       </url>
       <url>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/backup-upstream/</loc>
+      </url>
+      <url>
         <loc>https://morzecrew.github.io/dotdash/dev/server/cdn/</loc>
       </url>
       <url>

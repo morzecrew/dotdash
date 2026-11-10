@@ -678,6 +678,8 @@
       
         
       
+        
+      
     
     
     
@@ -818,6 +820,33 @@
     
   
   IPv6 through a second proxy
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../server/backup-upstream/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  A backup proxy
 
     
   </span>
@@ -2489,6 +2518,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
+<li>
+<p>A backup proxy for when the upstream fails: <code>upstream_backup_protocol</code> with the new <code>upstream_backup</code> secret. Connections leave through the upstream while the gate's probes get through it, every 30 s, through the backup while they don't, and return by themselves.</p>
+</li>
 <li>
 <p>A relay with a site of its own serves devices their subscriptions inside the country, fetched from the server through its tunnel. <code>client-config</code> prints <code>through the relay &lt;domain&gt;: https://&lt;domain&gt;/&lt;token&gt;</code> under the server's URL, and <code>relay-entry</code> ends such a relay's line with <code>own-site</code>.</p>
 </li>
