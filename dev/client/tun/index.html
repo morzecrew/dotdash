@@ -1876,6 +1876,13 @@ filesystem stays read-only.</p>
 <h2 id="a-gateway-for-the-lan">A gateway for the LAN<a class="headerlink" href="#a-gateway-for-the-lan" title="Permanent link">&para;</a></h2>
 <p>Under <code>tun</code>, the machine can be its LAN's gateway: devices whose gateway is
 its address go through dotdash too, with nothing to set up on them.</p>
+<p>It is a gateway beside the main router, on the same LAN: one network
+interface, and the main router keeps the internet link and hands out
+addresses. It doesn't replace the router. Making this machine the LAN's only
+router, with two interfaces, its own DHCP server and NAT, is host setup that
+dotdash leaves to you; a router system such as OpenWrt suits that better.</p>
+<p>It carries IPv4 only. IPv6 from the LAN can't go through it, so step 4 turns
+IPv6 off around it, before any device is pointed at it.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p><code>192.168.1.10</code> below stands for this machine's LAN address
@@ -1909,13 +1916,25 @@ the host's firewall, or to a systemd unit that runs after
 <p>Not <code>0.0.0.0:53</code>, which clashes with systemd-resolved's stub.</p>
 </li>
 <li>
+<p><strong>Turn IPv6 off around it.</strong> A main router that advertises IPv6 gives
+   every device a second way out, straight past this machine. Turn off IPv6,
+   or its router advertisements, on the main router; failing that, on each
+   device. Then check on this machine:</p>
+<div class="highlight"><pre><span></span><code>ip<span class="w"> </span>-6<span class="w"> </span>route<span class="w"> </span>show<span class="w"> </span>default<span class="w">     </span><span class="c1"># prints nothing once the main router stops advertising</span>
+</code></pre></div>
+<p>A line with <code>proto ra</code> there means the LAN still has IPv6 from the main
+router.</p>
+</li>
+<li>
 <p><strong>Point devices at it:</strong> hand out <code>192.168.1.10</code> as the gateway (and DNS
    server) from the main router's DHCP, or set it on each device.</p>
 </li>
+<li>
+<p><strong>Check from a device:</strong> an IP checker shows the dotdash exit, and an IPv6
+   test (<code>curl -6 https://api6.ipify.org</code>) fails rather than showing the
+   device's own address.</p>
+</li>
 </ol>
-<p>The gateway DHCP hands out is IPv4's. A main router that also advertises
-IPv6 gives devices a second way out, around this machine: turn IPv6 off on
-the LAN, or on the devices.</p>
 
 
 
