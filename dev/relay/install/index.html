@@ -2130,9 +2130,10 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>apply
 <p><code>apply</code> succeeds once the relay gets out through dotdash. The relay
 generates its own keys at <code>init</code>.</p>
 <h2 id="4-on-the-relay-its-line">4. On the relay: its line<a class="headerlink" href="#4-on-the-relay-its-line" title="Permanent link">&para;</a></h2>
-<p>Give <code>relay-entry</code> the address devices reach the relay at, its public IP or a
-name pointing at it:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span><span class="m">198</span>.51.100.7
+<p>Give <code>relay-entry</code> the address devices reach the relay at. With a domain, give
+the domain: links then name it, and <a href="../operations/#move-a-relay">moving the relay</a>
+needs only a DNS change. Without one, give the relay's public IP:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>relay.example.ru<span class="w">   </span><span class="c1"># or 198.51.100.7</span>
 </code></pre></div>
 <p>It prints one line for the server, its own address, site, public key, short
 id and encryption, plus the commands a <a href="../../canary/">canary</a> needs to

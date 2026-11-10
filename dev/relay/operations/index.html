@@ -1442,6 +1442,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#move-a-relay" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Move a relay
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#watching-it" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1955,6 +1966,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#move-a-relay" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Move a relay
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#watching-it" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2120,14 +2142,33 @@ the keys:</p>
 <p>Under <code>own-site</code>, <code>sudo morzer apply</code> afterwards: the site fetches
 subscriptions from these servers, and only an apply restarts it with the new
 list.</p>
+<h2 id="move-a-relay">Move a relay<a class="headerlink" href="#move-a-relay" title="Permanent link">&para;</a></h2>
+<p>A relay whose links name its domain moves to a new machine, or a new address,
+with a DNS change, and devices keep their links. It keeps its keys, which a
+backup holds. Prepare when you set it up: keep the recovery key off the
+machine, add a backup target, and set the <code>A</code> record's TTL to 300 s or less.</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>backup_s3<span class="w"> </span>&lt;<span class="w"> </span>./bucket.yaml<span class="w">   </span><span class="c1"># the bucket's credentials</span>
+sudo<span class="w"> </span>morzer<span class="w"> </span>backup<span class="w"> </span>target<span class="w"> </span>add<span class="w"> </span>s3://bucket/dotdash-relay<span class="w"> </span>--credentials<span class="w"> </span>backup_s3
+sudo<span class="w"> </span>morzer<span class="w"> </span>backup<span class="w">                                  </span><span class="c1"># one now; each update takes another</span>
+</code></pre></div>
+<p>Then, on the new machine, after <code>bootstrap.sh</code>:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>--product<span class="w"> </span>dotdash-relay<span class="w"> </span>installation<span class="w"> </span>import<span class="w"> </span>--from-backup<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--target<span class="w"> </span>s3://bucket/dotdash-relay<span class="w"> </span>--credentials-file<span class="w"> </span>./bucket.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--identity<span class="w"> </span>~/relay-recovery.key
+sudo<span class="w"> </span>morzer<span class="w"> </span>update<span class="w"> </span>oci://ghcr.io/morzecrew/dotdash-relay:stable
+</code></pre></div>
+<p>Point the relay's domain at the new address, and open 443, and 80 under
+<code>own-site</code>. Shut the old machine down: two live relays with one installation
+id confuse each other's backups. A relay whose links name its IP needs a new
+line from <code>relay-entry</code> in the server's <code>relays</code>, and new links for devices.</p>
 <h2 id="watching-it">Watching it<a class="headerlink" href="#watching-it" title="Permanent link">&para;</a></h2>
 <p><code>doctor</code> and each <code>apply</code> fetch <code>probe_url</code> through dotdash, so they fail
 when the relay can't reach the server. Have them alert you:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>notify<span class="w"> </span>target<span class="w"> </span>add<span class="w"> </span>https://hooks.example/morzer
 </code></pre></div>
 <p>What the relay can't see is whether devices reach it: only a machine on the
-networks devices use can. A <a href="../../canary/">canary</a> there checks the
-relay as it checks a server, with the commands <code>relay-entry</code> prints.</p>
+networks devices use can. A <a href="../../canary/#on-a-mobile-line">canary on a mobile line</a>
+checks the relay as it checks a server, with the commands <code>relay-entry</code> prints.</p>
 <h2 id="updates">Updates<a class="headerlink" href="#updates" title="Permanent link">&para;</a></h2>
 <p>As for the server: <code>sudo morzer self-update</code> when a release needs a newer
 morzer, then <code>sudo morzer update --stage &amp;&amp; sudo morzer update --to &lt;version&gt;</code>.

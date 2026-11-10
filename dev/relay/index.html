@@ -1936,13 +1936,23 @@ reach.</p>
 <h2 id="before-you-start">Before you start<a class="headerlink" href="#before-you-start" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>The relay's address must get through.</strong> Whether one does depends on the
-  network, the provider and the day. Test it from a SIM on such a network
-  before relying on it.</li>
+  network, the provider and the day:</li>
+<li>host it in a network with many addresses on the allowlists, such as a
+    large domestic cloud or hosting provider. A public list of allowlisted
+    subnets is a first filter only, because such lists go stale;</li>
+<li>test it from a SIM on each operator that matters, with mobile data and
+    Wi-Fi off, before relying on it;</li>
+<li>run at least two relays, in different networks, so one blocked
+    address costs devices nothing. A spare left installed is <a href="operations/#move-a-relay">moved into
+    place</a> with a DNS change;</li>
+<li>expect allowlisted subnets to be tightened, and keep a
+    <a href="../server/cdn/">domestic CDN</a> as another way in.</li>
 <li>On those networks only 443 and TCP get through: the
   <a href="../server/dns-tunnel/">DNS tunnel</a> is no use there.</li>
 <li><strong>Devices need the relay links before a shutdown.</strong> An app can't refresh a
   subscription from the server's site while only domestic addresses get
-  through.</li>
+  through, though it can through a relay with a site of its own. See
+  <a href="../shutdown/">Before a shutdown</a>.</li>
 <li>The machine needs Docker, sops, age and morzer
   (<a href="../#what-every-machine-needs"><code>bootstrap.sh</code></a>), and port 443 free.</li>
 <li>The official sing-box apps, Karing and NekoBox can't connect to dotdash,
