@@ -893,6 +893,29 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#a-domestic-cdn-for-allowlists" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A domestic CDN, for allowlists
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-foreign-cdn-against-ip-blocking" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A foreign CDN, against IP blocking
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A foreign CDN, against IP blocking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#ech-through-cloudflare" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -900,6 +923,11 @@
       </span>
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1796,6 +1824,29 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#a-domestic-cdn-for-allowlists" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A domestic CDN, for allowlists
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-foreign-cdn-against-ip-blocking" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A foreign CDN, against IP blocking
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="A foreign CDN, against IP blocking">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#ech-through-cloudflare" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1803,6 +1854,11 @@
       </span>
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1936,10 +1992,86 @@
 
 
 <h1 id="cdn">CDN<a class="headerlink" href="#cdn" title="Permanent link">&para;</a></h1>
+<p>A CDN in front of this server carries XHTTP for it, and serves two different
+ends:</p>
+<ul>
+<li>a <strong>domestic CDN</strong>, for mobile allowlists: its edges inside the country
+  are on the lists, and this server abroad is not;</li>
+<li>a <strong>foreign CDN</strong> such as Cloudflare, against blocking of this server's
+  address: devices see only the CDN's.</li>
+</ul>
+<h2 id="a-domestic-cdn-for-allowlists">A domestic CDN, for allowlists<a class="headerlink" href="#a-domestic-cdn-for-allowlists" title="Permanent link">&para;</a></h2>
+<p>While only allowlisted addresses get through, a domestic CDN whose edges
+are on the list can still reach this server: devices connect to the CDN's
+edge, and the CDN fetches from <code>https://example.com</code> abroad.</p>
+<ol>
+<li><strong>At the CDN</strong>, create a resource with this server as its origin:</li>
+<li>origin <code>https://example.com</code>, with the <code>Host</code> header sent to it set
+     to <code>example.com</code>;</li>
+<li>no caching, and HTTP/2 towards devices if it is offered;</li>
+<li>a name devices use: the provider's own name for the resource, or a
+     domain of yours pointed at it, with the certificate it asks for.</li>
+<li>
+<p><strong>Here</strong>, list the names devices use, comma-separated:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">cdn_hosts</span><span class="o">=</span>cdn.example.ru
+</code></pre></div>
+</li>
+<li>
+<p><strong>Devices</strong>: <code>client-config</code> prints a <code>phone [cdn cdn.example.ru]</code> link,
+   the Xray config gains an outbound through it, and subscriptions pick it up.
+   Give devices the link before a shutdown, as with a
+   <a href="../../relay/">relay</a>.</p>
+</li>
+</ol>
+<p>Such CDNs pass <code>GET</code> alone and no request body, so these links upload in
+small <code>GET</code> requests with the data in headers (XHTTP <code>packet-up</code>). The server
+needs nothing changed for it. An app that imports the link but never
+connects may read its <code>extra</code> settings differently; the Xray config works
+in v2rayN and v2rayNG.</p>
+<div class="admonition warning">
+<p class="admonition-title">Fragile, as of November 2026</p>
+<p>Every one of these has broken for someone, and providers act on VPN use:</p>
+<table>
+<thead>
+<tr>
+<th>CDN</th>
+<th>Seen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Yandex Cloud CDN</td>
+<td>worked from an MTS SIM during restrictions in October; answers 413 to any request with a body since 2026-09-28, which these links avoid; mobile outages since 2026-11-02; its terms let it block on state instruction</td>
+</tr>
+<tr>
+<td>VK Cloud CDN</td>
+<td><code>GET</code> only; its terms forbid proxies and VPNs</td>
+</tr>
+<tr>
+<td>Selectel CDN</td>
+<td>VPN use unsupported, and may be blocked</td>
+</tr>
+<tr>
+<td>Timeweb, Beget</td>
+<td>403 to VPN-like traffic reported, and questions from support</td>
+</tr>
+<tr>
+<td>MWS</td>
+<td>dropped from the allowlists in August</td>
+</tr>
+</tbody>
+</table>
+<p>The ministry asked CDNs on 2026-08-31 to move allowlisted resources into
+subnets of their own. Test from a SIM on the networks you care about,
+keep a CDN as one way among several, and expect the account to be closed.</p>
+</div>
+<p>The CDN ends one TLS connection and opens another, so it sees the requests'
+paths and headers. VLESS Encryption keeps what they carry from it.</p>
+<h2 id="a-foreign-cdn-against-ip-blocking">A foreign CDN, against IP blocking<a class="headerlink" href="#a-foreign-cdn-against-ip-blocking" title="Permanent link">&para;</a></h2>
 <p>The XHTTP link works through a CDN that proxies HTTP/2 to
 <code>https://example.com</code>: put the CDN's name in the link's address. Check its
 terms first; Cloudflare's self-serve plans forbid proxies.</p>
-<h2 id="ech-through-cloudflare">ECH through Cloudflare<a class="headerlink" href="#ech-through-cloudflare" title="Permanent link">&para;</a></h2>
+<h3 id="ech-through-cloudflare">ECH through Cloudflare<a class="headerlink" href="#ech-through-cloudflare" title="Permanent link">&para;</a></h3>
 <p>ECH also hides <code>example.com</code> from the network: the TLS handshake then shows
 <code>cloudflare-ech.com</code>. Cloudflare turns ECH on by default. Add it to the XHTTP
 link, before the <code>#</code> (v2rayN ≥ 7.17, v2rayNG ≥ 2.0):</p>
