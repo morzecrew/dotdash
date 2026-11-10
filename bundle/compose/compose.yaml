@@ -145,6 +145,7 @@ services:
       DNS_RESOLVER: ${DOTDASH_PARAM_DNS_RESOLVER:-https://1.1.1.1/dns-query}
       SUBSCRIPTION: ${DOTDASH_PARAM_SUBSCRIPTION:-false}
       RELAYS: ${DOTDASH_PARAM_RELAYS:-}
+      CDN_HOSTS: ${DOTDASH_PARAM_CDN_HOSTS:-none}
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image
