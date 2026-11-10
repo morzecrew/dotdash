@@ -2099,6 +2099,16 @@
 <td>what the health check fetches through dotdash; any 2xx is healthy</td>
 </tr>
 <tr>
+<td><code>kcp_port</code></td>
+<td><code>8447</code></td>
+<td>with <code>mkcp</code>, the UDP port devices reach the relay's mKCP on</td>
+</tr>
+<tr>
+<td><code>kcp_header</code></td>
+<td><code>srtp</code></td>
+<td>with <code>mkcp</code>, what its packets start with, as the server's <a href="../../server/mkcp/"><code>kcp_header</code></a></td>
+</tr>
+<tr>
 <td><code>dotdash_server</code></td>
 <td><code>none</code></td>
 <td>deprecated: the one server, read only while <code>dotdash_servers</code> is unset</td>
@@ -2113,6 +2123,13 @@ certificate. The site also serves devices their subscriptions, fetched from
 the servers through the relay's tunnel, and XHTTP on the secret path
 <code>xhttp_path</code>, which <code>init</code> generates. See
 <a href="../install/#1-pick-the-site">Set up a relay</a>.</p>
+<p><code>installation.profile=mkcp</code> (with a site of its own: <code>own-site,mkcp</code>): the
+relay serves <a href="../../server/mkcp/">mKCP</a> on UDP <code>kcp_port</code> too, under its own
+<code>kcp_seed</code>, and carries it on to the servers like REALITY. <code>relay-entry</code> then
+ends the relay's line with <code>kcp=&lt;port&gt;,&lt;header&gt;,&lt;seed&gt;</code>, from which the server
+gives each device a <code>[relay &lt;host&gt; kcp]</code> link. Open the UDP port in the
+provider's firewall, and replace the relay's line on the server after turning
+it on.</p>
 <h2 id="secrets">Secrets<a class="headerlink" href="#secrets" title="Permanent link">&para;</a></h2>
 <p><code>init</code> generates the relay's own keys; the rest come from the server's
 <code>relay-config</code>.</p>
@@ -2159,6 +2176,11 @@ the servers through the relay's tunnel, and XHTTP on the secret path
 <td><code>reality_short_id</code></td>
 <td>yes</td>
 <td>the relay's REALITY short id</td>
+</tr>
+<tr>
+<td><code>kcp_seed</code></td>
+<td>yes</td>
+<td>the key the relay's mKCP packets are encrypted under, with <code>mkcp</code></td>
 </tr>
 </tbody>
 </table>
