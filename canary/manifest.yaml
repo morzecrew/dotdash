@@ -97,6 +97,12 @@ parameters:
     default: dtls
     description: The dotdash server's kcp_header (the mkcp profile)
     services: [mkcp]
+  kcp_open:
+    type: enum
+    values: [none, quic]
+    default: none
+    description: The dotdash server's kcp_open (the mkcp profile); quic adds the QUIC-Initial-shaped opener, so the canary measures the same flow a device sees
+    services: [mkcp]
   reality_public_key:
     type: string
     description: The REALITY public key, the pbk of a dotdash REALITY link

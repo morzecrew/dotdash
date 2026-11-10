@@ -58,6 +58,21 @@ client() { # <name> <socks port> <link> [seed] [header]: an mKCP client from the
   sudo docker rm -f "dotdash-rig-$1" >/dev/null 2>&1 || true
   sudo docker run -d --name "dotdash-rig-$1" --network host -v "${dir}:/etc/xray:ro" "${xray}" >/dev/null
 }
+client_fm() { # <name> <socks port> <fm json> <dest port> <id> <enc>: a client from a raw finalmask
+  local dir=/rig/clients/$1
+  mkdir -p "${dir}"
+  jq -n --argjson socks "$2" --argjson fm "$3" --argjson port "$4" --arg id "$5" --arg enc "$6" '
+    {inbounds: [{listen: "127.0.0.1", port: $socks, protocol: "socks"}],
+     outbounds: [{protocol: "vless",
+       settings: {address: "127.0.0.1", port: $port, id: $id, encryption: $enc},
+       streamSettings: {network: "kcp", finalmask: $fm}}]}' \
+    >"${dir}/client.json"
+  chmod -R a+rX "${dir}"
+  sudo docker rm -f "dotdash-rig-$1" >/dev/null 2>&1 || true
+  sudo docker run -d --name "dotdash-rig-$1" --network host -v "${dir}:/etc/xray:ro" "${xray}" >/dev/null
+}
+# Percent-decode an fm= value back to its finalmask JSON.
+fm_decode() { sed 's/%7B/{/g;s/%7D/}/g;s/%22/"/g;s/%3A/:/g;s/%2C/,/g;s/%5B/[/g;s/%5D/]/g;s/%20/ /g;s/%25/%/g'; }
 gets_through() { # <socks port>
   [ "$(curl -fsS --max-time 15 --retry 5 --retry-delay 2 --retry-all-errors \
     --socks5-hostname "127.0.0.1:$1" "${target}" 2>/dev/null)" = ok ]
@@ -66,7 +81,7 @@ locked_out() { # <socks port>
   sleep 2
   ! curl -fsS -o /dev/null --max-time 10 --socks5-hostname "127.0.0.1:$1" "${target}" 2>/dev/null
 }
-cleanup() { for c in kcp kcp-seed kcp-header kcp-moved; do sudo docker rm -f "dotdash-rig-$c" >/dev/null 2>&1 || true; done; }
+cleanup() { for c in kcp kcp-seed kcp-header kcp-moved kcp-open; do sudo docker rm -f "dotdash-rig-$c" >/dev/null 2>&1 || true; done; }
 trap cleanup EXIT
 
 before=$(links)
@@ -112,6 +127,31 @@ fi
 sudo docker start dotdash-rig-upstream >/dev/null
 gets_through 11091 || die "mKCP did not recover with the upstream"
 echo "17-mkcp.sh: with the upstream stopped, mKCP gets nothing"
+
+# 1b. The QUIC-shaped opener: the link drops seed and headerType for the whole
+# mask list in fm=, that list carries the noise mask, client-config's outbound
+# gains it, and a client built from fm= still gets through. Then back off.
+set_config kcp_open=quic
+kl=$(kcp_link) || die "no mKCP link with kcp_open=quic"
+{ [ -z "$(param "${kl}" seed)" ] && [ -z "$(param "${kl}" headerType)" ]; } \
+  || die "the opener link still carries seed or headerType instead of fm="
+fm=$(param "${kl}" fm)
+[ -n "${fm}" ] || die "the opener link carries no fm="
+fmjson=$(printf '%s' "${fm}" | fm_decode)
+printf '%s' "${fmjson}" | jq -e '.udp | map(.type) | index("noise")' >/dev/null \
+  || die "the opener link's fm= has no noise mask"
+full_config | jq -e '
+  [.outbounds[] | select(.tag | endswith("-kcp"))][0].streamSettings.finalmask.udp
+  | map(.type) | index("noise")' >/dev/null \
+  || die "the opener is not in client-config's mKCP outbound"
+client_fm kcp-open 11095 "${fmjson}" "$(port "${kl}")" "$(id "${kl}")" "$(param "${kl}" encryption)"
+gets_through 11095 || die "no answer through mKCP with the QUIC-shaped opener"
+sudo docker rm -f dotdash-rig-kcp-open >/dev/null 2>&1 || true
+set_config kcp_open=none
+kl=$(kcp_link) || die "no mKCP link after kcp_open=none"
+[ -n "$(param "${kl}" seed)" ] || die "the link did not revert to seed= after kcp_open=none"
+gets_through 11091 || die "the plain dtls client does not get through after kcp_open=none"
+echo "17-mkcp.sh: kcp_open=quic carries the mask in fm= and still gets through"
 
 # 2. Another port, no header; 53 refused beside the DNS tunnel.
 set_config kcp_port=9447 kcp_header=none

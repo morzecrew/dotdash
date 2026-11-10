@@ -17,7 +17,10 @@ Caddy. No flow on it, as on any XHTTP inbound: Vision is for RAW only.
 The mkcp profile adds VLESS over mKCP on UDP (8447 here, kcp_port outside):
 no TLS underneath, so another protocol family for the network to block. Its
 packets are AES-128-GCM under kcp_seed, then dressed in kcp_header; a client
-must name both, in that order, as a link's seed and headerType do.
+must name both, in that order, as a link's seed and headerType do. With
+kcp_open=quic a finalmask noise mask sends a QUIC-Initial-shaped packet before
+the flow, so a network that lets QUIC out sees the opening as QUIC; the client
+carries the whole mask list, this one included, in its link's fm=.
 
 There is no direct (freedom) outbound: if the upstream proxy is down, traffic
 stops rather than leaving from this server's own IP. Nor could there be one:
@@ -50,6 +53,7 @@ carries TCP; a proxy carries UDP only as SOCKS5 with upstream_udp. */ -}}
 {{- $withXdns := or (has "xdns" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
 {{- $xhttpReality := or (has "xhttp-reality" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
 {{- $kcp := has "mkcp" .Profiles -}}
+{{- $kcpOpen := and $kcp (eq .Parameters.kcp_open "quic") -}}
 {{- $xdns := .Parameters.xdns_domain -}}
 {{- if not (contains $xdns ".") }}{{ $xdns = printf "%s.%s" $xdns $domain }}{{ end -}}
 {
@@ -135,6 +139,9 @@ carries TCP; a proxy carries UDP only as SOCKS5 with upstream_udp. */ -}}
           {"type": "mkcp-legacy", "settings": {"value": {"$file": "/run/secrets/kcp_seed"}}}
 {{- if ne .Parameters.kcp_header "none" }},
           {"type": "mkcp-legacy", "settings": {"header": "{{ .Parameters.kcp_header }}"}}
+{{- end }}
+{{- if $kcpOpen }},
+          {"type": "noise", "settings": {"noise": [{"type": "hex", "packet": "c300000001088394c8f03e5157080000449e00000002", "delay": "0-0"}]}}
 {{- end }}
         ]}
       },
