@@ -13,12 +13,27 @@ directly whatever its config says. The gate carries what has to cross:
     "user:pass@host:port" into the outbound's settings ({"$proxy": ...}); TLS
     takes the server name from that address.
 
+A tunnel takes the proxy's place. upstream_protocol=wireguard: the outbound
+is Xray's own WireGuard, on its built-in TCP/IP stack, so the gate needs no
+capability; the image builds its settings from the wg-quick file in the
+upstream_wireguard secret ({"$wireguard": ...}). upstream_protocol=openvpn: the outbound
+is a SOCKS hop to vpn-socks, which shares the namespace of the OpenVPN client
+(vpn, the openvpn profile), whose kill switch leaves it no route but the
+tunnel. Either carries UDP, and IPv6 if the exit has it, so neither takes
+upstream6; nor resolve=upstream, as a tunnel resolves no names.
+
 Nothing else is routed: the freedom outbound carries only the public inbounds,
 whose destination is fixed to Xray, and everything else is blocked.
 */ -}}
 {{- $withXdns := or (has "xdns" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
 {{- $xhttpReality := or (has "xhttp-reality" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
 {{- $v6 := ne .Parameters.upstream6_protocol "none" -}}
+{{- $proto := .Parameters.upstream_protocol -}}
+{{- $tunnel := or (eq $proto "wireguard") (eq $proto "openvpn") -}}
+{{- $udp := or $tunnel (and (eq (print .Parameters.upstream_udp) "true") (eq $proto "socks")) -}}
+{{- if and $tunnel $v6 }}{{ required (printf "upstream_protocol=%s carries IPv6 itself: unset upstream6_protocol" $proto) "" }}{{ end }}
+{{- if and $tunnel (ne .Parameters.resolve "gateway") }}{{ required (printf "upstream_protocol=%s resolves no names: set resolve=gateway" $proto) "" }}{{ end }}
+{{- if and (eq $proto "openvpn") (not (has "openvpn" .Profiles)) }}{{ required "upstream_protocol=openvpn needs the openvpn profile, which runs the OpenVPN client: first sudo morzer config set installation.profile=openvpn (with others: xdns,openvpn), then upstream_protocol=openvpn" "" }}{{ end }}
 {{- /* Two services cannot publish one host port; refused here, so the apply
 stops before anything is replaced. The template language has no fail: required
 fails on its empty value with the message. */ -}}
@@ -40,21 +55,27 @@ fails on its empty value with the message. */ -}}
      "settings": {"address": "xray", "port": 8443, "network": "tcp"}},
 {{- end }}
     {"tag": "egress", "listen": "0.0.0.0", "port": 1080, "protocol": "socks",
-     "settings": {"auth": "noauth", "udp": {{ and (eq (print .Parameters.upstream_udp) "true") (eq .Parameters.upstream_protocol "socks") }}}}
+     "settings": {"auth": "noauth", "udp": {{ $udp }}}}
 {{- if $v6 }},
     {"tag": "egress6", "listen": "0.0.0.0", "port": 1081, "protocol": "socks",
      "settings": {"auth": "noauth", "udp": false}}
 {{- end }}
   ],
   "outbounds": [
+{{- if eq $proto "wireguard" }}
+    {"tag": "upstream", "protocol": "wireguard", "settings": {"$wireguard": "/run/secrets/upstream_wireguard"}},
+{{- else if eq $proto "openvpn" }}
+    {"tag": "upstream", "protocol": "socks", "settings": {"address": "vpn", "port": 1080}},
+{{- else }}
     {
       "tag": "upstream",
-      "protocol": "{{ .Parameters.upstream_protocol }}",
+      "protocol": "{{ $proto }}",
       "settings": {"$proxy": "/run/secrets/upstream"}
 {{- if eq (print .Parameters.upstream_tls) "true" }},
       "streamSettings": {"security": "tls"}
 {{- end }}
     },
+{{- end }}
     {"tag": "inside", "protocol": "freedom"},
     {"tag": "block", "protocol": "blackhole"}
 {{- if $v6 }},

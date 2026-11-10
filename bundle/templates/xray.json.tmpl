@@ -38,6 +38,10 @@ hands that proxy IPv6 addresses only (ForceIPv6) and the first IPv4 only
 (ForceIPv4). Neither falls back to the other. With resolve=upstream only IPv6
 literals match. IPv6 UDP is blocked: the hop to it carries none. */ -}}
 {{- $v6 := ne .Parameters.upstream6_protocol "none" -}}
+{{- /* A WireGuard or OpenVPN upstream is a tunnel, which carries UDP as it
+carries TCP; a proxy carries UDP only as SOCKS5 with upstream_udp. */ -}}
+{{- $tunnel := or (eq .Parameters.upstream_protocol "wireguard") (eq .Parameters.upstream_protocol "openvpn") -}}
+{{- $udp := or $tunnel (and (eq (print .Parameters.upstream_udp) "true") (eq .Parameters.upstream_protocol "socks")) -}}
 {{- $withXdns := or (has "xdns" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
 {{- $xhttpReality := or (has "xhttp-reality" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
 {{- $xdns := .Parameters.xdns_domain -}}
@@ -149,7 +153,7 @@ literals match. IPv6 UDP is blocked: the hop to it carries none. */ -}}
 {{- end }}
       {"ip": ["geoip:private"], "outboundTag": "block"},
       {"protocol": ["bittorrent"], "outboundTag": "block"}
-      {{- if not (and (eq (print .Parameters.upstream_udp) "true") (eq .Parameters.upstream_protocol "socks")) }},
+      {{- if not $udp }},
       {"network": "udp", "outboundTag": "block"}
       {{- end }},
 {{- if $v6 }}

@@ -94,7 +94,7 @@ parameters:
 images:
   # The measure task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
-  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:c5885766b9f12bdf3986bf621ad0ea72d87dea54e0e3f80cf532939f2e4ef5cd
+  xray: ghcr.io/morzecrew/xray:26.10.31@sha256:996f30a2cb6f65e1121b599afcebb1d3cb669f0ba3f22fe16c2ac9b7c6693527
 
 tasks:
   measure:

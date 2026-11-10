@@ -105,6 +105,22 @@ why() {
   if [ "${DOTDASH_PARAM_UPSTREAM6_PROTOCOL:-none}" != none ]; then
     if [ "$fam" = 6 ]; then order="6 4"; else order="4 6"; fi
   fi
+  # A tunnel has no proxy to ask: name what holds it.
+  if [ "$fam" = 4 ]; then
+    case ${DOTDASH_PARAM_UPSTREAM_PROTOCOL:-socks} in
+    wireguard)
+      echo "the WireGuard peer in the upstream_wireguard secret did not carry it: it may be down, unreachable from here, or not know this key: $out"
+      return ;;
+    openvpn)
+      local t
+      if ! t=$(docker compose -p "$project" exec -T vpn /usr/local/bin/openvpn-entrypoint healthcheck 2>&1); then
+        echo "the OpenVPN tunnel is down (${t##*unhealthy: }): its server in the upstream_openvpn secret may be down, unreachable from here, or refusing this config"
+      else
+        echo "the OpenVPN tunnel is up, so the fault is past its server, or in the SOCKS hop beside it (vpn-socks): $out"
+      fi
+      return ;;
+    esac
+  fi
   local f
   for f in $order; do
     ask_upstream "$f" || return 0

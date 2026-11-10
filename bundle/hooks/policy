@@ -95,8 +95,12 @@ violations+=$'\n'$(jq '
       check(.settings.address == "xray"; "the gate forwards \(.tag) to \(.settings.address), not Xray")),
     check([.outbounds[]?.tag] | . == ["upstream", "inside", "block"] or . == ["upstream", "inside", "block", "upstream6"];
       "the gate'"'"'s outbounds are \([.outbounds[]?.tag])"),
-    check([.outbounds[0], .outbounds[3]? // empty] | all(.protocol | IN("socks", "http"));
+    check([.outbounds[0], .outbounds[3]? // empty] | all(.protocol | IN("socks", "http", "wireguard"));
       "the gate dials an upstream with \([.outbounds[0], .outbounds[3]? // empty | .protocol])"),
+    # WireGuard only as the image builds it from the upstream secret, which
+    # always sets noKernelTun: the gate has no capability for a kernel tun.
+    check(.outbounds[0] | .protocol != "wireguard" or .settings == {"$wireguard": "/run/secrets/upstream_wireguard"};
+      "the gate'"'"'s WireGuard outbound is not built from the upstream_wireguard secret"),
     check(.outbounds[2].protocol == "blackhole"; "the gate'"'"'s block outbound is not a blackhole"),
     check(($inward - $public) == []; "the gate sends \($inward - $public) out directly"),
     check(.routing.rules[-1] == {network: "tcp,udp", outboundTag: "block"}; "the gate does not block what its rules leave"),
@@ -114,9 +118,19 @@ while IFS='|' read -r name privileged readonly user network caps ports; do
   [ -n "${name}" ] || continue
   [ "${privileged}" = false ] || violations+=$'\n'"${name} runs privileged"
   [ "${readonly}" = true ] || violations+=$'\n'"${name} has a writable root filesystem"
-  [ "${user}" = 65532:65532 ] || violations+=$'\n'"${name} runs as '${user:-root}', not 65532:65532"
   [ "${network}" != host ] || violations+=$'\n'"${name} is on the host's network"
-  case ${caps} in null | '[]') ;; *) violations+=$'\n'"${name} adds capabilities ${caps}" ;; esac
+  if [ "${name}" = vpn ]; then
+    # The OpenVPN client (the openvpn profile): root with NET_ADMIN alone,
+    # and, its kill switch holding, no default route but into the tunnel.
+    # Docker reports it with or without the CAP_ prefix, by version.
+    [ "${caps//CAP_/}" = '["NET_ADMIN"]' ] ||
+      violations+=$'\n'"vpn adds capabilities ${caps}, not NET_ADMIN alone"
+    vpn_default=$(docker compose -p "${project}" exec -T vpn ip -4 route show default 2>/dev/null || true)
+    case ${vpn_default} in '' | *" dev tun"*) ;; *) violations+=$'\n'"vpn has a default route around the tunnel: ${vpn_default}" ;; esac
+  else
+    [ "${user}" = 65532:65532 ] || violations+=$'\n'"${name} runs as '${user:-root}', not 65532:65532"
+    case ${caps} in null | '[]') ;; *) violations+=$'\n'"${name} adds capabilities ${caps}" ;; esac
+  fi
   for binding in ${ports//;/ }; do
     case ${name}/${binding} in
     gate/443/tcp=*:"${https_port}" | caddy/80/tcp=*:80) ;;
