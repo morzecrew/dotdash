@@ -11,8 +11,12 @@ on:
 
 permissions: {}
 
+# One group per workflow: GitHub keeps one waiting run per group, so a group
+# the four release workflows shared cancelled two of them on v0.5.0. Their
+# GitHub release is safe without it: github-release.yml uploads to the
+# release when another bundle created it first.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
