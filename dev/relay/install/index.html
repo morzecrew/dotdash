@@ -1997,8 +1997,24 @@ relay prints the one line the server needs back:</p>
 <p><img alt="Setup in six steps: a relay client on the server, relay-config, init and apply on the relay, relay-entry, its line into relays on the server, new links for devices" src="../../assets/diagrams/relay-setup.light.svg#only-light" />
 <img alt="Setup in six steps: a relay client on the server, relay-config, init and apply on the relay, relay-entry, its line into relays on the server, new links for devices" src="../../assets/diagrams/relay-setup.dark.svg#only-dark" /></p>
 <h2 id="1-pick-the-site">1. Pick the site<a class="headerlink" href="#1-pick-the-site" title="Permanent link">&para;</a></h2>
-<p>The relay borrows the name of a site next to it: devices send that name, and
-probes get that site's handshake. Pick one that is:</p>
+<p>Devices send the name of a site, and anyone probing the relay without its
+keys meets that site. Two ways:</p>
+<p><strong>A site of the relay's own</strong> (recommended). A domain whose DNS points at the
+relay, and the <code>own-site</code> profile: the relay serves a site under that name,
+with a certificate from Let's Encrypt. To the network the name and the
+address agree, as they do for any real site. It needs:</p>
+<ul>
+<li>a domain, <code>relay.example.ru</code>, with an <code>A</code> record for the relay's address;</li>
+<li>port 80 open as well as 443, for the certificate;</li>
+<li>in step 3, <code>--domain relay.example.ru --profile own-site</code> in place of
+  <code>--set site=…</code>.</li>
+</ul>
+<p>Your own pages go in <code>/srv/dotdash-relay</code> (the <code>site_dir</code> parameter); without
+them it serves a plain bundled page titled with the domain.</p>
+<p><strong>A site next to the relay.</strong> No domain needed: the relay borrows the name of
+a real site, and probes get that site's own handshake. But that name's DNS
+points at the site, not the relay, and a censor that compares the two can
+tell. Pick one that is:</p>
 <ul>
 <li>in the relay's own network, the same hosting provider or nearby, not a big
   name served from somewhere else;</li>
@@ -2027,7 +2043,9 @@ recovery key as for the server:</p>
 <div class="highlight"><pre><span></span><code>morzer<span class="w"> </span>secret<span class="w"> </span>recipients<span class="w"> </span>generate-recovery-key<span class="w"> </span>~/relay-recovery.key<span class="w">   </span><span class="c1"># keep it off the machine</span>
 </code></pre></div>
 <p>Then run what step 2 printed, with your site and the recovery key's
-<code>age1…</code> filled in. It has this shape:</p>
+<code>age1…</code> filled in. It has this shape, here with a borrowed site; for a site of
+the relay's own, replace <code>--set site=…</code> with <code>--domain relay.example.ru
+--profile own-site</code>:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>init<span class="w"> </span>--release<span class="w"> </span>oci://ghcr.io/morzecrew/dotdash-relay:stable<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--recovery-recipient<span class="w"> </span>age1…<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--set<span class="w"> </span><span class="nv">site</span><span class="o">=</span>site.example.ru<span class="w"> </span><span class="se">\</span>

@@ -1843,10 +1843,12 @@ whose address does get through, and carries devices on to the server.</p>
 <img alt="A phone connects to the relay inside the country on 443 under the name of a site next to it; the relay carries it on to whichever dotdash server answers fastest" src="../assets/diagrams/relay.dark.svg#only-dark" /></p>
 <h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Devices connect to the relay on 443 with REALITY, under the name of a site
-  next to it: its <code>site</code> parameter, a real site in the relay's own network.
-  To the network, the connection looks like one to that site.</li>
-<li>Anyone probing the relay's 443 gets that site's real TLS handshake.</li>
+<li>Devices connect to the relay on 443 with REALITY, under the name of a
+  site: best, the relay's own, a domain pointing at it and a site it serves
+  (the <code>own-site</code> profile); or a real site next to it, borrowed (its <code>site</code>
+  parameter). To the network, the connection looks like one to that site.</li>
+<li>Anyone probing the relay's 443 without its keys meets that site: its own,
+  with a certificate for its name, or the borrowed site's real handshake.</li>
 <li>The relay has keys of its own, and its own copy of the devices allowed in.
   A device uses the same id as on the server, with a separate link per relay,
   <code>phone [relay &lt;host&gt;]</code>.</li>

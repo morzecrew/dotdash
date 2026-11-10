@@ -1365,6 +1365,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Profiles
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#secrets" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1818,6 +1829,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Profiles
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#secrets" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1938,8 +1960,18 @@
 <tbody>
 <tr>
 <td><code>site</code></td>
-<td>none, given at <code>init</code></td>
-<td>a site next to the relay, in its own network, on TLS 1.3 and HTTP/2: devices send its name, and probes get its handshake</td>
+<td><code>none</code></td>
+<td>without the <code>own-site</code> profile, a site next to the relay, in its own network, on TLS 1.3 and HTTP/2: devices send its name, and probes get its handshake</td>
+</tr>
+<tr>
+<td><code>site_dir</code></td>
+<td><code>/srv/dotdash-relay</code></td>
+<td>with <code>own-site</code>, your own pages, served in place of the bundled one; readable by uid 65532</td>
+</tr>
+<tr>
+<td><code>cert_issuer</code></td>
+<td><code>acme</code></td>
+<td>with <code>own-site</code>, <code>acme</code> (Let's Encrypt, over port 80) or <code>internal</code> (Caddy's own CA, for a machine the internet can't reach)</td>
 </tr>
 <tr>
 <td><code>dotdash_servers</code></td>
@@ -1973,6 +2005,11 @@
 </tr>
 </tbody>
 </table>
+<h2 id="profiles">Profiles<a class="headerlink" href="#profiles" title="Permanent link">&para;</a></h2>
+<p><code>installation.profile=own-site</code>: the relay serves a site of its own under its
+domain (<code>--domain</code> at <code>init</code>, or <code>installation.domains</code>), and REALITY hands it
+every connection without the relay's keys. It publishes port 80 too, for the
+certificate. See <a href="../install/#1-pick-the-site">Set up a relay</a>.</p>
 <h2 id="secrets">Secrets<a class="headerlink" href="#secrets" title="Permanent link">&para;</a></h2>
 <p><code>init</code> generates the relay's own keys; the rest come from the server's
 <code>relay-config</code>.</p>

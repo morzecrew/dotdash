@@ -1349,6 +1349,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#a-site-of-its-own-later" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A site of its own, later
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#servers" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1851,6 +1862,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#a-site-of-its-own-later" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A site of its own, later
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#servers" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2005,6 +2027,17 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w">
 </tr>
 </tbody>
 </table>
+<h2 id="a-site-of-its-own-later">A site of its own, later<a class="headerlink" href="#a-site-of-its-own-later" title="Permanent link">&para;</a></h2>
+<p>A relay set up with a borrowed site moves to one of its own in place. Point a
+domain at it and open port 80, then:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.domains<span class="o">=</span>relay.example.ru
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>own-site
+sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span><span class="m">198</span>.51.100.7
+</code></pre></div>
+<p>The site in the line changes, so replace the relay's line in the server's
+<code>relays</code>, and send devices their links again (subscriptions pick them up).
+<code>sudo morzer config unset installation.profile</code> goes back to the borrowed
+site.</p>
 <h2 id="servers">Servers<a class="headerlink" href="#servers" title="Permanent link">&para;</a></h2>
 <p>The relay goes to every server in <code>dotdash_servers</code> and uses whichever
 answers fastest. With a <a href="../../server/several-servers/">new server</a> sharing
