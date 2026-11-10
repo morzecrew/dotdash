@@ -13,6 +13,8 @@
 #   OpenVPN tunnel;
 # - a new config while OpenVPN runs restarts vpn, and vpn-socks after it in
 #   vpn's new network namespace, and traffic flows again;
+# - openvpn killed inside vpn starts again in place: vpn doesn't restart,
+#   vpn-socks stays in its namespace, and traffic flows again;
 # - upstream_protocol=http, then the xdns profile CI installs, go back.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
@@ -165,13 +167,16 @@ grep -q 'the OpenVPN tunnel is' <<<"$(doctor)" || die "doctor does not name the 
 sudo docker start dotdash-rig-ovpn >/dev/null
 echo "${0##*/}: with the server stopped, nothing gets through, and doctor names the tunnel"
 
+started() { sudo docker inspect -f '{{.State.StartedAt}}' "$(service_container "$1")"; }
+# By the processes' namespaces, from here: Xray's image has no shell.
+netns() { sudo readlink "/proc/$(sudo docker inspect -f '{{.State.Pid}}' "$(service_container "$1")")/ns/net"; }
+
 # A new config while OpenVPN runs takes effect when set: secret set restarts
 # vpn, and Compose restarts vpn-socks after it, into vpn's new network
 # namespace. Releases before morzer 0.15.1 declared no services for the
 # secret (the rehearsal runs these hooks on the published :main first).
 if sudo sed -n '/^  - name: upstream_openvpn$/,/^  - name:/p' /opt/dotdash/current/secrets.schema.yaml |
   grep -q '^    services: \[vpn\]$'; then
-  started() { sudo docker inspect -f '{{.State.StartedAt}}' "$(service_container "$1")"; }
   vpn_started=$(started vpn)
   socks_started=$(started vpn-socks)
   watch_tunnel
@@ -179,8 +184,6 @@ if sudo sed -n '/^  - name: upstream_openvpn$/,/^  - name:/p' /opt/dotdash/curre
     { tunnel_logs; die "changing upstream_openvpn while OpenVPN runs failed"; }
   [ "$(started vpn)" != "${vpn_started}" ] || die "vpn did not restart when upstream_openvpn changed"
   [ "$(started vpn-socks)" != "${socks_started}" ] || die "vpn-socks did not restart when upstream_openvpn changed"
-  # By the processes' namespaces, from here: Xray's image has no shell.
-  netns() { sudo readlink "/proc/$(sudo docker inspect -f '{{.State.Pid}}' "$(service_container "$1")")/ns/net"; }
   [ "$(netns vpn)" = "$(netns vpn-socks)" ] || die "vpn-socks is not in vpn's network namespace after the restart"
   reaches "${target}" || { tunnel_logs; die "a client does not reach the target after upstream_openvpn changed"; }
   route=$(sudo docker exec "$(service_container vpn)" ip -4 route show default || true)
@@ -189,6 +192,30 @@ if sudo sed -n '/^  - name: upstream_openvpn$/,/^  - name:/p' /opt/dotdash/curre
   echo "${0##*/}: a new config while OpenVPN runs restarts vpn, vpn-socks joins it again, and a client gets through"
 else
   echo "${0##*/}: skipped the change while OpenVPN runs: the installed release restarts nothing on upstream_openvpn"
+fi
+
+# openvpn dies inside vpn, as a crash or an OOM kill would end it: the image
+# starts it again in place, so vpn's namespace, and vpn-socks in it, stay as
+# they are. Before it, the container exited, and the runtime's restart left
+# vpn-socks in the old namespace.
+if sudo docker exec "$(service_container vpn)" grep -q 'starting it again' /usr/local/bin/openvpn-entrypoint; then
+  vpn_started=$(started vpn)
+  socks_netns=$(netns vpn-socks)
+  watch_tunnel
+  sudo docker exec "$(service_container vpn)" pkill -KILL -x openvpn ||
+    die "could not kill openvpn inside vpn"
+  reaches "${target}" || { tunnel_logs; die "a client does not reach the target after openvpn died inside vpn"; }
+  [ "$(started vpn)" = "${vpn_started}" ] || die "vpn restarted when openvpn died inside it"
+  [ "$(netns vpn-socks)" = "${socks_netns}" ] && [ "$(netns vpn)" = "${socks_netns}" ] ||
+    die "vpn and vpn-socks no longer share the namespace after openvpn died"
+  sudo docker logs "$(service_container vpn)" 2>&1 | grep -c 'openvpn exited with' >/dev/null ||
+    die "vpn's log does not show openvpn exiting and starting again"
+  route=$(sudo docker exec "$(service_container vpn)" ip -4 route show default || true)
+  case ${route} in '' | *" dev tun"*) ;; *) die "vpn has a default route around the tunnel after openvpn came back: ${route}" ;; esac
+  kill "${watcher}" 2>/dev/null || true
+  echo "${0##*/}: openvpn killed inside vpn starts again in place, and a client gets through"
+else
+  echo "${0##*/}: skipped openvpn dying inside vpn: the installed image lets the container exit"
 fi
 
 sudo docker start dotdash-rig-upstream >/dev/null

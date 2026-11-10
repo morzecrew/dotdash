@@ -193,7 +193,7 @@ images:
   caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
   # The openvpn profile's OpenVPN client, whose kill switch drops the default
   # routes before anything runs (platform-images, images/openvpn).
-  openvpn: ghcr.io/morzecrew/openvpn:2.6.20@sha256:28e59e18595ab6656a6e0e569b7a02a5542dc7a3f194a9adea866417669d75c4
+  openvpn: ghcr.io/morzecrew/openvpn:2.6.20@sha256:12a7d3fe60c726d15c04f500fc1ad5696bc7e8a1ce0bfc41962267d1e2f31276
 
 # Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);
 # its content is JSON, which is also YAML. Secrets are not in it: it holds
