@@ -2,7 +2,8 @@
 # The measure task reports each transport this canary runs as JSON: here only
 # REALITY (CI installs no xhttp profile), through the rig's stand-in server
 # (pre-apply/10-server.sh), with every fetch counted and latencies for the ones
-# that succeeded.
+# that succeeded, and, from a release with them, three downloads of
+# download_url with the median Mbit/s.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -20,4 +21,8 @@ jq -e '
   and (.transports.reality | .requests == 5 and .ok + .timeouts + .errors == 5 and .ok >= 1)
   and (.transports.reality.latency_ms | .p50 <= .p95 and .p95 <= .max)
 ' <<<"${json}" >/dev/null || die "measure reported something else: ${out}"
-echo "20-measure.sh: $(jq -c '.transports.reality | {ok, success_rate, latency_ms}' <<<"${json}")"
+if sudo grep -qF 'download_url' /opt/dotdash-canary/current/tasks/measure.sh; then
+  jq -e '.transports.reality.download | .of == 3 and .ok >= 1 and .mbps_p50 > 0' <<<"${json}" >/dev/null ||
+    die "measure reported no downloads through REALITY: ${out}"
+fi
+echo "20-measure.sh: $(jq -c '.transports.reality | {ok, success_rate, latency_ms, download}' <<<"${json}")"
