@@ -27,6 +27,15 @@ filesystem stays read-only.
 Under `tun`, the machine can be its LAN's gateway: devices whose gateway is
 its address go through dotdash too, with nothing to set up on them.
 
+It is a gateway beside the main router, on the same LAN: one network
+interface, and the main router keeps the internet link and hands out
+addresses. It doesn't replace the router. Making this machine the LAN's only
+router, with two interfaces, its own DHCP server and NAT, is host setup that
+dotdash leaves to you; a router system such as OpenWrt suits that better.
+
+It carries IPv4 only. IPv6 from the LAN can't go through it, so step 4 turns
+IPv6 off around it, before any device is pointed at it.
+
 !!! note
     `192.168.1.10` below stands for this machine's LAN address
     (`hostname -I` shows it): use yours.
@@ -65,9 +74,21 @@ its address go through dotdash too, with nothing to set up on them.
 
     Not `0.0.0.0:53`, which clashes with systemd-resolved's stub.
 
-4. **Point devices at it:** hand out `192.168.1.10` as the gateway (and DNS
+4. **Turn IPv6 off around it.** A main router that advertises IPv6 gives
+   every device a second way out, straight past this machine. Turn off IPv6,
+   or its router advertisements, on the main router; failing that, on each
+   device. Then check on this machine:
+
+    ```sh
+    ip -6 route show default     # prints nothing once the main router stops advertising
+    ```
+
+    A line with `proto ra` there means the LAN still has IPv6 from the main
+    router.
+
+5. **Point devices at it:** hand out `192.168.1.10` as the gateway (and DNS
    server) from the main router's DHCP, or set it on each device.
 
-The gateway DHCP hands out is IPv4's. A main router that also advertises
-IPv6 gives devices a second way out, around this machine: turn IPv6 off on
-the LAN, or on the devices.
+6. **Check from a device:** an IP checker shows the dotdash exit, and an IPv6
+   test (`curl -6 https://api6.ipify.org`) fails rather than showing the
+   device's own address.
