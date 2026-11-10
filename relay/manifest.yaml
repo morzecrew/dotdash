@@ -83,7 +83,7 @@ parameters:
   kcp_header:
     type: enum
     values: [none, dtls, srtp, utp, wechat, wireguard]
-    default: srtp
+    default: dtls
     description: "What mKCP's packets start with (the mkcp profile), as the server's kcp_header; relay-entry carries it to the server's relays line"
     services: [xray]
   # No services: Caddy runs under the own-site profile alone, and morzer's

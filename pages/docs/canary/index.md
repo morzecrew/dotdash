@@ -72,7 +72,7 @@ relay's address no longer gets through for devices.
 | `port` | `443` | the server's `https_port` |
 | `xhttp_reality_port` | `8443` | the server's `xhttp_reality_port` |
 | `kcp_port` | `8447` | the server's `kcp_port` |
-| `kcp_header` | `srtp` | the server's `kcp_header` |
+| `kcp_header` | `dtls` | the server's `kcp_header` |
 | `reality_public_key` | none, given at `init` | the REALITY public key, the `pbk` of a link |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what each check fetches through dotdash; any 2xx is healthy |
 

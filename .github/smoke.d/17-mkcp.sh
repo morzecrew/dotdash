@@ -80,14 +80,14 @@ grep -vxFf <(printf '%s\n' "${after}") <(printf '%s\n' "${before}") >/dev/null \
   && die "a link printed before changed once mKCP was added"
 kl=$(grep -m1 '^vless://.*type=kcp' <<<"${after}") || die "client-config printed no mKCP link"
 [ "$(port "${kl}")" = 8447 ] || die "the mKCP link is not on 8447"
-[ "$(param "${kl}" headerType)" = srtp ] || die "the mKCP link's header is not the default srtp"
+[ "$(param "${kl}" headerType)" = dtls ] || die "the mKCP link's header is not the default dtls"
 [[ $(param "${kl}" seed) =~ ^[0-9a-f]{32}$ ]] || die "the mKCP link carries no 32-hex seed"
 [[ ${kl} != *flow=* && ${kl} != *security=* ]] || die "the mKCP link sets a flow or a security"
 full_config | jq -e --arg seed "$(param "${kl}" seed)" '
   [.outbounds[] | select(.tag | endswith("-kcp"))] as $k
   | ($k | length) == 1 and $k[0].settings.port == 8447 and $k[0].streamSettings.network == "kcp"
     and $k[0].streamSettings.finalmask.udp == [
-      {type: "mkcp-legacy", settings: {value: $seed}}, {type: "mkcp-legacy", settings: {header: "srtp"}}]' >/dev/null \
+      {type: "mkcp-legacy", settings: {value: $seed}}, {type: "mkcp-legacy", settings: {header: "dtls"}}]' >/dev/null \
   || die "client-config's Xray config has no mKCP outbound matching the link"
 published 8447 udp || die "8447/udp is not published under xdns,mkcp"
 published 53 udp || die "the DNS tunnel is not published under xdns,mkcp"
@@ -99,7 +99,7 @@ done
 echo "17-mkcp.sh: xdns,mkcp adds an mKCP link and outbound that work beside the others"
 
 client kcp-seed 11092 "${kl}" "$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')"
-client kcp-header 11093 "${kl}" "" dtls
+client kcp-header 11093 "${kl}" "" srtp
 locked_out 11092 || die "a client with a wrong seed gets through mKCP"
 locked_out 11093 || die "a client with a wrong header gets through mKCP"
 echo "17-mkcp.sh: a wrong seed or header gets nothing"
@@ -120,7 +120,7 @@ published 9447 udp || die "9447/udp is not published with kcp_port=9447"
 kl=$(kcp_link) || die "no mKCP link with kcp_port=9447"
 [ "$(port "${kl}")" = 9447 ] && [ "$(param "${kl}" headerType)" = none ] \
   || die "the mKCP link does not name kcp_port=9447 and no header"
-locked_out 11091 || die "the srtp client still gets through with kcp_header=none"
+locked_out 11091 || die "the dtls client still gets through with kcp_header=none"
 client kcp-moved 11094 "${kl}"
 gets_through 11094 || die "no answer through mKCP on 9447 with no header"
 if out=$(sudo morzer config set kcp_port=53 2>&1); then

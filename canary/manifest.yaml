@@ -94,7 +94,7 @@ parameters:
   kcp_header:
     type: enum
     values: [none, dtls, srtp, utp, wechat, wireguard]
-    default: srtp
+    default: dtls
     description: The dotdash server's kcp_header (the mkcp profile)
     services: [mkcp]
   reality_public_key:

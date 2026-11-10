@@ -15,7 +15,7 @@
 | `xdns_mtu` | `900` | tunnel reply size; lower it if replies get lost |
 | `xhttp_reality_port` | `8443` | port for XHTTP with REALITY; not `https_port` or 80 |
 | `kcp_port` | `8447` | UDP port for [mKCP](mkcp.md); not 53 with the DNS tunnel |
-| `kcp_header` | `srtp` | what mKCP's packets start with: `dtls`, `srtp`, `utp`, `wechat`, `wireguard` or `none` |
+| `kcp_header` | `dtls` | what mKCP's packets start with: `dtls`, `srtp`, `utp`, `wechat`, `wireguard` or `none` |
 | `log_level` | `error` | Xray error log; `warning` and below name failed destinations |
 | `healthcheck_url` | `https://www.gstatic.com/generate_204` | fetched through the upstream |
 | `healthcheck_expect` | `.*` | regex the response must match, such as the exit IP |

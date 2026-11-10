@@ -38,7 +38,7 @@ jq -n --arg id "${id}" --arg key "${private}" --arg sid "${sid}" --arg path "/${
       {listen: "0.0.0.0", port: 8447, protocol: "vless",
        settings: {clients: [{id: $id}], decryption: "none"},
        streamSettings: {network: "kcp", finalmask: {udp: [
-         {type: "mkcp-legacy", settings: {value: $seed}}, {type: "mkcp-legacy", settings: {header: "srtp"}}]}}}],
+         {type: "mkcp-legacy", settings: {value: $seed}}, {type: "mkcp-legacy", settings: {header: "dtls"}}]}}}],
     outbounds: [{protocol: "freedom"}]}' >/rig/server/config.json
 chmod -R a+rX /rig/server
 sudo docker run -d --name canary-rig-server -p 443:443 -p 8443:8443 -p 8447:8447/udp --sysctl net.ipv4.ip_unprivileged_port_start=0 \

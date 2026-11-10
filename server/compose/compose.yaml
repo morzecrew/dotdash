@@ -147,7 +147,7 @@ services:
       RELAYS: ${DOTDASH_PARAM_RELAYS:-}
       CDN_HOSTS: ${DOTDASH_PARAM_CDN_HOSTS:-none}
       POOLS: ${DOTDASH_PARAM_POOLS:-}
-      KCP_HEADER: ${DOTDASH_PARAM_KCP_HEADER:-srtp}
+      KCP_HEADER: ${DOTDASH_PARAM_KCP_HEADER:-dtls}
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image

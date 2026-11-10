@@ -141,8 +141,8 @@ parameters:
   kcp_header:
     type: enum
     values: [none, dtls, srtp, utp, wechat, wireguard]
-    default: srtp
-    description: "What mKCP's packets start with, to pass for another protocol (the mkcp profile): a DTLS or SRTP record as in a call, uTP, a WeChat video call, WireGuard; none sends the encrypted packets bare. Devices take a change from new links or their subscription"
+    default: dtls
+    description: "What mKCP's packets start with, to pass for another protocol (the mkcp profile): dtls a DTLS 1.2 record header, as WebRTC and VPNs send; wireguard a WireGuard data header; utp, wechat, or srtp (Xray's own, which does not start as RTP does); none sends the encrypted packets bare. Devices take a change from new links or their subscription"
     services: [xray, subscription]
   xdns_mtu:
     type: int
