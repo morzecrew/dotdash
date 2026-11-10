@@ -35,6 +35,12 @@ borrowed site, whose DNS is someone else's. */ -}}
       }
     },
     {"tag": "probe", "listen": "127.0.0.1", "port": 10809, "protocol": "http"}
+    {{- if $own }},
+    {{- /* Caddy's way to the dotdash servers, for devices' subscriptions:
+    on the project's network, which nothing but Caddy shares, and never
+    published. */}}
+    {"tag": "subscriptions", "listen": "0.0.0.0", "port": 10810, "protocol": "http"}
+    {{- end }}
   ],
   {{- /* One outbound per dotdash server, which share their keys. With
   several, a balancer takes whichever answers fastest, so a ban on one

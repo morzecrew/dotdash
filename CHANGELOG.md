@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A relay with a site of its own serves devices their subscriptions inside the country, fetched from the server through its tunnel. `client-config` prints `through the relay <domain>: https://<domain>/<token>` under the server's URL, and `relay-entry` ends such a relay's line with `own-site`.
+
 - Domestic CDNs, for allowlists: with their names in the new `cdn_hosts` parameter, `client-config`, the Xray config and the subscriptions add an XHTTP link through each, uploading in `GET` requests with the data in headers, as such CDNs need. The CDN page covers the setup and the risks.
 
 - A relay can serve a site of its own: with a domain pointing at it and the new `own-site` profile, devices send the relay's own name, and a prober meets a real site with a certificate for that name, so the name and the address agree as for any site. `relay-config` offers it first; a borrowed site (`site`) still works.
@@ -20,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A tunnel's config has a secret of its own, so it is set while the proxy is still the upstream, and the switch never leaves the gate without a working upstream: one `config set` for WireGuard, the profile and then the protocol for OpenVPN.
 
 ### Changed
+
+- Subscriptions are served with `Cache-Control: no-store`, so nothing between the server and a device keeps a copy.
 
 - The server bundle is published as `ghcr.io/morzecrew/dotdash-server`, and `ghcr.io/morzecrew/dotdash` gets no new versions. Switch with `sudo morzer update oci://ghcr.io/morzecrew/dotdash-server:stable`, and point `update.channel` there if set. The product, its paths and data stay `dotdash`.
 

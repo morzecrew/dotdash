@@ -55,6 +55,12 @@ sudo morzer task run client-config --output -- --full phone    # plus links and 
   [client bundle](../client/index.md) runs it on a Linux machine for you.
 - A URL is as secret as the links. `sudo morzer secret rotate subscription_key`
   moves every URL; any other path gets the site's 404.
+- A [relay](../relay/install.md#6-devices) with a site of its own serves the
+  same subscription inside the country: `client-config` adds a
+  `through the relay …` URL under the server's. An app takes one URL, so give
+  a device inside the country the relay's.
+- Never give a device its subscription through a [CDN](cdn.md): the CDN
+  would read every link.
 
 The official sing-box apps, Karing and NekoBox can't connect to dotdash: they
 lack VLESS Encryption and the key share Xray's REALITY requires.

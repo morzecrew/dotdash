@@ -21,7 +21,9 @@ Set one with `sudo morzer config set <name>=<value>`.
 `installation.profile=own-site`: the relay serves a site of its own under its
 domain (`--domain` at `init`, or `installation.domains`), and REALITY hands it
 every connection without the relay's keys. It publishes port 80 too, for the
-certificate. See [Set up a relay](install.md#1-pick-the-site).
+certificate. The site also serves devices their subscriptions, fetched from
+the servers through the relay's tunnel. See
+[Set up a relay](install.md#1-pick-the-site).
 
 ## Secrets
 

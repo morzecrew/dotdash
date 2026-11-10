@@ -10,6 +10,9 @@
 #   the bundled page, titled with it;
 # - a device whose link names the domain gets out through the relay, and
 #   doctor passes, the cover-site check included;
+# - a subscription path goes on to the dotdash servers through the relay's
+#   tunnel, any other path stays the relay's site, and relay-entry marks the
+#   line own-site;
 # - dropping the profile brings back the borrowed site, and devices on it.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
@@ -33,7 +36,7 @@ trap restore EXIT
 entry() { sudo morzer task run relay-entry --output -- 127.0.0.1 | grep -m1 '^127\.0\.0\.1 ' || true; }
 device() { # <port> <site>: an Xray client of the relay, HTTP proxy on 127.0.0.1:<port>
   local host site pbk sid enc
-  read -r host site pbk sid enc <<<"$(entry)"
+  read -r host site pbk sid enc _ <<<"$(entry)"
   [ "${site}" = "$2" ] || die "relay-entry gave the site as ${site}, not $2"
   mkdir -p /rig/relay/own
   jq -n --arg host "${host}" --arg site "${site}" --arg pbk "${pbk}" --arg sid "${sid}" --arg enc "${enc}" \
@@ -74,6 +77,20 @@ device 18083 "${domain}"
 gets_out 18083 || die "a device naming ${domain} did not get out through the relay"
 sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the own site up: $(sudo morzer doctor 2>&1 | tail -5)"
 echo "${0##*/}: a device naming the relay's domain gets out, and doctor passes"
+
+if sudo grep -q SUBSCRIPTION_UPSTREAMS /opt/dotdash-relay/current/caddy/Caddyfile; then
+  # The stand-in server sends dotdash_port on to www.gstatic.com:443
+  # (pre-apply), so Google's 404 for a path it doesn't have proves the request
+  # went through the tunnel, over TLS checked against the server's name.
+  token=$(openssl rand -hex 16)
+  body=$(curl -sk --max-time 40 --resolve "${domain}:443:127.0.0.1" "https://${domain}/${token}" || true)
+  grep -qF 'Error 404 (Not Found)!!1' <<<"${body}" ||
+    die "a subscription path did not reach the servers through the relay's tunnel: $(head -c 300 <<<"${body}")"
+  other=$(curl -sk --max-time 10 --resolve "${domain}:443:127.0.0.1" "https://${domain}/${token}0" || true)
+  ! grep -qF 'Error 404 (Not Found)!!1' <<<"${other}" || die "a path that is no subscription went on to the servers"
+  [ "$(awk '{ print $6 }' <<<"$(entry)")" = own-site ] || die "relay-entry does not mark the line own-site: $(entry | cut -d' ' -f1,2,6)"
+  echo "${0##*/}: a subscription path reaches the servers through the tunnel, and relay-entry marks the line own-site"
+fi
 
 sudo morzer config unset installation.profile >/dev/null || die "could not drop the own-site profile"
 device 18083 www.gstatic.com

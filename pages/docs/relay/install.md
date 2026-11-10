@@ -100,6 +100,9 @@ check this relay:
 198.51.100.7 site.example.ru <public key> <short id> <encryption>
 ```
 
+Under `own-site`, the site is the relay's domain and the line ends with
+`own-site`: the relay also serves devices their subscriptions (step 6).
+
 ## 5. On the server: add the line to `relays`
 
 One line per relay:
@@ -114,6 +117,19 @@ sudo morzer config edit relays
 and the Xray config falls back to the relays when the server itself is out of
 reach. Subscriptions pick the link up by themselves; otherwise resend the
 links. Do it now, while devices can still reach the server.
+
+With subscriptions on and a relay under `own-site`, each device also gets
+its subscription through the relay:
+
+```text
+https://example.com/<token>
+through the relay relay.example.ru: https://relay.example.ru/<token>
+```
+
+Give a device inside the country the second one. The relay fetches it from
+the server through its own tunnel, so the app keeps refreshing its links
+while only domestic addresses get through, and nothing between the relay and
+the server can read them.
 
 To check, connect a phone on the target network with its relay link alone.
 

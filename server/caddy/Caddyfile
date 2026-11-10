@@ -62,7 +62,10 @@ http://127.0.0.1:8081 {
 	}
 	handle @subscription {
 		root * /srv/sub
+		# no-store: neither a CDN nor a relay keeps a copy, which would outlive
+		# a revocation and hold every link.
 		header Content-Type "text/plain; charset=utf-8"
+		header Cache-Control no-store
 		file_server
 	}
 
