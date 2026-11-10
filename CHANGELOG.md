@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Links list XHTTP before REALITY, for each server and each relay, in `client-config` and the subscriptions: an app tends to try the first link, and REALITY over raw TCP is blocked most often.
+
 - Subscriptions are served with `Cache-Control: no-store`, so nothing between the server and a device keeps a copy.
 
 - The server bundle is published as `ghcr.io/morzecrew/dotdash-server`, and `ghcr.io/morzecrew/dotdash` gets no new versions. Switch with `sudo morzer update oci://ghcr.io/morzecrew/dotdash-server:stable`, and point `update.channel` there if set. The product, its paths and data stay `dotdash`.

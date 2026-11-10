@@ -21,7 +21,7 @@ id() { local rest=${1#vless://}; echo "${rest%%@*}"; }
 device() { # <name> <socks port> [all]: a REALITY client from that client's link, or the first of all
   local link dir=/rig/clients/$1 only=(-- "$1")
   [ "${3:-}" != all ] || only=()
-  link=$(sudo morzer task run client-config --output "${only[@]}" | grep -m1 '^vless://.*security=reality') \
+  link=$(sudo morzer task run client-config --output "${only[@]}" | grep -m1 '^vless://.*security=reality.*type=tcp') \
     || die "client-config printed no REALITY link for ${3:-$1}"
   mkdir -p "${dir}"
   jq -n --argjson port "$2" --arg id "$(id "${link}")" --arg enc "$(param "${link}" encryption)" \

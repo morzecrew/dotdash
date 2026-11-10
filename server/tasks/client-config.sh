@@ -53,19 +53,23 @@ cdn_extra='%7B%22scMaxEachPostBytes%22%3A32768%2C%22scMinPostsIntervalMs%22%3A10
 # support-x25519mlkem768: mihomo strips the X25519MLKEM768 key share unless a
 # link asks for it, and Xray's REALITY refuses a client without it. Other
 # clients look up the parameters they know and pass over this one.
+# XHTTP first, then REALITY: an app tends to try the first link it holds, and
+# REALITY with Vision over raw TCP is the transport blocked most often. REALITY
+# stays, for networks where XHTTP is the one that fails.
 links() { # <id> <label> <server>: each named "<label> [<transport>]"
   cat <<EOF
-REALITY via $3 (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
-vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&flow=xtls-rprx-vision&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=tcp#$2%20%5Breality%5D
-
 XHTTP over TLS via $3 (for a CDN in front: replace the address with the CDN's name):
 vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&security=tls&sni=$3&host=$3&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=auto#$2%20%5Bxhttp%5D
 
 EOF
-  [ -n "$xr_port" ] || return 0
-  cat <<EOF
+  [ -z "$xr_port" ] || cat <<EOF
 XHTTP with REALITY via $3, on port ${xr_port} (v2rayN, v2rayNG, mihomo):
 vless://$1@$3:${xr_port}?encryption=${enc}&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=xhttp&path=%2F${path}&mode=auto#$2%20%5Bxhttp%2Breality%5D
+
+EOF
+  cat <<EOF
+REALITY via $3 (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
+vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&flow=xtls-rprx-vision&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=tcp#$2%20%5Breality%5D
 
 EOF
 }
@@ -75,15 +79,14 @@ EOF
 relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]", and "[relay <host> xhttp]" through an own-site one
   printf '%s\n' "$relays" | while read -r h s k i e _ p; do
     [ -n "$h" ] || continue
+    [ "$p" = - ] || cat <<EOF
+XHTTP over TLS through the relay $h, behind its own site (v2rayN, v2rayNG, Happ):
+vless://$1@$h:443?encryption=$e&security=tls&sni=$s&host=$s&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=auto#$2%20%5Brelay%20$h%20xhttp%5D
+
+EOF
     cat <<EOF
 REALITY through the relay $h (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
 vless://$1@$h:443?encryption=$e&flow=xtls-rprx-vision&security=reality&sni=$s&fp=chrome&pbk=$k&sid=$i&support-x25519mlkem768=true&type=tcp#$2%20%5Brelay%20$h%5D
-
-EOF
-    [ "$p" != - ] || continue
-    cat <<EOF
-XHTTP over TLS through the relay $h, behind its own site (v2rayN, v2rayNG, Happ):
-vless://$1@$h:443?encryption=$e&security=tls&sni=$s&host=$s&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=auto#$2%20%5Brelay%20$h%20xhttp%5D
 
 EOF
   done

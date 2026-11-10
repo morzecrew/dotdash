@@ -133,7 +133,10 @@ set_config xhttp_reality_port=9443
 ! published 53 udp || die "53 is still published under xhttp-reality"
 ! published 8443 tcp || die "8443 is still published with xhttp_reality_port=9443"
 published 9443 tcp || die "9443 is not published with xhttp_reality_port=9443"
-xr=$(links | grep -m1 '^vless://.*security=reality.*type=xhttp') || die "no XHTTP with REALITY link under xhttp-reality"
+# Not links | grep -m1: links run to kilobytes, and once the XHTTP with REALITY
+# link is no longer the last, grep -m1 exits before links' own grep flushes
+# the rest, which dies of SIGPIPE and fails the pipe under pipefail.
+xr=$(grep -m1 '^vless://.*security=reality.*type=xhttp' <<<"$(links)") || die "no XHTTP with REALITY link under xhttp-reality"
 [ "$(port "${xr}")" = 9443 ] || die "the link does not name xhttp_reality_port"
 client xhttp-reality 11086 "${xr}"
 gets_through 11086 || die "no answer through XHTTP with REALITY on 9443"

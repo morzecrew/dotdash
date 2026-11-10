@@ -50,7 +50,7 @@ trap restore EXIT
 # A REALITY client of this hook's own, from the links as they are now:
 # 45-revocation.sh rotates reality_key, which locks 10-clients.sh's out.
 xray_client=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)
-link=$(sudo morzer task run client-config --output | grep -m1 '^vless://.*security=reality') ||
+link=$(sudo morzer task run client-config --output | grep -m1 '^vless://.*security=reality.*type=tcp') ||
   die "client-config printed no REALITY link"
 param() { sed -n "s/.*[?&]$2=\([^&#]*\).*/\1/p" <<<"$1"; }
 rest=${link#vless://}
