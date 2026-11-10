@@ -135,13 +135,15 @@ reaches() { # <url>: whether a client gets the target's "ok"
 reaches "${target}" || die "the proxy stopped carrying traffic once upstream_openvpn was set"
 echo "${0##*/}: upstream_openvpn set, and the proxy still the upstream"
 
-sudo docker stop dotdash-rig-upstream >/dev/null
 # A setting and a parameter are set apart, the profile first: vpn starts
 # while the gate still dials the proxy, then the gate moves to it.
 watch_tunnel
 sudo morzer config set installation.profile=xdns,openvpn >/dev/null ||
   { tunnel_logs; die "could not turn on the openvpn profile with the proxy still the upstream"; }
 reaches "${target}" || die "the proxy stopped carrying traffic once the openvpn profile was on"
+# Only now is the proxy stopped, so nothing can leave through it: before the
+# protocol moves, it is still the gate's upstream and Xray's egress check.
+sudo docker stop dotdash-rig-upstream >/dev/null
 sudo morzer config set upstream_protocol=openvpn >/dev/null ||
   { tunnel_logs; die "could not switch to the OpenVPN upstream (its health check failed?)"; }
 reaches "${target}" || { tunnel_logs; die "a client does not reach the target through the OpenVPN upstream"; }
