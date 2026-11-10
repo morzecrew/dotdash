@@ -17,10 +17,13 @@ sudo morzer task run client-config --output -- phone    # one
 
 Per device it prints:
 
-- a REALITY link and an XHTTP link, `phone [reality]` and `phone [xhttp]`,
+- an XHTTP link and a REALITY link, `phone [xhttp]` and `phone [reality]`,
   for each server; `phone [xhttp+reality]` with
   [XHTTP with REALITY](xhttp-reality.md) on; and `phone [relay <host>]` for
-  each [relay](../relay/index.md);
+  each [relay](../relay/index.md), with `phone [relay <host> xhttp]` before it
+  through a relay with a site of its own. XHTTP comes first everywhere: an
+  app tends to try the first link, and REALITY over raw TCP is the transport
+  blocked most often;
 - an Xray config for v2rayN or v2rayNG (as a custom config) that uses
   whichever link answers fastest, drops a dead one within about 30 s, and
   falls back to the [DNS tunnel](dns-tunnel.md) when it is on.

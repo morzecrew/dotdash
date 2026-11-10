@@ -11,7 +11,7 @@
 set -euo pipefail
 
 out=$(sudo morzer task run client-config --output)
-reality=$(grep -m1 '^vless://.*security=reality' <<<"${out}") || die "client-config printed no REALITY link"
+reality=$(grep -m1 '^vless://.*security=reality.*type=tcp' <<<"${out}") || die "client-config printed no REALITY link"
 xhttp=$(grep -m1 '^vless://.*type=xhttp' <<<"${out}") || die "client-config printed no XHTTP link"
 param() { sed -n "s/.*[?&]$2=\([^&#]*\).*/\1/p" <<<"$1"; }
 id() { local rest=${1#vless://}; echo "${rest%%@*}"; }
