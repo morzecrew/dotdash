@@ -53,6 +53,15 @@ relay instead, run the commands its `relay-entry` prints on the canary,
 without the xhttp profiles: the canary then connects through the relay, as a
 phone on that network would.
 
+## On a mobile line
+
+Allowlists apply on mobile networks, so a canary on a wired line can't see
+what phones see. Run one on a small machine with a USB LTE modem and a SIM
+from the operator you care about, with mobile data as its only way out, and
+point it at a relay. One for each operator and region that matters.
+A canary that fails there while the relay itself passes `doctor` means the
+relay's address no longer gets through for devices.
+
 ## Reference
 
 | Parameter | Default | |

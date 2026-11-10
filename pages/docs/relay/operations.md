@@ -58,6 +58,33 @@ Under `own-site`, `sudo morzer apply` afterwards: the site fetches
 subscriptions from these servers, and only an apply restarts it with the new
 list.
 
+## Move a relay
+
+A relay whose links name its domain moves to a new machine, or a new address,
+with a DNS change, and devices keep their links. It keeps its keys, which a
+backup holds. Prepare when you set it up: keep the recovery key off the
+machine, add a backup target, and set the `A` record's TTL to 300 s or less.
+
+```sh
+sudo morzer secret set backup_s3 < ./bucket.yaml   # the bucket's credentials
+sudo morzer backup target add s3://bucket/dotdash-relay --credentials backup_s3
+sudo morzer backup                                  # one now; each update takes another
+```
+
+Then, on the new machine, after `bootstrap.sh`:
+
+```sh
+sudo morzer --product dotdash-relay installation import --from-backup \
+  --target s3://bucket/dotdash-relay --credentials-file ./bucket.yaml \
+  --identity ~/relay-recovery.key
+sudo morzer update oci://ghcr.io/morzecrew/dotdash-relay:stable
+```
+
+Point the relay's domain at the new address, and open 443, and 80 under
+`own-site`. Shut the old machine down: two live relays with one installation
+id confuse each other's backups. A relay whose links name its IP needs a new
+line from `relay-entry` in the server's `relays`, and new links for devices.
+
 ## Watching it
 
 `doctor` and each `apply` fetch `probe_url` through dotdash, so they fail
@@ -68,8 +95,8 @@ sudo morzer notify target add https://hooks.example/morzer
 ```
 
 What the relay can't see is whether devices reach it: only a machine on the
-networks devices use can. A [canary](../canary/index.md) there checks the
-relay as it checks a server, with the commands `relay-entry` prints.
+networks devices use can. A [canary on a mobile line](../canary/index.md#on-a-mobile-line)
+checks the relay as it checks a server, with the commands `relay-entry` prints.
 
 ## Updates
 
