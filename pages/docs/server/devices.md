@@ -68,6 +68,35 @@ sudo morzer task run client-config --output -- --full phone    # plus links and 
 The official sing-box apps, Karing and NekoBox can't connect to dotdash: they
 lack VLESS Encryption and the key share Xray's REALITY requires.
 
+## Pools
+
+Every device gets every [relay](../relay/index.md) and [CDN](cdn.md) host, so
+one leaked device gives away all of them. Pools split them: a device in a
+pool gets its pool's relays and CDN hosts, and those in no pool. One line per
+pool in the `pools` parameter: the pool's name, then its devices (their names
+as written in `vless_clients`), relay hosts (as in `relays`) and CDN hosts:
+
+```sh
+sudo morzer config edit pools
+```
+
+```text
+family  mom dad relay1.example.ru cdn1.example.ru
+friends anna boris relay2.example.ru
+```
+
+- A device in no pool, or without a name, gets every relay and CDN host, as
+  before. A relay or CDN host in no pool goes to every device.
+- A device, relay or CDN host may be in several pools.
+- `client-config` and the subscriptions follow the change. A device that
+  fetched its links before keeps them until it refreshes, and a device's
+  links work through any relay, so pools hide entry points rather than lock
+  devices out of them.
+- `client-config` names a member that matches no device, relay or CDN host:
+  a typo would otherwise leave a device in no pool, and so give it everything.
+
+Replacing a pool's relay then means new links only for that pool's devices.
+
 ## Revoking a device
 
 Delete its line from `vless_clients`. A revoked device still knows the

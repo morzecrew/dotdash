@@ -26,10 +26,11 @@
 | `servers` | `self` | servers sharing these keys, comma-separated |
 | `cdn_hosts` | `none` | the names of domestic [CDNs](cdn.md#a-domestic-cdn-for-allowlists) in front of this server, comma-separated; a link through each |
 | `relays` | a comment | one `<host> <site> <public key> <short id> <encryption>` line per [relay](../relay/install.md), as its `relay-entry` prints it |
+| `pools` | a comment | one `<pool> <member>...` line per [pool](devices.md#pools), the members device names, relay hosts and CDN hosts |
 
 Set one with `sudo morzer config set <name>=<value>`, unset it with
-`sudo morzer config unset <name>`, edit `relays` with
-`sudo morzer config edit relays`. Profiles (`installation.profile`): `xdns`,
+`sudo morzer config unset <name>`, edit `relays` or `pools` with
+`sudo morzer config edit <name>`. Profiles (`installation.profile`): `xdns`,
 `xhttp-reality`, `openvpn` (for an [OpenVPN upstream](tunnel-upstream.md)),
 combined with commas, such as `xdns,xhttp-reality`; `xdns-xhttp-reality` does the
 same and goes in 0.6.0.

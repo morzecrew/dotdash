@@ -31,18 +31,43 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # path>]]" per line; blank lines, "#" comments and shorter lines are not
 # relays. own-site: the site is the relay's own, which fetches subscriptions
 # from here and, given its path, routes XHTTP to the relay's Xray.
-relays=$(printf '%s\n' "${RELAYS:-}" | while read -r h s k i e o p _; do
+all_relays=$(printf '%s\n' "${RELAYS:-}" | while read -r h s k i e o p _; do
   case $h in '' | '#'*) continue ;; esac
   if [ "${o:-}" != own-site ]; then o='' p=''; fi
   if [ -n "${e:-}" ]; then echo "$h $s $k $i $e ${o:--} ${p:--}"; fi
 done)
-# The own-site relays' domains, where a device inside the country fetches its
-# subscription.
-sub_relays=$(printf '%s\n' "$relays" | awk '$6 == "own-site" { print $2 }')
 
 # The domestic CDNs in front of this server (the cdn_hosts parameter), each
 # fronting https://${DOMAIN}.
-cdns=$(printf '%s\n' "${CDN_HOSTS:-none}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e '/^none$/d')
+all_cdns=$(printf '%s\n' "${CDN_HOSTS:-none}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e '/^none$/d')
+
+# The pools parameter: one "<pool> <member>..." line per pool, the members
+# device names, relay hosts and CDN hosts. A device in a pool gets its pools'
+# relays and CDN hosts and those in no pool; a device in none gets them all.
+# A leaked device then gives away its pools' entry points, not every one.
+pools=$(printf '%s\n' "${POOLS:-}" | sed 's/#.*//' | awk 'NF > 1')
+has() { # <member> <pool lines>: whether a line lists it
+  printf '%s\n' "$2" | awk -v m="$1" '{ for (i = 2; i <= NF; i++) if ($i == m) f = 1 } END { exit !f }'
+}
+sees() { [ -z "$mine" ] || has "$1" "$mine" || ! has "$1" "$pools"; }
+pick() { # <device name>: the relays, CDN hosts and subscription relays it gets
+  mine=
+  [ -z "$1" ] || mine=$(printf '%s\n' "$pools" | awk -v m="$1" '{ for (i = 2; i <= NF; i++) if ($i == m) { print; next } }')
+  relays=$(printf '%s\n' "$all_relays" | while read -r h rest; do
+    if [ -n "$h" ] && sees "$h"; then echo "$h $rest"; fi
+  done)
+  cdns=$(for h in $all_cdns; do if sees "$h"; then echo "$h"; fi; done)
+  # The own-site relays' domains, where a device inside the country fetches
+  # its subscription.
+  sub_relays=$(printf '%s\n' "$relays" | awk '$6 == "own-site" { print $2 }')
+}
+# A member that names nothing would leave its device in no pool, or its relay
+# or CDN host in none, and so seen by every device: say so.
+names=$(awk '$1 !~ /^#/ && NF > 1 { print $2 }' /run/secrets/vless_clients)
+for m in $(printf '%s\n' "$pools" | awk '{ $1 = ""; print }'); do
+  printf '%s\n%s\n%s\n' "$names" "$all_cdns" "$(printf '%s\n' "$all_relays" | awk '{ print $1 }')" | grep -qxF -- "$m" ||
+    echo "pools: $m is no device name, relay host or CDN host" >&2
+done
 # Their edges take GET alone and no request body (Yandex has answered 413 to
 # any since 2026-09-28), so a device uploads in packet-up GETs with the data in
 # headers. The server's inbound reads that as it is: its placement is auto. The
@@ -262,6 +287,7 @@ while read -r id name _ || [ -n "${id:-}" ]; do
   case $id in '' | '#'*) continue ;; esac
   [ -z "$want" ] || [ "$want" = "${name:-}" ] || [ "$want" = "$id" ] || continue
   found=1
+  pick "${name:-}"
   client "$id" "${name:-client}"
 done </run/secrets/vless_clients
 [ -n "$found" ] || { echo "no client named '$want' in vless_clients" >&2; exit 1; }

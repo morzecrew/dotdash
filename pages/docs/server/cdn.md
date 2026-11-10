@@ -56,7 +56,8 @@ To make losing an account cheap:
 
 - **Spread over CDNs and accounts.** `cdn_hosts` takes several names, and the
   Xray config passes over one that stops answering. Don't put every device
-  behind one account.
+  behind one account: [pools](devices.md#pools) give each group of devices
+  its own CDN hosts.
 - **Serve a real site at the origin** ([cover site](cover-site.md)). It is
   what the CDN fetches and what a provider's reviewer sees. Operators report
   that accounts with a live, visited site behind them last longer than
