@@ -89,6 +89,17 @@ body() { # <url>: through this hook's REALITY client; the body, or nothing
   curl -s --max-time 20 --retry 2 --retry-delay 2 --socks5-hostname 127.0.0.1:11097 "$1" 2>/dev/null || true
 }
 doctor() { { sudo morzer doctor 2>&1 || true; } | tr -s ' \n' ' '; }
+# What the tunnel's containers and the stand-in said, before a die: a failed
+# apply rolls back and removes them before the diagnose step looks.
+tunnel_logs() {
+  local c
+  # One query per service: Docker ANDs repeated label filters.
+  for c in $(sudo docker ps -aq --filter label=com.docker.compose.service=vpn) \
+    $(sudo docker ps -aq --filter label=com.docker.compose.service=vpn-socks) dotdash-rig-ovpn; do
+    echo "--- $(sudo docker inspect -f '{{.Name}}' "${c}" 2>/dev/null)" >&2
+    sudo docker logs --tail 15 "${c}" 2>&1 | grep -vE 'Note:|library versions' >&2 || true
+  done
+}
 # Up to 30 s: secret set returns once the gate restarts, before it serves,
 # and curl does not retry a refused connection.
 reaches() { # <url>: whether a client gets the target's "ok"
@@ -110,11 +121,11 @@ sudo docker stop dotdash-rig-upstream >/dev/null
 # A setting and a parameter are set apart, the profile first: vpn starts
 # while the gate still dials the proxy, then the gate moves to it.
 sudo morzer config set installation.profile=xdns,openvpn >/dev/null ||
-  die "could not turn on the openvpn profile with the proxy still the upstream"
+  { tunnel_logs; die "could not turn on the openvpn profile with the proxy still the upstream"; }
 reaches "${target}" || die "the proxy stopped carrying traffic once the openvpn profile was on"
 sudo morzer config set upstream_protocol=openvpn >/dev/null ||
-  die "could not switch to the OpenVPN upstream (its health check failed?)"
-reaches "${target}" || die "a client does not reach the target through the OpenVPN upstream"
+  { tunnel_logs; die "could not switch to the OpenVPN upstream (its health check failed?)"; }
+reaches "${target}" || { tunnel_logs; die "a client does not reach the target through the OpenVPN upstream"; }
 sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the OpenVPN server answering: $(doctor)"
 route=$(sudo docker exec "$(service_container vpn)" ip -4 route show default || true)
 case ${route} in '' | *" dev tun"*) ;; *) die "vpn has a default route around the tunnel: ${route}" ;; esac

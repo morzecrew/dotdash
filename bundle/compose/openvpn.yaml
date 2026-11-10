@@ -16,6 +16,10 @@ services:
     cap_add: [NET_ADMIN]
     devices: ["/dev/net/tun:/dev/net/tun"]
     read_only: true
+    # openvpn refuses to start unless its --tmp-dir, /tmp, is writable, and
+    # Docker's read_only, unlike Podman's, mounts no tmpfs there.
+    tmpfs:
+      - /tmp:size=1m,mode=0700
     security_opt: ["no-new-privileges:true"]
     pids_limit: 64
     environment:
