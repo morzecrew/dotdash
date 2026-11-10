@@ -166,20 +166,27 @@ sudo docker start dotdash-rig-ovpn >/dev/null
 echo "${0##*/}: with the server stopped, nothing gets through, and doctor names the tunnel"
 
 # A new config while OpenVPN runs takes effect when set: secret set restarts
-# vpn, and vpn-socks after it, into vpn's new network namespace.
-started() { sudo docker inspect -f '{{.State.StartedAt}}' "$(service_container "$1")"; }
-vpn_started=$(started vpn)
-socks_started=$(started vpn-socks)
-watch_tunnel
-client_config 4 | sudo morzer secret set upstream_openvpn >/dev/null ||
-  { tunnel_logs; die "changing upstream_openvpn while OpenVPN runs failed"; }
-[ "$(started vpn)" != "${vpn_started}" ] || die "vpn did not restart when upstream_openvpn changed"
-[ "$(started vpn-socks)" != "${socks_started}" ] || die "vpn-socks did not restart when upstream_openvpn changed"
-reaches "${target}" || { tunnel_logs; die "a client does not reach the target after upstream_openvpn changed"; }
-route=$(sudo docker exec "$(service_container vpn)" ip -4 route show default || true)
-case ${route} in '' | *" dev tun"*) ;; *) die "vpn has a default route around the tunnel after its restart: ${route}" ;; esac
-kill "${watcher}" 2>/dev/null || true
-echo "${0##*/}: a new config while OpenVPN runs restarts vpn and vpn-socks, and a client gets through"
+# vpn, and vpn-socks after it, into vpn's new network namespace. Releases
+# before morzer 0.15.1 declared no services for the secret (the rehearsal
+# runs these hooks on the published :main first).
+if sudo sed -n '/^  - name: upstream_openvpn$/,/^  - name:/p' /opt/dotdash/current/secrets.schema.yaml |
+  grep -q '^    services: \[vpn, vpn-socks\]$'; then
+  started() { sudo docker inspect -f '{{.State.StartedAt}}' "$(service_container "$1")"; }
+  vpn_started=$(started vpn)
+  socks_started=$(started vpn-socks)
+  watch_tunnel
+  client_config 4 | sudo morzer secret set upstream_openvpn >/dev/null ||
+    { tunnel_logs; die "changing upstream_openvpn while OpenVPN runs failed"; }
+  [ "$(started vpn)" != "${vpn_started}" ] || die "vpn did not restart when upstream_openvpn changed"
+  [ "$(started vpn-socks)" != "${socks_started}" ] || die "vpn-socks did not restart when upstream_openvpn changed"
+  reaches "${target}" || { tunnel_logs; die "a client does not reach the target after upstream_openvpn changed"; }
+  route=$(sudo docker exec "$(service_container vpn)" ip -4 route show default || true)
+  case ${route} in '' | *" dev tun"*) ;; *) die "vpn has a default route around the tunnel after its restart: ${route}" ;; esac
+  kill "${watcher}" 2>/dev/null || true
+  echo "${0##*/}: a new config while OpenVPN runs restarts vpn and vpn-socks, and a client gets through"
+else
+  echo "${0##*/}: skipped the change while OpenVPN runs: the installed release restarts nothing on upstream_openvpn"
+fi
 
 sudo docker start dotdash-rig-upstream >/dev/null
 sudo morzer config set upstream_protocol=http >/dev/null || die "could not switch back to the proxy"
