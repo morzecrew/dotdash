@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-10
+
+### Deprecated
+
+- The `xdns-xhttp-reality` profile goes in 0.6.0, not in this patch release as 0.5.0 announced: removing it would break a server still set to it. `xdns,xhttp-reality` deploys the same; switch before 0.6.0 with `sudo morzer config set installation.profile=xdns,xhttp-reality`.
+
 ### Fixed
 
 - The command `relay-config` prints for the relay machine's last step, `relay-entry`, now includes `--output`; without it morzer ran the task and showed nothing, not the line the `relays` parameter needs.

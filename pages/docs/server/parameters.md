@@ -28,4 +28,4 @@ Set one with `sudo morzer config set <name>=<value>`, unset it with
 `sudo morzer config unset <name>`, edit `relays` with
 `sudo morzer config edit relays`. Profiles (`installation.profile`): `xdns`,
 `xhttp-reality`, or both as `xdns,xhttp-reality`; `xdns-xhttp-reality` does the
-same and goes in the next release.
+same and goes in 0.6.0.
