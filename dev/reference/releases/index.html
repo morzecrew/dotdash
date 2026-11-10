@@ -1879,11 +1879,11 @@
 smoke-tests every pull request and push. A push to <code>main</code> publishes <code>:main</code>;
 a <code>vX.Y.Z</code> tag publishes all four bundles as <code>:X.Y.Z</code> and <code>:stable</code>, with a
 GitHub release. Each bundle carries signed build provenance:</p>
-<div class="highlight"><pre><span></span><code>gh<span class="w"> </span>attestation<span class="w"> </span>verify<span class="w"> </span>oci://ghcr.io/morzecrew/dotdash:&lt;version&gt;<span class="w"> </span>--owner<span class="w"> </span>morzecrew
+<div class="highlight"><pre><span></span><code>gh<span class="w"> </span>attestation<span class="w"> </span>verify<span class="w"> </span>oci://ghcr.io/morzecrew/dotdash-server:&lt;version&gt;<span class="w"> </span>--owner<span class="w"> </span>morzecrew
 </code></pre></div>
 <p>A weekly benchmark measures REALITY and XHTTP under added latency and loss;
 it informs and never gates. Check a bundle change with
-<code>morzer release verify ./bundle --render-check</code>.</p>
+<code>morzer release verify ./server --render-check</code>.</p>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <p>This site is <a href="https://zensical.org">Zensical</a> with
 <a href="https://github.com/squidfunk/mike">mike</a> versions on the <code>gh-pages</code> branch.

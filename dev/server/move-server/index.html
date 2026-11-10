@@ -1862,7 +1862,7 @@ the <code>A</code> record's TTL to 300 s or less. Devices keep their links.</p>
 sudo<span class="w"> </span>morzer<span class="w"> </span>--product<span class="w"> </span>dotdash<span class="w"> </span>installation<span class="w"> </span>import<span class="w"> </span>--from-backup<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--target<span class="w"> </span>s3://bucket/dotdash<span class="w"> </span>--credentials-file<span class="w"> </span>./bucket.yaml<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--identity<span class="w"> </span>~/dotdash-recovery.key
-sudo<span class="w"> </span>morzer<span class="w"> </span>update<span class="w"> </span>oci://ghcr.io/morzecrew/dotdash:stable
+sudo<span class="w"> </span>morzer<span class="w"> </span>update<span class="w"> </span>oci://ghcr.io/morzecrew/dotdash-server:stable
 <span class="c1"># optional, keeps Caddy's certificate (import prints both ids)</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>backup<span class="w"> </span>fetch<span class="w"> </span>&lt;backup<span class="w"> </span>id&gt;
 sudo<span class="w"> </span>morzer<span class="w"> </span>restore<span class="w"> </span>--force<span class="w"> </span>--confirm<span class="w"> </span>&lt;installation<span class="w"> </span>id&gt;<span class="w"> </span>--identity<span class="w"> </span>~/dotdash-recovery.key
