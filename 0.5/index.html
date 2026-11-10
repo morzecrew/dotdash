@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="A morzer bundle: Xray REALITY in front of a cover site, all traffic out through your upstream proxy">
+        <meta name="description" content="Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -17,7 +17,7 @@
       
       
       
-        <link rel="next" href="./get-started/install/">
+        <link rel="next" href="./server/">
       
       
         
@@ -226,37 +226,7 @@
       
       
         
-      
-        
-      
-    
-    
-    
-    
-      <li class="md-tabs__item">
-        <a href="./get-started/install/" class="md-tabs__link">
           
-  
-  Get started
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-      
-      
-        
-      
-        
-      
         
       
         
@@ -276,10 +246,10 @@
     
     
       <li class="md-tabs__item">
-        <a href="./options/cover-site/" class="md-tabs__link">
+        <a href="./server/" class="md-tabs__link">
           
   
-  Options
+  Server
 
         </a>
       </li>
@@ -310,10 +280,74 @@
     
     
       <li class="md-tabs__item">
-        <a href="./operations/" class="md-tabs__link">
+        <a href="./relay/" class="md-tabs__link">
           
   
-  Operations
+  Relay
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="./client/" class="md-tabs__link">
+          
+  
+  Client
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+      
+        
+          
+        
+      
+    
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="./canary/" class="md-tabs__link">
+          
+  
+  Canary
 
         </a>
       </li>
@@ -333,19 +367,15 @@
       
         
       
-        
-      
-        
-      
     
     
     
     
       <li class="md-tabs__item">
-        <a href="./reference/parameters/" class="md-tabs__link">
+        <a href="./reference/releases/" class="md-tabs__link">
           
   
-  Reference
+  Releases
 
         </a>
       </li>
@@ -464,6 +494,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#what-every-machine-needs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What every machine needs
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#releases" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -492,6 +533,18 @@
     
       
         
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
       
         
       
@@ -511,22 +564,29 @@
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
         
           
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
-            
+          <div class="md-nav__link md-nav__container">
+            <a href="./server/" class="md-nav__link ">
+              
   
   
   <span class="md-ellipsis">
     
   
-  Get started
+  Server
 
     
   </span>
   
   
 
-            <span class="md-nav__icon md-icon"></span>
-          </label>
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
         
         
           <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
@@ -534,10 +594,12 @@
               <span class="md-nav__icon md-icon"></span>
               
   
-  Get started
+  Server
 
             </label>
             <ul class="md-nav__list" data-md-scrollfix>
+              
+                
               
                 
                   
@@ -546,7 +608,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./get-started/install/" class="md-nav__link">
+      <a href="./server/install/" class="md-nav__link">
         
   
   
@@ -573,14 +635,14 @@
   
   
     <li class="md-nav__item">
-      <a href="./get-started/clients/" class="md-nav__link">
+      <a href="./server/devices/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Clients
+  Devices
 
     
   </span>
@@ -593,28 +655,41 @@
 
                 
               
-            </ul>
-          </nav>
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./server/device-dns/" class="md-nav__link">
         
-      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  DNS on devices
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
-    
-      
-      
+                
+              
+                
+                  
   
   
   
   
     
     
-      
-        
-      
-        
-      
-        
       
         
       
@@ -641,10 +716,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_5" >
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_5" id="__nav_2_5_label" tabindex="0">
             
   
   
@@ -662,8 +737,8 @@
           </label>
         
         
-          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-            <label class="md-nav__title" for="__nav_3">
+          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2_5">
               <span class="md-nav__icon md-icon"></span>
               
   
@@ -679,7 +754,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./options/cover-site/" class="md-nav__link">
+      <a href="./server/cover-site/" class="md-nav__link">
         
   
   
@@ -706,7 +781,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./options/dns-tunnel/" class="md-nav__link">
+      <a href="./server/dns-tunnel/" class="md-nav__link">
         
   
   
@@ -733,7 +808,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./options/xhttp-reality/" class="md-nav__link">
+      <a href="./server/xhttp-reality/" class="md-nav__link">
         
   
   
@@ -760,7 +835,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./options/ipv6-upstream/" class="md-nav__link">
+      <a href="./server/ipv6-upstream/" class="md-nav__link">
         
   
   
@@ -787,7 +862,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./options/cdn/" class="md-nav__link">
+      <a href="./server/cdn/" class="md-nav__link">
         
   
   
@@ -814,7 +889,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./options/several-servers/" class="md-nav__link">
+      <a href="./server/several-servers/" class="md-nav__link">
         
   
   
@@ -834,87 +909,6 @@
 
                 
               
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./options/relay/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Relay
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./options/client/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Client bundle
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./options/canary/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Canary
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
             </ul>
           </nav>
         
@@ -922,19 +916,16 @@
     </li>
   
 
-    
-      
-      
+                
+              
+                
+                  
   
   
   
   
     
     
-      
-        
-          
-        
       
         
       
@@ -955,12 +946,11 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
         
           
-          <div class="md-nav__link md-nav__container">
-            <a href="./operations/" class="md-nav__link ">
-              
+          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -973,18 +963,12 @@
   
   
 
-            </a>
-            
-              
-              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
+            <span class="md-nav__icon md-icon"></span>
+          </label>
         
         
-          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-            <label class="md-nav__title" for="__nav_4">
+          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2_6">
               <span class="md-nav__icon md-icon"></span>
               
   
@@ -994,6 +978,31 @@
             <ul class="md-nav__list" data-md-scrollfix>
               
                 
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./server/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Operations
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
               
                 
                   
@@ -1002,7 +1011,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./operations/leaks/" class="md-nav__link">
+      <a href="./server/leaks/" class="md-nav__link">
         
   
   
@@ -1029,14 +1038,107 @@
   
   
     <li class="md-nav__item">
-      <a href="./operations/device-dns/" class="md-nav__link">
+      <a href="./server/move-server/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  DNS on devices
+  Moving to a new server
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./server/parameters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Parameters
 
     
   </span>
@@ -1056,14 +1158,184 @@
   
   
     <li class="md-nav__item">
-      <a href="./operations/move-server/" class="md-nav__link">
+      <a href="./server/secrets/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Moving to a new server
+  Secrets
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="./relay/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Relay
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Relay
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./relay/install/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Set up a relay
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./relay/operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Running a relay
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./relay/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Relay reference
 
     
   </span>
@@ -1094,6 +1366,10 @@
     
       
         
+          
+        
+      
+        
       
         
       
@@ -1114,17 +1390,253 @@
       
         
         
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="./client/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Client
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Client
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./client/network/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Share the proxy port
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./client/rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Rules
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./client/tun/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  The whole machine
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./client/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Client reference
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+          <div class="md-nav__link md-nav__container">
+            <a href="./canary/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Canary
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
             
   
   
   <span class="md-ellipsis">
     
   
-  Reference
+  Releases
 
     
   </span>
@@ -1135,69 +1647,15 @@
           </label>
         
         
-          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-            <label class="md-nav__title" for="__nav_5">
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_6">
               <span class="md-nav__icon md-icon"></span>
               
   
-  Reference
+  Releases
 
             </label>
             <ul class="md-nav__list" data-md-scrollfix>
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./reference/parameters/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Parameters
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="./reference/secrets/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Secrets
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
               
                 
                   
@@ -1302,6 +1760,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#what-every-machine-needs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What every machine needs
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#releases" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1341,17 +1810,56 @@
 
 
 <h1 id="dotdash">dotdash<a class="headerlink" href="#dotdash" title="Permanent link">&para;</a></h1>
-<p>A <a href="https://github.com/morzecrew/morzer">morzer</a> bundle for one Docker host:
-Xray REALITY on 443 in front of a Caddy cover site, an optional DNS tunnel
-and XHTTP with REALITY, and all traffic out through your upstream proxy.</p>
-<ul>
-<li><strong><a href="get-started/install/">Install</a></strong> a server, then
-  <strong><a href="get-started/clients/">connect devices</a></strong>.</li>
-<li><strong><a href="options/cover-site/">Options</a></strong>: your own cover site, a DNS tunnel,
-  another port, an IPv6 proxy, a CDN, several servers, a canary.</li>
-<li><strong><a href="operations/">Operations</a></strong>: updates, alerts, backups, and
-  <a href="operations/leaks/">what leaks where</a>.</li>
-</ul>
+<p>dotdash gets devices in a censored network out to the open internet through
+a server of yours abroad. It comes as four
+<a href="https://github.com/morzecrew/morzer">morzer</a> bundles, released together from
+one tag:</p>
+<p><img alt="The four bundles: phones, the client and the canary inside the country reach the dotdash server abroad directly, or through the relay while only domestic addresses get through; the server leaves only through your upstream proxy" src="assets/diagrams/overview.light.svg#only-light" />
+<img alt="The four bundles: phones, the client and the canary inside the country reach the dotdash server abroad directly, or through the relay while only domestic addresses get through; the server leaves only through your upstream proxy" src="assets/diagrams/overview.dark.svg#only-dark" /></p>
+<table>
+<thead>
+<tr>
+<th>Bundle</th>
+<th>Runs on</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><a href="server/">dotdash</a></strong></td>
+<td>a server abroad</td>
+<td>Xray REALITY on 443 in front of a cover site; everything leaves through your upstream proxy</td>
+</tr>
+<tr>
+<td><strong><a href="relay/">dotdash-relay</a></strong></td>
+<td>a machine inside the country</td>
+<td>carries phones, clients and canaries on to the server while only domestic addresses get through</td>
+</tr>
+<tr>
+<td><strong><a href="client/">dotdash-client</a></strong></td>
+<td>a Linux machine on the client side</td>
+<td>a proxy port, the whole machine, or a whole LAN through dotdash</td>
+</tr>
+<tr>
+<td><strong><a href="canary/">dotdash-canary</a></strong></td>
+<td>a machine inside the country</td>
+<td>connects as a device would, and alerts when it can't get through</td>
+</tr>
+</tbody>
+</table>
+<p>Start with the server: its tasks print the other three's setup. The client
+and the canary reach it as phones do, directly or through a relay.</p>
+<h2 id="what-every-machine-needs">What every machine needs<a class="headerlink" href="#what-every-machine-needs" title="Permanent link">&para;</a></h2>
+<p>Docker ≥ 28 with Compose ≥ 2.35, <code>sops</code>, <code>age</code>, and morzer ≥ 0.15.0. On a
+fresh Debian or Ubuntu machine, <code>bootstrap.sh</code> installs them, turns on
+security updates, and sets SSH to keys only:</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-fsSLO<span class="w"> </span>https://morzecrew.github.io/dotdash/bootstrap.sh
+less<span class="w"> </span>bootstrap.sh<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>bash<span class="w"> </span>bootstrap.sh
+</code></pre></div>
+<p>Installing morzer by hand: <code>install.sh --dir /usr/local/bin</code>. <code>sudo</code> and
+morzer's timers don't look in <code>~/.local/bin</code>.</p>
+<p>Every bundle ships the key it is signed with: <code>morzer init</code> prints it,
+trusts it, and requires every later release to be signed by it.</p>
 <h2 id="releases">Releases<a class="headerlink" href="#releases" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1362,21 +1870,22 @@ and XHTTP with REALITY, and all traffic out through your upstream proxy.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>ghcr.io/morzecrew/dotdash:stable</code></td>
-<td>releases (<code>vX.Y.Z</code> tags), release key</td>
+<td><code>ghcr.io/morzecrew/&lt;bundle&gt;:stable</code></td>
+<td>the newest release (<code>vX.Y.Z</code> tags), release key</td>
 </tr>
 <tr>
-<td><code>ghcr.io/morzecrew/dotdash:X.Y.Z</code></td>
+<td><code>ghcr.io/morzecrew/&lt;bundle&gt;:X.Y.Z</code></td>
 <td>one release</td>
 </tr>
 <tr>
-<td><code>ghcr.io/morzecrew/dotdash:main</code></td>
+<td><code>ghcr.io/morzecrew/&lt;bundle&gt;:main</code></td>
 <td>every push to <code>main</code>, dev key; may be broken</td>
 </tr>
 </tbody>
 </table>
-<p>These docs are versioned with the releases: the version menu shows each
-released minor, and <code>dev</code> follows <code>main</code>.</p>
+<p><code>&lt;bundle&gt;</code> is <code>dotdash</code>, <code>dotdash-relay</code>, <code>dotdash-client</code> or
+<code>dotdash-canary</code>. These docs are versioned with the releases: the version
+menu shows each released minor, and <code>dev</code> follows <code>main</code>.</p>
 
 
 
@@ -1415,13 +1924,13 @@ released minor, and <code>dev</code> follows <code>main</code>.</p>
         
         
           
-          <a href="./get-started/install/" class="md-footer__link md-footer__link--next" aria-label="Next: Install">
+          <a href="./server/" class="md-footer__link md-footer__link--next" aria-label="Next: Server">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Install
+                Server
               </div>
             </div>
             <div class="md-footer__button md-icon">
