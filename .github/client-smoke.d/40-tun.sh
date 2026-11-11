@@ -89,17 +89,24 @@ lan_gets() { # <what>: poll for the LAN device reaching tun-target.test
 }
 policy=$(sudo iptables -S FORWARD | sed -n 's/^-P FORWARD //p')
 sudo iptables -P FORWARD DROP
-# morzer (0.16) health-checks the change, so a gateway whose FORWARD drops the
-# LAN is refused when set, naming the rules, and undone.
-out=$(sudo morzer config set gateway=true 2>&1) && die "gateway=true was taken with FORWARD dropping the LAN"
-tr -s '[:space:]' ' ' <<<"${out}" | grep -qF 'DOCKER-USER -o Meta -j ACCEPT' \
-  || die "gateway=true was refused, but not naming the DOCKER-USER rules: ${out}"
-[ "$(lan http://tun-target.test:8080/sub)" != 200 ] || die "with FORWARD dropping the LAN, the device still got through"
+# morzer (0.16) health-checks gateway=true and retries a failing check for
+# minutes before undoing it, so the rules go in first; taking them out after
+# shows what doctor names.
 sudo iptables -I DOCKER-USER -o Meta -j ACCEPT
 sudo iptables -I DOCKER-USER -i Meta -j ACCEPT
 sudo morzer config set gateway=true >/dev/null || die "with the rules in, gateway=true was refused"
 out=$(sudo morzer doctor 2>&1) || die "doctor fails as a gateway with the rules in: ${out}"
 lan_gets "with the rules in, the LAN device did not get through TUN and dotdash"
+sudo iptables -D DOCKER-USER -o Meta -j ACCEPT
+sudo iptables -D DOCKER-USER -i Meta -j ACCEPT
+out=$(sudo morzer doctor 2>&1) && die "doctor passes as a gateway whose FORWARD drops the LAN"
+tr -s '[:space:]' ' ' <<<"${out}" | grep -qF 'DOCKER-USER -o Meta -j ACCEPT' \
+  || die "doctor failed, but not naming the DOCKER-USER rules: ${out}"
+[ "$(lan http://tun-target.test:8080/sub)" != 200 ] || die "with FORWARD dropping the LAN, the device still got through"
+sudo iptables -I DOCKER-USER -o Meta -j ACCEPT
+sudo iptables -I DOCKER-USER -i Meta -j ACCEPT
+out=$(sudo morzer doctor 2>&1) || die "doctor fails as a gateway with the rules back: ${out}"
+lan_gets "with the rules back, the LAN device did not get through TUN and dotdash"
 sudo morzer config set dns_listen=10.99.0.1:53 >/dev/null
 echo 'nameserver 10.99.0.1' | sudo tee /etc/netns/lan/resolv.conf >/dev/null
 lan_gets "resolving with dns_listen on the gateway, the LAN device did not get through"
