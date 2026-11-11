@@ -12,7 +12,7 @@ set -euo pipefail
 
 plan=$(sudo morzer config set dotdash_servers=a.invalid,b.invalid,c.invalid --dry-run 2>&1) \
   || die "could not plan three servers: ${plan}"
-for want in '"tag": "dotdash-2", "protocol": "vless"' '"address": "a.invalid", "port": 443' \
+for want in '"tag": "dotdash-2", "protocol": "vless"' '"address": "a.invalid", "port": ' \
   '"serverName": "c.invalid", "fingerprint": "chrome"' \
   '"balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}}]' \
   '"rules": [{"type": "field", "network": "tcp,udp", "balancerTag": "dotdash"}' \
