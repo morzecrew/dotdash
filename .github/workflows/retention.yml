@@ -14,7 +14,7 @@ jobs:
   retention:
     # The package API is reached with GH_PAT, not GITHUB_TOKEN.
     permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@96969fd2ea37e5117f67353dae43c85c761597d0 # v0.10.0
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@31ef658ebef55dedc7cb23184f3a38acc7b1d899 # fix/container-dns (testing; v0.10.1 replaces it)
     with:
       package: dotdash-server
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
@@ -23,7 +23,7 @@ jobs:
 
   canary:
     permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@96969fd2ea37e5117f67353dae43c85c761597d0 # v0.10.0
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@31ef658ebef55dedc7cb23184f3a38acc7b1d899 # fix/container-dns (testing; v0.10.1 replaces it)
     with:
       package: dotdash-canary
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
@@ -32,7 +32,7 @@ jobs:
 
   relay:
     permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@96969fd2ea37e5117f67353dae43c85c761597d0 # v0.10.0
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@31ef658ebef55dedc7cb23184f3a38acc7b1d899 # fix/container-dns (testing; v0.10.1 replaces it)
     with:
       package: dotdash-relay
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
@@ -41,7 +41,7 @@ jobs:
 
   client:
     permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@96969fd2ea37e5117f67353dae43c85c761597d0 # v0.10.0
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@31ef658ebef55dedc7cb23184f3a38acc7b1d899 # fix/container-dns (testing; v0.10.1 replaces it)
     with:
       package: dotdash-client
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}

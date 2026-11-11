@@ -57,7 +57,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: morzecrew/bundle-ci
-          ref: 96969fd2ea37e5117f67353dae43c85c761597d0 # v0.10.0
+          ref: 31ef658ebef55dedc7cb23184f3a38acc7b1d899 # fix/container-dns (testing; v0.10.1 replaces it)
           path: .bundle-ci
           persist-credentials: false
 

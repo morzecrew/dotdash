@@ -23,7 +23,7 @@ jobs:
   guard:
     permissions:
       contents: read
-    uses: morzecrew/bundle-ci/.github/workflows/guard.yml@96969fd2ea37e5117f67353dae43c85c761597d0 # v0.10.0
+    uses: morzecrew/bundle-ci/.github/workflows/guard.yml@31ef658ebef55dedc7cb23184f3a38acc7b1d899 # fix/container-dns (testing; v0.10.1 replaces it)
     with:
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
 
@@ -32,7 +32,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@96969fd2ea37e5117f67353dae43c85c761597d0 # v0.10.0
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@31ef658ebef55dedc7cb23184f3a38acc7b1d899 # fix/container-dns (testing; v0.10.1 replaces it)
     with:
       morzer-version: "0.15.1"
       ref: ${{ github.sha }}
@@ -65,7 +65,7 @@ jobs:
       # The provenance publish.yml attests for the bundle.
       id-token: write
       attestations: write
-    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@96969fd2ea37e5117f67353dae43c85c761597d0 # v0.10.0
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@31ef658ebef55dedc7cb23184f3a38acc7b1d899 # fix/container-dns (testing; v0.10.1 replaces it)
     with:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}
@@ -77,7 +77,7 @@ jobs:
     needs: [bundle, publish]
     permissions:
       contents: write
-    uses: morzecrew/bundle-ci/.github/workflows/github-release.yml@96969fd2ea37e5117f67353dae43c85c761597d0 # v0.10.0
+    uses: morzecrew/bundle-ci/.github/workflows/github-release.yml@31ef658ebef55dedc7cb23184f3a38acc7b1d899 # fix/container-dns (testing; v0.10.1 replaces it)
     with:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}
