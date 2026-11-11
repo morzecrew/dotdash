@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -223,10 +223,10 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../shutdown/" class="md-tabs__link">
+      <a href="../../ways-in/" class="md-tabs__link">
         
   
-  Before a shutdown
+  More than one way in
 
       </a>
     </li>
@@ -479,14 +479,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../shutdown/" class="md-nav__link">
+      <a href="../../ways-in/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Before a shutdown
+  More than one way in
 
     
   </span>
@@ -1924,7 +1924,7 @@
 
 
 <h1 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h1>
-<p>You need a domain, a Linux host abroad, and an upstream proxy. <code>example.com</code>
+<p>You need a domain, a Linux host outside the restricted network, and an upstream proxy. <code>example.com</code>
 stands for your domain throughout.</p>
 <ol>
 <li>
@@ -1934,7 +1934,7 @@ stands for your domain throughout.</p>
 </li>
 <li>
 <p><strong>Firewall:</strong> open 80/tcp and 443/tcp in the cloud provider's firewall
-   (on Google Cloud, a VPC firewall rule). Docker's published ports bypass
+   (a VPC firewall rule, on some clouds). Docker's published ports bypass
    ufw and firewalld, so the provider's firewall is the one that counts.
    Allow SSH with keys only.</p>
 </li>

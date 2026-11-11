@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -223,10 +223,10 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../shutdown/" class="md-tabs__link">
+      <a href="../../ways-in/" class="md-tabs__link">
         
   
-  Before a shutdown
+  More than one way in
 
       </a>
     </li>
@@ -479,14 +479,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../shutdown/" class="md-nav__link">
+      <a href="../../ways-in/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Before a shutdown
+  More than one way in
 
     
   </span>
@@ -2112,9 +2112,9 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
 <li>A URL is as secret as the links. <code>sudo morzer secret rotate subscription_key</code>
   moves every URL; any other path gets the site's 404.</li>
 <li>A <a href="../../relay/install/#6-devices">relay</a> with a site of its own serves the
-  same subscription inside the country: <code>client-config</code> adds a
+  same subscription inside the restricted network: <code>client-config</code> adds a
   <code>through the relay …</code> URL under the server's. An app takes one URL, so give
-  a device inside the country the relay's.</li>
+  a device inside the restricted network the relay's.</li>
 <li>Never give a device its subscription through a <a href="../cdn/">CDN</a>: the CDN
   would read every link.</li>
 </ul>
@@ -2129,8 +2129,8 @@ as written in <code>vless_clients</code>), relay hosts (as in <code>relays</code
 a relay's own (its <code>cdn=</code> names) included:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>edit<span class="w"> </span>pools
 </code></pre></div>
-<div class="highlight"><pre><span></span><code>family  mom dad relay1.example.ru cdn1.example.ru
-friends anna boris relay2.example.ru
+<div class="highlight"><pre><span></span><code>family  mom dad relay1.example.net cdn1.example.net
+friends anna boris relay2.example.net
 </code></pre></div>
 <ul>
 <li>A device in no pool, or without a name, gets every relay and CDN host, as

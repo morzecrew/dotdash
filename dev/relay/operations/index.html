@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -223,10 +223,10 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../shutdown/" class="md-tabs__link">
+      <a href="../../ways-in/" class="md-tabs__link">
         
   
-  Before a shutdown
+  More than one way in
 
       </a>
     </li>
@@ -479,14 +479,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../shutdown/" class="md-nav__link">
+      <a href="../../ways-in/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Before a shutdown
+  More than one way in
 
     
   </span>
@@ -2152,14 +2152,14 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w">
 <h2 id="a-site-of-its-own-later">A site of its own, later<a class="headerlink" href="#a-site-of-its-own-later" title="Permanent link">&para;</a></h2>
 <p>A relay set up with a borrowed site moves to one of its own in place. Point a
 domain at it and open port 80, then:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.domains<span class="o">=</span>relay.example.ru
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.domains<span class="o">=</span>relay.example.net
 sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>own-site
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span><span class="m">198</span>.51.100.7
 </code></pre></div>
 <p>The site in the line changes and the line gains <code>own-site</code>, so replace the
 relay's line in the server's <code>relays</code>, and send devices their links again
 (subscriptions pick them up), with the subscription URL through the relay for
-those inside the country.
+those inside the restricted network.
 <code>sudo morzer config unset installation.profile</code> goes back to the borrowed
 site.</p>
 <h2 id="servers">Servers<a class="headerlink" href="#servers" title="Permanent link">&para;</a></h2>

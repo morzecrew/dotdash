@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -223,10 +223,10 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../shutdown/" class="md-tabs__link">
+      <a href="../../ways-in/" class="md-tabs__link">
         
   
-  Before a shutdown
+  More than one way in
 
       </a>
     </li>
@@ -479,14 +479,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../shutdown/" class="md-nav__link">
+      <a href="../../ways-in/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Before a shutdown
+  More than one way in
 
     
   </span>
@@ -993,15 +993,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#a-domestic-cdn-for-allowlists" class="md-nav__link">
+  <a href="#a-local-cdn-for-restricted-networks" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        A domestic CDN, for allowlists
+        A local CDN, for restricted networks
       </span>
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="A domestic CDN, for allowlists">
+    <nav class="md-nav" aria-label="A local CDN, for restricted networks">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1021,22 +1021,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#a-foreign-cdn-against-ip-blocking" class="md-nav__link">
+  <a href="#a-cdn-against-address-blocking" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        A foreign CDN, against IP blocking
+        A CDN against address blocking
       </span>
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="A foreign CDN, against IP blocking">
+    <nav class="md-nav" aria-label="A CDN against address blocking">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#ech-through-cloudflare" class="md-nav__link">
+  <a href="#ech" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        ECH through Cloudflare
+        ECH
       </span>
     </span>
   </a>
@@ -1941,15 +1941,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#a-domestic-cdn-for-allowlists" class="md-nav__link">
+  <a href="#a-local-cdn-for-restricted-networks" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        A domestic CDN, for allowlists
+        A local CDN, for restricted networks
       </span>
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="A domestic CDN, for allowlists">
+    <nav class="md-nav" aria-label="A local CDN, for restricted networks">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1969,22 +1969,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#a-foreign-cdn-against-ip-blocking" class="md-nav__link">
+  <a href="#a-cdn-against-address-blocking" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        A foreign CDN, against IP blocking
+        A CDN against address blocking
       </span>
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="A foreign CDN, against IP blocking">
+    <nav class="md-nav" aria-label="A CDN against address blocking">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#ech-through-cloudflare" class="md-nav__link">
+  <a href="#ech" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        ECH through Cloudflare
+        ECH
       </span>
     </span>
   </a>
@@ -2133,15 +2133,15 @@
 <p>A CDN in front of this server carries XHTTP for it, and serves two different
 ends:</p>
 <ul>
-<li>a <strong>domestic CDN</strong>, for mobile allowlists: its edges inside the country
-  are on the lists, and this server abroad is not;</li>
-<li>a <strong>foreign CDN</strong> such as Cloudflare, against blocking of this server's
-  address: devices see only the CDN's.</li>
+<li>a <strong>local CDN</strong>, for networks that let only some addresses through: its
+  edges are inside such a network and get through, and this server does not;</li>
+<li>a <strong>CDN against address blocking</strong>: devices see only the CDN's addresses,
+  never this server's.</li>
 </ul>
-<h2 id="a-domestic-cdn-for-allowlists">A domestic CDN, for allowlists<a class="headerlink" href="#a-domestic-cdn-for-allowlists" title="Permanent link">&para;</a></h2>
-<p>While only allowlisted addresses get through, a domestic CDN whose edges
-are on the list can still reach this server: devices connect to the CDN's
-edge, and the CDN fetches from <code>https://example.com</code> abroad.</p>
+<h2 id="a-local-cdn-for-restricted-networks">A local CDN, for restricted networks<a class="headerlink" href="#a-local-cdn-for-restricted-networks" title="Permanent link">&para;</a></h2>
+<p>While a network lets only some addresses through, a CDN whose edges are among
+them can still reach this server: devices connect to the CDN's edge, and the
+CDN fetches from <code>https://example.com</code>.</p>
 <ol>
 <li><strong>At the CDN</strong>, create a resource with this server as its origin:</li>
 <li>origin <code>https://example.com</code>. The <code>Host</code> header can stay at the
@@ -2153,57 +2153,29 @@ edge, and the CDN fetches from <code>https://example.com</code> abroad.</p>
      domain of yours pointed at it, with the certificate it asks for.</li>
 <li>
 <p><strong>Here</strong>, list the names devices use, comma-separated:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">cdn_hosts</span><span class="o">=</span>cdn.example.ru
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">cdn_hosts</span><span class="o">=</span>cdn.example.net
 </code></pre></div>
 </li>
 <li>
-<p><strong>Devices</strong>: <code>client-config</code> prints a <code>phone [cdn cdn.example.ru]</code> link,
+<p><strong>Devices</strong>: <code>client-config</code> prints a <code>phone [cdn cdn.example.net]</code> link,
    the Xray config gains an outbound through it, and subscriptions pick it up.
-   Give devices the link before a shutdown, as with a
+   Give devices the link before restrictions start, as with a
    <a href="../../relay/">relay</a>.</p>
 </li>
 </ol>
-<p>Such CDNs pass <code>GET</code> alone and no request body, so these links upload in
+<p>Some CDNs pass <code>GET</code> alone and no request body, so these links upload in
 small <code>GET</code> requests with the data in headers (XHTTP <code>packet-up</code>). The server
 needs nothing changed for it. An app that imports the link but never
 connects may read its <code>extra</code> settings differently; the Xray config works
 in v2rayN and v2rayNG.</p>
 <div class="admonition warning">
-<p class="admonition-title">Fragile, as of November 2026</p>
-<p>Every one of these has broken for someone, and providers act on VPN use:</p>
-<table>
-<thead>
-<tr>
-<th>CDN</th>
-<th>Seen</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Yandex Cloud CDN</td>
-<td>worked from an MTS SIM during restrictions in October; answers 413 to any request with a body since 2026-09-28, which these links avoid; mobile outages since 2026-11-02; its terms let it block on state instruction</td>
-</tr>
-<tr>
-<td>VK Cloud CDN</td>
-<td><code>GET</code> only; its terms forbid proxies and VPNs</td>
-</tr>
-<tr>
-<td>Selectel CDN</td>
-<td>VPN use unsupported, and may be blocked</td>
-</tr>
-<tr>
-<td>Timeweb, Beget</td>
-<td>403 to VPN-like traffic reported, and questions from support</td>
-</tr>
-<tr>
-<td>MWS</td>
-<td>dropped from the allowlists in August</td>
-</tr>
-</tbody>
-</table>
-<p>The ministry asked CDNs on 2026-08-31 to move allowlisted resources into
-subnets of their own. Test from a SIM on the networks you care about,
-keep a CDN as one way among several, and expect the account to be closed.</p>
+<p class="admonition-title">Fragile</p>
+<p>CDNs like these break without notice, and providers act on proxy and VPN
+use: some refuse requests with a body, some forbid proxies in their terms,
+some block traffic that looks like a VPN, and an edge can stop getting
+through from one week to the next. Read the provider's terms, test from
+the networks your devices use, keep a CDN as one way among several, and
+expect the account to be closed.</p>
 </div>
 <p>To make losing an account cheap:</p>
 <ul>
@@ -2219,46 +2191,48 @@ keep a CDN as one way among several, and expect the account to be closed.</p>
 <p>The CDN ends one TLS connection and opens another, so it sees the requests'
 paths and headers. VLESS Encryption keeps what they carry from it.</p>
 <p>Don't give devices their subscription URL through the CDN
-(<code>https://cdn.example.ru/&lt;token&gt;</code>), although it would answer. The CDN would
+(<code>https://cdn.example.net/&lt;token&gt;</code>), although it would answer. The CDN would
 read it in the clear: every link, the device's keys, every relay and CDN name.
-One request from the state to the provider would then list every way in. A
+One request to the provider would then list every way in. A
 <a href="../../relay/install/#6-devices">relay with its own site</a> serves the
-subscription inside the country with nothing in between reading it.</p>
+subscription inside the restricted network with nothing in between reading
+it.</p>
 <h3 id="in-front-of-a-relay">In front of a relay<a class="headerlink" href="#in-front-of-a-relay" title="Permanent link">&para;</a></h3>
 <p>A CDN can front a <a href="../../relay/install/#1-pick-the-site">relay with a site of its own</a>
 instead of this server. The CDN's account then names the relay, which is
 cheap to replace, rather than this server and its upstream.</p>
 <ol>
 <li><strong>At the CDN</strong>, as above, with the relay's domain as the origin:
-   <code>https://relay.example.ru</code>. Like the server, the relay answers under
+   <code>https://relay.example.net</code>. Like the server, the relay answers under
    any name.</li>
 <li>
 <p><strong>On the relay</strong>, list the names devices use, then print its line again
    (<a href="../../relay/install/#4-on-the-relay-its-line">its line</a>); it now ends in
-   <code>cdn=cdn.example.ru</code>:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">cdn_hosts</span><span class="o">=</span>cdn.example.ru
+   <code>cdn=cdn.example.net</code>:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">cdn_hosts</span><span class="o">=</span>cdn.example.net
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>&lt;address&gt;
 </code></pre></div>
 </li>
 <li>
 <p><strong>Here</strong>, replace the relay's line in <code>relays</code>
    (<code>sudo morzer config edit relays</code>). Devices get a
-   <code>phone [relay &lt;host&gt; cdn cdn.example.ru]</code> link and an outbound, shaped as
+   <code>phone [relay &lt;host&gt; cdn cdn.example.net]</code> link and an outbound, shaped as
    above, and <a href="../devices/#pools">pools</a> take the relay's CDN names as members.</p>
 </li>
 </ol>
-<h2 id="a-foreign-cdn-against-ip-blocking">A foreign CDN, against IP blocking<a class="headerlink" href="#a-foreign-cdn-against-ip-blocking" title="Permanent link">&para;</a></h2>
+<h2 id="a-cdn-against-address-blocking">A CDN against address blocking<a class="headerlink" href="#a-cdn-against-address-blocking" title="Permanent link">&para;</a></h2>
 <p>The XHTTP link works through a CDN that proxies HTTP/2 to
 <code>https://example.com</code>: put the CDN's name in the link's address. Check its
-terms first; Cloudflare's self-serve plans forbid proxies.</p>
-<h3 id="ech-through-cloudflare">ECH through Cloudflare<a class="headerlink" href="#ech-through-cloudflare" title="Permanent link">&para;</a></h3>
-<p>ECH also hides <code>example.com</code> from the network: the TLS handshake then shows
-<code>cloudflare-ech.com</code>. Cloudflare turns ECH on by default. Add it to the XHTTP
-link, before the <code>#</code> (v2rayN ≥ 7.17, v2rayNG ≥ 2.0):</p>
-<div class="highlight"><pre><span></span><code>&amp;ech=cloudflare-ech.com%2Bhttps%3A%2F%2F1.1.1.1%2Fdns-query
+terms first: many CDNs forbid proxies.</p>
+<h3 id="ech">ECH<a class="headerlink" href="#ech" title="Permanent link">&para;</a></h3>
+<p>With a CDN that offers ECH, the TLS handshake shows the CDN's public ECH name
+instead of <code>example.com</code>. Add that name to the XHTTP link, before the <code>#</code>
+(v2rayN ≥ 7.17, v2rayNG ≥ 2.0). <code>ech.example.net</code> stands for it here, and the
+DNS-over-HTTPS URL after it is where the app looks up its keys:</p>
+<div class="highlight"><pre><span></span><code>&amp;ech=ech.example.net%2Bhttps%3A%2F%2F1.1.1.1%2Fdns-query
 </code></pre></div>
 <p>In the Xray config, add the same to that outbound's <code>tlsSettings</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="nt">"echConfigList"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cloudflare-ech.com+https://1.1.1.1/dns-query"</span>
+<div class="highlight"><pre><span></span><code><span class="nt">"echConfigList"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ech.example.net+https://1.1.1.1/dns-query"</span>
 </code></pre></div>
 <p>With ECH set, the connection fails rather than falling back to plain SNI.</p>
 

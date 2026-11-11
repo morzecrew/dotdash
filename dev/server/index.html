@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -16,7 +16,7 @@
       
       
       
-        <link rel="prev" href="../shutdown/">
+        <link rel="prev" href="../ways-in/">
       
       
         <link rel="next" href="./install/">
@@ -223,10 +223,10 @@
   
   
     <li class="md-tabs__item">
-      <a href="../shutdown/" class="md-tabs__link">
+      <a href="../ways-in/" class="md-tabs__link">
         
   
-  Before a shutdown
+  More than one way in
 
       </a>
     </li>
@@ -479,14 +479,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../shutdown/" class="md-nav__link">
+      <a href="../ways-in/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Before a shutdown
+  More than one way in
 
     
   </span>
@@ -1939,7 +1939,7 @@
 
 <h1 id="server">Server<a class="headerlink" href="#server" title="Permanent link">&para;</a></h1>
 <p>The <code>dotdash</code> bundle (<code>ghcr.io/morzecrew/dotdash-server</code>) runs on one Docker host
-outside the censored network. Devices connect to it on 443, and it sends
+outside the restricted network. Devices connect to it on 443, and it sends
 their traffic on through your upstream proxy, the only way out it has.</p>
 <p><img alt="Inside the server: gate holds the public ports and the upstream's credentials, Xray answers clients, Caddy serves the cover site" src="../assets/diagrams/server.light.svg#only-light" />
 <img alt="Inside the server: gate holds the public ports and the upstream's credentials, Xray answers clients, Caddy serves the cover site" src="../assets/diagrams/server.dark.svg#only-dark" /></p>
@@ -1948,7 +1948,7 @@ their traffic on through your upstream proxy, the only way out it has.</p>
   ports in to Xray and carries Xray's traffic out to the upstream proxy, whose
   credentials only it holds.</li>
 <li><strong>Xray</strong> answers on 443 with REALITY. A dotdash device goes on through the
-  upstream; anything else, a censor's probe or a browser, is handed to Caddy,
+  upstream; anything else, a scanner's probe or a browser, is handed to Caddy,
   so 443 looks like an ordinary HTTPS site.</li>
 <li><strong>Caddy</strong> serves that site with a trusted certificate, each device's
   subscription URL, and XHTTP on a secret path, which is what lets XHTTP
@@ -1967,8 +1967,8 @@ address: <a href="leaks/">what leaks where</a>.</p>
 <li><a href="xhttp-reality/">XHTTP with REALITY</a> on another port;</li>
 <li>a <a href="ipv6-upstream/">second proxy for IPv6</a>;</li>
 <li>a <a href="tunnel-upstream/">WireGuard or OpenVPN exit</a> instead of a proxy;</li>
-<li>a <a href="cdn/">CDN</a> in front of XHTTP: a domestic one for allowlists, or a
-     foreign one against IP blocking;</li>
+<li>a <a href="cdn/">CDN</a> in front of XHTTP: a local one for restricted networks, or
+     one against address blocking;</li>
 <li><a href="several-servers/">several servers</a> sharing one set of keys.</li>
 <li><a href="operations/">Operations</a>: updates, alerts, backups, and
    <a href="move-server/">moving to a new server</a>.</li>
@@ -2010,7 +2010,7 @@ address: <a href="leaks/">what leaks where</a>.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../shutdown/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Before a shutdown">
+          <a href="../ways-in/" class="md-footer__link md-footer__link--prev" aria-label="Previous: More than one way in">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -2020,7 +2020,7 @@ address: <a href="leaks/">what leaks where</a>.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Before a shutdown
+                More than one way in
               </div>
             </div>
           </a>

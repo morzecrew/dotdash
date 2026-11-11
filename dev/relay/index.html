@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -223,10 +223,10 @@
   
   
     <li class="md-tabs__item">
-      <a href="../shutdown/" class="md-tabs__link">
+      <a href="../ways-in/" class="md-tabs__link">
         
   
-  Before a shutdown
+  More than one way in
 
       </a>
     </li>
@@ -479,14 +479,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../shutdown/" class="md-nav__link">
+      <a href="../ways-in/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Before a shutdown
+  More than one way in
 
     
   </span>
@@ -1934,13 +1934,13 @@
 
 
 <h1 id="relay">Relay<a class="headerlink" href="#relay" title="Permanent link">&para;</a></h1>
-<p>Some networks inside the country let only domestic addresses through: mobile
-networks do this during shutdowns, with an allowlist. A device there can't
-reach a dotdash server abroad at all. The <code>dotdash-relay</code> bundle
-(<code>ghcr.io/morzecrew/dotdash-relay</code>) runs on a machine inside the country,
-whose address does get through, and carries devices on to the server.</p>
-<p><img alt="A phone connects to the relay inside the country on 443 under the name of a site next to it; the relay carries it on to whichever dotdash server answers fastest" src="../assets/diagrams/relay.light.svg#only-light" />
-<img alt="A phone connects to the relay inside the country on 443 under the name of a site next to it; the relay carries it on to whichever dotdash server answers fastest" src="../assets/diagrams/relay.dark.svg#only-dark" /></p>
+<p>Some networks let only a set list of addresses through, for a region or for
+mobile data. A device there can't reach a dotdash server outside at all. The
+<code>dotdash-relay</code> bundle (<code>ghcr.io/morzecrew/dotdash-relay</code>) runs on a machine
+inside that network, whose address does get through, and carries devices on
+to the server.</p>
+<p><img alt="A phone connects to the relay inside the restricted network on 443 under the name of a site next to it; the relay carries it on to whichever dotdash server answers fastest" src="../assets/diagrams/relay.light.svg#only-light" />
+<img alt="A phone connects to the relay inside the restricted network on 443 under the name of a site next to it; the relay carries it on to whichever dotdash server answers fastest" src="../assets/diagrams/relay.dark.svg#only-dark" /></p>
 <h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Devices connect to the relay on 443 with REALITY, under the name of a
@@ -1958,30 +1958,30 @@ whose address does get through, and carries devices on to the server.</p>
 <li>Nothing leaves the relay except to dotdash: traffic still exits through
   the server's upstream proxy.</li>
 </ul>
-<p>It can also help where home and mobile lines slow down TLS to foreign
-hosting: devices then reach only a domestic address, and the relay's own
+<p>It can also help where home and mobile lines slow down TLS to faraway
+hosting: devices then reach only a nearby address, and the relay's own
 link to the server runs from its hosting network, which the slowdown may not
 reach.</p>
 <h2 id="before-you-start">Before you start<a class="headerlink" href="#before-you-start" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>The relay's address must get through.</strong> Whether one does depends on the
   network, the provider and the day:</li>
-<li>host it in a network with many addresses on the allowlists, such as a
-    large domestic cloud or hosting provider. A public list of allowlisted
-    subnets is a first filter only, because such lists go stale;</li>
-<li>test it from a SIM on each operator that matters, with mobile data and
-    Wi-Fi off, before relying on it;</li>
+<li>host it in a network whose addresses get through, such as a large
+    cloud or hosting provider inside the restricted network. A public list
+    of such subnets is a first filter only, because such lists go stale;</li>
+<li>test it from each network that matters, on mobile data with Wi-Fi off,
+    before relying on it;</li>
 <li>run at least two relays, in different networks, so one blocked
     address costs devices nothing. A spare left installed is <a href="operations/#move-a-relay">moved into
     place</a> with a DNS change;</li>
-<li>expect allowlisted subnets to be tightened, and keep a
-    <a href="../server/cdn/">domestic CDN</a> as another way in.</li>
+<li>expect the subnets that get through to shrink, and keep a
+    <a href="../server/cdn/">local CDN</a> as another way in.</li>
 <li>On those networks only 443 and TCP get through: the
   <a href="../server/dns-tunnel/">DNS tunnel</a> is no use there.</li>
-<li><strong>Devices need the relay links before a shutdown.</strong> An app can't refresh a
-  subscription from the server's site while only domestic addresses get
+<li><strong>Devices need the relay links before restrictions start.</strong> An app can't
+  refresh a subscription from the server's site while only some addresses get
   through, though it can through a relay with a site of its own. See
-  <a href="../shutdown/">Before a shutdown</a>.</li>
+  <a href="../ways-in/">Keep more than one way in</a>.</li>
 <li>The machine needs Docker, sops, age and morzer
   (<a href="../#what-every-machine-needs"><code>bootstrap.sh</code></a>), and port 443 free.</li>
 <li>The official sing-box apps, Karing and NekoBox can't connect to dotdash,

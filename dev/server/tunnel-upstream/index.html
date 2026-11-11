@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -223,10 +223,10 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../shutdown/" class="md-tabs__link">
+      <a href="../../ways-in/" class="md-tabs__link">
         
   
-  Before a shutdown
+  More than one way in
 
       </a>
     </li>
@@ -479,14 +479,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../shutdown/" class="md-nav__link">
+      <a href="../../ways-in/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Before a shutdown
+  More than one way in
 
     
   </span>
@@ -2085,7 +2085,7 @@
 
 <h1 id="wireguard-or-openvpn-upstream">WireGuard or OpenVPN upstream<a class="headerlink" href="#wireguard-or-openvpn-upstream" title="Permanent link">&para;</a></h1>
 <p>Instead of a SOCKS5 or HTTP proxy, the upstream can be a WireGuard or an
-OpenVPN exit: your own router at home abroad, say, or a VPN provider. The
+OpenVPN exit: your own router at home outside the restricted network, say, or a VPN provider. The
 client config the exit gives you goes in a secret of its own, and all traffic
 leaves through that tunnel. The proxy in <code>upstream</code> stays where it is, so
 the proxy carries traffic until the moment the tunnel takes over, and going
@@ -2094,10 +2094,11 @@ back needs nothing set again.</p>
 <code>upstream_udp</code> nor the <a href="../ipv6-upstream/">second proxy for IPv6</a>. It resolves
 no names, so it needs <code>resolve=gateway</code>, the default.</p>
 <div class="admonition warning">
-<p class="admonition-title">The exit must be outside the censored network</p>
-<p>Censors detect and block WireGuard and OpenVPN. Between this server and an
-exit abroad that doesn't matter; an exit inside the country would be
-blocked, and would send the traffic back where it came from.</p>
+<p class="admonition-title">The exit must be outside the restricted network</p>
+<p>WireGuard and OpenVPN are easy to detect and block. Between this server
+and an exit outside that doesn't matter; an exit inside the restricted
+network would be blocked, and would send the traffic back where it came
+from.</p>
 </div>
 <h2 id="wireguard">WireGuard<a class="headerlink" href="#wireguard" title="Permanent link">&para;</a></h2>
 <p>The config is a wg-quick file, as a router or a provider exports it:</p>

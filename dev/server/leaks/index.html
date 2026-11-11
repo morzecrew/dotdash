@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -223,10 +223,10 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../shutdown/" class="md-tabs__link">
+      <a href="../../ways-in/" class="md-tabs__link">
         
   
-  Before a shutdown
+  More than one way in
 
       </a>
     </li>
@@ -479,14 +479,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../shutdown/" class="md-nav__link">
+      <a href="../../ways-in/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Before a shutdown
+  More than one way in
 
     
   </span>
@@ -1963,7 +1963,7 @@
   checks this against what runs.</li>
 <li>The upstream sees destination addresses, ports and volume, not hostnames:
   this server resolves them over DoH (<code>dns_resolver</code>), through the upstream.
-  SNI stays visible unless the client uses <a href="../cdn/#ech-through-cloudflare">ECH</a>.
+  SNI stays visible unless the client uses <a href="../cdn/#ech">ECH</a>.
   <code>resolve=upstream</code> hands the upstream the hostnames.</li>
 <li>On the device, only the app keeps traffic inside a dropped tunnel (TUN with
   a kill switch, or Android's "block connections without VPN"). A browser IP

@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -223,10 +223,10 @@
   
   
     <li class="md-tabs__item">
-      <a href="../shutdown/" class="md-tabs__link">
+      <a href="../ways-in/" class="md-tabs__link">
         
   
-  Before a shutdown
+  More than one way in
 
       </a>
     </li>
@@ -479,14 +479,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../shutdown/" class="md-nav__link">
+      <a href="../ways-in/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Before a shutdown
+  More than one way in
 
     
   </span>
@@ -2005,7 +2005,7 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>apply
 <h2 id="the-subscription">The subscription<a class="headerlink" href="#the-subscription" title="Permanent link">&para;</a></h2>
 <p>mihomo fetches the subscription every <code>subscription_interval</code> seconds (an
 hour), through dotdash, so it stays current where only dotdash gets through,
-such as through a <a href="../relay/">relay</a> while only domestic addresses
+such as through a <a href="../relay/">relay</a> while only some addresses
 do. When that fails, as on a first start, it fetches directly. It keeps the
 last copy, so a restart while the URL is out of reach starts on the links it
 fetched last. Relays in the subscription are links like the others: while

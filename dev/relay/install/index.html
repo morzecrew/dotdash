@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -223,10 +223,10 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../shutdown/" class="md-tabs__link">
+      <a href="../../ways-in/" class="md-tabs__link">
         
   
-  Before a shutdown
+  More than one way in
 
       </a>
     </li>
@@ -479,14 +479,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../shutdown/" class="md-nav__link">
+      <a href="../../ways-in/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Before a shutdown
+  More than one way in
 
     
   </span>
@@ -2104,24 +2104,24 @@ relay, and the <code>own-site</code> profile: the relay serves a site under that
 with a certificate from Let's Encrypt. To the network the name and the
 address agree, as they do for any real site. It needs:</p>
 <ul>
-<li>a domain, <code>relay.example.ru</code>, with an <code>A</code> record for the relay's address;</li>
+<li>a domain, <code>relay.example.net</code>, with an <code>A</code> record for the relay's address;</li>
 <li>port 80 open as well as 443, for the certificate;</li>
-<li>in step 3, <code>--domain relay.example.ru --profile own-site</code> in place of
+<li>in step 3, <code>--domain relay.example.net --profile own-site</code> in place of
   <code>--set site=…</code>.</li>
 </ul>
 <p>Your own pages go in <code>/srv/dotdash-relay</code> (the <code>site_dir</code> parameter); without
 them it serves a plain bundled page titled with the domain.</p>
 <p><strong>A site next to the relay.</strong> No domain needed: the relay borrows the name of
 a real site, and probes get that site's own handshake. But that name's DNS
-points at the site, not the relay, and a censor that compares the two can
-tell. Pick one that is:</p>
+points at the site, not the relay, and an observer that compares the two
+can tell. Pick one that is:</p>
 <ul>
 <li>in the relay's own network, the same hosting provider or nearby, not a big
   name served from somewhere else;</li>
 <li>
 <p>on TLS 1.3 and HTTP/2. <code>curl</code> prints <code>2</code> for one that is, and fails for one
   without TLS 1.3:</p>
-<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-so<span class="w"> </span>/dev/null<span class="w"> </span>--tlsv1.3<span class="w"> </span>--http2<span class="w"> </span>-w<span class="w"> </span><span class="s1">'%{http_version}\n'</span><span class="w"> </span>https://site.example.ru
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-so<span class="w"> </span>/dev/null<span class="w"> </span>--tlsv1.3<span class="w"> </span>--http2<span class="w"> </span>-w<span class="w"> </span><span class="s1">'%{http_version}\n'</span><span class="w"> </span>https://site.example.net
 </code></pre></div>
 </li>
 </ul>
@@ -2144,11 +2144,11 @@ recovery key as for the server:</p>
 </code></pre></div>
 <p>Then run what step 2 printed, with your site and the recovery key's
 <code>age1…</code> filled in. It has this shape, here with a borrowed site; for a site of
-the relay's own, replace <code>--set site=…</code> with <code>--domain relay.example.ru
+the relay's own, replace <code>--set site=…</code> with <code>--domain relay.example.net
 --profile own-site</code>:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>init<span class="w"> </span>--release<span class="w"> </span>oci://ghcr.io/morzecrew/dotdash-relay:stable<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--recovery-recipient<span class="w"> </span>age1…<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--set<span class="w"> </span><span class="nv">site</span><span class="o">=</span>site.example.ru<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span><span class="nv">site</span><span class="o">=</span>site.example.net<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--set<span class="w"> </span><span class="nv">dotdash_servers</span><span class="o">=</span>example.com<span class="w"> </span>--set<span class="w"> </span><span class="nv">dotdash_port</span><span class="o">=</span><span class="m">443</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--set<span class="w"> </span><span class="nv">dotdash_public_key</span><span class="o">=</span>…
 sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>dotdash_id<span class="w"> </span><span class="s">&lt;&lt;'END'          # and dotdash_encryption,</span>
@@ -2162,12 +2162,12 @@ generates its own keys at <code>init</code>.</p>
 <p>Give <code>relay-entry</code> the address devices reach the relay at. With a domain, give
 the domain: links then name it, and <a href="../operations/#move-a-relay">moving the relay</a>
 needs only a DNS change. Without one, give the relay's public IP:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>relay.example.ru<span class="w">   </span><span class="c1"># or 198.51.100.7</span>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>relay.example.net<span class="w">   </span><span class="c1"># or 198.51.100.7</span>
 </code></pre></div>
 <p>It prints one line for the server, its own address, site, public key, short
 id and encryption, plus the commands a <a href="../../canary/">canary</a> needs to
 check this relay:</p>
-<div class="highlight"><pre><span></span><code>198.51.100.7 site.example.ru &lt;public key&gt; &lt;short id&gt; &lt;encryption&gt;
+<div class="highlight"><pre><span></span><code>198.51.100.7 site.example.net &lt;public key&gt; &lt;short id&gt; &lt;encryption&gt;
 </code></pre></div>
 <p>Under <code>own-site</code>, the site is the relay's domain, and the line ends with
 <code>own-site</code> and the relay's XHTTP path. The relay then also serves devices
@@ -2186,11 +2186,11 @@ links. Do it now, while devices can still reach the server.</p>
 <p>With subscriptions on and a relay under <code>own-site</code>, each device also gets
 its subscription through the relay:</p>
 <div class="highlight"><pre><span></span><code>https://example.com/&lt;token&gt;
-through the relay relay.example.ru: https://relay.example.ru/&lt;token&gt;
+through the relay relay.example.net: https://relay.example.net/&lt;token&gt;
 </code></pre></div>
-<p>Give a device inside the country the second one. The relay fetches it from
+<p>Give a device inside the restricted network the second one. The relay fetches it from
 the server through its own tunnel, so the app keeps refreshing its links
-while only domestic addresses get through, and nothing between the relay and
+while only some addresses get through, and nothing between the relay and
 the server can read them.</p>
 <p>To check, connect a phone on the target network with its relay link alone.</p>
 <p>Next: <a href="../operations/">keeping it running</a>.</p>
