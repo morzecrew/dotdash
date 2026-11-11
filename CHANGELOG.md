@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The relay's `site_dir` and `cert_issuer` take effect with `config set`, without a full apply.
 
+- The server, the relay and the canary run Xray 26.11.9, and the client mihomo 1.19.34.
+
 ### Removed
 
 - **Breaking:** the relay's deprecated `dotdash_server`. `dotdash_servers` is now required: on a relay that still has only `dotdash_server`, set `dotdash_servers` before updating.
