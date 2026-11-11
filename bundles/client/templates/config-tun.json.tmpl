@@ -11,7 +11,8 @@ compares them. */ -}}
   "mode": "rule",
   "log-level": "warning",
   {{- /* IPv6 on, so TUN routes it too and it can't leave around dotdash; DNS
-  below still answers no AAAA records, so apps mostly use IPv4. */}}
+  below still answers no AAAA records, so apps mostly use IPv4. With
+  ipv6=block, the first rule refuses what TUN takes in. */}}
   "ipv6": true,
   "listeners": [
     {"name": "proxy", "type": "mixed", "listen": "{{ default "127.0.0.1" .Parameters.listen }}", "port": {{ .Parameters.port }},
@@ -74,5 +75,7 @@ compares them. */ -}}
     "direct": {"type": "inline", "behavior": "classical", "payload": ["DOMAIN,never.invalid"
       {{- range lines .Parameters.direct_rules }}{{ $l := trim . }}{{ if and $l (ne (slice $l 0 1) "#") }}, {{ quote (replace $l "\\" "\\\\") }}{{ end }}{{ end }}]}
   },
-  "rules": ["RULE-SET,block,REJECT", "RULE-SET,direct,DIRECT", "MATCH,dotdash"]
+  {{- /* ipv6=block: every IPv6 destination refused first, before a direct
+  rule could send it around dotdash; names resolve to IPv4 (dns.ipv6 false). */}}
+  "rules": [{{ if eq .Parameters.ipv6 "block" }}"IP-CIDR6,::/0,REJECT,no-resolve", {{ end }}"RULE-SET,block,REJECT", "RULE-SET,direct,DIRECT", "MATCH,dotdash"]
 }

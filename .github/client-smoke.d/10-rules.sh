@@ -37,3 +37,17 @@ until_status '!204' "with direct rules unset, it got out with dotdash gone"
 sudo docker start client-rig-server >/dev/null
 until_status 204 "the proxy port does not get out once dotdash is back"
 echo "10-rules.sh: out through dotdash, a block rule refuses, a direct rule needs no dotdash"
+
+# ipv6=block: every IPv6 destination refused before any other rule, a direct
+# rule's included; names still go out through dotdash.
+if sudo grep -q '^  ipv6:$' /opt/dotdash-client/current/manifest.yaml; then
+  first() { sudo jq -r '.rules[0]' /etc/dotdash-client/config.json; }
+  sudo morzer config set ipv6=block >/dev/null || die "could not set ipv6=block"
+  [ "$(first)" = "IP-CIDR6,::/0,REJECT,no-resolve" ] || { sudo morzer config set ipv6=allow >/dev/null 2>&1 || true
+    die "ipv6=block does not refuse IPv6 first: $(first)"; }
+  until_status 204 "with ipv6=block the proxy port no longer gets out by name"
+  sudo morzer config set ipv6=allow >/dev/null || die "could not set ipv6=allow"
+  [ "$(first)" = "RULE-SET,block,REJECT" ] || die "back on ipv6=allow, the IPv6 rule remains: $(first)"
+  until_status 204 "back on ipv6=allow the proxy port does not get out"
+  echo "10-rules.sh: ipv6=block refuses IPv6 first, and names still get out"
+fi

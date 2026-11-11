@@ -101,6 +101,12 @@ parameters:
     default: "# One rule per line, without its target, such as IP-CIDR,192.168.0.0/16,no-resolve"
     description: "Destinations reached directly, not through dotdash, one mihomo classical rule per line without its target, such as IP-CIDR,192.168.0.0/16,no-resolve; \"#\" starts a comment"
     services: [mihomo]
+  ipv6:
+    type: enum
+    values: [allow, block]
+    default: allow
+    description: "IPv6 destinations. allow: through dotdash like the rest. block: refused before any other rule, a direct rule's included, so apps fall back to IPv4; under tun it is still taken in, so nothing leaves around dotdash"
+    services: [mihomo]
   probe_url:
     type: string
     default: https://www.gstatic.com/generate_204
