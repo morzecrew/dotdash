@@ -136,6 +136,12 @@ parameters:
     type: string
     description: The dotdash server's REALITY public key, the pbk of its REALITY links
     services: [xray]
+  ipv6:
+    type: enum
+    values: [allow, block]
+    default: allow
+    description: "IPv6 destinations. allow: carried on to the dotdash servers like any other. block: dropped here, so they never reach a server; names still go on, for the server to resolve"
+    services: [xray]
   probe_url:
     type: string
     default: https://www.gstatic.com/generate_204

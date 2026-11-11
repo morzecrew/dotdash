@@ -15,6 +15,7 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `dotdash_public_key` | none, given at `init` | the servers' REALITY public key, the `pbk` of their links |
 | `dotdash_address` | `none` | where to connect when `dotdash_servers` names one server, such as its IP; `none` reaches each server by its name |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what the health check fetches through dotdash; any 2xx is healthy |
+| `ipv6` | `allow` | `block`: IPv6 destinations end at the relay and never reach a server; names go on |
 | `kcp_port` | `8447` | with `mkcp`, the UDP port devices reach the relay's mKCP on |
 | `kcp_header` | `dtls` | with `mkcp`, what its packets start with, as the server's [`kcp_header`](../server/mkcp.md) |
 | `dotdash_server` | `none` | deprecated: the one server, read only while `dotdash_servers` is unset |
