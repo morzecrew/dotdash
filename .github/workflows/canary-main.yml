@@ -22,7 +22,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@31ef658ebef55dedc7cb23184f3a38acc7b1d899 # fix/container-dns (testing; v0.10.1 replaces it)
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@dc33ba03f86a4ed2264db186f6abbf3012c9f58a # v0.10.1
     with:
       morzer-version: "0.15.1"
       ref: ${{ github.sha }}
@@ -56,7 +56,7 @@ jobs:
       # The provenance publish.yml attests for the bundle.
       id-token: write
       attestations: write
-    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@31ef658ebef55dedc7cb23184f3a38acc7b1d899 # fix/container-dns (testing; v0.10.1 replaces it)
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@dc33ba03f86a4ed2264db186f6abbf3012c9f58a # v0.10.1
     with:
       version: ${{ needs.bundle.outputs.version }}
       archive: ${{ needs.bundle.outputs.archive }}
