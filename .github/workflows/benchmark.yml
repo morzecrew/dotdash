@@ -76,7 +76,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           REHEARSE_PUBKEY: ${{ vars.MINISIGN_DEV_PUBKEY }}
           REHEARSE_MORZER_VERSION: "0.15.1"
-          REHEARSE_BUNDLE_DIR: server
+          REHEARSE_BUNDLE_DIR: bundles/server
           # The smoke hooks' pre-apply alone, for the rig's stand-in upstream
           # and target: the hooks themselves would run against the published
           # :main the rehearsal installs first, and bench.sh makes its own
