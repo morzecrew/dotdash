@@ -22,6 +22,10 @@
 	# acme: Let's Encrypt. internal: Caddy's own CA, for a machine the
 	# internet cannot reach, such as a CI rig (the cert_issuer parameter).
 	cert_issuer {$CERT_ISSUER}
+	# A CDN in front may send its own name as SNI: answer with this domain's
+	# certificate rather than none. A CDN that checks the origin's certificate
+	# against its own name still fails; tell it to send this domain.
+	fallback_sni {$DOMAIN}
 	servers {
 		protocols h1 h2
 	}
@@ -44,7 +48,9 @@ http://127.0.0.1:8081 {
 	}
 }
 
-{$DOMAIN} {
+# The site, its routes and the XHTTP path: served under this domain, and
+# under any name a CDN in front sends as Host (below).
+(site) {
 	import headers
 	handle_errors {
 		import headers
@@ -99,4 +105,15 @@ http://127.0.0.1:8081 {
 		templates
 		file_server
 	}
+}
+
+{$DOMAIN} {
+	import site
+}
+
+# A CDN in front (cdn_hosts) passes devices' requests on with its own name as
+# Host unless told to send this domain: the same site under any name, so a
+# CDN works on its defaults. The secret path, not the name, lets a device in.
+https:// {
+	import site
 }

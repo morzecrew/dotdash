@@ -15,8 +15,10 @@ are on the list can still reach this server: devices connect to the CDN's
 edge, and the CDN fetches from `https://example.com` abroad.
 
 1. **At the CDN**, create a resource with this server as its origin:
-   - origin `https://example.com`, with the `Host` header sent to it set
-     to `example.com`;
+   - origin `https://example.com`. The `Host` header can stay at the
+     CDN's default: this server answers under any name. If the CDN checks
+     the origin's certificate against a name of its own and fails, have it
+     send `example.com` as the `Host`, or as the origin's name;
    - no caching, and HTTP/2 towards devices if it is offered;
    - a name devices use: the provider's own name for the resource, or a
      domain of yours pointed at it, with the certificate it asks for.
@@ -80,8 +82,8 @@ instead of this server. The CDN's account then names the relay, which is
 cheap to replace, rather than this server and its upstream.
 
 1. **At the CDN**, as above, with the relay's domain as the origin:
-   `https://relay.example.ru`, with the `Host` header sent to it set to
-   `relay.example.ru`.
+   `https://relay.example.ru`. Like the server, the relay answers under
+   any name.
 2. **On the relay**, list the names devices use, then print its line again
    ([its line](../relay/install.md#4-on-the-relay-its-line)); it now ends in
    `cdn=cdn.example.ru`:
