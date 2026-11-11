@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -17,7 +17,7 @@
       
       
       
-        <link rel="next" href="./shutdown/">
+        <link rel="next" href="./ways-in/">
       
       
         
@@ -223,10 +223,10 @@
   
   
     <li class="md-tabs__item">
-      <a href="./shutdown/" class="md-tabs__link">
+      <a href="./ways-in/" class="md-tabs__link">
         
   
-  Before a shutdown
+  More than one way in
 
       </a>
     </li>
@@ -546,14 +546,14 @@
   
   
     <li class="md-nav__item">
-      <a href="./shutdown/" class="md-nav__link">
+      <a href="./ways-in/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Before a shutdown
+  More than one way in
 
     
   </span>
@@ -1939,12 +1939,12 @@
 
 
 <h1 id="dotdash">dotdash<a class="headerlink" href="#dotdash" title="Permanent link">&para;</a></h1>
-<p>dotdash gets devices in a censored network out to the open internet through
-a server of yours abroad. It comes as four
+<p>dotdash gets devices in a restricted network out to the open internet through
+a server of yours outside it. It comes as four
 <a href="https://github.com/morzecrew/morzer">morzer</a> bundles, released together from
 one tag:</p>
-<p><img alt="The four bundles: phones, the client and the canary inside the country reach the dotdash server abroad directly, or through the relay while only domestic addresses get through; the server leaves only through your upstream proxy" src="assets/diagrams/overview.light.svg#only-light" />
-<img alt="The four bundles: phones, the client and the canary inside the country reach the dotdash server abroad directly, or through the relay while only domestic addresses get through; the server leaves only through your upstream proxy" src="assets/diagrams/overview.dark.svg#only-dark" /></p>
+<p><img alt="The four bundles: phones, the client and the canary inside the restricted network reach the dotdash server outside it directly, or through the relay while only some addresses get through; the server leaves only through your upstream proxy" src="assets/diagrams/overview.light.svg#only-light" />
+<img alt="The four bundles: phones, the client and the canary inside the restricted network reach the dotdash server outside it directly, or through the relay while only some addresses get through; the server leaves only through your upstream proxy" src="assets/diagrams/overview.dark.svg#only-dark" /></p>
 <table>
 <thead>
 <tr>
@@ -1956,13 +1956,13 @@ one tag:</p>
 <tbody>
 <tr>
 <td><strong><a href="server/">dotdash</a></strong></td>
-<td>a server abroad</td>
+<td>a server outside the restricted network</td>
 <td>Xray REALITY on 443 in front of a cover site; everything leaves through your upstream proxy</td>
 </tr>
 <tr>
 <td><strong><a href="relay/">dotdash-relay</a></strong></td>
-<td>a machine inside the country</td>
-<td>carries phones, clients and canaries on to the server while only domestic addresses get through</td>
+<td>a machine inside the restricted network</td>
+<td>carries phones, clients and canaries on to the server while only some addresses get through</td>
 </tr>
 <tr>
 <td><strong><a href="client/">dotdash-client</a></strong></td>
@@ -1971,7 +1971,7 @@ one tag:</p>
 </tr>
 <tr>
 <td><strong><a href="canary/">dotdash-canary</a></strong></td>
-<td>a machine inside the country</td>
+<td>a machine inside the restricted network</td>
 <td>connects as a device would, and alerts when it can't get through</td>
 </tr>
 </tbody>
@@ -2053,13 +2053,13 @@ menu shows each released minor, and <code>dev</code> follows <code>main</code>.<
         
         
           
-          <a href="./shutdown/" class="md-footer__link md-footer__link--next" aria-label="Next: Before a shutdown">
+          <a href="./ways-in/" class="md-footer__link md-footer__link--next" aria-label="Next: More than one way in">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Before a shutdown
+                More than one way in
               </div>
             </div>
             <div class="md-footer__button md-icon">

@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -221,10 +221,10 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../shutdown/" class="md-tabs__link">
+      <a href="../../ways-in/" class="md-tabs__link">
         
   
-  Before a shutdown
+  More than one way in
 
       </a>
     </li>
@@ -477,14 +477,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../shutdown/" class="md-nav__link">
+      <a href="../../ways-in/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Before a shutdown
+  More than one way in
 
     
   </span>
@@ -2620,10 +2620,10 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>A backup proxy for when the upstream fails: <code>upstream_backup_protocol</code> with the new <code>upstream_backup</code> secret. Connections leave through the upstream while the gate's probes get through it, every 30 s, through the backup while they don't, and return by themselves.</p>
 </li>
 <li>
-<p>A relay with a site of its own serves devices their subscriptions inside the country, fetched from the server through its tunnel. <code>client-config</code> prints <code>through the relay &lt;domain&gt;: https://&lt;domain&gt;/&lt;token&gt;</code> under the server's URL, and <code>relay-entry</code> ends such a relay's line with <code>own-site</code>.</p>
+<p>A relay with a site of its own serves devices their subscriptions inside the restricted network, fetched from the server through its tunnel. <code>client-config</code> prints <code>through the relay &lt;domain&gt;: https://&lt;domain&gt;/&lt;token&gt;</code> under the server's URL, and <code>relay-entry</code> ends such a relay's line with <code>own-site</code>.</p>
 </li>
 <li>
-<p>Domestic CDNs, for allowlists: with their names in the new <code>cdn_hosts</code> parameter, <code>client-config</code>, the Xray config and the subscriptions add an XHTTP link through each, uploading in <code>GET</code> requests with the data in headers, as such CDNs need. The CDN page covers the setup and the risks.</p>
+<p>Local CDNs, for restricted networks: with their names in the new <code>cdn_hosts</code> parameter, <code>client-config</code>, the Xray config and the subscriptions add an XHTTP link through each, uploading in <code>GET</code> requests with the data in headers, as such CDNs need. The CDN page covers the setup and the risks.</p>
 </li>
 <li>
 <p>A relay can serve a site of its own: with a domain pointing at it and the new <code>own-site</code> profile, devices send the relay's own name, and a prober meets a real site with a certificate for that name, so the name and the address agree as for any site. <code>relay-config</code> offers it first; a borrowed site (<code>site</code>) still works.</p>
@@ -2679,7 +2679,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>Every bundle ships the key it is signed with, so <code>morzer init</code> needs no <code>--signing-key</code>: it prints the key, trusts it, and requires every later release to be signed by it. <code>--signing-key</code> still checks even the first release against the repository's.</p>
 </li>
 <li>
-<p>A relay for networks that let only domestic addresses through: <code>dotdash-relay</code>, a new bundle released with dotdash, carries devices from a machine inside the country on to this server over port 443. The <code>relay-config</code> task prints its setup; its line in the new <code>relays</code> parameter adds a link through it for every device.</p>
+<p>A relay for networks that let only some addresses through: <code>dotdash-relay</code>, a new bundle released with dotdash, carries devices from a machine inside that network on to this server over port 443. The <code>relay-config</code> task prints its setup; its line in the new <code>relays</code> parameter adds a link through it for every device.</p>
 </li>
 <li>
 <p>A client for a Linux machine or a network: <code>dotdash-client</code>, a new bundle released with dotdash, runs mihomo from one device's subscription URL, refreshed through dotdash, with a SOCKS5 and HTTP proxy port, block and direct rules, and a password once the port is published beyond the machine.</p>

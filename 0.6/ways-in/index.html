@@ -6,13 +6,13 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
       
       
         <meta name="author" content="Lev Litvinov">
       
       
-        <link rel="canonical" href="https://morzecrew.github.io/dotdash/0.6/shutdown/">
+        <link rel="canonical" href="https://morzecrew.github.io/dotdash/0.6/ways-in/">
       
       
       
@@ -30,7 +30,7 @@
     
     
       
-        <title>Before a shutdown - dotdash</title>
+        <title>More than one way in - dotdash</title>
       
     
     
@@ -122,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Before a shutdown
+              More than one way in
             
           </span>
         </div>
@@ -228,7 +228,7 @@
       <a href="././" class="md-tabs__link">
         
   
-  Before a shutdown
+  More than one way in
 
       </a>
     </li>
@@ -495,7 +495,7 @@
   <span class="md-ellipsis">
     
   
-  Before a shutdown
+  More than one way in
 
     
   </span>
@@ -512,7 +512,7 @@
   <span class="md-ellipsis">
     
   
-  Before a shutdown
+  More than one way in
 
     
   </span>
@@ -1940,28 +1940,30 @@
   
 
 
-<h1 id="before-and-during-a-shutdown">Before and during a shutdown<a class="headerlink" href="#before-and-during-a-shutdown" title="Permanent link">&para;</a></h1>
-<p>In a shutdown, mobile networks in a region let through only addresses on an
-allowlist. That covers domestic services and none of your servers abroad.
-The server stops answering devices there, but a relay inside the country
-and a domestic CDN still answer. Set them up and hand everything out
-<strong>before</strong> it starts, while devices still reach the server.</p>
+<h1 id="keep-more-than-one-way-in">Keep more than one way in<a class="headerlink" href="#keep-more-than-one-way-in" title="Permanent link">&para;</a></h1>
+<p>Some networks let through only a set list of addresses, for a region or for
+mobile data, and your servers need not be on it. The server then stops
+answering devices there, while a relay inside that network and a local CDN
+may still answer. Set them up and hand everything out <strong>before</strong> restrictions
+start, while devices still reach the server.</p>
 <h2 id="before">Before<a class="headerlink" href="#before" title="Permanent link">&para;</a></h2>
 <ol>
 <li><strong>A relay with a site of its own</strong> (<a href="../relay/install/">set one up</a>), in a
    network that stays reachable. Give <code>relay-entry</code> the relay's domain
    rather than its IP: links and subscription URLs then name the domain, and
    moving the relay to a new address only takes a DNS change.</li>
-<li><strong>A canary on a mobile line</strong> (<a href="../canary/">canary</a>), checking the
-   relay. It alerts you when a way in stops working for devices like yours.</li>
-<li><strong>A domestic CDN</strong>, as one more way in (<a href="../server/cdn/">CDN</a>). Expect the
+<li><strong>A canary on the kind of line devices use</strong> (<a href="../canary/">canary</a>),
+   checking the relay. It alerts you when a way in stops working for devices
+   like yours.</li>
+<li><strong>A local CDN</strong>, as one more way in (<a href="../server/cdn/">CDN</a>). Expect the
    account to be closed one day.</li>
 <li><strong>Every device</strong> gets its links again once the relay and the CDN are in.
-   With subscriptions on, give a device inside the country its subscription
-   URL through the relay (<code>through the relay …</code> in <code>client-config</code>), not the
-   server's. Its app then keeps refreshing its links during a shutdown.</li>
-<li><strong>Test</strong> on a phone with a SIM from the network you care about, using
-   mobile data with Wi-Fi off and the relay link alone.</li>
+   With subscriptions on, give a device inside the restricted network its
+   subscription URL through the relay (<code>through the relay …</code> in
+   <code>client-config</code>), not the server's. Its app then keeps refreshing its links
+   while restrictions last.</li>
+<li><strong>Test</strong> on a phone on the network you care about, using mobile data with
+   Wi-Fi off and the relay link alone.</li>
 </ol>
 <h2 id="during">During<a class="headerlink" href="#during" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1971,11 +1973,11 @@ and a domestic CDN still answer. Set them up and hand everything out
 <li>The Xray config from <code>client-config</code> uses whichever of the server, the
   relays and the CDNs answers, on its own. An app holding several links lets
   the user pick one that works.</li>
-<li>To hand a link over, show its QR code in person, send a file, or use
-  domestic mail (Yandex, Mail.ru), which allowlists let through. A link or
-  subscription URL is a credential that also names your relay. If it may
-  have leaked, delete the device from <code>vless_clients</code> and give it a new one.
-  Avoid MAX, the state-run messenger.</li>
+<li>To hand a link over, show its QR code in person, send a file, or use any
+  channel that still gets through. A link or subscription URL is a credential
+  that also names your relay, so avoid a messenger whose operator may read or
+  hand over messages. If a link may have leaked, delete the device from
+  <code>vless_clients</code> and give it a new one.</li>
 <li>If a relay's address is blocked, move the relay to a new machine or
   address under the same domain. Its links and subscription URLs work again
   as soon as DNS points there. Devices with links through other relays carry
