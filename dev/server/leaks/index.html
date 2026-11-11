@@ -1969,6 +1969,10 @@
   a kill switch, or Android's "block connections without VPN"). A browser IP
   checker showing an IPv6 address that <code>exit-check</code> calls unavailable sees the
   device's own: route IPv6 into the tunnel or turn it off in the app.</li>
+<li>To keep IPv6 out altogether, set <code>ipv6=block</code> where it applies: on a
+  <a href="../../client/reference/">client</a> it is refused on the machine, on a
+  <a href="../../relay/reference/">relay</a> it ends there, and here no IPv6 destination
+  leaves (<a href="../parameters/">parameters</a>).</li>
 </ul>
 
 

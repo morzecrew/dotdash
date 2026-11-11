@@ -2097,6 +2097,11 @@ with <code>sudo morzer config edit &lt;name&gt;</code>.</p>
 <td>what picking the fastest link and the health check fetch through dotdash</td>
 </tr>
 <tr>
+<td><code>ipv6</code></td>
+<td><code>allow</code></td>
+<td><code>block</code>: every IPv6 destination refused before any other rule, a direct rule's included, so apps fall back to IPv4; with <code>tun</code> it is still taken in, so nothing leaves around dotdash</td>
+</tr>
+<tr>
 <td><code>gateway</code></td>
 <td><code>false</code></td>
 <td>under <code>tun</code>, this machine is its LAN's gateway, and <code>doctor</code> checks the host for it (<a href="../tun/#a-gateway-for-the-lan">gateway</a>)</td>

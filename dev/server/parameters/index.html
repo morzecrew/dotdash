@@ -2059,6 +2059,11 @@
 <td><code>gateway</code>: this server resolves over <code>dns_resolver</code>; <code>upstream</code>: the upstream sees hostnames</td>
 </tr>
 <tr>
+<td><code>ipv6</code></td>
+<td><code>allow</code></td>
+<td><code>block</code>: no IPv6 destination leaves; names resolve to IPv4 only and the upstream is dialled over IPv4, so dual-stack sites still work (with <code>resolve=upstream</code>, the upstream resolves names itself). Not with <code>upstream6_protocol</code></td>
+</tr>
+<tr>
 <td><code>dns_resolver</code></td>
 <td><code>https://1.1.1.1/dns-query</code></td>
 <td>DoH server for <code>resolve=gateway</code> and device DNS; <code>https://</code> only</td>
