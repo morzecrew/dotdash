@@ -47,12 +47,14 @@ home=$(sudo docker volume inspect -f '{{.Mountpoint}}' dotdash-client_home)
 # rig's own requests reach no further than tun-target.test.
 sudo apk add -q iproute2 >/dev/null || die "apk add iproute2 failed"
 
-# Its subscription, a probe the stand-in answers, the direct rule, and no
-# cached links.
+# Its subscription, the direct rule, no cached links, and a probe the stand-in
+# answers. The cache goes before the probe moves: morzer (0.16) health-checks
+# that change, and the cached links are the old stand-in's, which resolves no
+# tun-target.test; with none, mihomo starts on the new subscription.
 printf 'http://%s:8089/sub' "${eth0}" | sudo morzer secret set subscription_url >/dev/null
 printf 'DOMAIN,www.gstatic.com\n' | sudo morzer config set --set-file direct_rules=- >/dev/null
-sudo morzer config set probe_url=http://tun-target.test:8080/sub >/dev/null
 sudo rm -f "${home}/proxies/dotdash.yaml"
+sudo morzer config set probe_url=http://tun-target.test:8080/sub >/dev/null
 sudo morzer config set installation.profile=tun >/dev/null
 ip -o link show Meta >/dev/null 2>&1 || die "under the tun profile there is no TUN interface"
 
