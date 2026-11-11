@@ -42,9 +42,8 @@ secrets:
   schema: secrets.schema.yaml
 
 compatibility:
-  # The manager this bundle is verified and rehearsed with, and the first with
-  # text parameters, which the rules are.
-  min_manager_version: "0.15.0"
+  # The manager this bundle is verified and rehearsed with.
+  min_manager_version: "0.16.0"
   rollback_safe: true
   # No database, which an unattended update needs declared.
   database: none
@@ -86,8 +85,8 @@ parameters:
     services: [mihomo]
   dns_listen:
     type: string
-    default: "off"
-    description: "Under the tun profile, the address and port mihomo answers DNS on for the LAN, such as 192.168.1.10:53, with the same fake addresses; off for none. 0.0.0.0:53 clashes with systemd-resolved's stub"
+    default: none
+    description: "Under the tun profile, the address and port mihomo answers DNS on for the LAN, such as 192.168.1.10:53, with the same fake addresses; none for none. 0.0.0.0:53 clashes with systemd-resolved's stub"
     services: [mihomo]
   # morzer wants a default for every parameter it doesn't ask for at init:
   # a comment, which the templates skip, showing a rule's form.

@@ -4,16 +4,16 @@
   "outbounds": [{
     "tag": "dotdash", "protocol": "vless",
     "settings": {
-      "address": "{{ required "set address" .Parameters.address }}", "port": {{ .Parameters.kcp_port }},
-      "id": {"$file": "/run/secrets/vless_id"},
-      "encryption": {"$file": "/run/secrets/vless_encryption"}
+      "address": "{{ required "set dotdash_address" .Parameters.dotdash_address }}", "port": {{ .Parameters.dotdash_kcp_port }},
+      "id": {"$file": "/run/secrets/dotdash_id"},
+      "encryption": {"$file": "/run/secrets/dotdash_encryption"}
     },
     "streamSettings": {"network": "kcp", "finalmask": {"udp": [
-      {"type": "mkcp-legacy", "settings": {"value": {"$file": "/run/secrets/kcp_seed"}}}
-{{- if ne .Parameters.kcp_header "none" }},
-      {"type": "mkcp-legacy", "settings": {"header": "{{ .Parameters.kcp_header }}"}}
+      {"type": "mkcp-legacy", "settings": {"value": {"$file": "/run/secrets/dotdash_kcp_seed"}}}
+{{- if ne .Parameters.dotdash_kcp_header "none" }},
+      {"type": "mkcp-legacy", "settings": {"header": "{{ .Parameters.dotdash_kcp_header }}"}}
 {{- end }}
-{{- if eq .Parameters.kcp_open "quic" }},
+{{- if eq .Parameters.dotdash_kcp_open "quic" }},
       {"type": "noise", "settings": {"noise": [{"type": "hex", "packet": "c300000001088394c8f03e5157080000449e00000002", "delay": "0-0"}]}}
 {{- end }}
     ]}}

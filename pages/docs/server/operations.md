@@ -33,7 +33,7 @@ sudo morzer config set update.auto_apply=true
 `doctor` fails when the provider moves you:
 
 ```sh
-sudo morzer config set healthcheck_url=https://api.ipify.org 'healthcheck_expect=^203\.0\.113\.7\s*$'
+sudo morzer config set probe_url=https://api.ipify.org 'probe_expect=^203\.0\.113\.7\s*$'
 ```
 
 ## What the checks say

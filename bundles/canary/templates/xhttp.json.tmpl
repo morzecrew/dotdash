@@ -4,13 +4,13 @@
   "outbounds": [{
     "tag": "dotdash", "protocol": "vless",
     "settings": {
-      "address": "{{ required "set address" .Parameters.address }}", "port": {{ .Parameters.port }},
-      "id": {"$file": "/run/secrets/vless_id"},
-      "encryption": {"$file": "/run/secrets/vless_encryption"}
+      "address": "{{ required "set dotdash_address" .Parameters.dotdash_address }}", "port": {{ .Parameters.dotdash_port }},
+      "id": {"$file": "/run/secrets/dotdash_id"},
+      "encryption": {"$file": "/run/secrets/dotdash_encryption"}
     },
     "streamSettings": {"network": "xhttp", "security": "tls",
-      "tlsSettings": {"serverName": "{{ .Parameters.server }}", "alpn": ["h2"], "fingerprint": "chrome"},
-      "xhttpSettings": {"path": {"$file": "/run/secrets/xhttp_path"}, "host": "{{ .Parameters.server }}", "mode": "auto"}
+      "tlsSettings": {"serverName": "{{ .Parameters.dotdash_server }}", "alpn": ["h2"], "fingerprint": "chrome"},
+      "xhttpSettings": {"path": {"$file": "/run/secrets/dotdash_xhttp_path"}, "host": "{{ .Parameters.dotdash_server }}", "mode": "auto"}
     }
   }]
 }

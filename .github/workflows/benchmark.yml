@@ -75,7 +75,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REHEARSE_PUBKEY: ${{ vars.MINISIGN_DEV_PUBKEY }}
-          REHEARSE_MORZER_VERSION: "0.15.1"
+          REHEARSE_MORZER_VERSION: "0.16.0"
           REHEARSE_BUNDLE_DIR: bundles/server
           # The smoke hooks' pre-apply alone, for the rig's stand-in upstream
           # and target: the hooks themselves would run against the published
@@ -84,12 +84,12 @@ jobs:
           REHEARSE_HOOKS: .bench-hooks
           REHEARSE_PROBE_PATHS: ""
           REHEARSE_OPERATOR_SECRETS: upstream
-          # The published release's upstream_host and upstream_port, as in pr.yml.
+          # healthcheck_url for a published release from before 0.7.0, as in pr.yml.
           REHEARSE_INIT_ARGS: >-
-            --domain dotdash.test --set upstream_host=upstream.rig.invalid
-            --set upstream_port=18080 --set upstream_protocol=http
-            --set healthcheck_url=http://11.99.0.10:8000/ --set cert_issuer=internal
-            --profile xdns
+            --domain dotdash.test --set upstream_protocol=http
+            --set probe_url=http://11.99.0.10:8000/
+            --set healthcheck_url=http://11.99.0.10:8000/
+            --set cert_issuer=internal --profile xdns
         run: |
           mkdir -p .bench-hooks && cp -R .github/smoke.d/pre-apply .bench-hooks/
           # ponytail: the old package until dotdash-server:main is published;

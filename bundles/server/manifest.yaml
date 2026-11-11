@@ -40,15 +40,14 @@ runtimes:
 
 compatibility:
   # The manager this bundle is verified and rehearsed with, and the first that
-  # restarts only the services the active profiles define after a secret
-  # change, which upstream_openvpn's services need.
-  min_manager_version: "0.15.1"
-  # 0.4.0 alone declared false: it replaced upstream_host, upstream_port and
-  # their secrets with the upstream secret, and an update drops the old
-  # values, so 0.3.x could not start again. Going back from a later release
-  # to 0.4.0 or after loses nothing. An update from 0.3.x straight to a later
-  # one is still refused until `upstream` is set.
-  rollback_safe: true
+  # health-checks a parameter change and undoes it when the check fails.
+  min_manager_version: "0.16.0"
+  # 0.7.0 renamed healthcheck_url, healthcheck6_url and healthcheck_expect to
+  # probe_*, and an update retires the old values, so 0.6.x would come back
+  # without them; nor does 0.6.x take upstream_protocol=socks-tls or https.
+  # 0.4.0 declared false too, when the upstream secret replaced upstream_host
+  # and its kin. An update from 0.3.x is still refused until `upstream` is set.
+  rollback_safe: false
   # No database, which an unattended update needs declared.
   database: none
 
@@ -74,43 +73,47 @@ parameters:
     services: [gate, subscription]
   upstream_protocol:
     type: enum
-    values: [socks, http, wireguard, openvpn]
+    values: [socks, socks-tls, http, https, wireguard, openvpn]
     default: socks
-    description: "How every client connection leaves: socks or http, a proxy the upstream secret names as user:pass@host:port; wireguard, a WireGuard exit, from the wg-quick client config in upstream_wireguard; openvpn, an OpenVPN exit, from the client config in upstream_openvpn, which needs the openvpn profile. A tunnel carries UDP and IPv6 itself, so it takes neither upstream6_protocol nor resolve=upstream"
+    description: "How every client connection leaves: socks or http, a proxy the upstream secret names as user:pass@host:port, and socks-tls or https the same over TLS, so its credentials and your destinations do not cross the network in clear; wireguard, a WireGuard exit, from the wg-quick client config in upstream_wireguard; openvpn, an OpenVPN exit, from the client config in upstream_openvpn, which needs the openvpn profile. A tunnel carries UDP and IPv6 itself, so it takes neither upstream6_protocol nor resolve=upstream"
     services: [xray, gate]
+  # Deprecated in 0.7.0 for the -tls protocols, and read until 0.8.0: an update
+  # can't take a value for a parameter the running release does not declare, so
+  # a TLS upstream would fail its health check, and the update roll back,
+  # without it.
   upstream_tls:
     type: bool
     default: false
-    description: Connect to the upstream proxy over TLS (an HTTPS or SOCKS-over-TLS proxy), so its credentials and your destinations do not cross the network in clear
+    description: "Deprecated: with true, socks is socks-tls and http https; set upstream_protocol instead"
     services: [gate]
   upstream_udp:
     type: bool
     default: false
-    description: Relay client UDP through a SOCKS5 upstream that supports UDP ASSOCIATE; otherwise UDP is dropped. A wireguard or openvpn upstream always carries UDP
+    description: Relay client UDP through a SOCKS5 upstream (socks or socks-tls) that supports UDP ASSOCIATE; otherwise UDP is dropped. A wireguard or openvpn upstream always carries UDP
     services: [xray, gate]
   upstream6_protocol:
     type: enum
-    values: [none, socks, http]
+    values: [none, socks, socks-tls, http, https]
     default: none
-    description: "Protocol of a second proxy for IPv6, which the upstream6 secret names as user:pass@host:port, or none. With one, a destination that has an IPv6 address leaves through it, IPv4-only ones through the upstream, and neither falls back to the other"
+    description: "Protocol of a second proxy for IPv6, as upstream_protocol's, which the upstream6 secret names as user:pass@host:port, or none. With one, a destination that has an IPv6 address leaves through it, IPv4-only ones through the upstream, and neither falls back to the other"
     services: [xray, gate]
   upstream6_tls:
     type: bool
     default: false
-    description: Connect to the IPv6 proxy over TLS
+    description: "Deprecated: with true, socks is socks-tls and http https; set upstream6_protocol instead"
     services: [gate]
   upstream_backup_protocol:
     type: enum
-    values: [none, socks, http]
+    values: [none, socks, socks-tls, http, https]
     default: none
-    description: "Protocol of a backup proxy, which the upstream_backup secret names as user:pass@host:port, or none. With one, connections leave through the upstream while probes of healthcheck_url get through it, every 30 s, and through the backup while they don't; the exit changes with it. upstream_udp holds for the backup too"
+    description: "Protocol of a backup proxy, as upstream_protocol's, which the upstream_backup secret names as user:pass@host:port, or none. With one, connections leave through the upstream while probes of probe_url get through it, every 30 s, and through the backup while they don't; the exit changes with it. upstream_udp holds for the backup too"
     services: [gate]
   upstream_backup_tls:
     type: bool
     default: false
-    description: Connect to the backup proxy over TLS
+    description: "Deprecated: with true, socks is socks-tls and http https; set upstream_backup_protocol instead"
     services: [gate]
-  healthcheck6_url:
+  probe6_url:
     type: string
     default: http://api6.ipify.org
     description: "With the IPv6 proxy, a URL with an IPv6 address only, which the egress health check also fetches, through the IPv6 proxy; any 2xx is healthy"
@@ -168,10 +171,10 @@ parameters:
     default: https://1.1.1.1/dns-query
     description: "The DNS-over-HTTPS server resolve=gateway asks, through the upstream; it sees the names, the upstream does not. client-config's Xray config answers the device's DNS from it too, through the tunnel. Only https:// URLs are accepted"
     services: [xray]
-  healthcheck_expect:
+  probe_expect:
     type: string
     default: ".*"
-    description: "Regular expression (RE2) the healthcheck response must match. With healthcheck_url at an IP-echo service, the upstream's exit IP anchored, such as ^203\\.0\\.113\\.7\\s*$, makes Xray unhealthy when the exit IP changes"
+    description: "Regular expression (RE2) the response to probe_url must match. With probe_url at an IP-echo service, the upstream's exit IP anchored, such as ^203\\.0\\.113\\.7\\s*$, makes Xray unhealthy when the exit IP changes"
     services: [xray]
   cert_issuer:
     type: enum
@@ -217,10 +220,10 @@ parameters:
     default: error
     description: "Xray error-log verbosity; the access log is always off. warning and below name the destinations of failed connections, so keep them for debugging"
     services: [xray, gate]
-  healthcheck_url:
+  probe_url:
     type: string
     default: https://www.gstatic.com/generate_204
-    description: URL Xray's healthcheck fetches through the upstream proxy; any 2xx is healthy. With a backup proxy, the gate probes each with it too
+    description: URL the egress health check fetches through Xray and the upstream proxy; any 2xx is healthy. With a backup proxy, the gate probes each with it too
     services: [xray, gate]
 
 images:
@@ -287,7 +290,7 @@ tasks:
 
 health:
   checks:
-    # egress fetches healthcheck_url through Xray and the upstream, so healthy
+    # egress fetches probe_url through Xray and the upstream, so healthy
     # means the whole way out works, not that a process is up; failing, it
     # names the layer (the upstream's address, its credentials, the
     # destination, the exit). `doctor` fails while either check does.

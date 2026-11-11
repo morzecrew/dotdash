@@ -11,6 +11,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - An `ipv6` parameter on the server, the relay and the client: `block` keeps IPv6 out. The client refuses it before any rule, the relay drops it, and the server resolves names to IPv4 only and blocks IPv6 addresses, so dual-stack sites still work over IPv4.
 
+### Changed
+
+- **Breaking:** every bundle needs morzer 0.16.0, which health-checks a parameter change and undoes it when the check fails. Update morzer first: an older one refuses the release and changes nothing.
+
+- **Breaking:** the server's `healthcheck_url`, `healthcheck6_url` and `healthcheck_expect` are `probe_url`, `probe6_url` and `probe_expect`, as the other bundles name them. An update drops the old values, so set changed ones again after it.
+
+- The upstream protocols take `socks-tls` and `https`, a proxy over TLS. `upstream_tls`, `upstream6_tls` and `upstream_backup_tls` still work until 0.8.0: set the protocol, then unset them.
+
+- **Breaking:** the canary names its target as the relay does, `dotdash_server`, `dotdash_address`, `dotdash_port`, `dotdash_public_key`, `dotdash_id`, `dotdash_encryption`, `dotdash_short_id`, and `dotdash_` before the XHTTP and mKCP ones. A canary is not updated to it but set up again from `canary-config`.
+
+- `canary-config` also prints the server's mKCP opener, as `dotdash_kcp_open`.
+
+- **Breaking:** the client's `dns_listen` is off at `none`, as every other parameter says it, rather than `off`.
+
+- `morzer rollback` from this release of the server or the canary is refused, since the earlier release lacks the new names; the pre-update backup is the way back.
+
+- The relay's `site_dir` and `cert_issuer` take effect with `config set`, without a full apply.
+
+### Removed
+
+- **Breaking:** the relay's deprecated `dotdash_server`. `dotdash_servers` is now required: on a relay that still has only `dotdash_server`, set `dotdash_servers` before updating.
+
 ## [0.6.0] - 2026-11-11
 
 ### Added

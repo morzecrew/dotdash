@@ -44,14 +44,13 @@ chmod -R a+rX /rig/server
 sudo docker run -d --name canary-rig-server -p 443:443 -p 8443:8443 -p 8447:8447/udp --sysctl net.ipv4.ip_unprivileged_port_start=0 \
   -v /rig/server:/etc/xray:ro "${xray}" >/dev/null
 
-sudo morzer config set "address=${host}"
-sudo morzer config set "reality_public_key=${public}"
-printf %s "${id}" | sudo morzer secret set vless_id >/dev/null
-printf none | sudo morzer secret set vless_encryption >/dev/null
-printf %s "${sid}" | sudo morzer secret set reality_short_id >/dev/null
-printf %s "${path}" | sudo morzer secret set xhttp_path >/dev/null
-# A release from before the mkcp profile declares no such secret.
-printf %s "${seed}" | sudo morzer secret set kcp_seed >/dev/null 2>&1 || true
+sudo morzer config set "dotdash_address=${host}"
+sudo morzer config set "dotdash_public_key=${public}"
+printf %s "${id}" | sudo morzer secret set dotdash_id >/dev/null
+printf none | sudo morzer secret set dotdash_encryption >/dev/null
+printf %s "${sid}" | sudo morzer secret set dotdash_short_id >/dev/null
+printf %s "${path}" | sudo morzer secret set dotdash_xhttp_path >/dev/null
+printf %s "${seed}" | sudo morzer secret set dotdash_kcp_seed >/dev/null
 # smoke-update's pre-update backup would capture nothing: no volume, and no
 # identity without a recovery key, which the rig's init skips. A real canary
 # has a recovery key (canary-config prints it).

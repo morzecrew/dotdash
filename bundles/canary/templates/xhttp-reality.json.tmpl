@@ -4,17 +4,17 @@
   "outbounds": [{
     "tag": "dotdash", "protocol": "vless",
     "settings": {
-      "address": "{{ required "set address" .Parameters.address }}", "port": {{ .Parameters.xhttp_reality_port }},
-      "id": {"$file": "/run/secrets/vless_id"},
-      "encryption": {"$file": "/run/secrets/vless_encryption"}
+      "address": "{{ required "set dotdash_address" .Parameters.dotdash_address }}", "port": {{ .Parameters.dotdash_xhttp_reality_port }},
+      "id": {"$file": "/run/secrets/dotdash_id"},
+      "encryption": {"$file": "/run/secrets/dotdash_encryption"}
     },
     "streamSettings": {"network": "xhttp", "security": "reality",
       "realitySettings": {
-        "serverName": "{{ required "set server" .Parameters.server }}", "fingerprint": "chrome",
-        "password": "{{ required "set reality_public_key" .Parameters.reality_public_key }}",
-        "shortId": {"$file": "/run/secrets/reality_short_id"}
+        "serverName": "{{ required "set dotdash_server" .Parameters.dotdash_server }}", "fingerprint": "chrome",
+        "password": "{{ required "set dotdash_public_key" .Parameters.dotdash_public_key }}",
+        "shortId": {"$file": "/run/secrets/dotdash_short_id"}
       },
-      "xhttpSettings": {"path": {"$file": "/run/secrets/xhttp_path"}, "mode": "auto"}
+      "xhttpSettings": {"path": {"$file": "/run/secrets/dotdash_xhttp_path"}, "mode": "auto"}
     }
   }]
 }

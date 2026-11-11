@@ -2,12 +2,12 @@
 # The release's health checks, one per argument:
 #
 #   cover-site  Caddy reports healthy.
-#   egress      Xray fetches healthcheck_url through the gate and the upstream,
-#               now, and with the IPv6 proxy also healthcheck6_url, which has
+#   egress      Xray fetches probe_url through the gate and the upstream,
+#               now, and with the IPv6 proxy also probe6_url, which has
 #               an IPv6 address only, through the IPv6 proxy. When it cannot,
 #               the message names the layer that failed: the gate, a proxy's
 #               address, its credentials, the destination behind it, or an
-#               exit that no longer matches healthcheck_expect.
+#               exit that no longer matches probe_expect.
 #
 # Through Xray a refused login and a stopped upstream look alike (a 503, or a
 # dropped tunnel), so a failed fetch is followed by asking the upstream
@@ -30,10 +30,14 @@ ask_upstream() {
   local fam=$1 p=UPSTREAM label="the upstream proxy" name=upstream
   if [ "$fam" = 6 ]; then p=UPSTREAM6 label="the IPv6 proxy" name=upstream6; fi
   local rv="DOTDASH_PARAM_${p}_PROTOCOL" tv="DOTDASH_PARAM_${p}_TLS"
-  local protocol=${!rv:-socks} tls=${!tv:-false}
-  local url=${DOTDASH_PARAM_HEALTHCHECK_URL:-https://www.gstatic.com/generate_204}
+  local protocol=${!rv:-socks}
+  local url=${DOTDASH_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
   local secrets=${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets} err errf rc code scheme
-  [ "$fam" = 4 ] || url=${DOTDASH_PARAM_HEALTHCHECK6_URL:-http://api6.ipify.org}
+  [ "$fam" = 4 ] || url=${DOTDASH_PARAM_PROBE6_URL:-http://api6.ipify.org}
+  # ponytail: the deprecated *_tls parameters, read until 0.8.0.
+  if [ "${!tv:-false}" = true ]; then
+    case $protocol in socks) protocol=socks-tls ;; http) protocol=https ;; esac
+  fi
 
   # "[user:pass@]host:port", split as the gate's image splits it: at the last
   # "@", then the user up to the first ":". Neither half is ever printed.
@@ -63,10 +67,10 @@ ask_upstream() {
     echo "$label at $host:$port accepts connections; install curl to check its credentials"
     return 1
   fi
-  case $protocol/$tls in
-  socks/true) echo "$label at $host:$port accepts connections; curl cannot speak SOCKS over TLS to check further"; return 1 ;;
-  socks/*) scheme=socks5h ;;
-  http/true) scheme=https ;;
+  case $protocol in
+  socks-tls) echo "$label at $host:$port accepts connections; curl cannot speak SOCKS over TLS to check further"; return 1 ;;
+  socks) scheme=socks5h ;;
+  https) scheme=https ;;
   *) scheme=http ;;
   esac
 
@@ -98,7 +102,7 @@ why() {
   local out=$1 fam=${2:-4}
   case $out in
   *"does not match XRAY_HEALTHCHECK_EXPECT"*)
-    echo "the exit changed: healthcheck_url answered ${out##*XRAY_HEALTHCHECK_EXPECT: }, which healthcheck_expect does not match"
+    echo "the exit changed: probe_url answered ${out##*XRAY_HEALTHCHECK_EXPECT: }, which probe_expect does not match"
     return ;;
   esac
   local order=4
@@ -148,13 +152,13 @@ egress() {
 }
 
 # With the IPv6 proxy: one fetch of a URL with an IPv6 address only, so it can
-# leave through the IPv6 proxy alone. healthcheck_expect is about the IPv4
+# leave through the IPv6 proxy alone. probe_expect is about the IPv4
 # exit, so any answer will do.
 egress6() {
   local out
   [ "${DOTDASH_PARAM_UPSTREAM6_PROTOCOL:-none}" != none ] || return 0
   if out=$(docker compose -p "$project" exec -T -e XRAY_HEALTHCHECK_TIMEOUT=6s \
-    -e XRAY_HEALTHCHECK_URL="${DOTDASH_PARAM_HEALTHCHECK6_URL:-http://api6.ipify.org}" -e XRAY_HEALTHCHECK_EXPECT='.*' \
+    -e XRAY_HEALTHCHECK_URL="${DOTDASH_PARAM_PROBE6_URL:-http://api6.ipify.org}" -e XRAY_HEALTHCHECK_EXPECT='.*' \
     xray /usr/local/bin/xray-entrypoint healthcheck 2>&1); then
     return 0
   fi

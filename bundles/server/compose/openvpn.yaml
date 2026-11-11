@@ -49,7 +49,7 @@ services:
     network_mode: service:vpn
     environment:
       XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:10809
-      XRAY_HEALTHCHECK_URL: ${DOTDASH_PARAM_HEALTHCHECK_URL:-https://www.gstatic.com/generate_204}
+      XRAY_HEALTHCHECK_URL: ${DOTDASH_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
     volumes:
       - type: bind
         source: /etc/dotdash/vpn-socks.json

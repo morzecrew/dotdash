@@ -10,7 +10,9 @@
 # - with the upstream stopped, they move to the backup within the probes'
 #   interval, and doctor passes;
 # - with the upstream back, they return to it;
-# - with the backup turned off, the upstream alone again.
+# - with the backup turned off, the upstream alone again;
+# - upstream_backup_protocol=https is http over TLS in the gate's config, and
+#   so, until 0.8.0, is http with the deprecated upstream_backup_tls.
 #
 # Needs the internet, as the upstream's way to 1.1.1.1.
 # shellcheck source=/dev/null
@@ -36,6 +38,7 @@ sudo docker run -d --name dotdash-rig-backup --network dotdash-rig -p 18082:8080
 
 restore() {
   sudo docker start dotdash-rig-upstream >/dev/null 2>&1 || true
+  sudo morzer config unset upstream_backup_tls >/dev/null 2>&1 || true
   sudo morzer config set upstream_backup_protocol=none >/dev/null 2>&1 || true
   sudo docker rm -f dotdash-rig-backup >/dev/null 2>&1 || true
 }
@@ -44,6 +47,22 @@ trap restore EXIT
 printf 'rigb:%s@%s:18082' "${pass}" "${host}" | sudo morzer secret set upstream_backup >/dev/null
 sudo morzer config set upstream_backup_protocol=http >/dev/null \
   || die "could not turn on the backup proxy (its health check failed?)"
+
+# The config alone: the stand-in speaks no TLS, and while the upstream is up
+# the backup carries nothing, so the health check still passes.
+tls_backup() {
+  sudo jq -e '[.outbounds[] | select(.tag == "backup")] | length == 1 and all(.protocol == "http" and .streamSettings.security == "tls")' \
+    /etc/dotdash/gate.json >/dev/null
+}
+sudo morzer config set upstream_backup_protocol=https >/dev/null || die "could not set upstream_backup_protocol=https"
+tls_backup || die "upstream_backup_protocol=https is not http over TLS in the gate"
+sudo morzer config set upstream_backup_protocol=http upstream_backup_tls=true >/dev/null \
+  || die "could not set the deprecated upstream_backup_tls"
+tls_backup || die "the deprecated upstream_backup_tls=true does not make http https"
+sudo morzer config unset upstream_backup_tls >/dev/null || die "could not unset upstream_backup_tls"
+sudo jq -e '.outbounds[] | select(.tag == "backup") | .streamSettings == null' /etc/dotdash/gate.json >/dev/null \
+  || die "with upstream_backup_protocol=http the backup still speaks TLS"
+echo "${0##*/}: https is http over TLS, as is http with the deprecated upstream_backup_tls"
 
 code() { # through 10-clients.sh's REALITY client: 301 through the upstream, 200 through the backup
   curl -s -o /dev/null -w '%{http_code}' --max-time 15 --socks5-hostname 127.0.0.1:11080 http://1.1.1.1/ 2>/dev/null || true

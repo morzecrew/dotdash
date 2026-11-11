@@ -6,7 +6,7 @@ falls back to the other.
 
 ```sh
 sudo morzer secret set upstream6                  # user:pass@host:port, first
-sudo morzer config set upstream6_protocol=socks   # or http; upstream6_tls=true if needed
+sudo morzer config set upstream6_protocol=socks   # or socks-tls, http, https
 sudo morzer task run exit-check --output
 ```
 

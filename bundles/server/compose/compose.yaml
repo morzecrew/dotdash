@@ -28,8 +28,8 @@ services:
       # The config's loopback-only http inbound: the probe takes the same
       # routing and upstream as client traffic.
       XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:10809
-      XRAY_HEALTHCHECK_URL: ${DOTDASH_PARAM_HEALTHCHECK_URL:-https://www.gstatic.com/generate_204}
-      XRAY_HEALTHCHECK_EXPECT: ${DOTDASH_PARAM_HEALTHCHECK_EXPECT:-.*}
+      XRAY_HEALTHCHECK_URL: ${DOTDASH_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
+      XRAY_HEALTHCHECK_EXPECT: ${DOTDASH_PARAM_PROBE_EXPECT:-.*}
     volumes:
       # Long form, so a missing file fails the start: the short form has
       # Docker create a directory there, which morzer cannot render over.

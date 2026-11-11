@@ -11,8 +11,10 @@ directly whatever its config says. The gate carries what has to cross:
     the upstream secret's address and credentials, and with
     upstream6_protocol a second hop (1081) to the IPv6 proxy, with its own.
     Xray never holds either. The image splits each secret's
-    "user:pass@host:port" into the outbound's settings ({"$proxy": ...}); TLS
-    takes the server name from that address.
+    "user:pass@host:port" into the outbound's settings ({"$proxy": ...}).
+    socks-tls and https are socks and http over TLS, which takes the server
+    name from that address; until 0.8.0 the deprecated *_tls parameters still
+    turn socks into socks-tls and http into https.
 
 A tunnel takes the proxy's place. upstream_protocol=wireguard: the outbound
 is Xray's own WireGuard, on its built-in TCP/IP stack, so the gate needs no
@@ -26,7 +28,7 @@ upstream6; nor resolve=upstream, as a tunnel resolves no names.
 upstream_backup_protocol: a second proxy for when the upstream fails, from
 the upstream_backup secret. The egress goes to a balancer whose one candidate
 is the upstream, and whose fallback is the backup: while the observatory's
-probes of healthcheck_url get through the upstream, everything leaves there,
+probes of probe_url get through the upstream, everything leaves there,
 so the exit stays the same; when they stop, the backup, until they get through
 again. The balancer matches tags by prefix, so the IPv6 proxy is "ipv6", never
 "upstream6".
@@ -37,11 +39,17 @@ whose destination is fixed to Xray, and everything else is blocked.
 {{- $withXdns := has "xdns" .Profiles -}}
 {{- $xhttpReality := has "xhttp-reality" .Profiles -}}
 {{- $kcp := has "mkcp" .Profiles -}}
-{{- $v6 := ne .Parameters.upstream6_protocol "none" -}}
-{{- $backup := ne .Parameters.upstream_backup_protocol "none" -}}
 {{- $proto := .Parameters.upstream_protocol -}}
+{{- $proto6 := .Parameters.upstream6_protocol -}}
+{{- $protoBackup := .Parameters.upstream_backup_protocol -}}
+{{- /* ponytail: the *_tls fallback goes in 0.8.0. */ -}}
+{{- if eq (print .Parameters.upstream_tls) "true" }}{{ if eq $proto "socks" }}{{ $proto = "socks-tls" }}{{ else if eq $proto "http" }}{{ $proto = "https" }}{{ end }}{{ end -}}
+{{- if eq (print .Parameters.upstream6_tls) "true" }}{{ if eq $proto6 "socks" }}{{ $proto6 = "socks-tls" }}{{ else if eq $proto6 "http" }}{{ $proto6 = "https" }}{{ end }}{{ end -}}
+{{- if eq (print .Parameters.upstream_backup_tls) "true" }}{{ if eq $protoBackup "socks" }}{{ $protoBackup = "socks-tls" }}{{ else if eq $protoBackup "http" }}{{ $protoBackup = "https" }}{{ end }}{{ end -}}
+{{- $v6 := ne $proto6 "none" -}}
+{{- $backup := ne $protoBackup "none" -}}
 {{- $tunnel := or (eq $proto "wireguard") (eq $proto "openvpn") -}}
-{{- $udp := or $tunnel (and (eq (print .Parameters.upstream_udp) "true") (eq $proto "socks")) -}}
+{{- $udp := or $tunnel (and (eq (print .Parameters.upstream_udp) "true") (contains $proto "socks")) -}}
 {{- if and $tunnel $v6 }}{{ required (printf "upstream_protocol=%s carries IPv6 itself: unset upstream6_protocol" $proto) "" }}{{ end }}
 {{- if and $tunnel (ne .Parameters.resolve "gateway") }}{{ required (printf "upstream_protocol=%s resolves no names: set resolve=gateway" $proto) "" }}{{ end }}
 {{- if and (eq $proto "openvpn") (not (has "openvpn" .Profiles)) }}{{ required "upstream_protocol=openvpn needs the openvpn profile, which runs the OpenVPN client: first sudo morzer config set installation.profile=openvpn (with others: xdns,openvpn), then upstream_protocol=openvpn" "" }}{{ end }}
@@ -85,9 +93,9 @@ fails on its empty value with the message. */ -}}
 {{- else }}
     {
       "tag": "upstream",
-      "protocol": "{{ $proto }}",
+      "protocol": "{{ if contains $proto "socks" }}socks{{ else }}http{{ end }}",
       "settings": {"$proxy": "/run/secrets/upstream"}
-{{- if eq (print .Parameters.upstream_tls) "true" }},
+{{- if or (eq $proto "socks-tls") (eq $proto "https") }},
       "streamSettings": {"security": "tls"}
 {{- end }}
     },
@@ -97,9 +105,9 @@ fails on its empty value with the message. */ -}}
 {{- if $v6 }},
     {
       "tag": "ipv6",
-      "protocol": "{{ .Parameters.upstream6_protocol }}",
+      "protocol": "{{ if contains $proto6 "socks" }}socks{{ else }}http{{ end }}",
       "settings": {"$proxy": "/run/secrets/upstream6"}
-{{- if eq (print .Parameters.upstream6_tls) "true" }},
+{{- if or (eq $proto6 "socks-tls") (eq $proto6 "https") }},
       "streamSettings": {"security": "tls"}
 {{- end }}
     }
@@ -107,16 +115,16 @@ fails on its empty value with the message. */ -}}
 {{- if $backup }},
     {
       "tag": "backup",
-      "protocol": "{{ .Parameters.upstream_backup_protocol }}",
+      "protocol": "{{ if contains $protoBackup "socks" }}socks{{ else }}http{{ end }}",
       "settings": {"$proxy": "/run/secrets/upstream_backup"}
-{{- if eq (print .Parameters.upstream_backup_tls) "true" }},
+{{- if or (eq $protoBackup "socks-tls") (eq $protoBackup "https") }},
       "streamSettings": {"security": "tls"}
 {{- end }}
     }
 {{- end }}
   ],
 {{- if $backup }}
-  "observatory": {"subjectSelector": ["upstream", "backup"], "probeUrl": "{{ .Parameters.healthcheck_url }}", "probeInterval": "30s", "enableConcurrency": true},
+  "observatory": {"subjectSelector": ["upstream", "backup"], "probeUrl": "{{ .Parameters.probe_url }}", "probeInterval": "30s", "enableConcurrency": true},
 {{- end }}
   "routing": {
     "domainStrategy": "AsIs",

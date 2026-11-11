@@ -33,7 +33,7 @@ jobs:
       packages: read
     uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@dc33ba03f86a4ed2264db186f6abbf3012c9f58a # v0.10.1
     with:
-      morzer-version: "0.15.1"
+      morzer-version: "0.16.0"
       bundle-dir: bundles/server
       version-paths: bundles/server
       package: dotdash-server
@@ -47,14 +47,14 @@ jobs:
       components: ""
       probe-paths: ""
       operator-secrets: upstream
-      # upstream_host and upstream_port are the published release's, from
-      # before the upstream secret, which smoke-update installs first; a
-      # release that does not declare them gets them left out (smoke.sh).
+      # healthcheck_url is the published release's name for probe_url, from
+      # before 0.7.0, which smoke-update installs first; a release that does
+      # not declare a --set gets it left out (smoke.sh).
       init-args: >-
-        --domain dotdash.test --set upstream_host=upstream.rig.invalid
-        --set upstream_port=18080 --set upstream_protocol=http
-        --set healthcheck_url=http://11.99.0.10:8000/ --set cert_issuer=internal
-        --profile xdns
+        --domain dotdash.test --set upstream_protocol=http
+        --set probe_url=http://11.99.0.10:8000/
+        --set healthcheck_url=http://11.99.0.10:8000/
+        --set cert_issuer=internal --profile xdns
       release-pubkey: ${{ vars.MINISIGN_RELEASE_PUBKEY }}
     secrets:
       minisign-key: ${{ secrets.MINISIGN_RELEASE_KEY }}

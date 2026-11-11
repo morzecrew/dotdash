@@ -50,10 +50,14 @@ secrets:
   schema: secrets.schema.yaml
 
 compatibility:
-  # The manager this bundle is verified and rehearsed with, and the first whose
-  # `doctor` fails on a failing health check.
-  min_manager_version: "0.14.0"
-  rollback_safe: true
+  # The manager this bundle is verified and rehearsed with.
+  min_manager_version: "0.16.0"
+  # 0.7.0 renamed every parameter and secret that names the target to
+  # dotdash_*, as the relay names them, and an update retires the old values,
+  # so 0.6.x would come back with none. A canary is set up again from
+  # canary-config instead: an update can't take the new names' values, since
+  # they have no default.
+  rollback_safe: false
   # No database, which an unattended update needs declared.
   database: none
 
@@ -68,42 +72,42 @@ requirements:
 # `morzer task run canary-config -- <client>` on the dotdash server prints the
 # init command and the secrets for this machine.
 parameters:
-  server:
+  dotdash_server:
     type: string
     description: The dotdash server's domain, sent as the TLS server name
     services: [reality, xhttp, xhttp-reality, mkcp]
-  address:
+  dotdash_address:
     type: string
     description: Where to connect, normally the same domain; an IP or a CDN's name also works
     services: [reality, xhttp, xhttp-reality, mkcp]
-  port:
+  dotdash_port:
     type: port
     default: 443
     description: The dotdash server's https_port
     services: [reality, xhttp]
-  xhttp_reality_port:
+  dotdash_xhttp_reality_port:
     type: port
     default: 8443
     description: The dotdash server's xhttp_reality_port (the xhttp-reality profile)
     services: [xhttp-reality]
-  kcp_port:
+  dotdash_kcp_port:
     type: port
     default: 8447
     description: The dotdash server's kcp_port (the mkcp profile)
     services: [mkcp]
-  kcp_header:
+  dotdash_kcp_header:
     type: enum
     values: [none, dtls, srtp, utp, wechat, wireguard]
     default: dtls
     description: The dotdash server's kcp_header (the mkcp profile)
     services: [mkcp]
-  kcp_open:
+  dotdash_kcp_open:
     type: enum
     values: [none, quic]
     default: none
     description: The dotdash server's kcp_open (the mkcp profile); quic adds the QUIC-Initial-shaped opener, so the canary measures the same flow a device sees
     services: [mkcp]
-  reality_public_key:
+  dotdash_public_key:
     type: string
     description: The REALITY public key, the pbk of a dotdash REALITY link
     services: [reality, xhttp-reality]

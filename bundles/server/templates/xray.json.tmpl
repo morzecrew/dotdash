@@ -55,7 +55,7 @@ resolve=upstream the upstream resolves names itself, so only literals stop. */ -
 {{- /* A WireGuard or OpenVPN upstream is a tunnel, which carries UDP as it
 carries TCP; a proxy carries UDP only as SOCKS5 with upstream_udp. */ -}}
 {{- $tunnel := or (eq .Parameters.upstream_protocol "wireguard") (eq .Parameters.upstream_protocol "openvpn") -}}
-{{- $udp := or $tunnel (and (eq (print .Parameters.upstream_udp) "true") (eq .Parameters.upstream_protocol "socks")) -}}
+{{- $udp := or $tunnel (and (eq (print .Parameters.upstream_udp) "true") (contains .Parameters.upstream_protocol "socks")) -}}
 {{- $withXdns := has "xdns" .Profiles -}}
 {{- $xhttpReality := has "xhttp-reality" .Profiles -}}
 {{- $kcp := has "mkcp" .Profiles -}}

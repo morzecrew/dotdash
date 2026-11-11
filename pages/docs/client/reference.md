@@ -16,7 +16,7 @@ with `sudo morzer config edit <name>`.
 | `probe_url` | `https://www.gstatic.com/generate_204` | what picking the fastest link and the health check fetch through dotdash |
 | `ipv6` | `allow` | `block`: every IPv6 destination refused before any other rule, a direct rule's included, so apps fall back to IPv4; with `tun` it is still taken in, so nothing leaves around dotdash |
 | `gateway` | `false` | under `tun`, this machine is its LAN's gateway, and `doctor` checks the host for it ([gateway](tun.md#a-gateway-for-the-lan)) |
-| `dns_listen` | `off` | under `tun`, the address and port that answers the LAN's DNS, such as `192.168.1.10:53` |
+| `dns_listen` | `none` | under `tun`, the address and port that answers the LAN's DNS, such as `192.168.1.10:53` |
 
 Profiles (`installation.profile`): `tun`, the [whole machine](tun.md).
 
