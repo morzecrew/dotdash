@@ -71,6 +71,39 @@ if sudo grep -q 'dotdash-relay-\$n-xhttp' /opt/dotdash/current/tasks/client-conf
   echo "46-relays.sh: an own-site relay with its path adds an XHTTP link and outbound through it"
 fi
 
+# An own-site relay with CDNs in front (its relay-entry adds cdn=<host>,...): a
+# link per CDN, to the CDN on 443 under its name with the relay's path and
+# encryption, uploading by GET with the data in headers, and an outbound each.
+# The same CDNs on a relay without its XHTTP path, or a malformed field: none.
+if sudo grep -q 'dotdash-relay-\$n-cdn-' /opt/dotdash/current/tasks/client-config.sh; then
+  printf '%s\n' \
+    "198.51.100.8 relay-c.test pbkC 0123456789abcdef mlkem.c own-site 00112233445566778899aabbccddeeff cdn=cdn-a.test,cdn-b.test" \
+    "198.51.100.10 site-e.test pbkE 0011223344556677 mlkem.e cdn=cdn-e.test" \
+    "198.51.100.11 relay-f.test pbkF 0011223344556677 mlkem.f own-site 00112233445566778899aabbccddeeff cdn=bad_name!" |
+    sudo morzer config set --set-file relays=- >/dev/null
+  text=$(out)
+  clinks=$(grep '^vless://.*%5Brelay%20198.51.100.8%20cdn%20' <<<"${text}" || true)
+  [ "$(grep -c . <<<"${clinks}")" = $((2 * devices)) ] || die "expected a link per CDN in front of the relay for each device"
+  l=$(grep -m1 'cdn%20cdn-b.test%5D$' <<<"${clinks}") || die "no link through the relay's second CDN"
+  got="$(param "$l" security) $(param "$l" type) $(param "$l" sni) $(param "$l" host) $(param "$l" path) $(param "$l" encryption) $(param "$l" mode)"
+  [ "${got}" = "tls xhttp cdn-b.test cdn-b.test %2F00112233445566778899aabbccddeeff mlkem.c packet-up" ] && [[ $l == *@cdn-b.test:443\?* ]] ||
+    die "the link through the relay's CDN is not packet-up to the CDN with the relay's path and encryption: ${got}"
+  [[ $(param "$l" extra) == *uplinkDataPlacement%22%3A%22header%22*uplinkHTTPMethod%22%3A%22GET%22* ]] ||
+    die "the link through the relay's CDN does not upload by GET with the data in headers"
+  ! grep -qE '%5Brelay%20198\.51\.100\.1[01]%20cdn%20' <<<"${text}" ||
+    die "a relay without its XHTTP path, or with a malformed cdn= field, got CDN links"
+  awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"${text}" | jq -e '
+    [.outbounds[] | select(.tag | startswith("dotdash-relay-1-cdn-"))] as $c
+    | ($c | map(.settings.address)) == ["cdn-a.test", "cdn-b.test"]
+      and ($c | all(.settings.encryption == "mlkem.c"
+        and .streamSettings.xhttpSettings.path == "/00112233445566778899aabbccddeeff"
+        and .streamSettings.xhttpSettings.mode == "packet-up"
+        and .streamSettings.xhttpSettings.uplinkHTTPMethod == "GET"
+        and .streamSettings.xhttpSettings.uplinkDataPlacement == "header"))' >/dev/null ||
+    die "the config lacks a packet-up outbound per CDN in front of the relay"
+  echo "46-relays.sh: CDNs in front of an own-site relay add a packet-up link and outbound each; none without its path"
+fi
+
 # A relay with mKCP (its relay-entry ends the line with kcp=<port>,<header>,
 # <seed>): an mKCP link through it too, to its port with its header and seed,
 # and an outbound with the same masks.

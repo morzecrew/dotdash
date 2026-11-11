@@ -57,6 +57,8 @@ services:
     pids_limit: 64
     environment:
       SITE: ${DOTDASH_RELAY_PARAM_SITE:-}
+      # Here rather than under own-site, so relay-entry can say it needs it.
+      CDN_HOSTS: ${DOTDASH_RELAY_PARAM_CDN_HOSTS:-none}
     volumes:
       - ${DOTDASH_RELAY_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image

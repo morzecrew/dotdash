@@ -30,6 +30,7 @@ xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghc
 set_config() { sudo morzer config set "$@" >/dev/null || die "config set $* failed"; }
 
 restore() {
+  sudo morzer config set cdn_hosts=none >/dev/null 2>&1 || true
   sudo morzer config unset installation.profile >/dev/null 2>&1 || true
   sudo docker rm -f relay-rig-own relay-rig-xhttp >/dev/null 2>&1 || true
 }
@@ -117,9 +118,36 @@ if sudo jq -e '[.inbounds[].tag] | index("devices-xhttp")' /etc/dotdash-relay/xr
   gets_out 18084 || die "a device did not get out over XHTTP behind the relay's site: $(sudo docker logs relay-rig-xhttp 2>&1 | tail -2)"
   sudo docker rm -f relay-rig-xhttp >/dev/null
   echo "${0##*/}: a device gets out over XHTTP behind the relay's site, with the path relay-entry gives"
+
+  # cdn_hosts: relay-entry ends the line with cdn=<names>. The rig has no CDN,
+  # so the relay's site stands in for one under its own name, as the server's
+  # 16-cdn.sh does: a device shaped for a CDN (packet-up, uploads by GET with
+  # the data in headers) gets out, so the relay reads uploads placed so.
+  if sudo grep -q '^  cdn_hosts:' /opt/dotdash-relay/current/manifest.yaml; then
+    set_config "cdn_hosts=${domain},cdn-b.test"
+    [[ $(entry) == *" cdn=${domain},cdn-b.test" ]] || die "relay-entry does not end the line with cdn=${domain},cdn-b.test: $(entry | grep -o 'cdn=[^ ]*' || true)"
+    jq '.outbounds[0].streamSettings.xhttpSettings += {mode: "packet-up", uplinkHTTPMethod: "GET",
+        uplinkDataPlacement: "header", uplinkChunkSize: 16384, scMaxEachPostBytes: 32768, scMinPostsIntervalMs: 10}' \
+      /rig/relay/xhttp/config.json >/rig/relay/xhttp/cdn.json
+    mv /rig/relay/xhttp/cdn.json /rig/relay/xhttp/config.json
+    chmod -R a+rX /rig/relay/xhttp
+    sudo docker run -d --name relay-rig-xhttp --network host -v /rig/relay/xhttp:/etc/xray:ro \
+      -v /rig/relay/xhttp-ca:/ca:ro "${xray}" >/dev/null
+    gets_out 18084 || die "a device shaped for a CDN did not get out behind the relay's site: $(sudo docker logs relay-rig-xhttp 2>&1 | tail -2)"
+    sudo docker rm -f relay-rig-xhttp >/dev/null
+    set_config cdn_hosts=none
+    [[ $(entry) != *cdn=* ]] || die "relay-entry still prints a cdn= field with cdn_hosts=none"
+    echo "${0##*/}: cdn_hosts ends the line with cdn=, and a device shaped for a CDN gets out behind the relay's site"
+  fi
 fi
 
 sudo morzer config unset installation.profile >/dev/null || die "could not drop the own-site profile"
+if sudo grep -q '^  cdn_hosts:' /opt/dotdash-relay/current/manifest.yaml; then
+  set_config cdn_hosts=cdn-b.test
+  [[ $(entry) != *cdn=* ]] || die "relay-entry prints a cdn= field without the own-site profile"
+  set_config cdn_hosts=none
+  echo "${0##*/}: without the profile, relay-entry leaves cdn_hosts out"
+fi
 device 18083 www.gstatic.com
 gets_out 18083 || die "a device on the borrowed site did not get out once the profile was dropped"
 sudo docker rm -f relay-rig-own >/dev/null

@@ -73,6 +73,29 @@ One request from the state to the provider would then list every way in. A
 [relay with its own site](../relay/install.md#6-devices) serves the
 subscription inside the country with nothing in between reading it.
 
+### In front of a relay
+
+A CDN can front a [relay with a site of its own](../relay/install.md#1-pick-the-site)
+instead of this server. The CDN's account then names the relay, which is
+cheap to replace, rather than this server and its upstream.
+
+1. **At the CDN**, as above, with the relay's domain as the origin:
+   `https://relay.example.ru`, with the `Host` header sent to it set to
+   `relay.example.ru`.
+2. **On the relay**, list the names devices use, then print its line again
+   ([its line](../relay/install.md#4-on-the-relay-its-line)); it now ends in
+   `cdn=cdn.example.ru`:
+
+    ```sh
+    sudo morzer config set cdn_hosts=cdn.example.ru
+    sudo morzer task run relay-entry --output -- <address>
+    ```
+
+3. **Here**, replace the relay's line in `relays`
+   (`sudo morzer config edit relays`). Devices get a
+   `phone [relay <host> cdn cdn.example.ru]` link and an outbound, shaped as
+   above, and [pools](devices.md#pools) take the relay's CDN names as members.
+
 ## A foreign CDN, against IP blocking
 
 The XHTTP link works through a CDN that proxies HTTP/2 to

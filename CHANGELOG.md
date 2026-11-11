@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- CDNs in front of a relay: the relay's new `cdn_hosts` parameter (with the `own-site` profile) ends the line `relay-entry` prints with `cdn=<names>`, and the server gives each device an XHTTP link and an outbound through each CDN to the relay's own site, shaped as for `cdn_hosts` (packet-up, uploads by `GET` with the data in headers), named `[relay <host> cdn <name>]`. The CDN's account then names a relay rather than the server. Pools take a relay's CDN names as members; a server from before ignores the field.
+
 - A QUIC-shaped opener in front of mKCP, for networks that let QUIC out: the new `kcp_open` parameter (`quic`) adds a finalmask `noise` mask that sends a QUIC-Initial-shaped packet before the flow, on the server, the relays (a fourth `kcp=` field on `relay-entry`'s line carries it) and the canary. `client-config` and the subscriptions give such a link the whole mask list in `fm=` in place of `headerType` and `seed`, for v2rayN and v2rayNG. The opener is a fixed shape, off unless set; measure it on a canary before relying on it.
 
 - The canary's `measure` adds throughput: three downloads of the new `download_url` parameter (1 MB from speed.cloudflare.com unless set, `https://` only, `none` to skip) through each transport, with how many completed and the median Mbit/s.

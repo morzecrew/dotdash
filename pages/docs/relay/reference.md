@@ -9,6 +9,7 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `site` | `none` | without the `own-site` profile, a site next to the relay, in its own network, on TLS 1.3 and HTTP/2: devices send its name, and probes get its handshake |
 | `site_dir` | `/srv/dotdash-relay` | with `own-site`, your own pages, served in place of the bundled one; readable by uid 65532 |
 | `cert_issuer` | `acme` | with `own-site`, `acme` (Let's Encrypt, over port 80) or `internal` (Caddy's own CA, for a machine the internet can't reach) |
+| `cdn_hosts` | `none` | with `own-site`, the names devices use for [domestic CDNs](../server/cdn.md#in-front-of-a-relay) in front of the relay, comma-separated; `relay-entry` adds them to the relay's line |
 | `dotdash_servers` | none, given at `init` | the dotdash servers sharing one set of keys, comma-separated domains; the relay uses whichever answers fastest |
 | `dotdash_port` | `443` | the servers' `https_port` |
 | `dotdash_public_key` | none, given at `init` | the servers' REALITY public key, the `pbk` of their links |
@@ -25,7 +26,10 @@ domain (`--domain` at `init`, or `installation.domains`), and REALITY hands it
 every connection without the relay's keys. It publishes port 80 too, for the
 certificate. The site also serves devices their subscriptions, fetched from
 the servers through the relay's tunnel, and XHTTP on the secret path
-`xhttp_path`, which `init` generates. See
+`xhttp_path`, which `init` generates. With `cdn_hosts` set, `relay-entry`
+ends the relay's line with `cdn=<name>,...`, and the server gives each device
+a `[relay <host> cdn <name>]` link through each
+([CDN in front of a relay](../server/cdn.md#in-front-of-a-relay)). See
 [Set up a relay](install.md#1-pick-the-site).
 
 `installation.profile=mkcp` (with a site of its own: `own-site,mkcp`): the

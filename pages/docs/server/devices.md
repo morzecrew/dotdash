@@ -22,8 +22,9 @@ Per device it prints:
   [XHTTP with REALITY](xhttp-reality.md) on; `phone [kcp]` with
   [mKCP](mkcp.md) on; and `phone [relay <host>]` for
   each [relay](../relay/index.md), with `phone [relay <host> xhttp]` before it
-  through a relay with a site of its own, and `phone [relay <host> kcp]`
-  after it through a relay with mKCP. XHTTP comes first everywhere: an
+  through a relay with a site of its own, `phone [relay <host> cdn <name>]`
+  after that through each [CDN in front of it](cdn.md#in-front-of-a-relay),
+  and `phone [relay <host> kcp]` after it through a relay with mKCP. XHTTP comes first everywhere: an
   app tends to try the first link, and REALITY over raw TCP is the transport
   blocked most often;
 - an Xray config for v2rayN or v2rayNG (as a custom config) that uses
@@ -76,7 +77,8 @@ Every device gets every [relay](../relay/index.md) and [CDN](cdn.md) host, so
 one leaked device gives away all of them. Pools split them: a device in a
 pool gets its pool's relays and CDN hosts, and those in no pool. One line per
 pool in the `pools` parameter: the pool's name, then its devices (their names
-as written in `vless_clients`), relay hosts (as in `relays`) and CDN hosts:
+as written in `vless_clients`), relay hosts (as in `relays`) and CDN hosts,
+a relay's own (its `cdn=` names) included:
 
 ```sh
 sudo morzer config edit pools
@@ -89,6 +91,7 @@ friends anna boris relay2.example.ru
 
 - A device in no pool, or without a name, gets every relay and CDN host, as
   before. A relay or CDN host in no pool goes to every device.
+- A relay's CDN hosts go only to devices that get the relay.
 - A device, relay or CDN host may be in several pools.
 - `client-config` and the subscriptions follow the change. A device that
   fetched its links before keeps them until it refreshes, and a device's
