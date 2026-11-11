@@ -26,11 +26,24 @@ if [ -n "${KCP_PORT:-}" ]; then
   kcp=" kcp=${KCP_PORT},${KCP_HEADER:-dtls},$(cat /run/secrets/kcp_seed)"
   [ "${KCP_OPEN:-none}" != quic ] || kcp="${kcp},quic"
 else kcp=; fi
+# cdn_hosts: domestic CDNs in front of this relay's own site, each fetching
+# from https://SITE with Host set to it, so client-config gives each device an
+# XHTTP link through each, shaped as for the server's cdn_hosts. After kcp=,
+# where a server from before it reads no field.
+cdn=
+hosts=$(printf '%s' "${CDN_HOSTS:-none}" | tr -d ' ')
+case $hosts in
+  none | '') ;;
+  ,* | *, | *,,* | *[!A-Za-z0-9.,-]*)
+    echo "cdn_hosts is not <name>[,<name>]: $hosts; leaving it out" >&2 ;;
+  *) if [ "${OWN_SITE:-}" = true ]; then cdn=" cdn=$hosts"
+     else echo "cdn_hosts needs the own-site profile, whose site a CDN fetches from; leaving it out" >&2; fi ;;
+esac
 
 cat <<EOF
 On the dotdash server, add this line to the relays parameter (sudo morzer
 config edit relays):
-${host} ${SITE} ${pbk} ${sid} ${enc}${own}${kcp}
+${host} ${SITE} ${pbk} ${sid} ${enc}${own}${kcp}${cdn}
 
 A dotdash-canary checks this relay as it checks the server, without the xhttp
 profiles, with the vless_id of any device on the relay:

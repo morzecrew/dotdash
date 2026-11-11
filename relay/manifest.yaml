@@ -104,6 +104,11 @@ parameters:
     values: [acme, internal]
     default: acme
     description: "With the own-site profile, where its certificate comes from: acme is Let's Encrypt, over port 80; internal is Caddy's own CA, for a machine the internet cannot reach"
+  # No services: relay-entry, a task, is all that reads it.
+  cdn_hosts:
+    type: string
+    default: none
+    description: "With the own-site profile, the names devices use for domestic CDNs in front of this relay, comma-separated, each fetching from https://<the relay's domain> with the Host header set to it; relay-entry carries them to the server's relays line, and devices get an XHTTP link through each. none for none"
   dotdash_servers:
     type: string
     description: "The dotdash servers sharing one set of keys (dotdash's servers), comma-separated domains, each sent as its TLS server name; with several, the relay uses whichever answers fastest"
