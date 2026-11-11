@@ -43,6 +43,8 @@ A 0.6.0 server's subscription may carry mKCP links, which mihomo cannot use: it 
 
 ### Changed
 
+- The server's and relays' sites answer under any name, so a CDN in front works on its defaults: no `Host` header to set at the provider. A CDN that sends its own name as SNI gets the site's certificate rather than a failed handshake.
+
 - Links list XHTTP before REALITY, for each server and each relay, in `client-config` and the subscriptions: an app tends to try the first link, and REALITY over raw TCP is blocked most often.
 
 - Subscriptions are served with `Cache-Control: no-store`, so nothing between the server and a device keeps a copy.
