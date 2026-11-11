@@ -1837,6 +1837,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Changed
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1866,7 +1877,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Changed
@@ -1955,7 +1966,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Changed
@@ -2005,7 +2016,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#changed_2" class="md-nav__link">
+  <a href="#changed_3" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Changed
@@ -2044,7 +2055,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_3" class="md-nav__link">
+  <a href="#changed_4" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Changed
@@ -2083,7 +2094,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_4" class="md-nav__link">
+  <a href="#changed_5" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Changed
@@ -2228,6 +2239,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Changed
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2257,7 +2279,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Changed
@@ -2346,7 +2368,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Changed
@@ -2396,7 +2418,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#changed_2" class="md-nav__link">
+  <a href="#changed_3" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Changed
@@ -2435,7 +2457,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_3" class="md-nav__link">
+  <a href="#changed_4" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Changed
@@ -2474,7 +2496,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_4" class="md-nav__link">
+  <a href="#changed_5" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Changed
@@ -2627,6 +2649,10 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <ul>
 <li>An <code>ipv6</code> parameter on the server, the relay and the client: <code>block</code> keeps IPv6 out. The client refuses it before any rule, the relay drops it, and the server resolves names to IPv4 only and blocks IPv6 addresses, so dual-stack sites still work over IPv4.</li>
 </ul>
+<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The server, the relay and the canary run Xray 26.11.9, and the client mihomo 1.19.34.</li>
+</ul>
 <h2 id="060-2026-11-11">[0.6.0] - 2026-11-11<a class="headerlink" href="#060-2026-11-11" title="Permanent link">&para;</a></h2>
 <h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2676,7 +2702,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>A tunnel's config has a secret of its own, so it is set while the proxy is still the upstream, and the switch never leaves the gate without a working upstream: one <code>config set</code> for WireGuard, the profile and then the protocol for OpenVPN.</p>
 </li>
 </ul>
-<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
+<h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
 <p>The server's and relays' sites answer under any name, so a CDN in front works on its defaults: no <code>Host</code> header to set at the provider. A CDN that sends its own name as SNI gets the site's certificate rather than a failed handshake.</p>
@@ -2732,7 +2758,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>mihomo connects over REALITY and XHTTP with REALITY: those links now carry <code>support-x25519mlkem768=true</code>, without which mihomo leaves out the key share Xray's REALITY requires and fails with "REALITY authentication failed". Other clients pass over the parameter.</p>
 </li>
 </ul>
-<h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">&para;</a></h3>
+<h3 id="changed_2">Changed<a class="headerlink" href="#changed_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
 <p>Every bundle of this release needs morzer 0.15.0: run <code>sudo morzer self-update</code> before updating. An older manager refuses the release and changes nothing.</p>
@@ -2759,7 +2785,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><code>bootstrap.sh</code> installs morzer 0.15.0, which the bundles require. It installed 0.13.0, so <code>init</code> on a freshly prepared host refused the release until <code>morzer self-update</code>.</li>
 </ul>
 <h2 id="040-2026-11-08">[0.4.0] - 2026-11-08<a class="headerlink" href="#040-2026-11-08" title="Permanent link">&para;</a></h2>
-<h3 id="changed_2">Changed<a class="headerlink" href="#changed_2" title="Permanent link">&para;</a></h3>
+<h3 id="changed_3">Changed<a class="headerlink" href="#changed_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
 <p>The upstream proxy is one secret, <code>upstream</code>, holding <code>user:pass@host:port</code>, so changing proxy is one restart; <code>upstream_host</code>, <code>upstream_port</code>, <code>upstream_username</code> and <code>upstream_password</code> no longer work. Run <code>sudo morzer secret set upstream</code> before updating: an update without it is refused.</p>
@@ -2790,7 +2816,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>An optional second proxy for IPv6 (<code>upstream6_host</code>, with its own credentials), for an upstream that leaves over IPv4 only: destinations with an IPv6 address, sites with both included, leave through it, and the rest through the first. Neither falls back to the other, and <code>doctor</code> names the one that fails.</p>
 </li>
 </ul>
-<h3 id="changed_3">Changed<a class="headerlink" href="#changed_3" title="Permanent link">&para;</a></h3>
+<h3 id="changed_4">Changed<a class="headerlink" href="#changed_4" title="Permanent link">&para;</a></h3>
 <ul>
 <li>The Xray config <code>client-config</code> prints checks all its entries at once every 30 seconds, where it checked one a minute in turn, so it leaves an entry that stops answering within about half a minute instead of up to several minutes. That is two small requests a minute per entry.</li>
 </ul>
@@ -2822,7 +2848,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>The Xray config <code>client-config</code> prints answers the device's DNS, in an app's VPN or TUN mode, over DNS-over-HTTPS (<code>dns_resolver</code>) through the tunnel, with IPv4 addresses only: lookups no longer reach the local network's resolver or need the upstream to relay UDP. The README covers each app.</p>
 </li>
 </ul>
-<h3 id="changed_4">Changed<a class="headerlink" href="#changed_4" title="Permanent link">&para;</a></h3>
+<h3 id="changed_5">Changed<a class="headerlink" href="#changed_5" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
 <p>Both bundles need morzer 0.14.0 or later. <code>sudo morzer secret edit vless_clients</code> then opens the list as plain text, one client per line, and <code>init</code> needs no <code>--product</code>.</p>
