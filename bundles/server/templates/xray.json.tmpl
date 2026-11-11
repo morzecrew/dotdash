@@ -46,6 +46,12 @@ hands that proxy IPv6 addresses only (ForceIPv6) and the first IPv4 only
 (ForceIPv4). Neither falls back to the other. With resolve=upstream only IPv6
 literals match. IPv6 UDP is blocked: the hop to it carries none. */ -}}
 {{- $v6 := ne .Parameters.upstream6_protocol "none" -}}
+{{- /* ipv6=block: no IPv6 destination leaves. DNS asks for A records only and
+the upstream is handed IPv4 addresses only (ForceIPv4), so a dual-stack name
+still works over IPv4; what is left, IPv6 literals, the ::/0 rule blocks. With
+resolve=upstream the upstream resolves names itself, so only literals stop. */ -}}
+{{- $block6 := eq .Parameters.ipv6 "block" -}}
+{{- if and $block6 $v6 }}{{ required "ipv6=block leaves nothing for the IPv6 proxy: set upstream6_protocol=none, or ipv6=allow" "" }}{{ end -}}
 {{- /* A WireGuard or OpenVPN upstream is a tunnel, which carries UDP as it
 carries TCP; a proxy carries UDP only as SOCKS5 with upstream_udp. */ -}}
 {{- $tunnel := or (eq .Parameters.upstream_protocol "wireguard") (eq .Parameters.upstream_protocol "openvpn") -}}
@@ -59,7 +65,7 @@ carries TCP; a proxy carries UDP only as SOCKS5 with upstream_udp. */ -}}
 {
   "log": {"loglevel": "{{ .Parameters.log_level }}", "access": "none", "dnsLog": false},
 {{- if $gateway }}
-  "dns": {"servers": ["{{ .Parameters.dns_resolver }}"], "queryStrategy": "UseIP", "disableFallback": true, "tag": "dns"},
+  "dns": {"servers": ["{{ .Parameters.dns_resolver }}"], "queryStrategy": "{{ if $block6 }}UseIPv4{{ else }}UseIP{{ end }}", "disableFallback": true, "tag": "dns"},
 {{- end }}
   "inbounds": [
     {
@@ -174,7 +180,7 @@ carries TCP; a proxy carries UDP only as SOCKS5 with upstream_udp. */ -}}
     }
   ],
   "outbounds": [
-    {"tag": "upstream", "protocol": "socks", "settings": {"address": "gate", "port": 1080}{{ if $gateway }}, "targetStrategy": "{{ if $v6 }}ForceIPv4{{ else }}ForceIPv4v6{{ end }}"{{ end }}},
+    {"tag": "upstream", "protocol": "socks", "settings": {"address": "gate", "port": 1080}{{ if $gateway }}, "targetStrategy": "{{ if or $v6 $block6 }}ForceIPv4{{ else }}ForceIPv4v6{{ end }}"{{ end }}},
     {"tag": "block", "protocol": "blackhole"}
 {{- if $v6 }},
     {"tag": "upstream6", "protocol": "socks", "settings": {"address": "gate", "port": 1081}{{ if $gateway }}, "targetStrategy": "ForceIPv6"{{ end }}}
@@ -194,6 +200,9 @@ carries TCP; a proxy carries UDP only as SOCKS5 with upstream_udp. */ -}}
 {{- if $v6 }}
       {"network": "udp", "ip": ["::/0"], "outboundTag": "block"},
       {"ip": ["::/0"], "outboundTag": "upstream6"},
+{{- end }}
+{{- if $block6 }}
+      {"ip": ["::/0"], "outboundTag": "block"},
 {{- end }}
       {"network": "tcp,udp", "outboundTag": "upstream"}
     ]
