@@ -21,7 +21,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@dc33ba03f86a4ed2264db186f6abbf3012c9f58a # v0.10.1
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@759760aded983198badd37208339f6a50dc55930 # v0.11.0
     with:
       morzer-version: "0.16.0"
       ref: ${{ github.sha }}

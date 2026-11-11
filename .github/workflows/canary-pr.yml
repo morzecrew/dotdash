@@ -21,9 +21,8 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@0cc66ee7b025debed21519852b28da43f0af58b5 # feat/smoke-update-input (testing; v0.11.0 replaces it)
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@759760aded983198badd37208339f6a50dc55930 # v0.11.0
     with:
-      bundle-ci-ref: 0cc66ee7b025debed21519852b28da43f0af58b5 # testing; dropped with v0.11.0
       morzer-version: "0.16.0"
       ref: ${{ github.sha }}
       version: 0.0.0-pr.${{ github.event.pull_request.number }}

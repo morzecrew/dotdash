@@ -14,7 +14,7 @@ jobs:
   retention:
     # The package API is reached with GH_PAT, not GITHUB_TOKEN.
     permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@dc33ba03f86a4ed2264db186f6abbf3012c9f58a # v0.10.1
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@759760aded983198badd37208339f6a50dc55930 # v0.11.0
     with:
       package: dotdash-server
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
@@ -23,7 +23,7 @@ jobs:
 
   canary:
     permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@dc33ba03f86a4ed2264db186f6abbf3012c9f58a # v0.10.1
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@759760aded983198badd37208339f6a50dc55930 # v0.11.0
     with:
       package: dotdash-canary
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
@@ -32,7 +32,7 @@ jobs:
 
   relay:
     permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@dc33ba03f86a4ed2264db186f6abbf3012c9f58a # v0.10.1
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@759760aded983198badd37208339f6a50dc55930 # v0.11.0
     with:
       package: dotdash-relay
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
@@ -41,7 +41,7 @@ jobs:
 
   client:
     permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@dc33ba03f86a4ed2264db186f6abbf3012c9f58a # v0.10.1
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@759760aded983198badd37208339f6a50dc55930 # v0.11.0
     with:
       package: dotdash-client
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
