@@ -2074,6 +2074,11 @@
 <td>with <code>own-site</code>, <code>acme</code> (Let's Encrypt, over port 80) or <code>internal</code> (Caddy's own CA, for a machine the internet can't reach)</td>
 </tr>
 <tr>
+<td><code>cdn_hosts</code></td>
+<td><code>none</code></td>
+<td>with <code>own-site</code>, the names devices use for <a href="../../server/cdn/#in-front-of-a-relay">domestic CDNs</a> in front of the relay, comma-separated; <code>relay-entry</code> adds them to the relay's line</td>
+</tr>
+<tr>
 <td><code>dotdash_servers</code></td>
 <td>none, given at <code>init</code></td>
 <td>the dotdash servers sharing one set of keys, comma-separated domains; the relay uses whichever answers fastest</td>
@@ -2121,7 +2126,10 @@ domain (<code>--domain</code> at <code>init</code>, or <code>installation.domain
 every connection without the relay's keys. It publishes port 80 too, for the
 certificate. The site also serves devices their subscriptions, fetched from
 the servers through the relay's tunnel, and XHTTP on the secret path
-<code>xhttp_path</code>, which <code>init</code> generates. See
+<code>xhttp_path</code>, which <code>init</code> generates. With <code>cdn_hosts</code> set, <code>relay-entry</code>
+ends the relay's line with <code>cdn=&lt;name&gt;,...</code>, and the server gives each device
+a <code>[relay &lt;host&gt; cdn &lt;name&gt;]</code> link through each
+(<a href="../../server/cdn/#in-front-of-a-relay">CDN in front of a relay</a>). See
 <a href="../install/#1-pick-the-site">Set up a relay</a>.</p>
 <p><code>installation.profile=mkcp</code> (with a site of its own: <code>own-site,mkcp</code>): the
 relay serves <a href="../../server/mkcp/">mKCP</a> on UDP <code>kcp_port</code> too, under its own

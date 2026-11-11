@@ -1001,6 +1001,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="A domestic CDN, for allowlists">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-front-of-a-relay" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        In front of a relay
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1932,6 +1949,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="A domestic CDN, for allowlists">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-front-of-a-relay" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        In front of a relay
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2188,6 +2222,29 @@ read it in the clear: every link, the device's keys, every relay and CDN name.
 One request from the state to the provider would then list every way in. A
 <a href="../../relay/install/#6-devices">relay with its own site</a> serves the
 subscription inside the country with nothing in between reading it.</p>
+<h3 id="in-front-of-a-relay">In front of a relay<a class="headerlink" href="#in-front-of-a-relay" title="Permanent link">&para;</a></h3>
+<p>A CDN can front a <a href="../../relay/install/#1-pick-the-site">relay with a site of its own</a>
+instead of this server. The CDN's account then names the relay, which is
+cheap to replace, rather than this server and its upstream.</p>
+<ol>
+<li><strong>At the CDN</strong>, as above, with the relay's domain as the origin:
+   <code>https://relay.example.ru</code>, with the <code>Host</code> header sent to it set to
+   <code>relay.example.ru</code>.</li>
+<li>
+<p><strong>On the relay</strong>, list the names devices use, then print its line again
+   (<a href="../../relay/install/#4-on-the-relay-its-line">its line</a>); it now ends in
+   <code>cdn=cdn.example.ru</code>:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">cdn_hosts</span><span class="o">=</span>cdn.example.ru
+sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>&lt;address&gt;
+</code></pre></div>
+</li>
+<li>
+<p><strong>Here</strong>, replace the relay's line in <code>relays</code>
+   (<code>sudo morzer config edit relays</code>). Devices get a
+   <code>phone [relay &lt;host&gt; cdn cdn.example.ru]</code> link and an outbound, shaped as
+   above, and <a href="../devices/#pools">pools</a> take the relay's CDN names as members.</p>
+</li>
+</ol>
 <h2 id="a-foreign-cdn-against-ip-blocking">A foreign CDN, against IP blocking<a class="headerlink" href="#a-foreign-cdn-against-ip-blocking" title="Permanent link">&para;</a></h2>
 <p>The XHTTP link works through a CDN that proxies HTTP/2 to
 <code>https://example.com</code>: put the CDN's name in the link's address. Check its

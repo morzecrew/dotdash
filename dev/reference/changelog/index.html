@@ -2548,6 +2548,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>CDNs in front of a relay: the relay's new <code>cdn_hosts</code> parameter (with the <code>own-site</code> profile) ends the line <code>relay-entry</code> prints with <code>cdn=&lt;names&gt;</code>, and the server gives each device an XHTTP link and an outbound through each CDN to the relay's own site, shaped as for <code>cdn_hosts</code> (packet-up, uploads by <code>GET</code> with the data in headers), named <code>[relay &lt;host&gt; cdn &lt;name&gt;]</code>. The CDN's account then names a relay rather than the server. Pools take a relay's CDN names as members; a server from before ignores the field.</p>
+</li>
+<li>
 <p>A QUIC-shaped opener in front of mKCP, for networks that let QUIC out: the new <code>kcp_open</code> parameter (<code>quic</code>) adds a finalmask <code>noise</code> mask that sends a QUIC-Initial-shaped packet before the flow, on the server, the relays (a fourth <code>kcp=</code> field on <code>relay-entry</code>'s line carries it) and the canary. <code>client-config</code> and the subscriptions give such a link the whole mask list in <code>fm=</code> in place of <code>headerType</code> and <code>seed</code>, for v2rayN and v2rayNG. The opener is a fixed shape, off unless set; measure it on a canary before relying on it.</p>
 </li>
 <li>

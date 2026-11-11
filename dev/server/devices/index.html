@@ -2078,8 +2078,9 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
   <a href="../xhttp-reality/">XHTTP with REALITY</a> on; <code>phone [kcp]</code> with
   <a href="../mkcp/">mKCP</a> on; and <code>phone [relay &lt;host&gt;]</code> for
   each <a href="../../relay/">relay</a>, with <code>phone [relay &lt;host&gt; xhttp]</code> before it
-  through a relay with a site of its own, and <code>phone [relay &lt;host&gt; kcp]</code>
-  after it through a relay with mKCP. XHTTP comes first everywhere: an
+  through a relay with a site of its own, <code>phone [relay &lt;host&gt; cdn &lt;name&gt;]</code>
+  after that through each <a href="../cdn/#in-front-of-a-relay">CDN in front of it</a>,
+  and <code>phone [relay &lt;host&gt; kcp]</code> after it through a relay with mKCP. XHTTP comes first everywhere: an
   app tends to try the first link, and REALITY over raw TCP is the transport
   blocked most often;</li>
 <li>an Xray config for v2rayN or v2rayNG (as a custom config) that uses
@@ -2124,7 +2125,8 @@ lack VLESS Encryption and the key share Xray's REALITY requires.</p>
 one leaked device gives away all of them. Pools split them: a device in a
 pool gets its pool's relays and CDN hosts, and those in no pool. One line per
 pool in the <code>pools</code> parameter: the pool's name, then its devices (their names
-as written in <code>vless_clients</code>), relay hosts (as in <code>relays</code>) and CDN hosts:</p>
+as written in <code>vless_clients</code>), relay hosts (as in <code>relays</code>) and CDN hosts,
+a relay's own (its <code>cdn=</code> names) included:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>edit<span class="w"> </span>pools
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>family  mom dad relay1.example.ru cdn1.example.ru
@@ -2133,6 +2135,7 @@ friends anna boris relay2.example.ru
 <ul>
 <li>A device in no pool, or without a name, gets every relay and CDN host, as
   before. A relay or CDN host in no pool goes to every device.</li>
+<li>A relay's CDN hosts go only to devices that get the relay.</li>
 <li>A device, relay or CDN host may be in several pools.</li>
 <li><code>client-config</code> and the subscriptions follow the change. A device that
   fetched its links before keeps them until it refreshes, and a device's
