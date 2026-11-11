@@ -13,7 +13,7 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-xray=ghcr.io/morzecrew/xray:26.10.31@sha256:996f30a2cb6f65e1121b599afcebb1d3cb669f0ba3f22fe16c2ac9b7c6693527
+xray=ghcr.io/morzecrew/xray:26.11.9@sha256:67e1c89f35c744e95b8294d85d7edcac532c75221f8b309c0c5853f6139b5ba2
 busybox=docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
 sudo docker pull -q "${xray}" >/dev/null || die "pulling ${xray} failed"
 sudo docker pull -q "${busybox}" >/dev/null || die "pulling ${busybox} failed"
