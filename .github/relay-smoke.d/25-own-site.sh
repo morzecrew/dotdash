@@ -135,6 +135,21 @@ if sudo jq -e '[.inbounds[].tag] | index("devices-xhttp")' /etc/dotdash-relay/xr
       -v /rig/relay/xhttp-ca:/ca:ro "${xray}" >/dev/null
     gets_out 18084 || die "a device shaped for a CDN did not get out behind the relay's site: $(sudo docker logs relay-rig-xhttp 2>&1 | tail -2)"
     sudo docker rm -f relay-rig-xhttp >/dev/null
+    # A CDN on its defaults sends its own name as SNI and Host: the site
+    # answers under any name, with the relay's certificate (fallback_sni),
+    # which the device checks against the relay's domain.
+    if sudo grep -q fallback_sni /opt/dotdash-relay/current/caddy/Caddyfile; then
+      jq '.outbounds[0].streamSettings |= (.tlsSettings.serverName = "cdn-b.test"
+          | .tlsSettings.verifyPeerCertByName = "'"${domain}"'" | .xhttpSettings.host = "cdn-b.test")' \
+        /rig/relay/xhttp/config.json >/rig/relay/xhttp/cdn.json
+      mv /rig/relay/xhttp/cdn.json /rig/relay/xhttp/config.json
+      chmod -R a+rX /rig/relay/xhttp
+      sudo docker run -d --name relay-rig-xhttp --network host -v /rig/relay/xhttp:/etc/xray:ro \
+        -v /rig/relay/xhttp-ca:/ca:ro "${xray}" >/dev/null
+      gets_out 18084 || die "a device under a CDN's own name did not get out behind the relay's site: $(sudo docker logs relay-rig-xhttp 2>&1 | tail -2)"
+      sudo docker rm -f relay-rig-xhttp >/dev/null
+      echo "${0##*/}: a CDN sending its own name as SNI and Host gets through the relay's site"
+    fi
     set_config cdn_hosts=none
     [[ $(entry) != *cdn=* ]] || die "relay-entry still prints a cdn= field with cdn_hosts=none"
     echo "${0##*/}: cdn_hosts ends the line with cdn=, and a device shaped for a CDN gets out behind the relay's site"
