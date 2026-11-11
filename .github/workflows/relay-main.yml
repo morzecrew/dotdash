@@ -1,4 +1,4 @@
-# The relay's dev channel: build, sign and smoke-test every change to relay/
+# The relay's dev channel: build, sign and smoke-test every change to bundles/relay/
 # on main, then publish ghcr.io/morzecrew/dotdash-relay:<version> and move
 # :main. The jobs are bundle-ci's.
 name: relay-main
@@ -7,7 +7,7 @@ on:
   push:
     branches: [main]
     paths:
-      - relay/**
+      - bundles/relay/**
       - .github/relay-smoke.d/**
   workflow_dispatch:
 
@@ -33,8 +33,8 @@ jobs:
       # Nothing moved since the last run: the version is already published.
       on-existing: skip
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
-      bundle-dir: relay
-      version-paths: relay
+      bundle-dir: bundles/relay
+      version-paths: bundles/relay
       package: dotdash-relay
       smoke-hooks: .github/relay-smoke.d
       components: ""

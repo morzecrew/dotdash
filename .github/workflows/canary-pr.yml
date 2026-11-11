@@ -6,7 +6,7 @@ name: canary-pr
 on:
   pull_request:
     paths:
-      - canary/**
+      - bundles/canary/**
       - .github/canary-smoke.d/**
       - .github/workflows/canary-*.yml
 
@@ -30,8 +30,8 @@ jobs:
       # The key that signs, shipped as minisign.pub: init trusts it on first use.
       ship-pubkey: true
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
-      bundle-dir: canary
-      version-paths: canary
+      bundle-dir: bundles/canary
+      version-paths: bundles/canary
       package: dotdash-canary
       smoke-hooks: .github/canary-smoke.d
       components: ""

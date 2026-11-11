@@ -6,7 +6,7 @@ name: client-pr
 on:
   pull_request:
     paths:
-      - client/**
+      - bundles/client/**
       - .github/client-smoke.d/**
       - .github/workflows/client-*.yml
 
@@ -30,8 +30,8 @@ jobs:
       # The key that signs, shipped as minisign.pub: init trusts it on first use.
       ship-pubkey: true
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
-      bundle-dir: client
-      version-paths: client
+      bundle-dir: bundles/client
+      version-paths: bundles/client
       package: dotdash-client
       smoke-hooks: .github/client-smoke.d
       components: ""
