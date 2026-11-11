@@ -1,4 +1,4 @@
-# The canary's dev channel: build, sign and smoke-test every change to canary/
+# The canary's dev channel: build, sign and smoke-test every change to bundles/canary/
 # on main, then publish ghcr.io/morzecrew/dotdash-canary:<version> and move
 # :main. The jobs are bundle-ci's.
 name: canary-main
@@ -7,7 +7,7 @@ on:
   push:
     branches: [main]
     paths:
-      - canary/**
+      - bundles/canary/**
       - .github/canary-smoke.d/**
   workflow_dispatch:
 
@@ -33,8 +33,8 @@ jobs:
       # Nothing moved since the last run: the version is already published.
       on-existing: skip
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
-      bundle-dir: canary
-      version-paths: canary
+      bundle-dir: bundles/canary
+      version-paths: bundles/canary
       package: dotdash-canary
       smoke-hooks: .github/canary-smoke.d
       components: ""

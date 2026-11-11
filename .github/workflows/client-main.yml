@@ -1,4 +1,4 @@
-# The client's dev channel: build, sign and smoke-test every change to client/
+# The client's dev channel: build, sign and smoke-test every change to bundles/client/
 # on main, then publish ghcr.io/morzecrew/dotdash-client:<version> and move
 # :main. The jobs are bundle-ci's.
 name: client-main
@@ -7,7 +7,7 @@ on:
   push:
     branches: [main]
     paths:
-      - client/**
+      - bundles/client/**
       - .github/client-smoke.d/**
   workflow_dispatch:
 
@@ -33,8 +33,8 @@ jobs:
       # Nothing moved since the last run: the version is already published.
       on-existing: skip
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
-      bundle-dir: client
-      version-paths: client
+      bundle-dir: bundles/client
+      version-paths: bundles/client
       package: dotdash-client
       smoke-hooks: .github/client-smoke.d
       components: ""

@@ -6,7 +6,7 @@ name: relay-pr
 on:
   pull_request:
     paths:
-      - relay/**
+      - bundles/relay/**
       - .github/relay-smoke.d/**
       - .github/workflows/relay-*.yml
 
@@ -30,8 +30,8 @@ jobs:
       # The key that signs, shipped as minisign.pub: init trusts it on first use.
       ship-pubkey: true
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
-      bundle-dir: relay
-      version-paths: relay
+      bundle-dir: bundles/relay
+      version-paths: bundles/relay
       package: dotdash-relay
       smoke-hooks: .github/relay-smoke.d
       components: ""
