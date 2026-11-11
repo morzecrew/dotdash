@@ -50,8 +50,8 @@ literals match. IPv6 UDP is blocked: the hop to it carries none. */ -}}
 carries TCP; a proxy carries UDP only as SOCKS5 with upstream_udp. */ -}}
 {{- $tunnel := or (eq .Parameters.upstream_protocol "wireguard") (eq .Parameters.upstream_protocol "openvpn") -}}
 {{- $udp := or $tunnel (and (eq (print .Parameters.upstream_udp) "true") (eq .Parameters.upstream_protocol "socks")) -}}
-{{- $withXdns := or (has "xdns" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
-{{- $xhttpReality := or (has "xhttp-reality" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
+{{- $withXdns := has "xdns" .Profiles -}}
+{{- $xhttpReality := has "xhttp-reality" .Profiles -}}
 {{- $kcp := has "mkcp" .Profiles -}}
 {{- $kcpOpen := and $kcp (eq .Parameters.kcp_open "quic") -}}
 {{- $xdns := .Parameters.xdns_domain -}}

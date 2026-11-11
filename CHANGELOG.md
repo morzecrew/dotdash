@@ -7,21 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-11
+
 ### Added
 
-- CDNs in front of a relay: the relay's new `cdn_hosts` parameter (with the `own-site` profile) ends the line `relay-entry` prints with `cdn=<names>`, and the server gives each device an XHTTP link and an outbound through each CDN to the relay's own site, shaped as for `cdn_hosts` (packet-up, uploads by `GET` with the data in headers), named `[relay <host> cdn <name>]`. The CDN's account then names a relay rather than the server. Pools take a relay's CDN names as members; a server from before ignores the field.
+- CDNs in front of a relay: with the `own-site` profile, the relay's new `cdn_hosts` parameter adds `cdn=<names>` to its line, and devices get an XHTTP link through each CDN, shaped as for the server's `cdn_hosts`. The CDN's account then names a relay rather than the server, and pools take these names too.
 
-- A QUIC-shaped opener in front of mKCP, for networks that let QUIC out: the new `kcp_open` parameter (`quic`) adds a finalmask `noise` mask that sends a QUIC-Initial-shaped packet before the flow, on the server, the relays (a fourth `kcp=` field on `relay-entry`'s line carries it) and the canary. `client-config` and the subscriptions give such a link the whole mask list in `fm=` in place of `headerType` and `seed`, for v2rayN and v2rayNG. The opener is a fixed shape, off unless set; measure it on a canary before relying on it.
+- A QUIC-shaped opener in front of mKCP: the new `kcp_open` parameter (`quic`) sends a QUIC-Initial-shaped packet before the flow, on the server, relays and canary; links carry it in `fm=` for v2rayN and v2rayNG. It is a fixed shape, off unless set, and no help where QUIC itself is blocked; measure it on a canary first.
 
 - The canary's `measure` adds throughput: three downloads of the new `download_url` parameter (1 MB from speed.cloudflare.com unless set, `https://` only, `none` to skip) through each transport, with how many completed and the median Mbit/s.
 
-- VLESS over mKCP, an opt-in UDP transport for networks that block the TCP ones: the new `mkcp` profile serves it on `kcp_port` (8447/udp), its packets encrypted under the new `kcp_seed` secret and starting with a fake `kcp_header` (`dtls` unless set, a DTLS 1.2 record header). `client-config` and the subscriptions add a `[kcp]` link and outbound per server, for v2rayN and v2rayNG.
+- VLESS over mKCP, an opt-in UDP transport for networks that block the TCP ones: the new `mkcp` profile serves it on `kcp_port` (8447/udp), encrypted under the new `kcp_seed` secret, its packets starting with a fake `kcp_header` (`dtls` unless set). Devices get a `[kcp]` link and outbound per server (v2rayN, v2rayNG).
 
-- mKCP on relays: the relay's `mkcp` profile (`own-site,mkcp` with its own site) serves it on `kcp_port` under its own `kcp_seed`, `relay-entry` ends its line with `kcp=<port>,<header>,<seed>`, and `client-config` and the subscriptions add a `[relay <host> kcp]` link and outbound through it. A server from before reads no such field.
+- mKCP on relays: the relay's `mkcp` profile serves it under its own `kcp_seed`, `relay-entry` adds `kcp=<port>,<header>,<seed>` to its line, and devices get a `[relay <host> kcp]` link and outbound through it. A server from before reads no such field.
 
 - The canary checks mKCP with `--profile mkcp`, with the server's `kcp_port`, `kcp_header` and `kcp_seed`, which `canary-config` prints for a server under the `mkcp` profile; `measure` reports it beside REALITY.
 
-- Pools, so a leaked device no longer gives away every relay and CDN host: the new `pools` parameter takes one `<pool> <member>...` line per pool, the members device names, relay hosts and CDN hosts. `client-config` and the subscriptions give a device in a pool its pools' relays and CDN hosts and those in no pool; a device in none still gets them all, and a member that names nothing is reported.
+- Pools, so a leaked device no longer gives away every relay and CDN host: the new `pools` parameter lists, per pool, its devices, relay hosts and CDN hosts. A device in a pool gets its pools' entry points and those in no pool; a device in none gets them all, and a member that names nothing is reported.
 
 - XHTTP through a relay with a site of its own: the site routes a secret path, the new `xhttp_path` secret, to the relay's Xray, `relay-entry` adds the path to the relay's line, and `client-config` and the subscriptions add an `[relay … xhttp]` link and outbound. The relay needs morzer 0.15.1.
 
@@ -52,6 +54,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The server needs morzer 0.15.1: update morzer before updating dotdash.
 
 - The `upstream` secret is no longer required: an installation whose upstream is a tunnel needs none. With a proxy, the egress health check still fails, naming it, while it is unset.
+
+### Removed
+
+- The `xdns-xhttp-reality` profile, deprecated since 0.5.0: a server still set to it must switch before updating. `xdns,xhttp-reality` deploys the same: `sudo morzer config set installation.profile=xdns,xhttp-reality`.
 
 ## [0.5.1] - 2026-11-10
 

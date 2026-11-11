@@ -34,8 +34,8 @@ again. The balancer matches tags by prefix, so the IPv6 proxy is "ipv6", never
 Nothing else is routed: the freedom outbound carries only the public inbounds,
 whose destination is fixed to Xray, and everything else is blocked.
 */ -}}
-{{- $withXdns := or (has "xdns" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
-{{- $xhttpReality := or (has "xhttp-reality" .Profiles) (has "xdns-xhttp-reality" .Profiles) -}}
+{{- $withXdns := has "xdns" .Profiles -}}
+{{- $xhttpReality := has "xhttp-reality" .Profiles -}}
 {{- $kcp := has "mkcp" .Profiles -}}
 {{- $v6 := ne .Parameters.upstream6_protocol "none" -}}
 {{- $backup := ne .Parameters.upstream_backup_protocol "none" -}}

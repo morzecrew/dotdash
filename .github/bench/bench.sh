@@ -45,9 +45,6 @@ if grep -qF 'combinable:' /opt/dotdash/current/manifest.yaml; then
     transports="${transports} mkcp"
   fi
   morzer config set "installation.profile=${profile}" >/dev/null || die "could not switch to ${profile}"
-elif grep -qF 'xdns-xhttp-reality:' /opt/dotdash/current/manifest.yaml; then
-  morzer config set installation.profile=xdns-xhttp-reality >/dev/null || die "could not switch to xdns-xhttp-reality"
-  transports="${transports} xhttp-reality"
 fi
 
 # Clients from client-config's links, pointed at this rig's server.
