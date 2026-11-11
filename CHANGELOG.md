@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - An `ipv6` parameter on the server, the relay and the client: `block` keeps IPv6 out. The client refuses it before any rule, the relay drops it, and the server resolves names to IPv4 only and blocks IPv6 addresses, so dual-stack sites still work over IPv4.
 
+### Changed
+
+- The server, the relay and the canary run Xray 26.11.9, and the client mihomo 1.19.34.
+
 ## [0.6.0] - 2026-11-11
 
 ### Added
