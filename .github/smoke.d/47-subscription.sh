@@ -70,9 +70,9 @@ if sudo grep -q 'Cache-Control no-store' /opt/dotdash/current/caddy/Caddyfile; t
   echo "${0##*/}: a subscription is served no-store, so nothing between keeps a copy"
 fi
 
-# An own-site relay fetches the subscription for devices inside the country:
-# client-config adds that URL, the same token, under the server's; a relay on
-# a borrowed site, without the mark, gets none.
+# An own-site relay fetches the subscription for devices inside the
+# restricted network: client-config adds that URL, the same token, under the
+# server's; a relay on a borrowed site, without the mark, gets none.
 if sudo grep -q sub_through /opt/dotdash/current/tasks/client-config.sh; then
   printf '%s\n%s\n' "relay-a.test site-a.test pbkA 0011223344556677 mlkem.a" \
     "198.51.100.7 relay-b.test pbkB 8899aabbccddeeff mlkem.b own-site" | sudo morzer config set --set-file relays=- >/dev/null

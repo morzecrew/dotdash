@@ -1,7 +1,7 @@
 # WireGuard or OpenVPN upstream
 
 Instead of a SOCKS5 or HTTP proxy, the upstream can be a WireGuard or an
-OpenVPN exit: your own router at home abroad, say, or a VPN provider. The
+OpenVPN exit: your own router at home outside the restricted network, say, or a VPN provider. The
 client config the exit gives you goes in a secret of its own, and all traffic
 leaves through that tunnel. The proxy in `upstream` stays where it is, so
 the proxy carries traffic until the moment the tunnel takes over, and going
@@ -11,10 +11,11 @@ A tunnel carries UDP and, if the exit has it, IPv6, so it needs neither
 `upstream_udp` nor the [second proxy for IPv6](ipv6-upstream.md). It resolves
 no names, so it needs `resolve=gateway`, the default.
 
-!!! warning "The exit must be outside the censored network"
-    Censors detect and block WireGuard and OpenVPN. Between this server and an
-    exit abroad that doesn't matter; an exit inside the country would be
-    blocked, and would send the traffic back where it came from.
+!!! warning "The exit must be outside the restricted network"
+    WireGuard and OpenVPN are easy to detect and block. Between this server
+    and an exit outside that doesn't matter; an exit inside the restricted
+    network would be blocked, and would send the traffic back where it came
+    from.
 
 ## WireGuard
 

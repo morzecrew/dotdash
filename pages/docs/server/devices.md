@@ -62,9 +62,9 @@ sudo morzer task run client-config --output -- --full phone    # plus links and 
 - A URL is as secret as the links. `sudo morzer secret rotate subscription_key`
   moves every URL; any other path gets the site's 404.
 - A [relay](../relay/install.md#6-devices) with a site of its own serves the
-  same subscription inside the country: `client-config` adds a
+  same subscription inside the restricted network: `client-config` adds a
   `through the relay …` URL under the server's. An app takes one URL, so give
-  a device inside the country the relay's.
+  a device inside the restricted network the relay's.
 - Never give a device its subscription through a [CDN](cdn.md): the CDN
   would read every link.
 
@@ -85,8 +85,8 @@ sudo morzer config edit pools
 ```
 
 ```text
-family  mom dad relay1.example.ru cdn1.example.ru
-friends anna boris relay2.example.ru
+family  mom dad relay1.example.net cdn1.example.net
+friends anna boris relay2.example.net
 ```
 
 - A device in no pool, or without a name, gets every relay and CDN host, as

@@ -17,15 +17,16 @@ done </run/secrets/vless_clients
 servers=$(printf '%s\n' "${SERVERS:-self}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e "s/^self\$/${DOMAIN}/" | tr '\n' ',' | sed 's/,$//')
 
 cat <<EOF
-On the relay machine, inside the country (scripts/bootstrap.sh installs what it
-needs). init trusts the signing key the release ships, as for dotdash itself.
+On the relay machine, inside the restricted network (scripts/bootstrap.sh
+installs what it needs). init trusts the signing key the release ships, as for
+dotdash itself.
 
 Devices send the name of a site, and anyone probing the relay meets it. Best,
 a site of the relay's own: a domain whose DNS points at the relay, port 80
 open for its certificate, and in place of --set site below:
-  --domain relay.example.ru --profile own-site
+  --domain relay.example.net --profile own-site
 Or a site next to the relay, in its own network, not a big name, on TLS 1.3
-and HTTP/2, as below; its DNS points elsewhere, which a censor can compare.
+and HTTP/2, as below; its DNS points elsewhere, which an observer can compare.
 
 sudo morzer init --release oci://ghcr.io/morzecrew/dotdash-relay:stable \\
   --recovery-recipient age1… \\

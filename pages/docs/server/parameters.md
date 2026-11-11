@@ -27,7 +27,7 @@
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (offline machines) |
 | `site_dir` | `/srv/dotdash` | your own cover site |
 | `servers` | `self` | servers sharing these keys, comma-separated |
-| `cdn_hosts` | `none` | the names of domestic [CDNs](cdn.md#a-domestic-cdn-for-allowlists) in front of this server, comma-separated; a link through each |
+| `cdn_hosts` | `none` | the names of local [CDNs](cdn.md#a-local-cdn-for-restricted-networks) in front of this server, comma-separated; a link through each |
 | `relays` | a comment | one `<host> <site> <public key> <short id> <encryption>` line per [relay](../relay/install.md), as its `relay-entry` prints it, with `own-site <path>`, `kcp=<port>,<header>,<seed>` and `cdn=<name>[,<name>]` after it where the relay has them |
 | `pools` | a comment | one `<pool> <member>...` line per [pool](devices.md#pools), the members device names, relay hosts and CDN hosts |
 

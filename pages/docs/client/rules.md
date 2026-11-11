@@ -12,7 +12,7 @@ target, one per line, with `#` for comments:
 
 ```text
 # around dotdash
-DOMAIN-SUFFIX,example.ru
+DOMAIN-SUFFIX,example.net
 IP-CIDR,192.168.0.0/16,no-resolve
 ```
 
