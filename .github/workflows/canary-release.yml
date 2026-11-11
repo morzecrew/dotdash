@@ -1,5 +1,5 @@
 # The canary's stable channel, released with dotdash: the same tag vX.Y.Z on
-# main builds, signs and smoke-tests that commit's canary/, publishes
+# main builds, signs and smoke-tests that commit's bundles/canary/, publishes
 # dotdash-canary:X.Y.Z, moves :stable and attaches the archive to the tag's
 # GitHub release, whichever of this and release.yml creates it. The jobs are
 # bundle-ci's.
@@ -42,8 +42,8 @@ jobs:
       # The key that signs, shipped as minisign.pub: init trusts it on first use.
       ship-pubkey: true
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
-      bundle-dir: canary
-      version-paths: canary
+      bundle-dir: bundles/canary
+      version-paths: bundles/canary
       package: dotdash-canary
       smoke-hooks: .github/canary-smoke.d
       components: ""
