@@ -2,22 +2,23 @@
 # Several dotdash servers: the relay renders one outbound per server, each
 # reached and named by its own domain (dotdash_address applies to a single
 # server only), behind a leastPing balancer that every connection takes. The
-# rig's one stand-in can't stand behind three names, so this checks the
-# rendered config, then goes back to the stand-in and gets through again.
+# rig's one stand-in can't stand behind three names, and morzer (0.16) undoes
+# a config set whose health check fails, so three servers are checked in the
+# plan, whose diff renders the config without applying it; then one server,
+# the stand-in, is checked on disk and gets through.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-sudo morzer config set dotdash_servers=a.invalid,b.invalid,c.invalid >/dev/null
-sudo jq -e '
-  [.outbounds[] | {tag, address: .settings.address, name: .streamSettings.realitySettings.serverName}]
-    == [{tag: "dotdash-0", address: "a.invalid", name: "a.invalid"},
-        {tag: "dotdash-1", address: "b.invalid", name: "b.invalid"},
-        {tag: "dotdash-2", address: "c.invalid", name: "c.invalid"}]
-  and .routing.balancers == [{tag: "dotdash", selector: ["dotdash-"], strategy: {type: "leastPing"}}]
-  and .routing.rules == [{type: "field", network: "tcp,udp", balancerTag: "dotdash"}]
-  and .observatory.subjectSelector == ["dotdash-"]' /etc/dotdash-relay/xray.json >/dev/null \
-  || die "three servers did not render three outbounds behind a balancer: $(sudo jq -c '{outbounds: [.outbounds[].settings.address], routing}' /etc/dotdash-relay/xray.json)"
+plan=$(sudo morzer config set dotdash_servers=a.invalid,b.invalid,c.invalid --dry-run 2>&1) \
+  || die "could not plan three servers: ${plan}"
+for want in '"tag": "dotdash-2", "protocol": "vless"' '"address": "a.invalid", "port": 443' \
+  '"serverName": "c.invalid", "fingerprint": "chrome"' \
+  '"balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}}]' \
+  '"rules": [{"type": "field", "network": "tcp,udp", "balancerTag": "dotdash"}' \
+  '"observatory": {"subjectSelector": ["dotdash-"]'; do
+  grep -qF -- "${want}" <<<"${plan}" || die "the plan for three servers renders no ${want}: $(tail -n 40 <<<"${plan}")"
+done
 
 sudo morzer config set dotdash_servers=www.gstatic.com >/dev/null
 sudo jq -e '(.outbounds | length) == 1 and (.routing == null)' /etc/dotdash-relay/xray.json >/dev/null \
