@@ -2,17 +2,20 @@
 # The release's health checks, one per argument:
 #
 #   cover-site  Caddy reports healthy.
-#   egress      Xray fetches probe_url through the gate and the upstream,
-#               now, and with the IPv6 proxy also probe6_url, which has
-#               an IPv6 address only, through the IPv6 proxy. When it cannot,
-#               the message names the layer that failed: the gate, a proxy's
-#               address, its credentials, the destination behind it, or an
-#               exit that no longer matches probe_expect.
+#   egress      Xray fetches probe_url through the gate and the upstreams,
+#               now, and under ipv6=separate also probe6_url, which has an
+#               IPv6 address only, through the IPv6 lines. When it cannot,
+#               the message names what failed: the gate, or each upstreams
+#               line by its name= (its address, its credentials, the
+#               destination behind it, its tunnel), or an exit that no
+#               longer matches probe_expect.
 #
-# Through Xray a refused login and a stopped upstream look alike (a 503, or a
-# dropped tunnel), so a failed fetch is followed by asking the upstream
-# directly, with the same credentials. `doctor` gives health checks 30s in all:
-# two tries of 6s, then at most 3s to connect and 6s to ask.
+# Every upstream_mode falls through all of a group's lines before it fails, so
+# a failed fetch means each line failed. Through Xray a refused login and a
+# stopped proxy look alike (a 503, or a dropped tunnel), so each line is then
+# asked directly, with its own credentials. `doctor` gives health checks 30s
+# in all: two tries of 6s, then the first lines, at most 3s to connect and 6s
+# to ask each, which leaves room for two.
 set -euo pipefail
 
 project=${DOTDASH_COMPOSE_PROJECT:-dotdash}
@@ -23,31 +26,36 @@ cover_site() {
   [ "$health" = healthy ] || { echo "caddy is not healthy: ${health:-not running}" >&2; exit 1; }
 }
 
-# Asks one proxy directly, with its credentials: <family> is 4 for the
-# upstream secret's, 6 for upstream6's. Prints what is wrong with it and
-# returns 1, or returns 0 when it answers.
-ask_upstream() {
-  local fam=$1 p=UPSTREAM label="the upstream proxy" name=upstream
-  if [ "$fam" = 6 ]; then p=UPSTREAM6 label="the IPv6 proxy" name=upstream6; fi
-  local rv="DOTDASH_PARAM_${p}_PROTOCOL" tv="DOTDASH_PARAM_${p}_TLS"
-  local protocol=${!rv:-socks}
-  local url=${DOTDASH_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
-  local secrets=${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets} err errf rc code scheme
-  [ "$fam" = 4 ] || url=${DOTDASH_PARAM_PROBE6_URL:-http://api6.ipify.org}
-  # ponytail: the deprecated *_tls parameters, read until 0.8.0.
-  if [ "${!tv:-false}" = true ]; then
-    case $protocol in socks) protocol=socks-tls ;; http) protocol=https ;; esac
-  fi
+upstreams=${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstreams
 
+# ask_line <label> <url> <probe>: asks one upstreams line directly. Prints what
+# is wrong with it and returns 1, or returns 0 when it answers. Never prints
+# the URL, which holds the line's credentials.
+ask_line() {
+  local label=$1 line=$2 url=$3 err errf rc code scheme
+  case $line in
+  wireguard://*)
+    echo "$label (WireGuard): its peer did not carry it, and has no proxy to ask: it may be down, unreachable from here, or not know this key"
+    return 1 ;;
+  openvpn)
+    local t
+    if ! t=$(docker compose -p "$project" exec -T vpn /usr/local/bin/openvpn-entrypoint healthcheck 2>&1); then
+      echo "$label (OpenVPN): the tunnel is down (${t##*unhealthy: }): its server in upstream_openvpn may be down, unreachable from here, or refusing this config"
+    else
+      echo "$label (OpenVPN): the tunnel is up, so the fault is past its server, or in the SOCKS hop beside it (vpn-socks)"
+    fi
+    return 1 ;;
+  esac
+  scheme=${line%%://*}
+  local conn=${line#*://}
   # "[user:pass@]host:port", split as the gate's image splits it: at the last
   # "@", then the user up to the first ":". Neither half is ever printed.
-  local conn at userinfo='' user='' pass='' host port
-  conn=$(cat "$secrets/$name")
+  local at userinfo='' user='' pass='' host port
   at=${conn##*@}
   if [ "$at" != "$conn" ]; then userinfo=${conn%@*}; user=${userinfo%%:*} pass=${userinfo#*:}; fi
   port=${at##*:} host=${at%:*}
   if [ "$host" = "$at" ] || [ -z "$host" ] || [[ ! $port =~ ^[0-9]+$ ]]; then
-    echo "the $name secret is not \"user:pass@host:port\""
+    echo "$label: not \"[user:pass@]host:port\" after its scheme"
     return 1
   fi
   local bare=${host#[}
@@ -59,7 +67,7 @@ ask_upstream() {
       echo "$label at $host:$port does not answer (no connection within 3s)"
     else
       err=${err%%$'\n'*}
-      echo "cannot connect to $label at $host:$port: ${err##*: }"
+      echo "$label: cannot connect to $host:$port: ${err##*: }"
     fi
     return 1
   fi
@@ -67,9 +75,9 @@ ask_upstream() {
     echo "$label at $host:$port accepts connections; install curl to check its credentials"
     return 1
   fi
-  case $protocol in
-  socks-tls) echo "$label at $host:$port accepts connections; curl cannot speak SOCKS over TLS to check further"; return 1 ;;
-  socks) scheme=socks5h ;;
+  case $scheme in
+  socks5+tls) echo "$label at $host:$port accepts connections; curl cannot speak SOCKS over TLS to check further"; return 1 ;;
+  socks | socks5) scheme=socks5h ;;
   https) scheme=https ;;
   *) scheme=http ;;
   esac
@@ -85,7 +93,7 @@ ask_upstream() {
   rm -f "$errf"
 
   if [ "$code" = 407 ] || [ "$rc" = 97 ] || [[ $err == *"response 407"* ]]; then
-    echo "$label at $host:$port refused the credentials in the $name secret"
+    echo "$label at $host:$port refused the credentials in its line"
   elif [ "$rc" = 0 ] && [[ $code == [23]* ]]; then
     return 0
   elif [ "$rc" = 0 ]; then
@@ -96,40 +104,41 @@ ask_upstream() {
   return 1
 }
 
-# Why Xray's fetch ($1, the probe's last line) failed, as one line: the proxy
-# at fault, the IPv6 one first when <family> ($2) is 6, or else Xray or the gate.
+# Why Xray's fetch ($1, the probe's last line) failed, as one line: each line
+# of the group (<group>, $2: upstream, or ipv6) in order, or else Xray or the
+# gate. At most the first two are asked, for doctor's 30s.
 why() {
-  local out=$1 fam=${2:-4}
+  local out=$1 group=${2:-upstream}
   case $out in
   *"does not match XRAY_HEALTHCHECK_EXPECT"*)
     echo "the exit changed: probe_url answered ${out##*XRAY_HEALTHCHECK_EXPECT: }, which probe_expect does not match"
     return ;;
   esac
-  local order=4
-  if [ "${DOTDASH_PARAM_UPSTREAM6_PROTOCOL:-none}" != none ]; then
-    if [ "$fam" = 6 ]; then order="6 4"; else order="4 6"; fi
+  local probe=${DOTDASH_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
+  [ "$group" = upstream ] || probe=${DOTDASH_PARAM_PROBE6_URL:-http://api6.ipify.org}
+  local n=0 asked=0 left=0 failed=() answered=() verdict line opts name groups o
+  while read -r line opts || [ -n "${line:-}" ]; do
+    n=$((n + 1))
+    case $line in '' | '#'*) continue ;; esac
+    name="line $n" groups=upstream
+    for o in $opts; do
+      case $o in name=*) name=${o#name=} ;; group=*) groups=${o#group=} ;; esac
+    done
+    case ",$groups," in *",$group,"*) ;; *) continue ;; esac
+    if [ "$asked" -ge 2 ]; then left=$((left + 1)); continue; fi
+    asked=$((asked + 1))
+    if verdict=$(ask_line "$name" "$line" "$probe"); then answered+=("$name"); else failed+=("$verdict"); fi
+  done <"$upstreams"
+  if [ "$asked" = 0 ]; then
+    echo "no upstreams line is in group $group: $out"
+  elif [ "${#answered[@]}" -gt 0 ]; then
+    echo "${answered[*]} answer(s) when asked directly, so the fault is in Xray or the gate: $out"
+  else
+    local msg=${failed[0]} i
+    for ((i = 1; i < ${#failed[@]}; i++)); do msg+="; ${failed[i]}"; done
+    [ "$left" = 0 ] || msg+="; $left more not asked"
+    echo "$msg"
   fi
-  # A tunnel has no proxy to ask: name what holds it.
-  if [ "$fam" = 4 ]; then
-    case ${DOTDASH_PARAM_UPSTREAM_PROTOCOL:-socks} in
-    wireguard)
-      echo "the WireGuard peer in the upstream_wireguard secret did not carry it: it may be down, unreachable from here, or not know this key: $out"
-      return ;;
-    openvpn)
-      local t
-      if ! t=$(docker compose -p "$project" exec -T vpn /usr/local/bin/openvpn-entrypoint healthcheck 2>&1); then
-        echo "the OpenVPN tunnel is down (${t##*unhealthy: }): its server in the upstream_openvpn secret may be down, unreachable from here, or refusing this config"
-      else
-        echo "the OpenVPN tunnel is up, so the fault is past its server, or in the SOCKS hop beside it (vpn-socks): $out"
-      fi
-      return ;;
-    esac
-  fi
-  local f
-  for f in $order; do
-    ask_upstream "$f" || return 0
-  done
-  echo "the proxies answer when asked directly, so the fault is in Xray or the gate: $out"
 }
 
 egress() {
@@ -147,22 +156,22 @@ egress() {
   case $out in
   *"is not running"* | *"no such service"* | *"not running"*) echo "xray is not running" >&2; exit 1 ;;
   esac
-  echo "Xray cannot fetch through the upstream: $(why "$out")" >&2
+  echo "Xray cannot fetch through the upstreams: $(why "$out")" >&2
   exit 1
 }
 
-# With the IPv6 proxy: one fetch of a URL with an IPv6 address only, so it can
-# leave through the IPv6 proxy alone. probe_expect is about the IPv4
-# exit, so any answer will do.
+# Under ipv6=separate: one fetch of a URL with an IPv6 address only, so it
+# can leave through the IPv6 lines alone. probe_expect is about the IPv4 exit,
+# so any answer will do.
 egress6() {
   local out
-  [ "${DOTDASH_PARAM_UPSTREAM6_PROTOCOL:-none}" != none ] || return 0
+  [ "${DOTDASH_PARAM_IPV6:-allow}" = separate ] || return 0
   if out=$(docker compose -p "$project" exec -T -e XRAY_HEALTHCHECK_TIMEOUT=6s \
     -e XRAY_HEALTHCHECK_URL="${DOTDASH_PARAM_PROBE6_URL:-http://api6.ipify.org}" -e XRAY_HEALTHCHECK_EXPECT='.*' \
     xray /usr/local/bin/xray-entrypoint healthcheck 2>&1); then
     return 0
   fi
-  echo "Xray cannot fetch through the IPv6 proxy: $(why "$(tail -n1 <<<"$out")" 6)" >&2
+  echo "Xray cannot fetch through the IPv6 lines: $(why "$(tail -n1 <<<"$out")" ipv6)" >&2
   exit 1
 }
 

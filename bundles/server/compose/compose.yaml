@@ -61,15 +61,24 @@ services:
   gate:
     <<: *hardened
     image: ${DOTDASH_IMAGE_XRAY:?set by morzer}
+    # XRAY_UPSTREAM_PIN and XRAY_UPSTREAM_ALIASES (templates/gate.env.tmpl).
+    env_file: /etc/dotdash/gate.env
     volumes:
       - type: bind
         source: /etc/dotdash/gate.json
         target: /etc/xray/config.json
         read_only: true
         bind: {create_host_path: false}
+      # The upstreams secret as the gate's outbounds: a file of its own, whose
+      # outbounds Xray merges with config.json's, routing kept from that one.
+      - type: bind
+        source: ${DOTDASH_RELEASE_DIR:?set by morzer}/gate/upstreams.json
+        target: /etc/xray/upstreams.json
+        read_only: true
+        bind: {create_host_path: false}
     tmpfs:
       - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
-    secrets: [upstream, upstream6, upstream_backup, upstream_wireguard]
+    secrets: [upstreams]
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
     ports:
       - "${DOTDASH_PARAM_HTTPS_PORT:-443}:443/tcp"
@@ -228,14 +237,8 @@ secrets:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/vless_seed
   kcp_seed:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/kcp_seed
-  upstream:
-    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream
-  upstream6:
-    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream6
-  upstream_backup:
-    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream_backup
-  upstream_wireguard:
-    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream_wireguard
+  upstreams:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstreams
   upstream_openvpn:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream_openvpn
   reality_key:

@@ -83,7 +83,7 @@ jobs:
           # clients. smoke-install runs every hook on this tree's bundle.
           REHEARSE_HOOKS: .bench-hooks
           REHEARSE_PROBE_PATHS: ""
-          REHEARSE_OPERATOR_SECRETS: upstream
+          REHEARSE_OPERATOR_SECRETS: upstreams upstream
           # healthcheck_url for a published release from before 0.7.0, as in pr.yml.
           REHEARSE_INIT_ARGS: >-
             --domain dotdash.test --set upstream_protocol=http

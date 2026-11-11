@@ -67,7 +67,10 @@ sudo docker run -d --name dotdash-rig-target --network dotdash-rig --ip 11.99.0.
 sudo docker run -d --name dotdash-rig-upstream --network dotdash-rig -p 18080:8080 \
   -v /rig/upstream:/etc/xray:ro -v /rig/upstream-log:/log "${xray}" >/dev/null
 
-# Before the first apply morzer has nothing to restart, and says so.
+# Before the first apply morzer has nothing to restart, and says so. The list
+# is what this release reads; the line alone is what a release before it read,
+# which smoke-update installs first, and which keeps the list for its update.
+printf 'http://%s name=rig\n' "$(cat /rig/upstream.conn)" | sudo morzer secret set upstreams >/dev/null 2>&1 || true
 printf "%s" "$(cat /rig/upstream.conn)" | sudo morzer secret set upstream >/dev/null 2>&1 || true
 # A release from before the upstream secret, which smoke-update installs
 # first, takes a host and a port parameter and two secrets instead. Only such

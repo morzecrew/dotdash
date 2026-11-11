@@ -7,31 +7,30 @@ directly whatever its config says. The gate carries what has to cross:
   - in: the public TLS port, and under their profiles UDP/53 for the DNS
     tunnel, xhttp_reality_port and kcp_port, to Xray, byte for byte
     (dokodemo-door);
-  - out: Xray's SOCKS hop to the upstream proxy, which the gate dials with
-    the upstream secret's address and credentials, and with
-    upstream6_protocol a second hop (1081) to the IPv6 proxy, with its own.
-    Xray never holds either. The image splits each secret's
-    "user:pass@host:port" into the outbound's settings ({"$proxy": ...}).
-    socks-tls and https are socks and http over TLS, which takes the server
-    name from that address; until 0.8.0 the deprecated *_tls parameters still
-    turn socks into socks-tls and http into https.
+  - out: Xray's SOCKS hop (1080), and under ipv6=separate a second one for
+    IPv6 (1081), to the ways out the upstreams secret lists. Xray never holds
+    them.
 
-A tunnel takes the proxy's place. upstream_protocol=wireguard: the outbound
-is Xray's own WireGuard, on its built-in TCP/IP stack, so the gate needs no
-capability; the image builds its settings from the wg-quick file in the
-upstream_wireguard secret ({"$wireguard": ...}). upstream_protocol=openvpn: the outbound
-is a SOCKS hop to vpn-socks, which shares the namespace of the OpenVPN client
-(vpn, the openvpn profile), whose kill switch leaves it no route but the
-tunnel. Either carries UDP, and IPv6 if the exit has it, so neither takes
-upstream6; nor resolve=upstream, as a tunnel resolves no names.
+The ways out are not here: the gate's image turns the upstreams secret into
+outbounds ({"$upstreams": ...}) in a file of their own (gate/upstreams.json),
+whose outbounds Xray merges with these, routing kept from this file. In each
+group, upstream and under ipv6=separate ipv6, the first line is tagged
+<group>-0 and the rest <group>-b<n>, after upstream_pin moves a line to the
+front (gate.env), so the balancers below select them by prefix without
+knowing how many there are. The observatory probes every one at probe_url
+every 30 s.
 
-upstream_backup_protocol: a second proxy for when the upstream fails, from
-the upstream_backup secret. The egress goes to a balancer whose one candidate
-is the upstream, and whose fallback is the backup: while the observatory's
-probes of probe_url get through the upstream, everything leaves there,
-so the exit stays the same; when they stop, the backup, until they get through
-again. The balancer matches tags by prefix, so the IPv6 proxy is "ipv6", never
-"upstream6".
+upstream_mode, per group:
+  - failover: the first line while it answers. When it doesn't, the balancer
+    falls back to a SOCKS hop into this gate (1090, 1091 for ipv6), whose own
+    balancer takes the fastest of the rest; with no rest, or none answering,
+    block. Two levels, not one per line: Xray's balancers have one fallback
+    each, and leastLoad's cost weights overflow past ten or so;
+  - fastest: whichever answers fastest (leastPing), the first line before any
+    probe has answered;
+  - balance: any line that answers, picked at random per connection; a line
+    not yet probed counts as answering.
+When nothing answers, a connection fails: nothing here leaves directly.
 
 Nothing else is routed: the freedom outbound carries only the public inbounds,
 whose destination is fixed to Xray, and everything else is blocked.
@@ -39,20 +38,9 @@ whose destination is fixed to Xray, and everything else is blocked.
 {{- $withXdns := has "xdns" .Profiles -}}
 {{- $xhttpReality := has "xhttp-reality" .Profiles -}}
 {{- $kcp := has "mkcp" .Profiles -}}
-{{- $proto := .Parameters.upstream_protocol -}}
-{{- $proto6 := .Parameters.upstream6_protocol -}}
-{{- $protoBackup := .Parameters.upstream_backup_protocol -}}
-{{- /* ponytail: the *_tls fallback goes in 0.8.0. */ -}}
-{{- if eq (print .Parameters.upstream_tls) "true" }}{{ if eq $proto "socks" }}{{ $proto = "socks-tls" }}{{ else if eq $proto "http" }}{{ $proto = "https" }}{{ end }}{{ end -}}
-{{- if eq (print .Parameters.upstream6_tls) "true" }}{{ if eq $proto6 "socks" }}{{ $proto6 = "socks-tls" }}{{ else if eq $proto6 "http" }}{{ $proto6 = "https" }}{{ end }}{{ end -}}
-{{- if eq (print .Parameters.upstream_backup_tls) "true" }}{{ if eq $protoBackup "socks" }}{{ $protoBackup = "socks-tls" }}{{ else if eq $protoBackup "http" }}{{ $protoBackup = "https" }}{{ end }}{{ end -}}
-{{- $v6 := ne $proto6 "none" -}}
-{{- $backup := ne $protoBackup "none" -}}
-{{- $tunnel := or (eq $proto "wireguard") (eq $proto "openvpn") -}}
-{{- $udp := or $tunnel (and (eq (print .Parameters.upstream_udp) "true") (contains $proto "socks")) -}}
-{{- if and $tunnel $v6 }}{{ required (printf "upstream_protocol=%s carries IPv6 itself: unset upstream6_protocol" $proto) "" }}{{ end }}
-{{- if and $tunnel (ne .Parameters.resolve "gateway") }}{{ required (printf "upstream_protocol=%s resolves no names: set resolve=gateway" $proto) "" }}{{ end }}
-{{- if and (eq $proto "openvpn") (not (has "openvpn" .Profiles)) }}{{ required "upstream_protocol=openvpn needs the openvpn profile, which runs the OpenVPN client: first sudo morzer config set installation.profile=openvpn (with others: xdns,openvpn), then upstream_protocol=openvpn" "" }}{{ end }}
+{{- $v6 := eq .Parameters.ipv6 "separate" -}}
+{{- $udp := eq (print .Parameters.upstream_udp) "true" -}}
+{{- $mode := .Parameters.upstream_mode -}}
 {{- /* Two services cannot publish one host port; refused here, so the apply
 stops before anything is replaced. The template language has no fail: required
 fails on its empty value with the message. */ -}}
@@ -78,6 +66,14 @@ fails on its empty value with the message. */ -}}
     {"tag": "public-kcp", "listen": "0.0.0.0", "port": 8447, "protocol": "dokodemo-door",
      "settings": {"address": "xray", "port": 8447, "network": "udp"}},
 {{- end }}
+{{- if eq $mode "failover" }}
+    {"tag": "backups", "listen": "127.0.0.1", "port": 1090, "protocol": "socks",
+     "settings": {"auth": "noauth", "udp": {{ $udp }}}},
+{{- if $v6 }}
+    {"tag": "backups6", "listen": "127.0.0.1", "port": 1091, "protocol": "socks",
+     "settings": {"auth": "noauth", "udp": false}},
+{{- end }}
+{{- end }}
     {"tag": "egress", "listen": "0.0.0.0", "port": 1080, "protocol": "socks",
      "settings": {"auth": "noauth", "udp": {{ $udp }}}}
 {{- if $v6 }},
@@ -86,56 +82,49 @@ fails on its empty value with the message. */ -}}
 {{- end }}
   ],
   "outbounds": [
-{{- if eq $proto "wireguard" }}
-    {"tag": "upstream", "protocol": "wireguard", "settings": {"$wireguard": "/run/secrets/upstream_wireguard"}},
-{{- else if eq $proto "openvpn" }}
-    {"tag": "upstream", "protocol": "socks", "settings": {"address": "vpn", "port": 1080}},
-{{- else }}
-    {
-      "tag": "upstream",
-      "protocol": "{{ if contains $proto "socks" }}socks{{ else }}http{{ end }}",
-      "settings": {"$proxy": "/run/secrets/upstream"}
-{{- if or (eq $proto "socks-tls") (eq $proto "https") }},
-      "streamSettings": {"security": "tls"}
-{{- end }}
-    },
-{{- end }}
-    {"tag": "inside", "protocol": "freedom"},
-    {"tag": "block", "protocol": "blackhole"}
+    {"tag": "block", "protocol": "blackhole"},
+    {"tag": "inside", "protocol": "freedom"}
+{{- if eq $mode "failover" }},
+    {"tag": "to-backups", "protocol": "socks", "settings": {"address": "127.0.0.1", "port": 1090}}
 {{- if $v6 }},
-    {
-      "tag": "ipv6",
-      "protocol": "{{ if contains $proto6 "socks" }}socks{{ else }}http{{ end }}",
-      "settings": {"$proxy": "/run/secrets/upstream6"}
-{{- if or (eq $proto6 "socks-tls") (eq $proto6 "https") }},
-      "streamSettings": {"security": "tls"}
+    {"tag": "to-backups6", "protocol": "socks", "settings": {"address": "127.0.0.1", "port": 1091}}
 {{- end }}
-    }
-{{- end }}
-{{- if $backup }},
-    {
-      "tag": "backup",
-      "protocol": "{{ if contains $protoBackup "socks" }}socks{{ else }}http{{ end }}",
-      "settings": {"$proxy": "/run/secrets/upstream_backup"}
-{{- if or (eq $protoBackup "socks-tls") (eq $protoBackup "https") }},
-      "streamSettings": {"security": "tls"}
-{{- end }}
-    }
 {{- end }}
   ],
-{{- if $backup }}
-  "observatory": {"subjectSelector": ["upstream", "backup"], "probeUrl": "{{ .Parameters.probe_url }}", "probeInterval": "30s", "enableConcurrency": true},
-{{- end }}
+  "observatory": {"subjectSelector": ["upstream-"{{ if $v6 }}, "ipv6-"{{ end }}], "probeUrl": "{{ .Parameters.probe_url }}", "probeInterval": "30s", "enableConcurrency": true},
   "routing": {
     "domainStrategy": "AsIs",
-{{- if $backup }}
-    "balancers": [{"tag": "egress", "selector": ["upstream"], "fallbackTag": "backup", "strategy": {"type": "random"}}],
+    "balancers": [
+{{- if eq $mode "failover" }}
+      {"tag": "egress", "selector": ["upstream-0"], "strategy": {"type": "random"}, "fallbackTag": "to-backups"},
+      {"tag": "backups", "selector": ["upstream-b"], "strategy": {"type": "leastPing"}, "fallbackTag": "block"}
+{{- if $v6 }},
+      {"tag": "egress6", "selector": ["ipv6-0"], "strategy": {"type": "random"}, "fallbackTag": "to-backups6"},
+      {"tag": "backups6", "selector": ["ipv6-b"], "strategy": {"type": "leastPing"}, "fallbackTag": "block"}
 {{- end }}
+{{- else if eq $mode "fastest" }}
+      {"tag": "egress", "selector": ["upstream-"], "strategy": {"type": "leastPing"}, "fallbackTag": "upstream-0"}
+{{- if $v6 }},
+      {"tag": "egress6", "selector": ["ipv6-"], "strategy": {"type": "leastPing"}, "fallbackTag": "ipv6-0"}
+{{- end }}
+{{- else }}
+      {"tag": "egress", "selector": ["upstream-"], "strategy": {"type": "random"}, "fallbackTag": "block"}
+{{- if $v6 }},
+      {"tag": "egress6", "selector": ["ipv6-"], "strategy": {"type": "random"}, "fallbackTag": "block"}
+{{- end }}
+{{- end }}
+    ],
     "rules": [
       {"inboundTag": ["public-tls"{{ if $withXdns }}, "public-dns"{{ end }}{{ if $xhttpReality }}, "public-xhttp-reality"{{ end }}{{ if $kcp }}, "public-kcp"{{ end }}], "outboundTag": "inside"},
-      {"inboundTag": ["egress"], {{ if $backup }}"balancerTag": "egress"{{ else }}"outboundTag": "upstream"{{ end }}},
+      {"inboundTag": ["egress"], "balancerTag": "egress"},
+{{- if eq $mode "failover" }}
+      {"inboundTag": ["backups"], "balancerTag": "backups"},
+{{- end }}
 {{- if $v6 }}
-      {"inboundTag": ["egress6"], "outboundTag": "ipv6"},
+      {"inboundTag": ["egress6"], "balancerTag": "egress6"},
+{{- if eq $mode "failover" }}
+      {"inboundTag": ["backups6"], "balancerTag": "backups6"},
+{{- end }}
 {{- end }}
       {"network": "tcp,udp", "outboundTag": "block"}
     ]

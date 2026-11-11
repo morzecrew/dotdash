@@ -2,10 +2,9 @@
 
 | Name | Default | |
 | --- | --- | --- |
-| `upstream_protocol` | `socks` | `socks` or `http`, the proxy in `upstream`, and `socks-tls` or `https` the same over TLS; `wireguard` or `openvpn`, a [tunnel](tunnel-upstream.md) from `upstream_wireguard` or `upstream_openvpn` |
-| `upstream_udp` | `false` | relay UDP via a SOCKS5 upstream with UDP ASSOCIATE; otherwise dropped. A tunnel always carries UDP |
-| `upstream6_protocol` | `none` | `socks`, `socks-tls`, `http` or `https` turns on the IPv6 proxy, the `upstream6` secret |
-| `upstream_backup_protocol` | `none` | `socks`, `socks-tls`, `http` or `https` turns on the [backup proxy](backup-upstream.md), the `upstream_backup` secret |
+| `upstream_mode` | `failover` | how the [upstreams](upstreams.md#order-and-modes) lines share the traffic: `failover` (the first that answers), `fastest` or `balance` |
+| `upstream_pin` | `none` | the `name=` of the line that goes first; under `ipv6=separate`, a second name pins the IPv6 lines |
+| `upstream_udp` | `false` | carry UDP through the upstreams, every one of which must carry it (WireGuard, OpenVPN, SOCKS5 with UDP ASSOCIATE); otherwise dropped |
 | `https_port` | `443` | host port for REALITY and the site |
 | `xdns_domain` | `t` | tunnel zone (`xdns`); a name with no dot is under the domain |
 | `xdns_bind` | `0.0.0.0` | host address for UDP/53 |
@@ -14,11 +13,11 @@
 | `kcp_port` | `8447` | UDP port for [mKCP](mkcp.md); not 53 with the DNS tunnel |
 | `kcp_header` | `dtls` | what mKCP's packets start with: `dtls`, `srtp`, `utp`, `wechat`, `wireguard` or `none` |
 | `log_level` | `error` | Xray error log; `warning` and below name failed destinations |
-| `probe_url` | `https://www.gstatic.com/generate_204` | fetched through the upstream |
+| `probe_url` | `https://www.gstatic.com/generate_204` | fetched through the upstreams, and through each line every 30 s |
 | `probe_expect` | `.*` | regex the response must match, such as the exit IP |
-| `probe6_url` | `http://api6.ipify.org` | IPv6-only URL fetched through the IPv6 proxy |
-| `resolve` | `gateway` | `gateway`: this server resolves over `dns_resolver`; `upstream`: the upstream sees hostnames |
-| `ipv6` | `allow` | `block`: no IPv6 destination leaves; names resolve to IPv4 only and the upstream is dialled over IPv4, so dual-stack sites still work (with `resolve=upstream`, the upstream resolves names itself). Not with `upstream6_protocol` |
+| `probe6_url` | `http://api6.ipify.org` | IPv6-only URL fetched through the IPv6 lines, with `ipv6=separate` |
+| `resolve` | `gateway` | `gateway`: this server resolves over `dns_resolver`; `upstream`: the upstream proxies see hostnames (no WireGuard or OpenVPN line then) |
+| `ipv6` | `allow` | `allow`: IPv6 leaves like the rest; `separate`: through the [`group=ipv6` lines](upstreams.md#ipv6) alone; `block`: no IPv6 destination leaves, names resolve to IPv4 only, so dual-stack sites still work (with `resolve=upstream`, the upstream resolves names itself) |
 | `dns_resolver` | `https://1.1.1.1/dns-query` | DoH server for `resolve=gateway` and device DNS; `https://` only |
 | `subscription` | `false` | a subscription URL per device |
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (offline machines) |
@@ -31,9 +30,5 @@
 Set one with `sudo morzer config set <name>=<value>`, unset it with
 `sudo morzer config unset <name>`, edit `relays` or `pools` with
 `sudo morzer config edit <name>`. Profiles (`installation.profile`): `xdns`,
-`xhttp-reality`, `mkcp`, `openvpn` (for an [OpenVPN upstream](tunnel-upstream.md)),
+`xhttp-reality`, `mkcp`, `openvpn` (for an [OpenVPN line](upstreams.md#openvpn)),
 combined with commas, such as `xdns,xhttp-reality`.
-
-`upstream_tls`, `upstream6_tls` and `upstream_backup_tls` are deprecated and go
-in 0.8.0: `true` still turns `socks` into `socks-tls` and `http` into `https`.
-Set the protocol instead, then unset them.

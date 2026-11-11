@@ -59,6 +59,11 @@ caught '(.inbounds[] | select(.tag == "public-tls")).settings.address = "1.1.1.1
 caught '.routing.rules = [{network: "tcp,udp", outboundTag: "inside"}] + .routing.rules' "out directly" gate
 caught '.inbounds += [{tag: "debug", listen: "0.0.0.0", port: 9999, protocol: "http"}]' "unexpected inbounds" gate
 caught '.routing.rules |= .[:-1]' "does not block what its rules leave" gate
+if sudo grep -q '^  upstream_mode:$' "${release}/manifest.yaml"; then
+  caught '.routing.balancers[0].selector = ["inside"]' "not upstreams lines" gate
+  caught '.routing.balancers[0].fallbackTag = "inside"' "falls back to inside" gate
+  caught '.routing.rules = [{network: "tcp,udp", balancerTag: "egress"}] + .routing.rules' "through a balancer" gate
+fi
 echo "25-policy.sh: each injected violation is named"
 
 caddy=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' caddy | sed -n 1p)

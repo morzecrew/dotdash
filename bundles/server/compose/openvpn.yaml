@@ -1,6 +1,7 @@
-# The openvpn profile, for upstream_protocol=openvpn: Xray has no OpenVPN, so
-# an OpenVPN client (vpn) holds the tunnel and a SOCKS hop in its namespace
-# (vpn-socks) is what the gate dials, at vpn:1080 on the egress network.
+# The openvpn profile, for an `openvpn` line of the upstreams secret: Xray has
+# no OpenVPN, so an OpenVPN client (vpn) holds the tunnel and a SOCKS hop in
+# its namespace (vpn-socks) is what the gate dials, at vpn:1080 on the egress
+# network (XRAY_UPSTREAM_ALIASES, templates/gate.env.tmpl).
 # vpn's image swaps the default route for host routes to the servers in the
 # config before openvpn starts, so nothing in that namespace has a way out
 # but the tunnel, on the first start too (platform-images, images/openvpn).

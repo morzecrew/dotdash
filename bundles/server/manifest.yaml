@@ -26,14 +26,14 @@ runtimes:
       # transports every install has.
       xhttp-reality: [compose/xhttp-reality.yaml]
       # An OpenVPN client (vpn) and a SOCKS hop in its namespace (vpn-socks),
-      # which the gate dials with upstream_protocol=openvpn: Xray has no
-      # OpenVPN of its own.
+      # which an `openvpn` line of the upstreams secret names: Xray has no
+      # OpenVPN of its own, and one client runs one tunnel.
       openvpn: [compose/openvpn.yaml]
       # VLESS over mKCP on kcp_port: UDP, no TLS underneath, its packets
       # encrypted under kcp_seed and dressed in a kcp_header.
       mkcp: [compose/mkcp.yaml]
     # installation.profile=xdns,xhttp-reality runs both; any of them with
-    # openvpn, such as xdns,openvpn, adds the OpenVPN upstream.
+    # openvpn, such as xdns,openvpn, adds the OpenVPN line.
     combinable: [xdns, xhttp-reality, openvpn, mkcp]
     options:
       project: dotdash
@@ -43,8 +43,8 @@ compatibility:
   # health-checks a parameter change and undoes it when the check fails.
   min_manager_version: "0.16.0"
   # 0.7.0 renamed healthcheck_url, healthcheck6_url and healthcheck_expect to
-  # probe_*, and an update retires the old values, so 0.6.x would come back
-  # without them; nor does 0.6.x take upstream_protocol=socks-tls or https.
+  # probe_*, and replaced the upstream settings with the upstreams secret; an
+  # update retires the old values, so 0.6.x would come back without them.
   # 0.4.0 declared false too, when the upstream secret replaced upstream_host
   # and its kin. An update from 0.3.x is still refused until `upstream` is set.
   rollback_safe: false
@@ -71,52 +71,26 @@ parameters:
     default: 443
     description: Host port of the REALITY inbound; anything without its key reaches the cover site
     services: [gate, subscription]
-  upstream_protocol:
+  upstream_mode:
     type: enum
-    values: [socks, socks-tls, http, https, wireguard, openvpn]
-    default: socks
-    description: "How every client connection leaves: socks or http, a proxy the upstream secret names as user:pass@host:port, and socks-tls or https the same over TLS, so its credentials and your destinations do not cross the network in clear; wireguard, a WireGuard exit, from the wg-quick client config in upstream_wireguard; openvpn, an OpenVPN exit, from the client config in upstream_openvpn, which needs the openvpn profile. A tunnel carries UDP and IPv6 itself, so it takes neither upstream6_protocol nor resolve=upstream"
-    services: [xray, gate]
-  # Deprecated in 0.7.0 for the -tls protocols, and read until 0.8.0: an update
-  # can't take a value for a parameter the running release does not declare, so
-  # a TLS upstream would fail its health check, and the update roll back,
-  # without it.
-  upstream_tls:
-    type: bool
-    default: false
-    description: "Deprecated: with true, socks is socks-tls and http https; set upstream_protocol instead"
+    values: [failover, fastest, balance]
+    default: failover
+    description: "How the lines of the upstreams secret share the traffic. failover: the first line while it answers, then the fastest of the rest, so the exit stays put; fastest: whichever answers fastest; balance: connections spread over every line that answers, each possibly from another IP. Each line is probed at probe_url every 30 s"
+    services: [gate]
+  upstream_pin:
+    type: string
+    default: none
+    description: "The name= of an upstreams line that goes first whatever its place, with the others behind it as upstream_mode has them, or none; under ipv6=separate a second name, comma-separated, pins the IPv6 group"
     services: [gate]
   upstream_udp:
     type: bool
     default: false
-    description: Relay client UDP through a SOCKS5 upstream (socks or socks-tls) that supports UDP ASSOCIATE; otherwise UDP is dropped. A wireguard or openvpn upstream always carries UDP
+    description: "Carry client UDP through the upstreams. Every line must carry it: a WireGuard or OpenVPN line, or SOCKS5 with UDP ASSOCIATE; an HTTP proxy drops it. Otherwise UDP is dropped here"
     services: [xray, gate]
-  upstream6_protocol:
-    type: enum
-    values: [none, socks, socks-tls, http, https]
-    default: none
-    description: "Protocol of a second proxy for IPv6, as upstream_protocol's, which the upstream6 secret names as user:pass@host:port, or none. With one, a destination that has an IPv6 address leaves through it, IPv4-only ones through the upstream, and neither falls back to the other"
-    services: [xray, gate]
-  upstream6_tls:
-    type: bool
-    default: false
-    description: "Deprecated: with true, socks is socks-tls and http https; set upstream6_protocol instead"
-    services: [gate]
-  upstream_backup_protocol:
-    type: enum
-    values: [none, socks, socks-tls, http, https]
-    default: none
-    description: "Protocol of a backup proxy, as upstream_protocol's, which the upstream_backup secret names as user:pass@host:port, or none. With one, connections leave through the upstream while probes of probe_url get through it, every 30 s, and through the backup while they don't; the exit changes with it. upstream_udp holds for the backup too"
-    services: [gate]
-  upstream_backup_tls:
-    type: bool
-    default: false
-    description: "Deprecated: with true, socks is socks-tls and http https; set upstream_backup_protocol instead"
-    services: [gate]
   probe6_url:
     type: string
     default: http://api6.ipify.org
-    description: "With the IPv6 proxy, a URL with an IPv6 address only, which the egress health check also fetches, through the IPv6 proxy; any 2xx is healthy"
+    description: "With ipv6=separate, a URL with an IPv6 address only, which the egress health check also fetches, through the IPv6 lines; any 2xx is healthy"
   xdns_domain:
     type: string
     default: t
@@ -158,14 +132,14 @@ parameters:
     type: enum
     values: [gateway, upstream]
     default: gateway
-    description: "Who turns hostnames into addresses. gateway: this server, over dns_resolver, which itself goes out through the upstream, so the upstream sees addresses only; a name resolving to a private address is blocked. upstream: the upstream, which then sees every hostname"
+    description: "Who turns hostnames into addresses. gateway: this server, over dns_resolver, which itself goes out through the upstreams, so they see addresses only; a name resolving to a private address is blocked. upstream: the upstream proxies, which then see every hostname; not with a WireGuard or OpenVPN line, which resolves no names"
     services: [xray]
   ipv6:
     type: enum
-    values: [allow, block]
+    values: [allow, block, separate]
     default: allow
-    description: "IPv6 destinations. allow: they leave through the upstream (or upstream6). block: none leaves; names resolve to IPv4 addresses only and the upstream is dialled over IPv4, so dual-stack sites still work; with resolve=upstream the upstream resolves names itself. Not with upstream6_protocol"
-    services: [xray]
+    description: "IPv6 destinations. allow: they leave through the upstreams like any other, which suits lines that all have IPv6. separate: through the lines marked group=ipv6, with upstream_mode applying to them alone, and never through the others. block: none leaves; names resolve to IPv4 addresses only and the upstreams are dialled over IPv4, so dual-stack sites still work; with resolve=upstream the upstream resolves names itself"
+    services: [xray, gate]
   dns_resolver:
     type: string
     default: https://1.1.1.1/dns-query
@@ -223,7 +197,7 @@ parameters:
   probe_url:
     type: string
     default: https://www.gstatic.com/generate_204
-    description: URL the egress health check fetches through Xray and the upstream proxy; any 2xx is healthy. With a backup proxy, the gate probes each with it too
+    description: URL the egress health check fetches through Xray and the upstreams, and the gate probes each upstreams line with every 30 s; any 2xx is healthy
     services: [xray, gate]
 
 images:
@@ -245,6 +219,12 @@ configuration:
     mode: "0644"
   - template: templates/gate.json.tmpl
     target: /etc/dotdash/gate.json
+    mode: "0644"
+  # The gate's pin and aliases, for its image's $upstreams: an env file rather
+  # than a mounted one, so a change re-creates the gate, as Compose hashes a
+  # service's environment and never a mounted file's contents.
+  - template: templates/gate.env.tmpl
+    target: /etc/dotdash/gate.env
     mode: "0644"
   # Rendered under every profile; only the openvpn profile mounts it.
   - template: templates/vpn-socks.json.tmpl
@@ -280,6 +260,15 @@ tasks:
     service: client-config
     command: ["sh", "/task/canary-config.sh"]
     args: true
+    timeout: 1m
+  wireguard-line:
+    description: "Print the upstreams line for a WireGuard exit from its wg-quick file, given as --input conf=<file> (output is its private key)"
+    service: client-config
+    command: ["sh", "/task/wireguard-line.sh", "{inputs.conf}"]
+    inputs:
+      conf:
+        description: The WireGuard exit's wg-quick client config, as a provider or router exports it
+        max_size: 64KiB
     timeout: 1m
   relay-config:
     description: "Print the init command and secrets for a dotdash-relay machine carrying devices on to this server as the client named after -- (output is every device's credentials)"

@@ -39,7 +39,8 @@ jobs:
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
       components: ""
       probe-paths: ""
-      operator-secrets: upstream
+      # upstream is the published release's, which smoke-update installs first.
+      operator-secrets: upstreams upstream
       # What init refuses without; .github/smoke.d/pre-apply supplies the rest.
       # healthcheck_url is the published release's name for probe_url, from
       # before 0.7.0, which smoke-update installs first; a release that does

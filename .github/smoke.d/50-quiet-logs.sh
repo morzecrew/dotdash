@@ -38,13 +38,8 @@ leak() { # <what> <value>
 }
 secrets=/run/dotdash/secrets
 leak "the XHTTP path" "$(sudo cat "${secrets}/xhttp_path")"
-# The password: between the first ":" and the last "@" of "user:pass@host:port",
-# or a secret of its own in a release from before the upstream secret.
-if sudo test -e "${secrets}/upstream"; then
-  leak "the upstream password" "$(sudo cat "${secrets}/upstream" | sed -n 's/^[^:]*:\(.*\)@[^@]*$/\1/p')"
-else
-  leak "the upstream password" "$(sudo cat "${secrets}/upstream_password")"
-fi
+# The rig's upstream password, whichever secret holds it in this release.
+leak "the upstream password" "$(cat /rig/upstream.pass)"
 leak "the REALITY short id" "$(sudo cat "${secrets}/reality_short_id")"
 while read -r id _; do
   case ${id} in '' | '#'*) continue ;; esac
