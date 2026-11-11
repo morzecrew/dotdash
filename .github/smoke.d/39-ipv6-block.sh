@@ -27,16 +27,32 @@ lines() { wc -l <"${log}"; }
 fetch() { # <url>: its status through 10-clients.sh's REALITY client, or 000
   curl -s -o /dev/null --max-time 15 -w '%{http_code}' --socks5-hostname 127.0.0.1:11080 "$1" || true
 }
+# Xray writes its access log late (37-ipv6-upstream.sh), so a line is waited
+# for, and an absence is read only once a later IPv4 fetch, the marker, shows.
+logged() { # <log mark> <text> [seconds]: whether the upstream logs it since
+  local _
+  for _ in $(seq "${3:-20}"); do
+    grep -qF "$2" <<<"$(since "$1")" && return 0
+    sleep 1
+  done
+  return 1
+}
+marker=11.99.0.10:8000
 asked_for_v6() { # <log mark>: whether the upstream was handed the literal since
-  sleep 2
-  grep -qF "[${v6}]" <<<"$(since "$1")"
+  logged "$1" "[${v6}]"
+}
+not_asked_for_v6() { # <log mark>: the marker shows, and the literal before it does not
+  fetch "http://${marker}/" >/dev/null
+  logged "$1" "//${marker}" || die "the upstream's log shows no marker, so an absence proves nothing"
+  ! grep -qF "[${v6}]" <<<"$(since "$1")"
 }
 restore() { sudo morzer config set ipv6=allow >/dev/null 2>&1 || true; }
 trap restore EXIT
 
 mark=$(lines)
 fetch "http://[${v6}]/" >/dev/null
-asked_for_v6 "${mark}" || die "with ipv6=allow the upstream was not handed ${v6}, so the checks below would prove nothing"
+asked_for_v6 "${mark}" ||
+  die "with ipv6=allow the upstream was not handed ${v6}, so the checks below would prove nothing; it logged: $(since "${mark}" | tail -5 | tr '\n' ' ')"
 echo "${0##*/}: with ipv6=allow an IPv6 literal goes on to the upstream"
 
 sudo morzer config set ipv6=block >/dev/null || die "could not set ipv6=block"
@@ -48,7 +64,7 @@ sudo jq -e '.dns.queryStrategy == "UseIPv4"
 
 mark=$(lines)
 fetch "http://[${v6}]/" >/dev/null
-! asked_for_v6 "${mark}" || die "with ipv6=block the upstream was still handed ${v6}"
+not_asked_for_v6 "${mark}" || die "with ipv6=block the upstream was still handed ${v6}"
 mark=$(lines)
 code=$(fetch https://www.gstatic.com/generate_204)
 seen=$(since "${mark}")
