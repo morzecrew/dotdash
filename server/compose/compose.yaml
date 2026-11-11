@@ -4,7 +4,7 @@
 # inbound. Caddy publishes only port 80, for ACME. Every client connection
 # leaves through the upstream proxy. The xdns profile adds the DNS tunnel
 # (xdns.yaml), xhttp-reality XHTTP with REALITY on a port of its own
-# (xhttp-reality.yaml), and xdns-xhttp-reality both.
+# (xhttp-reality.yaml), and xdns,xhttp-reality both.
 #
 # Compose sees only what morzer gives it: DOTDASH_IMAGE_*, DOTDASH_PARAM_*,
 # DOTDASH_DOMAIN, DOTDASH_CONFIG_FILE, DOTDASH_RELEASE_DIR, DOTDASH_SECRETS_DIR.

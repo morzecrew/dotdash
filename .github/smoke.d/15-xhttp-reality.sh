@@ -6,9 +6,9 @@
 # 1. xdns,xhttp-reality, two profiles combined: client-config adds a third
 #    link and outbound, with no flow, and prints the first two links as before;
 #    a client from the new link gets through on 8443, and so do
-#    10-clients.sh's REALITY, XHTTP and DNS-tunnel clients. The deprecated
-#    xdns-xhttp-reality deploys the same. One with a wrong id, public key or
-#    short id does not get through; with the upstream stopped, nothing does.
+#    10-clients.sh's REALITY, XHTTP and DNS-tunnel clients. One with a wrong
+#    id, public key or short id does not get through; with the upstream
+#    stopped, nothing does.
 # 2. xhttp-reality, on a port of its own: 53 is no longer published, the link
 #    names the new port and works there, and 8443 is shut. xhttp_reality_port
 #    equal to https_port or 80 is refused, and the deployment keeps serving.
@@ -68,14 +68,8 @@ before=$(links)
 ! grep -q 'security=reality.*type=xhttp' <<<"${before}" || die "client-config prints XHTTP with REALITY under the xdns profile"
 ! published 8443 tcp || die "8443 is published under the xdns profile"
 
-# 1. Both optional transports, as two profiles combined; on a release from
-#    before profiles combined (the benchmark rehearses the published one), as
-#    the single profile it had.
-if sudo grep -qF 'combinable:' /opt/dotdash/current/manifest.yaml; then
-  both=xdns,xhttp-reality
-else
-  both=xdns-xhttp-reality
-fi
+# 1. Both optional transports, as two profiles combined.
+both=xdns,xhttp-reality
 set_config "installation.profile=${both}"
 after=$(links)
 grep -vxFf <(printf '%s\n' "${after}") <(printf '%s\n' "${before}") >/dev/null \
@@ -98,14 +92,6 @@ for p in 11080 11081 11082; do
   gets_through "${p}" || die "the client on ${p} no longer gets through under ${both}"
 done
 echo "15-xhttp-reality.sh: ${both} adds a third link, no flow, that works beside the others"
-# The single profile it replaces, deprecated, still deploys the same.
-if [ "${both}" != xdns-xhttp-reality ]; then
-  set_config installation.profile=xdns-xhttp-reality
-  [ "$(links)" = "${after}" ] || die "xdns-xhttp-reality prints other links than ${both}"
-  { published 53 udp && published 8443 tcp; } || die "xdns-xhttp-reality no longer publishes both"
-  gets_through 11086 || die "XHTTP with REALITY gets nothing under xdns-xhttp-reality"
-  echo "15-xhttp-reality.sh: the deprecated xdns-xhttp-reality still deploys the same"
-fi
 
 wrong_pbk=$(sudo docker run --rm "${xray}" x25519 | sed -n 's/^Password (PublicKey): //p')
 [ -n "${wrong_pbk}" ] || die "xray x25519 printed no public key"

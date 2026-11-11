@@ -23,12 +23,8 @@ runtimes:
       # The DNS tunnel on UDP/53, which also needs xdns_domain.
       xdns: [compose/xdns.yaml]
       # VLESS over XHTTP with REALITY on xhttp_reality_port, beside the two
-      # transports every install has. One profile per installation, so both
-      # together is a profile of its own.
+      # transports every install has.
       xhttp-reality: [compose/xhttp-reality.yaml]
-      # Both, from before profiles combined. Deprecated: xdns,xhttp-reality
-      # does the same; it goes in the next release.
-      xdns-xhttp-reality: [compose/xdns.yaml, compose/xhttp-reality.yaml]
       # An OpenVPN client (vpn) and a SOCKS hop in its namespace (vpn-socks),
       # which the gate dials with upstream_protocol=openvpn: Xray has no
       # OpenVPN of its own.
