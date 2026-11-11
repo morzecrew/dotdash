@@ -32,7 +32,7 @@ A relay set up with a borrowed site moves to one of its own in place. Point a
 domain at it and open port 80, then:
 
 ```sh
-sudo morzer config set installation.domains=relay.example.ru
+sudo morzer config set installation.domains=relay.example.net
 sudo morzer config set installation.profile=own-site
 sudo morzer task run relay-entry --output -- 198.51.100.7
 ```
@@ -40,7 +40,7 @@ sudo morzer task run relay-entry --output -- 198.51.100.7
 The site in the line changes and the line gains `own-site`, so replace the
 relay's line in the server's `relays`, and send devices their links again
 (subscriptions pick them up), with the subscription URL through the relay for
-those inside the country.
+those inside the restricted network.
 `sudo morzer config unset installation.profile` goes back to the borrowed
 site.
 

@@ -1,7 +1,7 @@
 [project]
 site_name = "dotdash"
 site_url = "https://morzecrew.github.io/dotdash/"
-site_description = "Four morzer bundles that get devices in a censored network out through a server of yours: the server, a relay, a client and a canary"
+site_description = "Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary"
 site_author = "Lev Litvinov"
 copyright = "&copy; 2026 Lev Litvinov and contributors"
 
@@ -10,7 +10,7 @@ repo_name = "dotdash"
 
 nav = [
     { "Home" = "index.md" },
-    { "Before a shutdown" = "shutdown.md" },
+    { "More than one way in" = "ways-in.md" },
     { "Server" = [
         "server/index.md",
         "server/install.md",

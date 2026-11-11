@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Domestic CDNs (cdn_hosts): client-config adds a link per CDN and an outbound
+# Local CDNs (cdn_hosts): client-config adds a link per CDN and an outbound
 # in the Xray config, shaped for CDNs that pass GET alone and no request body:
 # XHTTP packet-up, uploads in GET requests with the data in headers. The rig
 # has no CDN, so the server stands in for one under its own name:

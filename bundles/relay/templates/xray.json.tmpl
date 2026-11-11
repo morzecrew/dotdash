@@ -4,7 +4,7 @@ borrowed site, whose DNS is someone else's. */ -}}
 {{- $own := has "own-site" .Profiles -}}
 {{- $kcp := has "mkcp" .Profiles -}}
 {{- $site := .Parameters.site -}}
-{{- if $own }}{{ $site = required "the own-site profile needs a domain: sudo morzer config set installation.domains=relay.example.ru" .Installation.Domain }}
+{{- if $own }}{{ $site = required "the own-site profile needs a domain: sudo morzer config set installation.domains=relay.example.net" .Installation.Domain }}
 {{- else if eq $site "none" }}{{ $site = required "set site, a site next to the relay, or use the own-site profile with a domain of the relay's own" "" }}{{ end -}}
 {{- $list := .Parameters.dotdash_servers }}{{ if not $list }}{{ $list = .Parameters.dotdash_server }}{{ end -}}
 {{- if eq $list "none" }}{{ $list = "" }}{{ end -}}

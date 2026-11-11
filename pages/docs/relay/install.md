@@ -17,9 +17,9 @@ relay, and the `own-site` profile: the relay serves a site under that name,
 with a certificate from Let's Encrypt. To the network the name and the
 address agree, as they do for any real site. It needs:
 
-- a domain, `relay.example.ru`, with an `A` record for the relay's address;
+- a domain, `relay.example.net`, with an `A` record for the relay's address;
 - port 80 open as well as 443, for the certificate;
-- in step 3, `--domain relay.example.ru --profile own-site` in place of
+- in step 3, `--domain relay.example.net --profile own-site` in place of
   `--set site=…`.
 
 Your own pages go in `/srv/dotdash-relay` (the `site_dir` parameter); without
@@ -27,8 +27,8 @@ them it serves a plain bundled page titled with the domain.
 
 **A site next to the relay.** No domain needed: the relay borrows the name of
 a real site, and probes get that site's own handshake. But that name's DNS
-points at the site, not the relay, and a censor that compares the two can
-tell. Pick one that is:
+points at the site, not the relay, and an observer that compares the two
+can tell. Pick one that is:
 
 - in the relay's own network, the same hosting provider or nearby, not a big
   name served from somewhere else;
@@ -36,7 +36,7 @@ tell. Pick one that is:
   without TLS 1.3:
 
     ```sh
-    curl -so /dev/null --tlsv1.3 --http2 -w '%{http_version}\n' https://site.example.ru
+    curl -so /dev/null --tlsv1.3 --http2 -w '%{http_version}\n' https://site.example.net
     ```
 
 ## 2. On the server: a client for the relay
@@ -65,13 +65,13 @@ morzer secret recipients generate-recovery-key ~/relay-recovery.key   # keep it 
 
 Then run what step 2 printed, with your site and the recovery key's
 `age1…` filled in. It has this shape, here with a borrowed site; for a site of
-the relay's own, replace `--set site=…` with `--domain relay.example.ru
+the relay's own, replace `--set site=…` with `--domain relay.example.net
 --profile own-site`:
 
 ```sh
 sudo morzer init --release oci://ghcr.io/morzecrew/dotdash-relay:stable \
   --recovery-recipient age1… \
-  --set site=site.example.ru \
+  --set site=site.example.net \
   --set dotdash_servers=example.com --set dotdash_port=443 \
   --set dotdash_public_key=…
 sudo morzer secret set dotdash_id <<'END'          # and dotdash_encryption,
@@ -90,7 +90,7 @@ the domain: links then name it, and [moving the relay](operations.md#move-a-rela
 needs only a DNS change. Without one, give the relay's public IP:
 
 ```sh
-sudo morzer task run relay-entry --output -- relay.example.ru   # or 198.51.100.7
+sudo morzer task run relay-entry --output -- relay.example.net   # or 198.51.100.7
 ```
 
 It prints one line for the server, its own address, site, public key, short
@@ -98,7 +98,7 @@ id and encryption, plus the commands a [canary](../canary/index.md) needs to
 check this relay:
 
 ```text
-198.51.100.7 site.example.ru <public key> <short id> <encryption>
+198.51.100.7 site.example.net <public key> <short id> <encryption>
 ```
 
 Under `own-site`, the site is the relay's domain, and the line ends with
@@ -127,12 +127,12 @@ its subscription through the relay:
 
 ```text
 https://example.com/<token>
-through the relay relay.example.ru: https://relay.example.ru/<token>
+through the relay relay.example.net: https://relay.example.net/<token>
 ```
 
-Give a device inside the country the second one. The relay fetches it from
+Give a device inside the restricted network the second one. The relay fetches it from
 the server through its own tunnel, so the app keeps refreshing its links
-while only domestic addresses get through, and nothing between the relay and
+while only some addresses get through, and nothing between the relay and
 the server can read them.
 
 To check, connect a phone on the target network with its relay link alone.

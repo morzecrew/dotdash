@@ -1,6 +1,6 @@
 # Install
 
-You need a domain, a Linux host abroad, and an upstream proxy. `example.com`
+You need a domain, a Linux host outside the restricted network, and an upstream proxy. `example.com`
 stands for your domain throughout.
 
 1. **DNS:** point the domain at the server:
@@ -10,7 +10,7 @@ stands for your domain throughout.
     ```
 
 2. **Firewall:** open 80/tcp and 443/tcp in the cloud provider's firewall
-   (on Google Cloud, a VPC firewall rule). Docker's published ports bypass
+   (a VPC firewall rule, on some clouds). Docker's published ports bypass
    ufw and firewalld, so the provider's firewall is the one that counts.
    Allow SSH with keys only.
 

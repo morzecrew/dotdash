@@ -6,7 +6,7 @@
   checks this against what runs.
 - The upstream sees destination addresses, ports and volume, not hostnames:
   this server resolves them over DoH (`dns_resolver`), through the upstream.
-  SNI stays visible unless the client uses [ECH](cdn.md#ech-through-cloudflare).
+  SNI stays visible unless the client uses [ECH](cdn.md#ech).
   `resolve=upstream` hands the upstream the hostnames.
 - On the device, only the app keeps traffic inside a dropped tunnel (TUN with
   a kill switch, or Android's "block connections without VPN"). A browser IP

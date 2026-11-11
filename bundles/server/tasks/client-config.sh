@@ -59,7 +59,7 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # the site is the relay's own, which fetches subscriptions from here and, given
 # its path, routes XHTTP to the relay's Xray. kcp=: the relay serves mKCP on
 # that UDP port too, with the opener <open> (quic) if it names one. cdn=:
-# domestic CDNs front the relay's own site, as cdn_hosts fronts this server's;
+# local CDNs front the relay's own site, as cdn_hosts fronts this server's;
 # they need its XHTTP path. Each becomes "<host> <site> <key> <sid> <enc>
 # <own-site|-> <path|-> <kcp|-> <cdn hosts, comma-separated|->".
 all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
@@ -88,7 +88,7 @@ all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   if [ -n "${5:-}" ]; then echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $c $d"; fi
 done)
 
-# The domestic CDNs in front of this server (the cdn_hosts parameter), each
+# The local CDNs in front of this server (the cdn_hosts parameter), each
 # fronting https://${DOMAIN}.
 all_cdns=$(printf '%s\n' "${CDN_HOSTS:-none}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e '/^none$/d')
 
@@ -114,8 +114,8 @@ pick() { # <device name>: the relays, CDN hosts and subscription relays it gets
     echo "$h $s $k $i $e $o $p $c ${d:--}"
   done)
   cdns=$(for h in $all_cdns; do if sees "$h"; then echo "$h"; fi; done)
-  # The own-site relays' domains, where a device inside the country fetches
-  # its subscription.
+  # The own-site relays' domains, where a device inside the restricted network
+  # fetches its subscription.
   sub_relays=$(printf '%s\n' "$relays" | awk '$6 == "own-site" { print $2 }')
 }
 # A member that names nothing would leave its device in no pool, or its relay
@@ -126,11 +126,11 @@ for m in $(printf '%s\n' "$pools" | awk '{ $1 = ""; print }'); do
   printf '%s\n%s\n%s\n' "$names" "$all_cdns" "$relay_names" | grep -qxF -- "$m" ||
     echo "pools: $m is no device name, relay host or CDN host" >&2
 done
-# Their edges take GET alone and no request body (Yandex has answered 413 to
-# any since 2026-09-28), so a device uploads in packet-up GETs with the data in
-# headers. The server's inbound reads that as it is: its placement is auto. The
-# link's extra is the five keys a phone's importer was seen to take, with
-# uplinkChunkSize a string; this is it percent-encoded.
+# Their edges take GET alone and no request body (some answer 413 to any),
+# so a device uploads in packet-up GETs with the data in headers. The server's
+# inbound reads that as it is: its placement is auto. The link's extra is the
+# five keys a phone's importer was seen to take, with uplinkChunkSize a string;
+# this is it percent-encoded.
 cdn_extra='%7B%22scMaxEachPostBytes%22%3A32768%2C%22scMinPostsIntervalMs%22%3A10%2C%22uplinkChunkSize%22%3A%2216384%22%2C%22uplinkDataPlacement%22%3A%22header%22%2C%22uplinkHTTPMethod%22%3A%22GET%22%7D'
 
 # support-x25519mlkem768: mihomo strips the X25519MLKEM768 key share unless a
@@ -335,7 +335,7 @@ revocation or a key rotation (as secret as the links):
 https://${DOMAIN}${at}/${token}
 EOF
     sub_through "$token"
-    [ -z "$sub_relays" ] || echo "An app takes one: a device inside the country gets one through a relay."
+    [ -z "$sub_relays" ] || echo "An app takes one: a device inside the restricted network gets one through a relay."
     echo
   fi
   for s in $servers; do

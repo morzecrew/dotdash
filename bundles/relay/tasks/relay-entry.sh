@@ -26,7 +26,7 @@ if [ -n "${KCP_PORT:-}" ]; then
   kcp=" kcp=${KCP_PORT},${KCP_HEADER:-dtls},$(cat /run/secrets/kcp_seed)"
   [ "${KCP_OPEN:-none}" != quic ] || kcp="${kcp},quic"
 else kcp=; fi
-# cdn_hosts: domestic CDNs in front of this relay's own site, each fetching
+# cdn_hosts: local CDNs in front of this relay's own site, each fetching
 # from https://SITE with Host set to it, so client-config gives each device an
 # XHTTP link through each, shaped as for the server's cdn_hosts. After kcp=,
 # where a server from before it reads no field.
