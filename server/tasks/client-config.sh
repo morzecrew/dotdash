@@ -54,17 +54,19 @@ sid=$(cat /run/secrets/reality_short_id)
 pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # The dotdash-relay machines in front of this server (the relays parameter),
 # one "<host> <site> <public key> <short id> <encryption> [own-site [<xhttp
-# path>]] [kcp=<port>,<header>,<seed>[,<open>]]" per line; blank lines, "#"
-# comments and shorter lines are not relays. own-site: the site is the relay's
-# own, which fetches subscriptions from here and, given its path, routes XHTTP
-# to the relay's Xray. kcp=: the relay serves mKCP on that UDP port too, with
-# the opener <open> (quic) if it names one. Each
-# becomes "<host> <site> <key> <sid> <enc> <own-site|-> <path|-> <kcp|->".
+# path>]] [kcp=<port>,<header>,<seed>[,<open>]] [cdn=<host>[,<host>]]" per
+# line; blank lines, "#" comments and shorter lines are not relays. own-site:
+# the site is the relay's own, which fetches subscriptions from here and, given
+# its path, routes XHTTP to the relay's Xray. kcp=: the relay serves mKCP on
+# that UDP port too, with the opener <open> (quic) if it names one. cdn=:
+# domestic CDNs front the relay's own site, as cdn_hosts fronts this server's;
+# they need its XHTTP path. Each becomes "<host> <site> <key> <sid> <enc>
+# <own-site|-> <path|-> <kcp|-> <cdn hosts, comma-separated|->".
 all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   case $line in '' | '#'*) continue ;; esac
-  c=- rest=
+  c=- d=- rest=
   for f in $line; do
-    case $f in kcp=*) c=${f#kcp=} ;; *) rest="$rest $f" ;; esac
+    case $f in kcp=*) c=${f#kcp=} ;; cdn=*) d=${f#cdn=} ;; *) rest="$rest $f" ;; esac
   done
   # shellcheck disable=SC2086 # one field per word
   set -- $rest
@@ -74,7 +76,16 @@ all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   esac
   o=${6:-} p=${7:-}
   if [ "$o" != own-site ]; then o='' p=''; fi
-  if [ -n "${5:-}" ]; then echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $c"; fi
+  case $d in
+    -) ;;
+    '' | ,* | *, | *,,* | *[!A-Za-z0-9.,-]*)
+      echo "relays: the cdn= field of $1 is not <host>[,<host>]; no CDN link through it" >&2
+      d=- ;;
+    *) [ -n "$p" ] || {
+      echo "relays: $1 names CDNs but no XHTTP path of its own site; no CDN link through it" >&2
+      d=-; } ;;
+  esac
+  if [ -n "${5:-}" ]; then echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $c $d"; fi
 done)
 
 # The domestic CDNs in front of this server (the cdn_hosts parameter), each
@@ -82,9 +93,10 @@ done)
 all_cdns=$(printf '%s\n' "${CDN_HOSTS:-none}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e '/^none$/d')
 
 # The pools parameter: one "<pool> <member>..." line per pool, the members
-# device names, relay hosts and CDN hosts. A device in a pool gets its pools'
-# relays and CDN hosts and those in no pool; a device in none gets them all.
-# A leaked device then gives away its pools' entry points, not every one.
+# device names, relay hosts and CDN hosts, a relay's own included. A device in
+# a pool gets its pools' relays and CDN hosts and those in no pool; a device in
+# none gets them all. A relay's CDN hosts go only to devices that get the
+# relay. A leaked device then gives away its pools' entry points, not every one.
 pools=$(printf '%s\n' "${POOLS:-}" | sed 's/#.*//' | awk 'NF > 1')
 has() { # <member> <pool lines>: whether a line lists it
   printf '%s\n' "$2" | awk -v m="$1" '{ for (i = 2; i <= NF; i++) if ($i == m) f = 1 } END { exit !f }'
@@ -93,8 +105,13 @@ sees() { [ -z "$mine" ] || has "$1" "$mine" || ! has "$1" "$pools"; }
 pick() { # <device name>: the relays, CDN hosts and subscription relays it gets
   mine=
   [ -z "$1" ] || mine=$(printf '%s\n' "$pools" | awk -v m="$1" '{ for (i = 2; i <= NF; i++) if ($i == m) { print; next } }')
-  relays=$(printf '%s\n' "$all_relays" | while read -r h rest; do
-    if [ -n "$h" ] && sees "$h"; then echo "$h $rest"; fi
+  relays=$(printf '%s\n' "$all_relays" | while read -r h s k i e o p c d; do
+    if [ -z "$h" ] || ! sees "$h"; then continue; fi
+    if [ "$d" != - ]; then
+      d=$(for x in $(printf '%s' "$d" | tr ',' ' '); do if sees "$x"; then printf '%s,' "$x"; fi; done)
+      d=${d%,}
+    fi
+    echo "$h $s $k $i $e $o $p $c ${d:--}"
   done)
   cdns=$(for h in $all_cdns; do if sees "$h"; then echo "$h"; fi; done)
   # The own-site relays' domains, where a device inside the country fetches
@@ -104,8 +121,9 @@ pick() { # <device name>: the relays, CDN hosts and subscription relays it gets
 # A member that names nothing would leave its device in no pool, or its relay
 # or CDN host in none, and so seen by every device: say so.
 names=$(awk '$1 !~ /^#/ && NF > 1 { print $2 }' /run/secrets/vless_clients)
+relay_names=$(printf '%s\n' "$all_relays" | awk '{ print $1; if ($9 != "-") { gsub(",", "\n", $9); print $9 } }')
 for m in $(printf '%s\n' "$pools" | awk '{ $1 = ""; print }'); do
-  printf '%s\n%s\n%s\n' "$names" "$all_cdns" "$(printf '%s\n' "$all_relays" | awk '{ print $1 }')" | grep -qxF -- "$m" ||
+  printf '%s\n%s\n%s\n' "$names" "$all_cdns" "$relay_names" | grep -qxF -- "$m" ||
     echo "pools: $m is no device name, relay host or CDN host" >&2
 done
 # Their edges take GET alone and no request body (Yandex has answered 413 to
@@ -152,14 +170,20 @@ EOF
 
 # A relay takes REALITY on 443 under its neighbour site's name, with keys of its
 # own, and carries the device on to this server as its own client.
-relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]", "[relay <host> xhttp]" before it through an own-site one, "[relay <host> kcp]" after it with mKCP
-  printf '%s\n' "$relays" | while read -r h s k i e _ p c; do
+relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]", "[relay <host> xhttp]" and "[relay <host> cdn <cdn>]" before it through an own-site one, "[relay <host> kcp]" after it with mKCP
+  printf '%s\n' "$relays" | while read -r h s k i e _ p c d; do
     [ -n "$h" ] || continue
     [ "$p" = - ] || cat <<EOF
 XHTTP over TLS through the relay $h, behind its own site (v2rayN, v2rayNG, Happ):
 vless://$1@$h:443?encryption=$e&security=tls&sni=$s&host=$s&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=auto#$2%20%5Brelay%20$h%20xhttp%5D
 
 EOF
+    [ "$d" = - ] || for x in $(printf '%s' "$d" | tr ',' ' '); do cat <<EOF
+XHTTP through the CDN $x, in front of the relay $h (v2rayN, v2rayNG, Happ):
+vless://$1@$x:443?encryption=$e&security=tls&sni=$x&host=$x&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=packet-up&extra=${cdn_extra}#$2%20%5Brelay%20$h%20cdn%20$x%5D
+
+EOF
+    done
     cat <<EOF
 REALITY through the relay $h (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
 vless://$1@$h:443?encryption=$e&flow=xtls-rprx-vision&security=reality&sni=$s&fp=chrome&pbk=$k&sid=$i&support-x25519mlkem768=true&type=tcp#$2%20%5Brelay%20$h%5D
@@ -192,25 +216,29 @@ EOF
   done
 }
 
+cdn_outbound() { # <tag> <id> <cdn> <encryption> <path>: XHTTP through a CDN, uploading by GET with the data in headers
+  cat <<EOF
+    {"tag": "$1", "protocol": "vless",
+     "settings": {"address": "$3", "port": 443, "id": "$2", "encryption": "$4"},
+     "streamSettings": {"network": "xhttp", "security": "tls",
+       "tlsSettings": {"serverName": "$3", "alpn": ["h2"], "fingerprint": "chrome"},
+       "xhttpSettings": {"path": "/$5", "host": "$3", "mode": "packet-up",
+         "uplinkHTTPMethod": "GET", "uplinkDataPlacement": "header", "uplinkChunkSize": 16384,
+         "scMaxEachPostBytes": 32768, "scMinPostsIntervalMs": 10}}},
+EOF
+}
+
 cdn_outbounds() { # <id>
   n=0
   for h in $cdns; do
     n=$((n + 1))
-    cat <<EOF
-    {"tag": "dotdash-cdn-$n", "protocol": "vless",
-     "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "${enc}"},
-     "streamSettings": {"network": "xhttp", "security": "tls",
-       "tlsSettings": {"serverName": "$h", "alpn": ["h2"], "fingerprint": "chrome"},
-       "xhttpSettings": {"path": "/${path}", "host": "$h", "mode": "packet-up",
-         "uplinkHTTPMethod": "GET", "uplinkDataPlacement": "header", "uplinkChunkSize": 16384,
-         "scMaxEachPostBytes": 32768, "scMinPostsIntervalMs": 10}}},
-EOF
+    cdn_outbound "dotdash-cdn-$n" "$1" "$h" "${enc}" "${path}"
   done
 }
 
 relay_outbounds() { # <id>
   n=0
-  printf '%s\n' "$relays" | while read -r h s k i e _ p c; do
+  printf '%s\n' "$relays" | while read -r h s k i e _ p c d; do
     [ -n "$h" ] || continue
     n=$((n + 1))
     cat <<EOF
@@ -226,6 +254,11 @@ EOF
        "tlsSettings": {"serverName": "$s", "alpn": ["h2"], "fingerprint": "chrome"},
        "xhttpSettings": {"path": "/$p", "host": "$s", "mode": "auto"}}},
 EOF
+    m=0
+    [ "$d" = - ] || for x in $(printf '%s' "$d" | tr ',' ' '); do
+      m=$((m + 1))
+      cdn_outbound "dotdash-relay-$n-cdn-$m" "$1" "$x" "$e" "$p"
+    done
     [ "$c" != - ] || continue
     kport=${c%%,*}; r=${c#*,}; kheader=${r%%,*}; r2=${r#*,}; kseed=${r2%%,*}
     kopen=none; case $r2 in *,*) kopen=${r2#*,} ;; esac
