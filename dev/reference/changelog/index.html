@@ -2596,6 +2596,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>The server's and relays' sites answer under any name, so a CDN in front works on its defaults: no <code>Host</code> header to set at the provider. A CDN that sends its own name as SNI gets the site's certificate rather than a failed handshake.</p>
+</li>
+<li>
 <p>Links list XHTTP before REALITY, for each server and each relay, in <code>client-config</code> and the subscriptions: an app tends to try the first link, and REALITY over raw TCP is blocked most often.</p>
 </li>
 <li>

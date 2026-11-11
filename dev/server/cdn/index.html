@@ -2144,8 +2144,10 @@ are on the list can still reach this server: devices connect to the CDN's
 edge, and the CDN fetches from <code>https://example.com</code> abroad.</p>
 <ol>
 <li><strong>At the CDN</strong>, create a resource with this server as its origin:</li>
-<li>origin <code>https://example.com</code>, with the <code>Host</code> header sent to it set
-     to <code>example.com</code>;</li>
+<li>origin <code>https://example.com</code>. The <code>Host</code> header can stay at the
+     CDN's default: this server answers under any name. If the CDN checks
+     the origin's certificate against a name of its own and fails, have it
+     send <code>example.com</code> as the <code>Host</code>, or as the origin's name;</li>
 <li>no caching, and HTTP/2 towards devices if it is offered;</li>
 <li>a name devices use: the provider's own name for the resource, or a
      domain of yours pointed at it, with the certificate it asks for.</li>
@@ -2228,8 +2230,8 @@ instead of this server. The CDN's account then names the relay, which is
 cheap to replace, rather than this server and its upstream.</p>
 <ol>
 <li><strong>At the CDN</strong>, as above, with the relay's domain as the origin:
-   <code>https://relay.example.ru</code>, with the <code>Host</code> header sent to it set to
-   <code>relay.example.ru</code>.</li>
+   <code>https://relay.example.ru</code>. Like the server, the relay answers under
+   any name.</li>
 <li>
 <p><strong>On the relay</strong>, list the names devices use, then print its line again
    (<a href="../../relay/install/#4-on-the-relay-its-line">its line</a>); it now ends in
