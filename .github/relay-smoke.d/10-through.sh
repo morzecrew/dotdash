@@ -39,5 +39,23 @@ device stranger 18082 "$(cat /proc/sys/kernel/random/uuid)"
 code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 --proxy http://127.0.0.1:18082 \
   https://www.gstatic.com/generate_204 || true)
 [ "${code}" != 204 ] || die "a device missing from vless_clients got through the relay"
-sudo docker rm -f relay-rig-phone relay-rig-stranger >/dev/null
+sudo docker rm -f relay-rig-stranger >/dev/null
 echo "10-through.sh: a listed device gets out through the relay and dotdash; an unlisted one does not"
+
+# ipv6=block: IPv6 destinations end at the relay, in a blackhole after the
+# servers' outbounds, and the listed device still gets out by name.
+if sudo grep -q '^  ipv6:$' /opt/dotdash-relay/current/manifest.yaml; then
+  sudo morzer config set ipv6=block >/dev/null || die "could not set ipv6=block"
+  sudo jq -e '.outbounds[-1] == {tag: "block", protocol: "blackhole"} and .outbounds[0].tag == "dotdash-0"
+    and .routing.rules[0] == {type: "field", ip: ["::/0"], outboundTag: "block"}' \
+    /etc/dotdash-relay/xray.json >/dev/null ||
+    { sudo morzer config set ipv6=allow >/dev/null 2>&1 || true
+      die "ipv6=block did not end IPv6 in a blackhole: $(sudo jq -c '{outbounds: [.outbounds[].tag], routing}' /etc/dotdash-relay/xray.json)"; }
+  code=$(fetch 18081)
+  sudo morzer config set ipv6=allow >/dev/null || die "could not set ipv6=allow"
+  [ "${code}" = 204 ] || die "with ipv6=block the listed device got ${code}, not 204"
+  sudo jq -e '.routing == null and ([.outbounds[].tag] | index("block") == null)' /etc/dotdash-relay/xray.json >/dev/null ||
+    die "back on ipv6=allow, the block remains"
+  echo "10-through.sh: ipv6=block ends IPv6 at the relay, and the device still gets out"
+fi
+sudo docker rm -f relay-rig-phone >/dev/null

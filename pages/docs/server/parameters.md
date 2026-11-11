@@ -21,6 +21,7 @@
 | `healthcheck_expect` | `.*` | regex the response must match, such as the exit IP |
 | `healthcheck6_url` | `http://api6.ipify.org` | IPv6-only URL fetched through the IPv6 proxy |
 | `resolve` | `gateway` | `gateway`: this server resolves over `dns_resolver`; `upstream`: the upstream sees hostnames |
+| `ipv6` | `allow` | `block`: no IPv6 destination leaves; names resolve to IPv4 only and the upstream is dialled over IPv4, so dual-stack sites still work (with `resolve=upstream`, the upstream resolves names itself). Not with `upstream6_protocol` |
 | `dns_resolver` | `https://1.1.1.1/dns-query` | DoH server for `resolve=gateway` and device DNS; `https://` only |
 | `subscription` | `false` | a subscription URL per device |
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (offline machines) |

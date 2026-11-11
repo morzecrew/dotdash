@@ -157,6 +157,12 @@ parameters:
     default: gateway
     description: "Who turns hostnames into addresses. gateway: this server, over dns_resolver, which itself goes out through the upstream, so the upstream sees addresses only; a name resolving to a private address is blocked. upstream: the upstream, which then sees every hostname"
     services: [xray]
+  ipv6:
+    type: enum
+    values: [allow, block]
+    default: allow
+    description: "IPv6 destinations. allow: they leave through the upstream (or upstream6). block: none leaves; names resolve to IPv4 addresses only and the upstream is dialled over IPv4, so dual-stack sites still work; with resolve=upstream the upstream resolves names itself. Not with upstream6_protocol"
+    services: [xray]
   dns_resolver:
     type: string
     default: https://1.1.1.1/dns-query

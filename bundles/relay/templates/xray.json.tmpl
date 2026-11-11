@@ -10,6 +10,10 @@ borrowed site, whose DNS is someone else's. */ -}}
 {{- if eq $list "none" }}{{ $list = "" }}{{ end -}}
 {{- $servers := split "," (required "set dotdash_servers" $list) -}}
 {{- $address := .Parameters.dotdash_address }}{{ if eq $address "none" }}{{ $address = "" }}{{ end -}}
+{{- /* ipv6=block: an IPv6 destination ends here, in a blackhole after the
+servers' outbounds (the first outbound stays the default); names go on. */ -}}
+{{- $block6 := eq .Parameters.ipv6 "block" -}}
+{{- $many := gt (len $servers) 1 -}}
 {{- $pbk := required "set dotdash_public_key" .Parameters.dotdash_public_key -}}
 {
   "log": {"loglevel": "warning", "access": "none"},
@@ -108,11 +112,20 @@ borrowed site, whose DNS is someone else's. */ -}}
       }}
     }
     {{- end }}
-  ]{{ if gt (len $servers) 1 }},
-  "observatory": {"subjectSelector": ["dotdash-"], "probeUrl": "{{ .Parameters.probe_url }}", "probeInterval": "30s", "enableConcurrency": true},
+    {{- if $block6 }},
+    {"tag": "block", "protocol": "blackhole"}
+    {{- end }}
+  ]{{ if $many }},
+  "observatory": {"subjectSelector": ["dotdash-"], "probeUrl": "{{ .Parameters.probe_url }}", "probeInterval": "30s", "enableConcurrency": true}
+  {{- end }}{{ if or $many $block6 }},
   "routing": {
+    {{- if $many }}
     "balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}}],
-    "rules": [{"type": "field", "network": "tcp,udp", "balancerTag": "dotdash"}]
+    {{- end }}
+    "rules": [
+      {{- if $block6 }}{"type": "field", "ip": ["::/0"], "outboundTag": "block"}{{ if $many }},{{ end }}{{ end }}
+      {{- if $many }}{"type": "field", "network": "tcp,udp", "balancerTag": "dotdash"}{{ end }}
+    ]
   }
   {{- end }}
 }
