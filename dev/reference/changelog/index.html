@@ -1823,7 +1823,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="[Unreleased]">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#060-2026-11-11" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        [0.6.0] - 2026-11-11
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.6.0] - 2026-11-11">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1842,6 +1853,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Changed
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Removed
       </span>
     </span>
   </a>
@@ -2175,7 +2197,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="[Unreleased]">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#060-2026-11-11" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        [0.6.0] - 2026-11-11
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.6.0] - 2026-11-11">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2194,6 +2227,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Changed
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Removed
       </span>
     </span>
   </a>
@@ -2545,28 +2589,29 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="060-2026-11-11">[0.6.0] - 2026-11-11<a class="headerlink" href="#060-2026-11-11" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p>CDNs in front of a relay: the relay's new <code>cdn_hosts</code> parameter (with the <code>own-site</code> profile) ends the line <code>relay-entry</code> prints with <code>cdn=&lt;names&gt;</code>, and the server gives each device an XHTTP link and an outbound through each CDN to the relay's own site, shaped as for <code>cdn_hosts</code> (packet-up, uploads by <code>GET</code> with the data in headers), named <code>[relay &lt;host&gt; cdn &lt;name&gt;]</code>. The CDN's account then names a relay rather than the server. Pools take a relay's CDN names as members; a server from before ignores the field.</p>
+<p>CDNs in front of a relay: with the <code>own-site</code> profile, the relay's new <code>cdn_hosts</code> parameter adds <code>cdn=&lt;names&gt;</code> to its line, and devices get an XHTTP link through each CDN, shaped as for the server's <code>cdn_hosts</code>. The CDN's account then names a relay rather than the server, and pools take these names too.</p>
 </li>
 <li>
-<p>A QUIC-shaped opener in front of mKCP, for networks that let QUIC out: the new <code>kcp_open</code> parameter (<code>quic</code>) adds a finalmask <code>noise</code> mask that sends a QUIC-Initial-shaped packet before the flow, on the server, the relays (a fourth <code>kcp=</code> field on <code>relay-entry</code>'s line carries it) and the canary. <code>client-config</code> and the subscriptions give such a link the whole mask list in <code>fm=</code> in place of <code>headerType</code> and <code>seed</code>, for v2rayN and v2rayNG. The opener is a fixed shape, off unless set; measure it on a canary before relying on it.</p>
+<p>A QUIC-shaped opener in front of mKCP: the new <code>kcp_open</code> parameter (<code>quic</code>) sends a QUIC-Initial-shaped packet before the flow, on the server, relays and canary; links carry it in <code>fm=</code> for v2rayN and v2rayNG. It is a fixed shape, off unless set, and no help where QUIC itself is blocked; measure it on a canary first.</p>
 </li>
 <li>
 <p>The canary's <code>measure</code> adds throughput: three downloads of the new <code>download_url</code> parameter (1 MB from speed.cloudflare.com unless set, <code>https://</code> only, <code>none</code> to skip) through each transport, with how many completed and the median Mbit/s.</p>
 </li>
 <li>
-<p>VLESS over mKCP, an opt-in UDP transport for networks that block the TCP ones: the new <code>mkcp</code> profile serves it on <code>kcp_port</code> (8447/udp), its packets encrypted under the new <code>kcp_seed</code> secret and starting with a fake <code>kcp_header</code> (<code>dtls</code> unless set, a DTLS 1.2 record header). <code>client-config</code> and the subscriptions add a <code>[kcp]</code> link and outbound per server, for v2rayN and v2rayNG.</p>
+<p>VLESS over mKCP, an opt-in UDP transport for networks that block the TCP ones: the new <code>mkcp</code> profile serves it on <code>kcp_port</code> (8447/udp), encrypted under the new <code>kcp_seed</code> secret, its packets starting with a fake <code>kcp_header</code> (<code>dtls</code> unless set). Devices get a <code>[kcp]</code> link and outbound per server (v2rayN, v2rayNG).</p>
 </li>
 <li>
-<p>mKCP on relays: the relay's <code>mkcp</code> profile (<code>own-site,mkcp</code> with its own site) serves it on <code>kcp_port</code> under its own <code>kcp_seed</code>, <code>relay-entry</code> ends its line with <code>kcp=&lt;port&gt;,&lt;header&gt;,&lt;seed&gt;</code>, and <code>client-config</code> and the subscriptions add a <code>[relay &lt;host&gt; kcp]</code> link and outbound through it. A server from before reads no such field.</p>
+<p>mKCP on relays: the relay's <code>mkcp</code> profile serves it under its own <code>kcp_seed</code>, <code>relay-entry</code> adds <code>kcp=&lt;port&gt;,&lt;header&gt;,&lt;seed&gt;</code> to its line, and devices get a <code>[relay &lt;host&gt; kcp]</code> link and outbound through it. A server from before reads no such field.</p>
 </li>
 <li>
 <p>The canary checks mKCP with <code>--profile mkcp</code>, with the server's <code>kcp_port</code>, <code>kcp_header</code> and <code>kcp_seed</code>, which <code>canary-config</code> prints for a server under the <code>mkcp</code> profile; <code>measure</code> reports it beside REALITY.</p>
 </li>
 <li>
-<p>Pools, so a leaked device no longer gives away every relay and CDN host: the new <code>pools</code> parameter takes one <code>&lt;pool&gt; &lt;member&gt;...</code> line per pool, the members device names, relay hosts and CDN hosts. <code>client-config</code> and the subscriptions give a device in a pool its pools' relays and CDN hosts and those in no pool; a device in none still gets them all, and a member that names nothing is reported.</p>
+<p>Pools, so a leaked device no longer gives away every relay and CDN host: the new <code>pools</code> parameter lists, per pool, its devices, relay hosts and CDN hosts. A device in a pool gets its pools' entry points and those in no pool; a device in none gets them all, and a member that names nothing is reported.</p>
 </li>
 <li>
 <p>XHTTP through a relay with a site of its own: the site routes a secret path, the new <code>xhttp_path</code> secret, to the relay's Xray, <code>relay-entry</code> adds the path to the relay's line, and <code>client-config</code> and the subscriptions add an <code>[relay … xhttp]</code> link and outbound. The relay needs morzer 0.15.1.</p>
@@ -2613,6 +2658,10 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>
 <p>The <code>upstream</code> secret is no longer required: an installation whose upstream is a tunnel needs none. With a proxy, the egress health check still fails, naming it, while it is unset.</p>
 </li>
+</ul>
+<h3 id="removed">Removed<a class="headerlink" href="#removed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The <code>xdns-xhttp-reality</code> profile, deprecated since 0.5.0: a server still set to it must switch before updating. <code>xdns,xhttp-reality</code> deploys the same: <code>sudo morzer config set installation.profile=xdns,xhttp-reality</code>.</li>
 </ul>
 <h2 id="051-2026-11-10">[0.5.1] - 2026-11-10<a class="headerlink" href="#051-2026-11-10" title="Permanent link">&para;</a></h2>
 <h3 id="deprecated">Deprecated<a class="headerlink" href="#deprecated" title="Permanent link">&para;</a></h3>
