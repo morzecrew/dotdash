@@ -36,9 +36,11 @@ echo "${0##*/}: the site is the app's, a guessed subscription path included"
 
 sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the app up: $(sudo morzer doctor 2>&1 | tail -5)"
 sudo docker stop -t 1 dotdash-rig-cover-app >/dev/null
+# doctor wraps a long message over lines: read it as one.
 out=$(sudo morzer doctor 2>&1) && die "doctor passes with the app stopped"
+out=$(tr -s ' \n' ' ' <<<"${out}")
 grep -qF 'app behind the site (site_upstream) does not answer' <<<"${out}" ||
-  die "doctor does not name the stopped app: $(tail -5 <<<"${out}")"
+  die "doctor does not name the stopped app: ${out}"
 echo "${0##*/}: doctor passes with the app up, and names it once stopped"
 
 sudo docker start dotdash-rig-cover-app >/dev/null
