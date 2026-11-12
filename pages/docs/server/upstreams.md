@@ -162,8 +162,8 @@ sudo morzer task run exit-check --output
   down. Every `apply` and `doctor` checks that the container has no default
   route around the tunnels.
 - It runs as root with `NET_ADMIN` and `/dev/net/tun`, the one container here
-  that does: OpenVPN takes nothing less. It reads the `upstreams` secret for
-  its lines.
+  that does: OpenVPN takes nothing less. It reads its lines from the
+  `upstreams` secret, which is the gate's, with `DAC_READ_SEARCH`.
 - An edit of `upstreams` restarts it, and every tunnel with it. If an OpenVPN
   exits, it starts again within a minute, and nothing leaves through it while
   it is down; the other tunnels carry on.

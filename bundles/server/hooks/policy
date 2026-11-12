@@ -167,11 +167,12 @@ while IFS='|' read -r name privileged readonly user network caps ports; do
   [ "${readonly}" = true ] || violations+=$'\n'"${name} has a writable root filesystem"
   [ "${network}" != host ] || violations+=$'\n'"${name} is on the host's network"
   if [ "${name}" = vpn ]; then
-    # The OpenVPN client (the openvpn profile): root with NET_ADMIN alone,
-    # and, its kill switch holding, no default route but into the tunnel.
-    # Docker reports it with or without the CAP_ prefix, by version.
-    [ "${caps//CAP_/}" = '["NET_ADMIN"]' ] ||
-      violations+=$'\n'"vpn adds capabilities ${caps}, not NET_ADMIN alone"
+    # The OpenVPN client (the openvpn profile): root with NET_ADMIN and
+    # DAC_READ_SEARCH alone, and, its kill switch holding, no default route
+    # but into a tunnel. Docker reports them with or without the CAP_ prefix,
+    # by version, in any order.
+    [ "$(tr -d '[]" ' <<<"${caps//CAP_/}" | tr ',' '\n' | sort | paste -sd,)" = DAC_READ_SEARCH,NET_ADMIN ] ||
+      violations+=$'\n'"vpn adds capabilities ${caps}, not NET_ADMIN and DAC_READ_SEARCH alone"
     vpn_default=$(docker compose -p "${project}" exec -T vpn ip -4 route show default 2>/dev/null || true)
     case ${vpn_default} in '' | *" dev tun"*) ;; *) violations+=$'\n'"vpn has a default route around the tunnel: ${vpn_default}" ;; esac
   else

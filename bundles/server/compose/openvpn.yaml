@@ -15,9 +15,12 @@ services:
     restart: unless-stopped
     # Root, the one container here that is: openvpn needs NET_ADMIN for its
     # tun device and routes, which a non-root user cannot use, and the kill
-    # switch needs it for its own. Its secret is root's, so nothing more.
+    # switch needs it for its own. DAC_READ_SEARCH reads the upstreams secret,
+    # which is the gate's user's (0400, 65532) and which root without a
+    # capability may not open; it reads, never writes, and only within this
+    # container, where that secret is the one file not root's.
     cap_drop: [ALL]
-    cap_add: [NET_ADMIN]
+    cap_add: [NET_ADMIN, DAC_READ_SEARCH]
     devices: ["/dev/net/tun:/dev/net/tun"]
     # A read-only root needs nothing more: the image points openvpn's
     # temporary directory at /dev/shm, which Docker keeps writable.
