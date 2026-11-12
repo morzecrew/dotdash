@@ -16,6 +16,12 @@ case ${XDNS_DOMAIN:-} in '' | *.*) ;; *) XDNS_DOMAIN=${XDNS_DOMAIN}.${DOMAIN} ;;
 # servers parameter); self is this one.
 servers=$(printf '%s\n' "${SERVERS:-self}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e "s/^self\$/${DOMAIN}/")
 count=$(printf '%s\n' "$servers" | grep -c .)
+# direct=false: no server's address in anything printed here, so a leaked
+# device gives away relays and CDN hosts, never a server. No links or outbounds
+# to the servers, no subscription URL on this domain, and no DNS tunnel: its
+# zone is delegated to a server, so a lookup of it names the address.
+direct=${DIRECT:-true}
+if [ "$direct" = false ]; then servers='' count=0 XDNS_DOMAIN=; fi
 # Set by the xhttp-reality profiles' overlay only: XHTTP with REALITY, a third
 # link and outbound. Without it the output is what it always was.
 xr_port=${XHTTP_REALITY_PORT:-}
@@ -323,20 +329,28 @@ client() { # <id> <label>
     # As subscription.sh names the device's file.
     token=$(printf '%s:%s' "$(cat /run/secrets/subscription_key)" "$1" | sha256sum | cut -c1-32)
     if [ "${HTTPS_PORT}" = 443 ]; then at=; else at=":${HTTPS_PORT}"; fi
+    own="https://${DOMAIN}${at}/${token}"
+    [ "$direct" != false ] || own=
+    [ -n "$own$sub_relays" ] ||
+      echo "$2: no subscription URL: direct=false keeps this server's out, and the device gets no own-site relay" >&2
     if ! $full; then
-      printf 'https://%s%s/%s\n' "${DOMAIN}" "$at" "$token"
+      [ -z "$own" ] || echo "$own"
       sub_through "$token"
       echo
       return 0
     fi
-    cat <<EOF
+    [ -z "$own$sub_relays" ] || cat <<EOF
 Subscription, for the app to fetch these links from and refresh them after a
 revocation or a key rotation (as secret as the links):
-https://${DOMAIN}${at}/${token}
 EOF
+    [ -z "$own" ] || echo "$own"
     sub_through "$token"
-    [ -z "$sub_relays" ] || echo "An app takes one: a device inside the restricted network gets one through a relay."
+    [ -z "$own" ] || [ -z "$sub_relays" ] || echo "An app takes one: a device inside the restricted network gets one through a relay."
     echo
+  fi
+  if [ "$direct" = false ] && [ -z "$relays" ] && [ -z "$cdns" ]; then
+    echo "$2: no links: direct=false keeps the servers out, and the device gets no relay or CDN host" >&2
+    return 0
   fi
   for s in $servers; do
     if [ "$count" -gt 1 ]; then label="$2-$s"; else label=$2; fi
@@ -345,10 +359,13 @@ EOF
   relay_links "$1" "$2"
   cdn_links "$1" "$2"
   if [ "$count" -gt 1 ]; then where=" on any of the servers"; else where=; fi
-  if [ -n "$xr_port" ]; then which="REALITY, XHTTP and XHTTP with REALITY"; else which="REALITY and XHTTP"; fi
-  [ -z "$kcp_port" ] || which="${which}, or mKCP,"
-  [ -z "$relays" ] || which="${which}, or a relay,"
-  [ -z "$cdns" ] || which="${which}, or XHTTP through a CDN,"
+  if [ "$direct" = false ]; then which=
+  elif [ -n "$xr_port" ]; then which="REALITY, XHTTP and XHTTP with REALITY"
+  else which="REALITY and XHTTP"; fi
+  [ -z "$kcp_port" ] || [ "$direct" = false ] || which="${which}, or mKCP"
+  [ -z "$relays" ] || which="${which:+${which}, or }a relay"
+  [ -z "$cdns" ] || which="${which:+${which}, or }XHTTP through a CDN"
+  case $which in *', or '*) which="${which}," ;; esac
   if [ -n "${XDNS_DOMAIN:-}" ]; then
     last=", and the DNS tunnel only when none answers"
     fallback=', "fallbackTag": "xdns"'

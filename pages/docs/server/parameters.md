@@ -26,6 +26,7 @@
 | `cdn_hosts` | `none` | the names of local [CDNs](cdn.md#a-local-cdn-for-restricted-networks) in front of this server, comma-separated; a link through each |
 | `relays` | a comment | one `<host> <site> <public key> <short id> <encryption>` line per [relay](../relay/install.md), as its `relay-entry` prints it, with `own-site <path>`, `kcp=<port>,<header>,<seed>` and `cdn=<name>[,<name>]` after it where the relay has them |
 | `pools` | a comment | one `<pool> <member>...` line per [pool](devices.md#pools), the members device names, relay hosts and CDN hosts |
+| `direct` | `true` | `false`: no server's address in devices' links, configs or subscriptions, only [relays and CDN hosts](devices.md#keeping-the-servers-out-of-devices-links) |
 
 Set one with `sudo morzer config set <name>=<value>`, unset it with
 `sudo morzer config unset <name>`, edit `relays` or `pools` with
