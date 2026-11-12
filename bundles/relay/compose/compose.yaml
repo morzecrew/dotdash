@@ -59,6 +59,7 @@ services:
       SITE: ${DOTDASH_RELAY_PARAM_SITE:-}
       # Here rather than under own-site, so relay-entry can say it needs it.
       CDN_HOSTS: ${DOTDASH_RELAY_PARAM_CDN_HOSTS:-none}
+      ENTRY_HOST: ${DOTDASH_RELAY_PARAM_ENTRY_HOST:-none}
     volumes:
       - ${DOTDASH_RELAY_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image

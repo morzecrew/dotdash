@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The `wireguard-line` task turns a WireGuard exit's wg-quick file into its upstreams line.
 
+- Every bundle names what an authority it follows may set: on a server the devices, the shared keys and the server, relay, CDN and pool lists; on a relay the devices and its way to the servers; on a canary its target; on a client its subscription and proxy password. The rest stays the machine's own.
+
+- A `facts` task on the server and the relay prints, as JSON, what each tells the authority it follows after every change: a server's domain, ports, public key and encryption string, and a relay's `relay-entry` line.
+
+- The relay's `entry_host` parameter, the address devices reach it at, which `relay-entry` uses when given none; under `own-site` it is the relay's domain.
+
 - When nothing gets out, `doctor` names each upstreams line it asked by its `name=`: no answer, refused credentials, a WireGuard peer that did not carry it, or an OpenVPN tunnel that is down.
 
 ### Changed

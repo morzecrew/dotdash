@@ -9,6 +9,7 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `site` | `none` | without the `own-site` profile, a site next to the relay, in its own network, on TLS 1.3 and HTTP/2: devices send its name, and probes get its handshake |
 | `site_dir` | `/srv/dotdash-relay` | with `own-site`, your own pages, served in place of the bundled one; readable by uid 65532 |
 | `cert_issuer` | `acme` | with `own-site`, `acme` (Let's Encrypt, over port 80) or `internal` (Caddy's own CA, for a machine the internet can't reach) |
+| `entry_host` | `none` | the address devices reach the relay at, its IP without a domain, for `relay-entry` with no address and for `facts`; `none` under `own-site` is the relay's domain |
 | `cdn_hosts` | `none` | with `own-site`, the names devices use for [local CDNs](../server/cdn.md#in-front-of-a-relay) in front of the relay, comma-separated; `relay-entry` adds them to the relay's line |
 | `dotdash_servers` | none, given at `init` | the dotdash servers sharing one set of keys, comma-separated domains; the relay uses whichever answers fastest |
 | `dotdash_port` | `443` | the servers' `https_port` |
@@ -60,4 +61,5 @@ it on.
 
 | Task | |
 | --- | --- |
-| `relay-entry --output -- <address>` | the relay's line for the server's `relays`, and how a canary checks the relay |
+| `relay-entry --output -- <address>` | the relay's line for the server's `relays`, and how a canary checks the relay; with no address, at `entry_host` |
+| `facts --output` | the same line as JSON, which the relay publishes to an authority it [follows](../server/operations.md#managed-from-elsewhere) |

@@ -103,7 +103,12 @@ parameters:
     default: acme
     description: "With the own-site profile, where its certificate comes from: acme is Let's Encrypt, over port 80; internal is Caddy's own CA, for a machine the internet cannot reach"
     services: [caddy]
-  # No services: relay-entry, a task, is all that reads it.
+  # No services: relay-entry and facts, tasks, are all that read it.
+  entry_host:
+    type: string
+    default: none
+    description: "The address devices reach this relay at, its IP without a domain, for relay-entry and facts; none takes the relay's domain under own-site"
+  # No services: relay-entry and facts, tasks, are all that read it.
   cdn_hosts:
     type: string
     default: none
@@ -147,12 +152,30 @@ images:
   # The own-site profile's site; dotdash's own.
   caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
 
+# What an authority's desired-state document may set here (morzer 0.16): the
+# devices, this relay's own client of the servers, and the servers' facts.
+# This relay's own keys stay its own; its facts carry their public halves.
+# None of these reaches a command line or a hook.
+managed:
+  parameters: [dotdash_servers, dotdash_address, dotdash_port, dotdash_public_key, ipv6]
+  secrets: [vless_clients, dotdash_id, dotdash_encryption, dotdash_short_id]
+
+# What this machine tells the authority it follows, after every change, when
+# sync.recipient is set: the facts task's JSON.
+published:
+  task: facts
+
 tasks:
   relay-entry:
-    description: "Print this relay's line for the dotdash server's relays secret, and how a dotdash-canary checks it; argument: the address devices reach this machine at"
+    description: "Print this relay's line for the dotdash server's relays parameter, and how a dotdash-canary checks it; argument: the address devices reach this machine at, else entry_host"
     service: relay-entry
     command: ["sh", "/task/relay-entry.sh"]
     args: true
+    timeout: 1m
+  facts:
+    description: "Print relay-entry's line as JSON for the authority this relay follows: entry_host, site, public key, and the short id, XHTTP path and mKCP seed links carry (output is credentials)"
+    service: relay-entry
+    command: ["sh", "/task/facts.sh"]
     timeout: 1m
 
 health:

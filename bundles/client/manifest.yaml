@@ -117,6 +117,12 @@ images:
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
   mihomo: ghcr.io/morzecrew/mihomo:1.19.34@sha256:193e4a376dc1f1b54e6fac495de35eb0bea2d2020a1c8e388717d8cc20594fec
 
+# What an authority's desired-state document may set here (morzer 0.16): the
+# device's subscription and the password of its local proxy. Neither reaches
+# a command line or a hook.
+managed:
+  secrets: [subscription_url, proxy_password]
+
 tasks:
   proxy-config:
     description: "Print the SOCKS5 and HTTP proxy settings devices need, with proxy_user and proxy_password once listen is not 127.0.0.1; argument: the address devices reach this machine at (output is a credential)"

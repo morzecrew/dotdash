@@ -28,6 +28,26 @@ sudo morzer config set update.channel=oci://ghcr.io/morzecrew/dotdash-server:sta
 sudo morzer config set update.auto_apply=true
 ```
 
+## Managed from elsewhere
+
+A machine can follow an authority, an operator key that publishes what it
+should hold, as
+[morzer describes it](https://morzecrew.github.io/morzer/latest/operating/managing-from-elsewhere/).
+Each bundle names what an authority may set; everything else stays the
+machine's own.
+
+| Bundle | An authority may set | It tells the authority (`facts`) |
+| --- | --- | --- |
+| server | `vless_clients`, the shared keys (`reality_key`, `vless_seed`, `reality_short_id`, `xhttp_path`, `kcp_seed`, `subscription_key`), `servers`, `relays`, `cdn_hosts`, `pools`, `subscription` | its domain and ports, the REALITY public key and the VLESS encryption string |
+| relay | `vless_clients`, `dotdash_id`, `dotdash_encryption`, `dotdash_short_id`, `dotdash_servers`, `dotdash_address`, `dotdash_port`, `dotdash_public_key`, `ipv6` | its `relay-entry` line, at [`entry_host`](../relay/reference.md) |
+| canary | every `dotdash_*` | nothing |
+| client | `subscription_url`, `proxy_password` | nothing |
+
+The upstreams stay each server's own. A relay's facts carry the short id, and
+with `own-site` or `mkcp` the XHTTP path or the mKCP seed: the credentials
+its devices' links carry anyway. `sudo morzer task run facts --output` prints
+them.
+
 ## Pin the exit IP
 
 `doctor` fails when the provider moves you:

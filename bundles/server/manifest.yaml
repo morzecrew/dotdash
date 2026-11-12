@@ -242,6 +242,20 @@ operations:
     command: ["hooks/smoke-test"]
     timeout: 2m
 
+# What an authority's desired-state document may set here (morzer 0.16): the
+# devices and the keys every server shares, which the authority makes once,
+# and the lists it derives from the other machines' facts. Not the upstreams
+# or anything else this machine alone knows. None of these reaches a command
+# line or a hook.
+managed:
+  parameters: [servers, relays, cdn_hosts, pools, subscription]
+  secrets: [vless_clients, reality_key, vless_seed, reality_short_id, xhttp_path, kcp_seed, subscription_key]
+
+# What this machine tells the authority it follows, after every change, when
+# sync.recipient is set: the facts task's JSON.
+published:
+  task: facts
+
 tasks:
   client-config:
     description: "Print client settings, for every client or the one named after --: a link per transport and an Xray config; with subscriptions on, the URL alone unless --full (output is credentials)"
@@ -269,6 +283,11 @@ tasks:
       conf:
         description: The WireGuard exit's wg-quick client config, as a provider or router exports it
         max_size: 64KiB
+    timeout: 1m
+  facts:
+    description: "Print this server's facts as JSON, which morzer publishes to the authority it follows: its domain and ports, the REALITY public key and the VLESS encryption string; no credentials"
+    service: client-config
+    command: ["sh", "/task/facts.sh"]
     timeout: 1m
   relay-config:
     description: "Print the init command and secrets for a dotdash-relay machine carrying devices on to this server as the client named after -- (output is every device's credentials)"

@@ -127,6 +127,13 @@ images:
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
   xray: ghcr.io/morzecrew/xray:26.11.9@sha256:9d6c0112c03e921a786f9cbaf2efd65e89bf0bbd7027015b81abb535c58a2d19
 
+# What an authority's desired-state document may set here (morzer 0.16): the
+# server or relay this canary watches, from that machine's facts. None of
+# these reaches a command line or a hook.
+managed:
+  parameters: [dotdash_server, dotdash_address, dotdash_port, dotdash_xhttp_reality_port, dotdash_kcp_port, dotdash_kcp_header, dotdash_kcp_open, dotdash_public_key]
+  secrets: [dotdash_id, dotdash_encryption, dotdash_short_id, dotdash_xhttp_path, dotdash_kcp_seed]
+
 tasks:
   measure:
     description: "Measure each transport through dotdash as JSON: N fetches (20 unless given) for success and latency, 3 downloads of download_url for Mbit/s; arguments: [count] [url] [timeout]"
