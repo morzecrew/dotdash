@@ -269,6 +269,11 @@ tasks:
     command: ["sh", "/task/exit-check.sh"]
     args: true
     timeout: 2m
+  cdn-check:
+    description: "Tell whether each CDN in front of this server and its relays is refused a subscription, as it should be, by fetching a decoy one through it; changes nothing"
+    service: cdn-check
+    command: ["sh", "/task/cdn-check.sh"]
+    timeout: 2m
   canary-config:
     description: "Print the init command and secrets for a dotdash-canary machine acting as the client named after -- (output is credentials)"
     service: client-config

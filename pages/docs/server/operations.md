@@ -13,6 +13,7 @@ bundle.
 | Alerts | `sudo morzer notify target add https://hooks.example/morzer` |
 | Health and faults | `sudo morzer doctor` |
 | Which exit sites see | `sudo morzer task run exit-check --output` |
+| Whether each CDN is refused subscriptions | `sudo morzer task run cdn-check --output` |
 | Metrics for Prometheus | `sudo morzer config set metrics.textfile=/var/lib/prometheus/node-exporter` |
 
 ## Unattended updates
