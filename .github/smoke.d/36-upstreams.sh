@@ -71,12 +71,13 @@ echo "${0##*/}: with the first line back, connections return to it"
 
 sudo morzer config set upstream_mode=balance >/dev/null || die "could not set upstream_mode=balance"
 seen=" "
+both() { [[ ${seen} == *" 301 "* && ${seen} == *" 200 "* ]]; }
 for _ in $(seq 20); do
   c=$(code)
-  case ${seen} in *" ${c} "*) ;; *) seen+="${c} " ;; esac
-  case ${seen} in *" 301 "*" 200 "* | *" 200 "*" 301 "*) break ;; esac
+  [[ ${seen} == *" ${c} "* ]] || seen+="${c} "
+  both && break
 done
-case ${seen} in *" 301 "*" 200 "* | *" 200 "*" 301 "*) ;; *) die "balance: 20 connections did not leave through both lines (saw:${seen})" ;; esac
+both || die "balance: 20 connections did not leave through both lines (saw:${seen})"
 echo "${0##*/}: balance: connections leave through both lines"
 
 sudo morzer config set upstream_mode=failover upstream_pin=backup >/dev/null || die "could not pin the second line"
