@@ -11,4 +11,4 @@ services:
         target: /etc/xray/config.json
         read_only: true
         bind: {create_host_path: false}
-    secrets: [kcp_seed]
+    secrets: [dotdash_kcp_seed]

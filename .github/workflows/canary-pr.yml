@@ -21,9 +21,9 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@dc33ba03f86a4ed2264db186f6abbf3012c9f58a # v0.10.1
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@759760aded983198badd37208339f6a50dc55930 # v0.11.0
     with:
-      morzer-version: "0.15.1"
+      morzer-version: "0.16.0"
       ref: ${{ github.sha }}
       version: 0.0.0-pr.${{ github.event.pull_request.number }}
       signing: ephemeral
@@ -36,10 +36,14 @@ jobs:
       smoke-hooks: .github/canary-smoke.d
       components: ""
       probe-paths: ""
-      operator-secrets: vless_id vless_encryption reality_short_id xhttp_path
+      operator-secrets: dotdash_id dotdash_encryption dotdash_short_id dotdash_xhttp_path
       # .github/canary-smoke.d/pre-apply replaces these with the stand-in's.
       init-args: >-
-        --set server=www.gstatic.com --set address=rig.invalid
-        --set reality_public_key=set-by-the-rig
+        --set dotdash_server=www.gstatic.com --set dotdash_address=rig.invalid
+        --set dotdash_public_key=set-by-the-rig
+      # 0.7.0 renamed the target's parameters, which have no default, so a
+      # canary is set up again rather than updated to it. Back to true once
+      # 0.7.0 is on :main and :stable.
+      smoke-update: false
       # smoke-update installs the published :main first, trusting this key.
       dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}

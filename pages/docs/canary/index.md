@@ -69,23 +69,24 @@ relay's address no longer gets through for devices.
 
 | Parameter | Default | |
 | --- | --- | --- |
-| `server` | none, given at `init` | the server's domain, sent as the TLS server name; a relay's site |
-| `address` | none, given at `init` | where to connect: normally the same domain; an IP, a CDN's name, or a relay's address |
-| `port` | `443` | the server's `https_port` |
-| `xhttp_reality_port` | `8443` | the server's `xhttp_reality_port` |
-| `kcp_port` | `8447` | the server's `kcp_port` |
-| `kcp_header` | `dtls` | the server's `kcp_header` |
-| `reality_public_key` | none, given at `init` | the REALITY public key, the `pbk` of a link |
+| `dotdash_server` | none, given at `init` | the server's domain, sent as the TLS server name; a relay's site |
+| `dotdash_address` | none, given at `init` | where to connect: normally the same domain; an IP, a CDN's name, or a relay's address |
+| `dotdash_port` | `443` | the server's `https_port` |
+| `dotdash_xhttp_reality_port` | `8443` | the server's `xhttp_reality_port` |
+| `dotdash_kcp_port` | `8447` | the server's `kcp_port` |
+| `dotdash_kcp_header` | `dtls` | the server's `kcp_header` |
+| `dotdash_kcp_open` | `none` | the server's `kcp_open` |
+| `dotdash_public_key` | none, given at `init` | the REALITY public key, the `pbk` of a link |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what each check fetches through dotdash; any 2xx is healthy |
 | `download_url` | `https://speed.cloudflare.com/__down?bytes=1000000` | what `measure` downloads for its Mbit/s, `https://` only; `none` skips the downloads |
 
 | Secret | |
 | --- | --- |
-| `vless_id` | the canary's id, its line in the server's `vless_clients` |
-| `vless_encryption` | the `encryption=` value of a link |
-| `reality_short_id` | the `sid=` value of a REALITY link |
-| `kcp_seed` | the `seed=` value of an mKCP link, for `--profile mkcp` |
-| `xhttp_path` | the `path=` value of an XHTTP link, without the leading `%2F` |
+| `dotdash_id` | the canary's id, its line in the server's `vless_clients` |
+| `dotdash_encryption` | the `encryption=` value of a link |
+| `dotdash_short_id` | the `sid=` value of a REALITY link |
+| `dotdash_kcp_seed` | the `seed=` value of an mKCP link, for `--profile mkcp` |
+| `dotdash_xhttp_path` | the `path=` value of an XHTTP link, without the leading `%2F` |
 
 | Task | |
 | --- | --- |

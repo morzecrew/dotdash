@@ -11,4 +11,4 @@ services:
         target: /etc/xray/config.json
         read_only: true
         bind: {create_host_path: false}
-    secrets: [xhttp_path]
+    secrets: [dotdash_xhttp_path]

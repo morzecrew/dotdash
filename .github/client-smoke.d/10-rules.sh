@@ -22,6 +22,11 @@ until_status() { # <want|!want> <what>: poll for a minute, as morzer restarts mi
 }
 unset_rules() { sudo morzer config unset "$1" >/dev/null; }
 
+# morzer (0.16) health-checks every config change and undoes one that fails,
+# and the health check fetches probe_url through mihomo: so it probes a host
+# these rules leave alone, and every change is made while dotdash is up.
+sudo morzer config set probe_url=https://www.google.com/generate_204 >/dev/null \
+  || die "could not move probe_url off the host the rules refuse"
 until_status 204 "the proxy port does not get out through dotdash"
 
 printf 'DOMAIN-SUFFIX,gstatic.com\n' | sudo morzer config set --set-file block_rules=- >/dev/null
@@ -32,7 +37,9 @@ until_status 204 "unset block rules still refuse"
 printf '# through no proxy\nDOMAIN-SUFFIX,gstatic.com\n' | sudo morzer config set --set-file direct_rules=- >/dev/null
 sudo docker stop client-rig-server >/dev/null
 until_status 204 "a direct rule's destination needs dotdash"
+sudo docker start client-rig-server >/dev/null
 unset_rules direct_rules
+sudo docker stop client-rig-server >/dev/null
 until_status '!204' "with direct rules unset, it got out with dotdash gone"
 sudo docker start client-rig-server >/dev/null
 until_status 204 "the proxy port does not get out once dotdash is back"
@@ -51,3 +58,5 @@ if sudo grep -q '^  ipv6:$' /opt/dotdash-client/current/manifest.yaml; then
   until_status 204 "back on ipv6=allow the proxy port does not get out"
   echo "10-rules.sh: ipv6=block refuses IPv6 first, and names still get out"
 fi
+
+sudo morzer config unset probe_url >/dev/null || die "could not put probe_url back"

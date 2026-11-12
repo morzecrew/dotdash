@@ -51,7 +51,7 @@ while read -r id _; do
   leak "a client id" "${id}"
 done < <(sudo cat "${secrets}/vless_clients")
 leak "a share link" "vless://"
-# The image prints its settings at start, healthcheck_url among them: the
+# The image prints its settings at start, probe_url among them: the
 # operator's own choice, here the same target the clients fetch.
 logs=$(grep -v '^\[envconf\]' <<<"${logs}" || true)
 leak "a destination (the rig's target)" "11.99.0.10:8000"

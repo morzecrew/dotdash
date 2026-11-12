@@ -46,12 +46,12 @@ config edit relays):
 ${host} ${SITE} ${pbk} ${sid} ${enc}${own}${kcp}${cdn}
 
 A dotdash-canary checks this relay as it checks the server, without the xhttp
-profiles, with the vless_id of any device on the relay:
-sudo morzer config set server=${SITE} address=${host} port=443 reality_public_key=${pbk}
-sudo morzer secret set vless_encryption <<'END'
+profiles, with the dotdash_id of any device on the relay:
+sudo morzer config set dotdash_server=${SITE} dotdash_address=${host} dotdash_port=443 dotdash_public_key=${pbk}
+sudo morzer secret set dotdash_encryption <<'END'
 ${enc}
 END
-sudo morzer secret set reality_short_id <<'END'
+sudo morzer secret set dotdash_short_id <<'END'
 ${sid}
 END
 EOF

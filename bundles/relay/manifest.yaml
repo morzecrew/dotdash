@@ -47,9 +47,9 @@ secrets:
 
 compatibility:
   # The manager this bundle is verified and rehearsed with, and the first that
-  # restarts only the services the active profiles define after a secret
-  # change, which xhttp_path's caddy needs.
-  min_manager_version: "0.15.1"
+  # re-creates, on a parameter change, only the services the active profiles
+  # start, which site_dir's and cert_issuer's caddy needs.
+  min_manager_version: "0.16.0"
   rollback_safe: true
   # No database, which an unattended update needs declared.
   database: none
@@ -92,18 +92,17 @@ parameters:
     default: none
     description: "An opener in front of mKCP (the mkcp profile), as the server's kcp_open: quic sends a QUIC-Initial-shaped packet before the flow; relay-entry carries it to the server's relays line, so devices' links through this relay match"
     services: [xray]
-  # No services: Caddy runs under the own-site profile alone, and morzer's
-  # restart of a service behind an inactive profile fails (morzer#324). A
-  # change takes a full apply.
   site_dir:
     type: string
     default: /srv/dotdash-relay
     description: "With the own-site profile, the host directory of your own site, served in place of the bundled page; files must be readable by uid 65532"
+    services: [caddy]
   cert_issuer:
     type: enum
     values: [acme, internal]
     default: acme
     description: "With the own-site profile, where its certificate comes from: acme is Let's Encrypt, over port 80; internal is Caddy's own CA, for a machine the internet cannot reach"
+    services: [caddy]
   # No services: relay-entry, a task, is all that reads it.
   cdn_hosts:
     type: string
@@ -111,15 +110,8 @@ parameters:
     description: "With the own-site profile, the names devices use for local CDNs in front of this relay, comma-separated, each fetching from https://<the relay's domain> with the Host header set to it; relay-entry carries them to the server's relays line, and devices get an XHTTP link through each. none for none"
   dotdash_servers:
     type: string
+    required: true
     description: "The dotdash servers sharing one set of keys (dotdash's servers), comma-separated domains, each sent as its TLS server name; with several, the relay uses whichever answers fastest"
-    services: [xray]
-  # Before dotdash_servers, kept so a relay set up then updates as it is: an
-  # update leaves dotdash_servers, which has no default, empty, and the
-  # template falls back to this.
-  dotdash_server:
-    type: string
-    default: none
-    description: "Deprecated: the one dotdash server, read only while dotdash_servers is none; set dotdash_servers instead"
     services: [xray]
   dotdash_address:
     type: string

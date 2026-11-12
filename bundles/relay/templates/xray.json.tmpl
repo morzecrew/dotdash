@@ -6,9 +6,7 @@ borrowed site, whose DNS is someone else's. */ -}}
 {{- $site := .Parameters.site -}}
 {{- if $own }}{{ $site = required "the own-site profile needs a domain: sudo morzer config set installation.domains=relay.example.net" .Installation.Domain }}
 {{- else if eq $site "none" }}{{ $site = required "set site, a site next to the relay, or use the own-site profile with a domain of the relay's own" "" }}{{ end -}}
-{{- $list := .Parameters.dotdash_servers }}{{ if not $list }}{{ $list = .Parameters.dotdash_server }}{{ end -}}
-{{- if eq $list "none" }}{{ $list = "" }}{{ end -}}
-{{- $servers := split "," (required "set dotdash_servers" $list) -}}
+{{- $servers := split "," (required "set dotdash_servers" .Parameters.dotdash_servers) -}}
 {{- $address := .Parameters.dotdash_address }}{{ if eq $address "none" }}{{ $address = "" }}{{ end -}}
 {{- /* ipv6=block: an IPv6 destination ends here, in a blackhole after the
 servers' outbounds (the first outbound stays the default); names go on. */ -}}

@@ -36,7 +36,7 @@ services:
         target: /etc/xray/config.json
         read_only: true
         bind: {create_host_path: false}
-    secrets: [vless_id, vless_encryption, reality_short_id]
+    secrets: [dotdash_id, dotdash_encryption, dotdash_short_id]
 
   # One-shot behind a profile, started only by `morzer task run measure`. On
   # the project's network it reaches each transport's probe inbound, which is
@@ -68,8 +68,8 @@ services:
           subpath: etc/ssl/certs
 
 secrets:
-  vless_id: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/vless_id"}
-  vless_encryption: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/vless_encryption"}
-  reality_short_id: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/reality_short_id"}
-  xhttp_path: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/xhttp_path"}
-  kcp_seed: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/kcp_seed"}
+  dotdash_id: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/dotdash_id"}
+  dotdash_encryption: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/dotdash_encryption"}
+  dotdash_short_id: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/dotdash_short_id"}
+  dotdash_xhttp_path: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/dotdash_xhttp_path"}
+  dotdash_kcp_seed: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/dotdash_kcp_seed"}

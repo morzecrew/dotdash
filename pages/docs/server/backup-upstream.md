@@ -6,10 +6,10 @@ while it doesn't. They go back by themselves once the upstream answers again.
 
 ```sh
 sudo morzer secret set upstream_backup                  # user:pass@host:port, first
-sudo morzer config set upstream_backup_protocol=socks   # or http; upstream_backup_tls=true if needed
+sudo morzer config set upstream_backup_protocol=socks   # or socks-tls, http, https
 ```
 
-The gate probes both every 30 seconds, fetching `healthcheck_url` through
+The gate probes both every 30 seconds, fetching `probe_url` through
 each. A failed upstream moves connections within about a minute. Connections
 open at that moment break, and apps reconnect. Off:
 `sudo morzer config set upstream_backup_protocol=none`.
@@ -19,7 +19,7 @@ open at that moment break, and apps reconnect. Off:
 - **`doctor` passes** on the backup, since devices still get out.
   `exit-check` shows which exit is in use. If you [pin the exit IP](operations.md#pin-the-exit-ip),
   match both addresses to stay quiet on the backup, such as
-  `'healthcheck_expect=^(203\.0\.113\.7|198\.51\.100\.9)\s*$'`. Match the
+  `'probe_expect=^(203\.0\.113\.7|198\.51\.100\.9)\s*$'`. Match the
   upstream's alone to be told, but then `apply` fails too while the backup
   carries.
 - **UDP** goes through the backup only if it is SOCKS5 and `upstream_udp` is

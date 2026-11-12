@@ -47,12 +47,14 @@ home=$(sudo docker volume inspect -f '{{.Mountpoint}}' dotdash-client_home)
 # rig's own requests reach no further than tun-target.test.
 sudo apk add -q iproute2 >/dev/null || die "apk add iproute2 failed"
 
-# Its subscription, a probe the stand-in answers, the direct rule, and no
-# cached links.
+# Its subscription, the direct rule, no cached links, and a probe the stand-in
+# answers. The cache goes before the probe moves: morzer (0.16) health-checks
+# that change, and the cached links are the old stand-in's, which resolves no
+# tun-target.test; with none, mihomo starts on the new subscription.
 printf 'http://%s:8089/sub' "${eth0}" | sudo morzer secret set subscription_url >/dev/null
 printf 'DOMAIN,www.gstatic.com\n' | sudo morzer config set --set-file direct_rules=- >/dev/null
-sudo morzer config set probe_url=http://tun-target.test:8080/sub >/dev/null
 sudo rm -f "${home}/proxies/dotdash.yaml"
+sudo morzer config set probe_url=http://tun-target.test:8080/sub >/dev/null
 sudo morzer config set installation.profile=tun >/dev/null
 ip -o link show Meta >/dev/null 2>&1 || die "under the tun profile there is no TUN interface"
 
@@ -87,15 +89,24 @@ lan_gets() { # <what>: poll for the LAN device reaching tun-target.test
 }
 policy=$(sudo iptables -S FORWARD | sed -n 's/^-P FORWARD //p')
 sudo iptables -P FORWARD DROP
-sudo morzer config set gateway=true >/dev/null
+# morzer (0.16) health-checks gateway=true and retries a failing check for
+# minutes before undoing it, so the rules go in first; taking them out after
+# shows what doctor names.
+sudo iptables -I DOCKER-USER -o Meta -j ACCEPT
+sudo iptables -I DOCKER-USER -i Meta -j ACCEPT
+sudo morzer config set gateway=true >/dev/null || die "with the rules in, gateway=true was refused"
+out=$(sudo morzer doctor 2>&1) || die "doctor fails as a gateway with the rules in: ${out}"
+lan_gets "with the rules in, the LAN device did not get through TUN and dotdash"
+sudo iptables -D DOCKER-USER -o Meta -j ACCEPT
+sudo iptables -D DOCKER-USER -i Meta -j ACCEPT
 out=$(sudo morzer doctor 2>&1) && die "doctor passes as a gateway whose FORWARD drops the LAN"
 tr -s '[:space:]' ' ' <<<"${out}" | grep -qF 'DOCKER-USER -o Meta -j ACCEPT' \
   || die "doctor failed, but not naming the DOCKER-USER rules: ${out}"
 [ "$(lan http://tun-target.test:8080/sub)" != 200 ] || die "with FORWARD dropping the LAN, the device still got through"
 sudo iptables -I DOCKER-USER -o Meta -j ACCEPT
 sudo iptables -I DOCKER-USER -i Meta -j ACCEPT
-out=$(sudo morzer doctor 2>&1) || die "doctor fails as a gateway with the rules in: ${out}"
-lan_gets "with the rules in, the LAN device did not get through TUN and dotdash"
+out=$(sudo morzer doctor 2>&1) || die "doctor fails as a gateway with the rules back: ${out}"
+lan_gets "with the rules back, the LAN device did not get through TUN and dotdash"
 sudo morzer config set dns_listen=10.99.0.1:53 >/dev/null
 echo 'nameserver 10.99.0.1' | sudo tee /etc/netns/lan/resolv.conf >/dev/null
 lan_gets "resolving with dns_listen on the gateway, the LAN device did not get through"

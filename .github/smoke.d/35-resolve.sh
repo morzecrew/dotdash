@@ -22,7 +22,7 @@ fetch() { # <url>: through 10-clients.sh's REALITY client
     -w '%{http_code}' --socks5-hostname 127.0.0.1:11080 "$1"
 }
 
-restore() { sudo morzer config set resolve=gateway healthcheck_url=http://11.99.0.10:8000/ >/dev/null; }
+restore() { sudo morzer config set resolve=gateway probe_url=http://11.99.0.10:8000/ >/dev/null; }
 
 # The control: with resolve=upstream the upstream is handed the name `target`,
 # which only it resolves, and its log shows it.
@@ -38,7 +38,7 @@ fi
 echo "35-resolve.sh: resolve=upstream hands the upstream the name, and its log shows it"
 
 mark=$(lines)
-sudo morzer config set resolve=gateway healthcheck_url=https://www.gstatic.com/generate_204 >/dev/null \
+sudo morzer config set resolve=gateway probe_url=https://www.gstatic.com/generate_204 >/dev/null \
   || { restore; die "could not switch to resolve=gateway"; }
 
 code=$(fetch https://www.gstatic.com/generate_204) || true

@@ -36,8 +36,8 @@ stands for your domain throughout.
     sudo morzer apply
     ```
 
-    - Add `--set upstream_protocol=http` for an HTTP proxy, and
-      `--set upstream_tls=true` if it takes TLS. The default is SOCKS5. For
+    - Add `--set upstream_protocol=http` for an HTTP proxy, or `https` or
+      `socks-tls` for one that takes TLS. The default is SOCKS5. For
       a WireGuard or OpenVPN exit instead, see
       [WireGuard or OpenVPN upstream](tunnel-upstream.md).
     - `upstream` is `user:pass@host:port`, or `host:port` with no login. The
