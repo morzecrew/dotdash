@@ -32,18 +32,16 @@ stands for your domain throughout.
     ```sh
     sudo morzer init --release oci://ghcr.io/morzecrew/dotdash-server:stable \
       --domain example.com --recovery-recipient age1…
-    sudo morzer secret set upstream    # user:pass@host:port
+    sudo morzer secret set upstreams    # socks5://user:pass@host:port, one per line
     sudo morzer apply
     ```
 
-    - Add `--set upstream_protocol=http` for an HTTP proxy, or `https` or
-      `socks-tls` for one that takes TLS. The default is SOCKS5. For
-      a WireGuard or OpenVPN exit instead, see
-      [WireGuard or OpenVPN upstream](tunnel-upstream.md).
-    - `upstream` is `user:pass@host:port`, or `host:port` with no login. The
-      password may contain `:` and `@`; an IPv6 host goes in brackets; no
-      `socks5://` prefix. Changing proxy later is one `secret set` and one
-      restart.
+    - `upstreams` lists the ways out, one per line, in order:
+      `socks5://`, `socks5+tls://`, `http://` or `https://` and
+      `user:pass@host:port`, a WireGuard exit's `wireguard://` line, or
+      `openvpn`. The first that answers carries the traffic. See
+      [Upstreams](upstreams.md) for backups, IPv6, WireGuard and OpenVPN.
+    - Changing proxy later is one `secret edit upstreams` and one restart.
     - `init` prints the release's signing key and trusts it. To check even
       this first release against the key published with the repository, add
       `--signing-key "$(gh variable get MINISIGN_RELEASE_PUBKEY -R morzecrew/dotdash)"`.

@@ -17,8 +17,8 @@ their traffic on through your upstream proxy, the only way out it has.
   subscription URL, and XHTTP on a secret path, which is what lets XHTTP
   pass through a CDN.
 
-The upstream is a SOCKS5 or HTTP proxy you choose, typically one with a
-residential exit. With it down, devices get nothing, never the server's own
+The upstreams are the proxies and VPN exits you choose, typically ones with
+residential exits. With all of them down, devices get nothing, never the server's own
 address: [what leaks where](leaks.md).
 
 ## Steps
@@ -29,8 +29,8 @@ address: [what leaks where](leaks.md).
    - [your own cover site](cover-site.md);
    - a [DNS tunnel](dns-tunnel.md) for networks that pass little but DNS;
    - [XHTTP with REALITY](xhttp-reality.md) on another port;
-   - a [second proxy for IPv6](ipv6-upstream.md);
-   - a [WireGuard or OpenVPN exit](tunnel-upstream.md) instead of a proxy;
+   - more [upstreams](upstreams.md): backups, balancing, IPv6 of its own,
+     WireGuard and OpenVPN exits;
    - a [CDN](cdn.md) in front of XHTTP: a local one for restricted networks, or
      one against address blocking;
    - [several servers](several-servers.md) sharing one set of keys.

@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# A WireGuard upstream (upstream_protocol=wireguard): the gate's own Xray
-# WireGuard, built from the wg-quick file in upstream_wireguard. A stand-in
-# peer, the Xray image with a wireguard inbound, carries the rig's traffic on
-# to the target, with the rig's HTTP proxy stopped so nothing can leave
-# through it:
+# A WireGuard line in the upstreams secret: the gate's own Xray WireGuard,
+# from the wireguard:// line the wireguard-line task makes of a wg-quick file.
+# A stand-in peer, the Xray image with a wireguard inbound, carries the rig's
+# traffic on to the target. The line goes second, behind the rig's HTTP proxy:
 #
-# - setting upstream_wireguard changes nothing while the proxy is the upstream;
-# - with upstream_protocol=wireguard, apply's health check passes through the
-#   peer, a client reaches the target, and doctor passes;
-# - with the peer stopped, nothing gets through, and doctor names the peer;
-# - upstream_protocol=http is one config set back to the proxy.
+# - wireguard-line turns a provider's wg-quick export into one line;
+# - with that line behind the proxy, the proxy carries traffic;
+# - with the proxy stopped, the WireGuard line carries a client and the
+#   health check, and doctor passes;
+# - with the peer stopped too, nothing gets through, and doctor names both
+#   lines, the WireGuard one as such.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -q '^  - name: upstream_wireguard$' /opt/dotdash/current/secrets.schema.yaml; then
-  echo "${0##*/}: skipped, the installed release predates the WireGuard upstream"
+if ! sudo grep -q '^  wireguard-line:$' /opt/dotdash/current/manifest.yaml; then
+  echo "${0##*/}: skipped, the installed release predates WireGuard lines"
   exit 0
 fi
 
@@ -39,10 +39,12 @@ sudo docker rm -f dotdash-rig-wgpeer >/dev/null 2>&1 || true
 sudo docker run -d --name dotdash-rig-wgpeer --network dotdash-rig -p 51820:51820/udp \
   -v /rig/wgpeer:/etc/xray:ro "${xray}" >/dev/null
 
+one="http://$(cat /rig/upstream.conn) name=rig"
+list() { printf '%s\n' "$@" | sudo morzer secret set upstreams >/dev/null; }
 restore() {
   sudo docker rm -f dotdash-rig-wgclient >/dev/null 2>&1 || true
   sudo docker start dotdash-rig-upstream >/dev/null 2>&1 || true
-  sudo morzer config set upstream_protocol=http >/dev/null 2>&1 || true
+  list "${one}" || true
   sudo docker rm -f dotdash-rig-wgpeer >/dev/null 2>&1 || true
 }
 trap restore EXIT
@@ -71,36 +73,35 @@ body() { # <url>: through this hook's REALITY client; the body, or nothing
   curl -s --max-time 20 --retry 2 --retry-delay 2 --socks5-hostname 127.0.0.1:11096 "$1" 2>/dev/null || true
 }
 doctor() { { sudo morzer doctor 2>&1 || true; } | tr -s ' \n' ' '; }
-# Up to 30 s: secret set returns once the gate restarts, before it serves,
-# and curl does not retry a refused connection.
+# Up to 90 s: secret set returns once the gate restarts, before it serves,
+# and a failover waits for the probes, every 30 s, to see the first line gone.
 reaches() { # <url>: whether a client gets the target's "ok"
   local _
-  for _ in $(seq 15); do [ "$(body "$1")" = ok ] && return 0; sleep 2; done
+  for _ in $(seq 45); do [ "$(body "$1")" = ok ] && return 0; sleep 2; done
   return 1
 }
 
-# A provider's export: a DNS line, which the gate leaves out.
+# A provider's export: a DNS line, which the line leaves out.
 printf '[Interface]\nPrivateKey = %s\nAddress = 10.34.0.3/32\nDNS = 1.1.1.1\n\n[Peer]\nPublicKey = %s\nEndpoint = %s:51820\nAllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 25\n' \
-  "${client_key}" "${peer_pub}" "${host}" | sudo morzer secret set upstream_wireguard >/dev/null ||
-  die "setting upstream_wireguard while the proxy is the upstream failed"
-reaches "${target}" || die "the proxy stopped carrying traffic once upstream_wireguard was set"
-echo "${0##*/}: upstream_wireguard set, and the proxy still the upstream"
+  "${client_key}" "${peer_pub}" "${host}" | sudo tee /rig/wg0.conf >/dev/null
+line=$(sudo morzer task run wireguard-line --output --input conf=/rig/wg0.conf | grep -m1 '^wireguard://') ||
+  die "wireguard-line printed no wireguard:// line"
+echo "${0##*/}: wireguard-line turns a wg-quick file into one line"
+
+list "${one}" "${line} name=home"
+reaches "${target}" || die "the proxy, first, does not carry traffic with the WireGuard line behind it"
+echo "${0##*/}: the WireGuard line behind the proxy, and the proxy carries traffic"
 
 sudo docker stop dotdash-rig-upstream >/dev/null
-sudo morzer config set upstream_protocol=wireguard >/dev/null ||
-  die "could not switch to the WireGuard upstream (its health check failed?)"
-reaches "${target}" || die "a client does not reach the target through the WireGuard upstream"
-sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the WireGuard peer answering: $(doctor)"
-echo "${0##*/}: with the proxy stopped, the WireGuard upstream carries the health check and a client"
+reaches "${target}" || die "with the proxy stopped, a client does not reach the target through the WireGuard line"
+sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the WireGuard line carrying: $(doctor)"
+echo "${0##*/}: with the proxy stopped, the WireGuard line carries a client and the health check"
 
 sudo docker stop dotdash-rig-wgpeer >/dev/null
-[ -z "$(body "${target}")" ] || die "a client got through with the WireGuard peer stopped"
-grep -q 'the WireGuard peer in the upstream_wireguard secret did not carry it' <<<"$(doctor)" ||
-  die "doctor does not name the WireGuard peer with it stopped"
-sudo docker start dotdash-rig-wgpeer >/dev/null
-echo "${0##*/}: with the peer stopped, nothing gets through, and doctor names it"
-
-sudo docker start dotdash-rig-upstream >/dev/null
-sudo morzer config set upstream_protocol=http >/dev/null || die "could not switch back to the proxy"
-reaches "${target}" || die "a client does not reach the target back on the proxy"
-echo "${0##*/}: upstream_protocol=http is one config set back to the proxy"
+for _ in $(seq 20); do [ -z "$(body "${target}")" ] && break; sleep 3; done
+[ -z "$(body "${target}")" ] || die "a client got through with the proxy and the WireGuard peer stopped"
+out=$(doctor)
+grep -q 'home (WireGuard): its peer did not carry it' <<<"${out}" || die "doctor does not name the WireGuard line: ${out}"
+grep -q 'rig: cannot connect to' <<<"${out}" || die "doctor does not name the proxy line: ${out}"
+sudo docker start dotdash-rig-wgpeer dotdash-rig-upstream >/dev/null
+echo "${0##*/}: with both stopped, nothing gets through, and doctor names each line"

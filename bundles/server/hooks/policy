@@ -4,16 +4,17 @@
 #
 #   - Xray's traffic leaves through the upstream only: two outbounds, the
 #     upstream (a SOCKS hop to the gate, with no credentials) and block, and
-#     with upstream6_protocol a third, upstream6, the same hop to the gate's IPv6
+#     with ipv6=separate a third, upstream6, the same hop to the gate's IPv6
 #     egress; no freedom anywhere, and the upstream the explicit last rule;
 #   - names are resolved either by the upstream (no DNS in Xray, names passed
 #     on), or here over DoH routed through the upstream, with the upstream
 #     handed addresses only (ForceIP, never UseIP's fallback to the name);
 #   - every VLESS inbound demands a listed client and VLESS decryption, no
 #     XHTTP inbound sets a flow, and anything else listens on loopback only;
-#   - the gate forwards its public inbounds to Xray only, carries Xray's hop
-#     to the upstream, or to the backup proxy only as the upstream's fallback,
-#     and blocks everything else;
+#   - the gate forwards its public inbounds to Xray only, carries Xray's hops
+#     to the upstreams lines alone, through balancers that pick among those
+#     lines and nothing else, and blocks everything else; its upstreams file
+#     is the release's own, and the list holds what its settings need;
 #   - Xray is on internal networks only, so it has no route out at all, and
 #     publishes nothing; the gate publishes only https_port and, where it
 #     forwards them, 53 for the DNS tunnel, xhttp_reality_port and kcp_port,
@@ -90,31 +91,64 @@ violations=$(jq '
   ' "${config}")
 violations+=$'\n'$(jq '
   ["public-tls", "public-dns", "public-xhttp-reality", "public-kcp"] as $public
-  | ([.inbounds[]?.tag] - $public - ["egress", "egress6"]) as $extra
+  | ["egress", "egress6", "backups", "backups6"] as $hops
+  | ([.inbounds[]?.tag] - $public - $hops) as $extra
   | [.routing.rules[]? | select(.outboundTag == "inside") | .inboundTag // ["(any)"] | .[]] as $inward
   | check($extra == []; "the gate has unexpected inbounds: \($extra)"),
     (.inbounds[]? | select(.protocol == "dokodemo-door") |
       check(.settings.address == "xray"; "the gate forwards \(.tag) to \(.settings.address), not Xray")),
-    check([.outbounds[]?.tag] | .[0:3] == ["upstream", "inside", "block"] and IN(.[3:]; [], ["ipv6"], ["backup"], ["ipv6", "backup"]);
+    (.inbounds[]? | select(.tag | IN("backups", "backups6")) |
+      check(.listen == "127.0.0.1"; "the gate'"'"'s \(.tag) hop listens beyond loopback")),
+    # Its own outbounds: block, inside, and the hops into its backups balancers.
+    # The upstreams lines come from the upstreams file, which the image turns
+    # into socks, http and wireguard outbounds only (noKernelTun always).
+    check([.outbounds[]?.tag] | .[0:2] == ["block", "inside"] and IN(.[2:]; [], ["to-backups"], ["to-backups", "to-backups6"]);
       "the gate'"'"'s outbounds are \([.outbounds[]?.tag])"),
-    check([.outbounds[]? | select(.tag | IN("upstream", "ipv6", "backup"))] | all(.protocol | IN("socks", "http", "wireguard"));
-      "the gate dials an upstream with \([.outbounds[]? | select(.tag | IN("upstream", "ipv6", "backup")) | .protocol])"),
-    check([.outbounds[]? | select(.tag | IN("ipv6", "backup"))] | all(.protocol | IN("socks", "http"));
-      "the gate'"'"'s IPv6 or backup proxy is not a SOCKS or HTTP proxy"),
-    check([.outbounds[]? | select(.tag == "backup")] | all(.settings == {"$proxy": "/run/secrets/upstream_backup"});
-      "the gate'"'"'s backup proxy is not the upstream_backup secret"),
-    # The backup only ever as the upstream'"'"'s fallback, never beside it.
-    check(.routing.balancers // [] | all(. == {tag: "egress", selector: ["upstream"], fallbackTag: "backup", strategy: {type: "random"}});
-      "the gate balances its egress otherwise than the upstream, falling back to the backup"),
-    # WireGuard only as the image builds it from the upstream secret, which
-    # always sets noKernelTun: the gate has no capability for a kernel tun.
-    check(.outbounds[0] | .protocol != "wireguard" or .settings == {"$wireguard": "/run/secrets/upstream_wireguard"};
-      "the gate'"'"'s WireGuard outbound is not built from the upstream_wireguard secret"),
-    check(.outbounds[2].protocol == "blackhole"; "the gate'"'"'s block outbound is not a blackhole"),
+    check(.outbounds[0].protocol == "blackhole"; "the gate'"'"'s block outbound is not a blackhole"),
+    (.outbounds[]? | select(.tag | IN("to-backups", "to-backups6")) |
+      check(.protocol == "socks" and .settings.address == "127.0.0.1" and .settings.user == null and
+            .settings.port == (if .tag == "to-backups" then 1090 else 1091 end);
+        "the gate'"'"'s \(.tag) is not a hop into its own backups inbound")),
+    # Balancers pick upstreams lines alone, and fall back to a line, a hop or block.
+    (.routing.balancers // [])[] as $b
+    | check(($b.selector | length) > 0 and ($b.selector | all(test("^(upstream|ipv6)-(0|b)?$")));
+        "the gate'"'"'s balancer \($b.tag) selects \($b.selector), not upstreams lines"),
+      check($b.fallbackTag | IN("block", "to-backups", "to-backups6", "upstream-0", "ipv6-0");
+        "the gate'"'"'s balancer \($b.tag) falls back to \($b.fallbackTag)"),
+    (.routing.rules[]? | select(.balancerTag != null) |
+      check(.inboundTag != null and (.inboundTag - $hops) == [];
+        "the gate sends \(.inboundTag // ["(any)"]) through a balancer")),
+    check([.routing.rules[]? | .outboundTag // empty] - ["inside", "block"] == [];
+      "the gate routes straight to \([.routing.rules[]? | .outboundTag // empty] - ["inside", "block"])"),
     check(($inward - $public) == []; "the gate sends \($inward - $public) out directly"),
     check(.routing.rules[-1] == {network: "tcp,udp", outboundTag: "block"}; "the gate does not block what its rules leave"),
     check(has("dns") | not; "the gate has a DNS section of its own")
   ' "${gate}")
+want='{"outbounds": {"$upstreams": "/run/secrets/upstreams"}}'
+[ "$(cat "${release}/gate/upstreams.json" 2>/dev/null)" = "${want}" ] ||
+  violations+=$'\n'"the gate's upstreams file is not the release's own"
+
+# The list against the settings that read it. Only what each line is, never a
+# URL, goes into a message: the file holds credentials.
+upstreams=${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstreams
+if [ -r "${upstreams}" ]; then
+  tunnels=0 v4=0 v6=0
+  while read -r url opts || [ -n "${url:-}" ]; do
+    case ${url} in '' | '#'*) continue ;; esac
+    case ${url} in wireguard://* | openvpn) tunnels=$((tunnels + 1)) ;; esac
+    groups=upstream
+    for o in ${opts}; do case ${o} in group=*) groups=${o#group=} ;; esac; done
+    case ",${groups}," in *,upstream,*) v4=$((v4 + 1)) ;; esac
+    case ",${groups}," in *,ipv6,*) v6=$((v6 + 1)) ;; esac
+  done <"${upstreams}"
+  [ "${v4}" -gt 0 ] || violations+=$'\n'"no upstreams line is in the upstream group, which carries everything but IPv6"
+  if [ "${DOTDASH_PARAM_RESOLVE:-gateway}" = upstream ] && [ "${tunnels}" -gt 0 ]; then
+    violations+=$'\n'"resolve=upstream, but ${tunnels} upstreams line(s) are a WireGuard or OpenVPN tunnel, which resolves no names"
+  fi
+  if [ "${DOTDASH_PARAM_IPV6:-allow}" = separate ] && [ "${v6}" = 0 ]; then
+    violations+=$'\n'"ipv6=separate, but no upstreams line is in group=ipv6"
+  fi
+fi
 
 # shellcheck disable=SC2016 # a Go template, for docker inspect
 # Fields split on |, not spaces: read collapses empty fields between spaces,

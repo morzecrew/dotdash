@@ -17,7 +17,7 @@ less bootstrap.sh && sudo bash bootstrap.sh
 morzer secret recipients generate-recovery-key ~/dotdash-recovery.key   # keep it off the machine
 sudo morzer init --release oci://ghcr.io/morzecrew/dotdash-server:stable \
   --domain example.com --recovery-recipient age1…
-sudo morzer secret set upstream    # user:pass@host:port
+sudo morzer secret set upstreams    # socks5://user:pass@host:port, one per line
 sudo morzer apply
 sudo morzer task run client-config --output -- phone
 ```

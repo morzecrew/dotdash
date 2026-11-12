@@ -39,23 +39,24 @@ when resolution fails. IPOnDemand resolves before the routing rules, so a name
 that points at a private address is blocked like the address. resolve=upstream
 hands the upstream the names, as before. */ -}}
 {{- $gateway := eq .Parameters.resolve "gateway" -}}
-{{- /* upstream6_protocol: a second proxy, for IPv6. A destination with an IPv6
-address leaves through it: with resolve=gateway, IPOnDemand resolves a name
-for the ::/0 rule, so a name with an AAAA record matches it, and the hop
-hands that proxy IPv6 addresses only (ForceIPv6) and the first IPv4 only
-(ForceIPv4). Neither falls back to the other. With resolve=upstream only IPv6
-literals match. IPv6 UDP is blocked: the hop to it carries none. */ -}}
-{{- $v6 := ne .Parameters.upstream6_protocol "none" -}}
+{{- /* ipv6=separate: IPv6 goes its own way, through the upstreams lines marked
+group=ipv6, which the gate reaches on its second hop (1081). A destination
+with an IPv6 address leaves through them: with resolve=gateway, IPOnDemand
+resolves a name for the ::/0 rule, so a name with an AAAA record matches it,
+and the hop hands those lines IPv6 addresses only (ForceIPv6) and the first
+hop IPv4 only (ForceIPv4). Neither falls back to the other. With
+resolve=upstream only IPv6 literals match. IPv6 UDP is blocked: the hop to it
+carries none. */ -}}
+{{- $v6 := eq .Parameters.ipv6 "separate" -}}
 {{- /* ipv6=block: no IPv6 destination leaves. DNS asks for A records only and
-the upstream is handed IPv4 addresses only (ForceIPv4), so a dual-stack name
+the upstreams are handed IPv4 addresses only (ForceIPv4), so a dual-stack name
 still works over IPv4; what is left, IPv6 literals, the ::/0 rule blocks. With
 resolve=upstream the upstream resolves names itself, so only literals stop. */ -}}
 {{- $block6 := eq .Parameters.ipv6 "block" -}}
-{{- if and $block6 $v6 }}{{ required "ipv6=block leaves nothing for the IPv6 proxy: set upstream6_protocol=none, or ipv6=allow" "" }}{{ end -}}
-{{- /* A WireGuard or OpenVPN upstream is a tunnel, which carries UDP as it
-carries TCP; a proxy carries UDP only as SOCKS5 with upstream_udp. */ -}}
-{{- $tunnel := or (eq .Parameters.upstream_protocol "wireguard") (eq .Parameters.upstream_protocol "openvpn") -}}
-{{- $udp := or $tunnel (and (eq (print .Parameters.upstream_udp) "true") (contains .Parameters.upstream_protocol "socks")) -}}
+{{- /* UDP goes to the gate only when every upstreams line carries it, which
+is the operator's to say: a WireGuard or OpenVPN line, or SOCKS5 with UDP
+ASSOCIATE. */ -}}
+{{- $udp := eq (print .Parameters.upstream_udp) "true" -}}
 {{- $withXdns := has "xdns" .Profiles -}}
 {{- $xhttpReality := has "xhttp-reality" .Profiles -}}
 {{- $kcp := has "mkcp" .Profiles -}}

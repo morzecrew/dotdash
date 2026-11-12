@@ -11,13 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - An `ipv6` parameter on the server, the relay and the client: `block` keeps IPv6 out. The client refuses it before any rule, the relay drops it, and the server resolves names to IPv4 only and blocks IPv6 addresses, so dual-stack sites still work over IPv4.
 
+- `upstream_mode` decides how the upstreams share the traffic: `failover`, the first line that answers, then the fastest of the rest; `fastest`; or `balance`, connections spread over every line that answers. `upstream_pin` puts a named line first.
+
+- The `wireguard-line` task turns a WireGuard exit's wg-quick file into its upstreams line.
+
+- When nothing gets out, `doctor` names each upstreams line it asked by its `name=`: no answer, refused credentials, a WireGuard peer that did not carry it, or an OpenVPN tunnel that is down.
+
 ### Changed
 
 - **Breaking:** every bundle needs morzer 0.16.0, which health-checks a parameter change and undoes it when the check fails. Update morzer first: an older one refuses the release and changes nothing.
 
 - **Breaking:** the server's `healthcheck_url`, `healthcheck6_url` and `healthcheck_expect` are `probe_url`, `probe6_url` and `probe_expect`, as the other bundles name them. An update drops the old values, so set changed ones again after it.
 
-- The upstream protocols take `socks-tls` and `https`, a proxy over TLS. `upstream_tls`, `upstream6_tls` and `upstream_backup_tls` still work until 0.8.0: set the protocol, then unset them.
+- **Breaking:** every way out is a line of the new `upstreams` secret, in order: `socks5://`, `socks5+tls://`, `http://` or `https://` proxies, `wireguard://` exits and `openvpn`, any number of each but OpenVPN. Set it before updating, which is refused until it is: `sudo morzer secret set upstreams`.
+
+- **Breaking:** `ipv6=separate` sends IPv6 destinations through the lines marked `group=ipv6` alone, in place of the IPv6 proxy, and a line may serve both groups. `upstream_udp` now needs every line to carry UDP, tunnels included.
 
 - **Breaking:** the canary names its target as the relay does, `dotdash_server`, `dotdash_address`, `dotdash_port`, `dotdash_public_key`, `dotdash_id`, `dotdash_encryption`, `dotdash_short_id`, and `dotdash_` before the XHTTP and mKCP ones. A canary is not updated to it but set up again from `canary-config`.
 
@@ -32,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The server, the relay and the canary run Xray 26.11.9, and the client mihomo 1.19.34.
 
 ### Removed
+
+- **Breaking:** the `upstream`, `upstream6`, `upstream_backup` and `upstream_wireguard` secrets and the `upstream_protocol`, `upstream6_protocol` and `upstream_backup_protocol` parameters with their `*_tls` ones. Their ways out become lines of `upstreams`.
 
 - **Breaking:** the relay's deprecated `dotdash_server`. `dotdash_servers` is now required: on a relay that still has only `dotdash_server`, set `dotdash_servers` before updating.
 

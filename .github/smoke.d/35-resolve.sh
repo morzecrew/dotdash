@@ -37,9 +37,10 @@ if ! grep -qF 'target:8000' <<<"${seen}"; then
 fi
 echo "35-resolve.sh: resolve=upstream hands the upstream the name, and its log shows it"
 
+# probe_url stays on the rig's address: the gate's observatory fetches it
+# through every line by name, which is the gate's traffic, not a client's.
 mark=$(lines)
-sudo morzer config set resolve=gateway probe_url=https://www.gstatic.com/generate_204 >/dev/null \
-  || { restore; die "could not switch to resolve=gateway"; }
+restore || die "could not switch to resolve=gateway"
 
 code=$(fetch https://www.gstatic.com/generate_204) || true
 seen=$(since "${mark}")

@@ -82,7 +82,7 @@ if through 11080 http://11.99.0.10:8000/ 2>/dev/null; then
   sudo docker start dotdash-rig-upstream >/dev/null
   die "a client still reached the target with the upstream stopped"
 fi
-fails_naming "cannot connect to the upstream proxy"
+fails_naming "cannot connect to"
 sudo docker start dotdash-rig-upstream >/dev/null
 recovers
 through 11080 http://11.99.0.10:8000/ || die "the client did not recover with the upstream"
@@ -90,7 +90,12 @@ echo "20-fail-closed.sh: upstream stopped, clients get nothing and doctor names 
 
 # The rehearsal runs this against the published release too, which may
 # predate the upstream secret and take the password as a secret of its own.
-if sudo grep -q '^  - name: upstream$' /opt/dotdash/current/secrets.schema.yaml; then
+if sudo grep -q '^  - name: upstreams$' /opt/dotdash/current/secrets.schema.yaml; then
+  printf 'http://rig:wrong@%s name=rig\n' "$(sed 's/.*@//' /rig/upstream.conn)" | sudo morzer secret set upstreams >/dev/null
+  fails_naming "rig at"
+  fails_naming "refused the credentials"
+  printf 'http://%s name=rig\n' "$(cat /rig/upstream.conn)" | sudo morzer secret set upstreams >/dev/null
+elif sudo grep -q '^  - name: upstream$' /opt/dotdash/current/secrets.schema.yaml; then
   printf 'rig:wrong@%s' "$(sed 's/.*@//' /rig/upstream.conn)" | sudo morzer secret set upstream >/dev/null
   fails_naming "refused the credentials"
   printf "%s" "$(cat /rig/upstream.conn)" | sudo morzer secret set upstream >/dev/null

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# An OpenVPN upstream (upstream_protocol=openvpn, the openvpn profile): an
+# An OpenVPN line in the upstreams secret (`openvpn`, the openvpn profile): an
 # OpenVPN client (vpn) and a SOCKS hop in its namespace (vpn-socks), which the
 # gate dials. A stand-in server, the bundle's openvpn image in server mode,
 # carries the rig's traffic on to the target, with the rig's HTTP proxy
 # stopped so nothing can leave through it:
 #
-# - setting upstream_openvpn changes nothing while the proxy is the upstream;
-# - with the profile and upstream_protocol=openvpn, apply's health check
+# - setting upstream_openvpn changes nothing while the proxy is the line;
+# - with the profile and an openvpn line alone, the health check
 #   passes through the tunnel, a client reaches the target, doctor passes,
 #   and vpn has no default route around the tunnel;
 # - with the server stopped, nothing gets through, and doctor names the
@@ -15,15 +15,17 @@
 #   vpn's new network namespace, and traffic flows again;
 # - openvpn killed inside vpn starts again in place: vpn doesn't restart,
 #   vpn-socks stays in its namespace, and traffic flows again;
-# - upstream_protocol=http, then the xdns profile CI installs, go back.
+# - the proxy's line, then the xdns profile CI installs, go back.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -q '^  - name: upstream_openvpn$' /opt/dotdash/current/secrets.schema.yaml; then
-  echo "${0##*/}: skipped, the installed release predates the OpenVPN upstream"
+if ! sudo grep -q '^  - name: upstreams$' /opt/dotdash/current/secrets.schema.yaml; then
+  echo "${0##*/}: skipped, the installed release predates the upstreams list"
   exit 0
 fi
+one="http://$(cat /rig/upstream.conn) name=rig"
+list() { printf '%s\n' "$@" | sudo morzer secret set upstreams >/dev/null; }
 
 openvpn=$(sudo sed -n 's/^  openvpn: *//p' /opt/dotdash/current/manifest.yaml)
 [ -n "${openvpn}" ] || die "the installed manifest names no openvpn image"
@@ -64,7 +66,7 @@ restore() {
   kill "${watcher:-}" 2>/dev/null || true
   sudo docker rm -f dotdash-rig-ovpnclient >/dev/null 2>&1 || true
   sudo docker start dotdash-rig-upstream >/dev/null 2>&1 || true
-  sudo morzer config set upstream_protocol=http >/dev/null 2>&1 || true
+  list "${one}" || true
   sudo morzer config set installation.profile=xdns >/dev/null 2>&1 || true
   sudo docker rm -f dotdash-rig-ovpn >/dev/null 2>&1 || true
 }
@@ -150,20 +152,19 @@ sudo morzer config set installation.profile=xdns,openvpn >/dev/null ||
   { tunnel_logs; die "could not turn on the openvpn profile with the proxy still the upstream"; }
 reaches "${target}" || die "the proxy stopped carrying traffic once the openvpn profile was on"
 # Only now is the proxy stopped, so nothing can leave through it: before the
-# protocol moves, it is still the gate's upstream and Xray's egress check.
+# list moves, it is still the gate's line and Xray's egress check.
 sudo docker stop dotdash-rig-upstream >/dev/null
-sudo morzer config set upstream_protocol=openvpn >/dev/null ||
-  { tunnel_logs; die "could not switch to the OpenVPN upstream (its health check failed?)"; }
-reaches "${target}" || { tunnel_logs; die "a client does not reach the target through the OpenVPN upstream"; }
+list "openvpn name=vpn" || { tunnel_logs; die "could not switch the list to the OpenVPN line"; }
+reaches "${target}" || { tunnel_logs; die "a client does not reach the target through the OpenVPN line"; }
 sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the OpenVPN server answering: $(doctor)"
 route=$(sudo docker exec "$(service_container vpn)" ip -4 route show default || true)
 case ${route} in '' | *" dev tun"*) ;; *) die "vpn has a default route around the tunnel: ${route}" ;; esac
 kill "${watcher}" 2>/dev/null || true
-echo "${0##*/}: with the proxy stopped, the OpenVPN upstream carries the health check and a client"
+echo "${0##*/}: with the proxy stopped, the OpenVPN line carries the health check and a client"
 
 sudo docker stop dotdash-rig-ovpn >/dev/null
 [ -z "$(body "${target}")" ] || die "a client got through with the OpenVPN server stopped"
-grep -q 'the OpenVPN tunnel is' <<<"$(doctor)" || die "doctor does not name the OpenVPN tunnel with its server stopped"
+grep -q 'vpn (OpenVPN): the tunnel is' <<<"$(doctor)" || die "doctor does not name the OpenVPN line with its server stopped: $(doctor)"
 sudo docker start dotdash-rig-ovpn >/dev/null
 echo "${0##*/}: with the server stopped, nothing gets through, and doctor names the tunnel"
 
@@ -219,9 +220,9 @@ else
 fi
 
 sudo docker start dotdash-rig-upstream >/dev/null
-sudo morzer config set upstream_protocol=http >/dev/null || die "could not switch back to the proxy"
+list "${one}" || die "could not switch back to the proxy's line"
 reaches "${target}" || die "a client does not reach the target back on the proxy, with the profile still on"
 sudo morzer config set installation.profile=xdns >/dev/null || die "could not drop the openvpn profile"
 reaches "${target}" || die "a client does not reach the target back on the proxy"
 [ -z "$(service_container vpn 2>/dev/null || true)" ] || die "vpn still runs after the openvpn profile was dropped"
-echo "${0##*/}: upstream_protocol=http, then the xdns profile, go back to the proxy"
+echo "${0##*/}: the proxy's line, then the xdns profile, go back to the proxy"
