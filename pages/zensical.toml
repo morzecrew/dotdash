@@ -51,6 +51,7 @@ nav = [
     { "Canary" = [
         "canary/index.md",
     ] },
+    { "Manager" = "manager.md" },
     { "Releases" = [
         "reference/releases.md",
         "reference/changelog.md",

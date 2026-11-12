@@ -1,0 +1,91 @@
+# dotdash-manager: its self-check, then a real server following it in a rig on
+# a GitHub-hosted runner (.github/manager/e2e.sh). The rig is bundle-ci's
+# rehearsal, as for the benchmark: the published :main with the smoke hooks'
+# stand-in upstream and target, and this tree's server bundle on top.
+name: manager
+
+on:
+  pull_request:
+    paths:
+      - manager/**
+      - bundles/server/**
+      - .github/manager/**
+      - .github/workflows/manager.yml
+  push:
+    branches: [main]
+    paths:
+      - manager/**
+      - bundles/server/**
+      - .github/manager/**
+      - .github/workflows/manager.yml
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: manager-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  manager:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Self-check
+        run: python3 manager/dotdash_manager.py --selftest
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: morzecrew/bundle-ci
+          ref: 759760aded983198badd37208339f6a50dc55930 # v0.11.0
+          path: .bundle-ci
+          persist-credentials: false
+
+      - name: Install oras
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          BIN_DIR="${RUNNER_TEMP}/bin" bash .bundle-ci/scripts/tools.sh oras
+          echo "${RUNNER_TEMP}/bin" >>"${GITHUB_PATH}"
+
+      - name: Install dotdash in a rig
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REHEARSE_PUBKEY: ${{ vars.MINISIGN_DEV_PUBKEY }}
+          REHEARSE_MORZER_VERSION: "0.16.0"
+          REHEARSE_BUNDLE_DIR: bundles/server
+          # The smoke hooks' pre-apply alone, for the stand-in upstream and target.
+          REHEARSE_HOOKS: .manager-hooks
+          REHEARSE_PROBE_PATHS: ""
+          REHEARSE_OPERATOR_SECRETS: upstreams upstream
+          REHEARSE_INIT_ARGS: >-
+            --domain dotdash.test --set upstream_protocol=http
+            --set probe_url=http://11.99.0.10:8000/
+            --set healthcheck_url=http://11.99.0.10:8000/
+            --set cert_issuer=internal
+        run: |
+          mkdir -p .manager-hooks && cp -R .github/smoke.d/pre-apply .manager-hooks/
+          # ponytail: the old package until dotdash-server:main is published,
+          # as in benchmark.yml; drop the fallback with it.
+          from=ghcr.io/morzecrew/dotdash-server:main
+          oras manifest fetch "${from}" >/dev/null 2>&1 || from=ghcr.io/morzecrew/dotdash:main
+          bash .bundle-ci/scripts/rehearse.sh --from "${from}" --keep
+          GITHUB_TOKEN= bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal \
+            sh -c 'bash /rig/smoke.sh update "$(ls /rig/dist/*.tar.zst | head -1)"'
+
+      - name: A server follows the manager
+        run: |
+          bash .bundle-ci/scripts/rig.sh cp dotdash-rehearsal manager/dotdash_manager.py /rig/dotdash_manager.py
+          bash .bundle-ci/scripts/rig.sh cp dotdash-rehearsal .github/manager/e2e.sh /rig/e2e.sh
+          bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal bash /rig/e2e.sh
+
+      - name: Remove the rig
+        if: always()
+        run: bash .bundle-ci/scripts/rig.sh stop dotdash-rehearsal || true
