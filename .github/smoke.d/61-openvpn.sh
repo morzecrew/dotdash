@@ -251,7 +251,13 @@ echo "${0##*/}: openvpn killed inside vpn starts again in place, and a client ge
 sudo docker start dotdash-rig-upstream >/dev/null
 list "${one}" "${good} name=vpn" || die "could not put the proxy's line back first"
 settled || { tunnel_logs; die "vpn and vpn-socks did not settle after the proxy's line came back"; }
-sudo morzer config set upstream_pin=none >/dev/null || die "could not drop the pin: $(sudo morzer status 2>&1 | tail -n 12)"
+if ! out=$(sudo morzer config set upstream_pin=none --verbose 2>&1); then
+  echo "--- containers" >&2
+  sudo docker ps -a --filter label=com.docker.compose.project=dotdash \
+    --format '{{.Label "com.docker.compose.service"}} {{.Status}} {{.ID}} net={{.Networks}}' >&2 || true
+  sudo docker inspect -f '{{.Name}} netmode={{.HostConfig.NetworkMode}}' "$(service_container vpn-socks)" >&2 || true
+  die "could not drop the pin: $(grep -iE 'error|cannot|failed|conflict|denied' <<<"${out}" | tail -n 12)"
+fi
 reaches "${target}" || die "a client does not reach the target back on the proxy, with the profile still on"
 sudo morzer config set installation.profile=xdns >/dev/null || die "could not drop the openvpn profile"
 list "${one}" || die "could not switch back to the proxy's line alone"
