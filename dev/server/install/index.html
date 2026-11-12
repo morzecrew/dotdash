@@ -695,10 +695,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -861,68 +857,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../ipv6-upstream/" class="md-nav__link">
+      <a href="../upstreams/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  IPv6 through a second proxy
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../backup-upstream/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  A backup proxy
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../tunnel-upstream/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  WireGuard or OpenVPN upstream
+  Upstreams
 
     
   </span>
@@ -1954,18 +1896,16 @@ stands for your domain throughout.</p>
 <p><strong>Deploy:</strong></p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>init<span class="w"> </span>--release<span class="w"> </span>oci://ghcr.io/morzecrew/dotdash-server:stable<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--domain<span class="w"> </span>example.com<span class="w"> </span>--recovery-recipient<span class="w"> </span>age1…
-sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>upstream<span class="w">    </span><span class="c1"># user:pass@host:port</span>
+sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>upstreams<span class="w">    </span><span class="c1"># socks5://user:pass@host:port, one per line</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>apply
 </code></pre></div>
 <ul>
-<li>Add <code>--set upstream_protocol=http</code> for an HTTP proxy, or <code>https</code> or
-  <code>socks-tls</code> for one that takes TLS. The default is SOCKS5. For
-  a WireGuard or OpenVPN exit instead, see
-  <a href="../tunnel-upstream/">WireGuard or OpenVPN upstream</a>.</li>
-<li><code>upstream</code> is <code>user:pass@host:port</code>, or <code>host:port</code> with no login. The
-  password may contain <code>:</code> and <code>@</code>; an IPv6 host goes in brackets; no
-  <code>socks5://</code> prefix. Changing proxy later is one <code>secret set</code> and one
-  restart.</li>
+<li><code>upstreams</code> lists the ways out, one per line, in order:
+  <code>socks5://</code>, <code>socks5+tls://</code>, <code>http://</code> or <code>https://</code> and
+  <code>user:pass@host:port</code>, a WireGuard exit's <code>wireguard://</code> line, or
+  <code>openvpn</code>. The first that answers carries the traffic. See
+  <a href="../upstreams/">Upstreams</a> for backups, IPv6, WireGuard and OpenVPN.</li>
+<li>Changing proxy later is one <code>secret edit upstreams</code> and one restart.</li>
 <li><code>init</code> prints the release's signing key and trusts it. To check even
   this first release against the key published with the repository, add
   <code>--signing-key "$(gh variable get MINISIGN_RELEASE_PUBKEY -R morzecrew/dotdash)"</code>.</li>

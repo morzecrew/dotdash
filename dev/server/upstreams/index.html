@@ -12,11 +12,11 @@
         <meta name="author" content="Lev Litvinov">
       
       
-        <link rel="canonical" href="https://morzecrew.github.io/dotdash/dev/server/tunnel-upstream/">
+        <link rel="canonical" href="https://morzecrew.github.io/dotdash/dev/server/upstreams/">
       
       
       
-        <link rel="prev" href="../backup-upstream/">
+        <link rel="prev" href="../mkcp/">
       
       
         <link rel="next" href="../cdn/">
@@ -30,7 +30,7 @@
     
     
       
-        <title>WireGuard or OpenVPN upstream - dotdash</title>
+        <title>Upstreams - dotdash</title>
       
     
     
@@ -122,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              WireGuard or OpenVPN upstream
+              Upstreams
             
           </span>
         </div>
@@ -687,10 +687,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -850,60 +846,6 @@
                   
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../ipv6-upstream/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  IPv6 through a second proxy
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../backup-upstream/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  A backup proxy
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
     
   
   
@@ -923,7 +865,7 @@
   <span class="md-ellipsis">
     
   
-  WireGuard or OpenVPN upstream
+  Upstreams
 
     
   </span>
@@ -940,7 +882,7 @@
   <span class="md-ellipsis">
     
   
-  WireGuard or OpenVPN upstream
+  Upstreams
 
     
   </span>
@@ -966,6 +908,28 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#order-and-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Order and modes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ipv6" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        IPv6
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#wireguard" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -988,10 +952,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#back-to-a-proxy" class="md-nav__link">
+  <a href="#udp" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Back to a proxy
+        UDP
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-doctor-says" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What doctor says
       </span>
     </span>
   </a>
@@ -1918,6 +1893,28 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#order-and-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Order and modes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ipv6" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        IPv6
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#wireguard" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1940,10 +1937,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#back-to-a-proxy" class="md-nav__link">
+  <a href="#udp" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Back to a proxy
+        UDP
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-doctor-says" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What doctor says
       </span>
     </span>
   </a>
@@ -2048,10 +2056,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -2083,62 +2087,175 @@
   
 
 
-<h1 id="wireguard-or-openvpn-upstream">WireGuard or OpenVPN upstream<a class="headerlink" href="#wireguard-or-openvpn-upstream" title="Permanent link">&para;</a></h1>
-<p>Instead of a SOCKS5 or HTTP proxy, the upstream can be a WireGuard or an
-OpenVPN exit: your own router at home outside the restricted network, say, or a VPN provider. The
-client config the exit gives you goes in a secret of its own, and all traffic
-leaves through that tunnel. The proxy in <code>upstream</code> stays where it is, so
-the proxy carries traffic until the moment the tunnel takes over, and going
-back needs nothing set again.</p>
-<p>A tunnel carries UDP and, if the exit has it, IPv6, so it needs neither
-<code>upstream_udp</code> nor the <a href="../ipv6-upstream/">second proxy for IPv6</a>. It resolves
-no names, so it needs <code>resolve=gateway</code>, the default.</p>
-<div class="admonition warning">
-<p class="admonition-title">The exit must be outside the restricted network</p>
-<p>WireGuard and OpenVPN are easy to detect and block. Between this server
-and an exit outside that doesn't matter; an exit inside the restricted
-network would be blocked, and would send the traffic back where it came
-from.</p>
-</div>
-<h2 id="wireguard">WireGuard<a class="headerlink" href="#wireguard" title="Permanent link">&para;</a></h2>
-<p>The config is a wg-quick file, as a router or a provider exports it:</p>
-<div class="highlight"><pre><span></span><code><span class="k">[Interface]</span>
-<span class="na">PrivateKey</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&lt;base64&gt;</span>
-<span class="na">Address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">10.34.0.3/32, fd30:2::3/128</span>
-<span class="na">DNS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">1.1.1.1</span>
-
-<span class="k">[Peer]</span>
-<span class="na">PublicKey</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&lt;base64&gt;</span>
-<span class="na">Endpoint</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">vpn.example:51820</span>
-<span class="na">AllowedIPs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">0.0.0.0/0, ::/0</span>
-<span class="na">PersistentKeepalive</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">25</span>
+<h1 id="upstreams">Upstreams<a class="headerlink" href="#upstreams" title="Permanent link">&para;</a></h1>
+<p>Every connection leaves through the ways out the <code>upstreams</code> secret lists:
+proxies, WireGuard exits and an OpenVPN exit, one per line, in order. A
+change of provider, a backup or a second exit is one edit of that secret.</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>upstreams
 </code></pre></div>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>upstream_wireguard<span class="w"> </span>&lt;<span class="w"> </span>wg.conf
-sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">upstream_protocol</span><span class="o">=</span>wireguard
+<div class="highlight"><pre><span></span><code># &lt;url&gt; [name=&lt;name&gt;] [group=&lt;group&gt;]
+socks5://alice:secret@203.0.113.7:1080            name=isp-a
+https://bob:secret@proxy.example.net:443          name=isp-b
+wireguard://&lt;private key&gt;@198.51.100.4:51820?publickey=&lt;base64&gt;&amp;address=10.34.0.3/32 name=home
+openvpn                                           name=vpn
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>A line</th>
+<th>Way out</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>socks5://[user:pass@]host:port</code></td>
+<td>a SOCKS5 proxy</td>
+</tr>
+<tr>
+<td><code>socks5+tls://[user:pass@]host:port</code></td>
+<td>a SOCKS5 proxy over TLS</td>
+</tr>
+<tr>
+<td><code>http://[user:pass@]host:port</code></td>
+<td>an HTTP proxy</td>
+</tr>
+<tr>
+<td><code>https://[user:pass@]host:port</code></td>
+<td>an HTTP proxy over TLS</td>
+</tr>
+<tr>
+<td><code>wireguard://…</code></td>
+<td>a WireGuard exit, from its wg-quick file (<a href="#wireguard">below</a>)</td>
+</tr>
+<tr>
+<td><code>openvpn</code></td>
+<td>the OpenVPN exit in <code>upstream_openvpn</code> (<a href="#openvpn">below</a>)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>After the scheme, a proxy is <code>user:pass@host:port</code>, or <code>host:port</code> with no
+  login. The password may contain <code>:</code> and <code>@</code>, and is not percent-encoded. An
+  IPv6 host goes in brackets.</li>
+<li><code>name=</code> is optional, lowercase letters, digits and dashes. <code>doctor</code> and the
+  gate's log name each line by it, and <a href="#order-and-modes"><code>upstream_pin</code></a>
+  takes it.</li>
+<li>Blank lines and <code>#</code> lines are skipped.</li>
+</ul>
+<p>Proxies with residential exits suit this best. With every line down, devices
+get nothing, never the server's own address: <a href="../leaks/">what leaks where</a>.</p>
+<h2 id="order-and-modes">Order and modes<a class="headerlink" href="#order-and-modes" title="Permanent link">&para;</a></h2>
+<p>The gate probes every line through it, fetching <code>probe_url</code>, every 30
+seconds, so every line sees that URL's host name; with <code>resolve=gateway</code>,
+clients' destinations still reach them as addresses. <code>upstream_mode</code> decides how the lines that answer share the traffic:</p>
+<table>
+<thead>
+<tr>
+<th><code>upstream_mode</code></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>failover</code> (default)</td>
+<td>the first line while it answers, so the exit stays put; when it doesn't, the fastest of the rest, and back to the first once it answers again</td>
+</tr>
+<tr>
+<td><code>fastest</code></td>
+<td>whichever line answers fastest</td>
+</tr>
+<tr>
+<td><code>balance</code></td>
+<td>every line that answers, each connection to any of them</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>A failed line moves connections within about a minute. Connections open at
+  that moment break, and apps reconnect.</li>
+<li><strong>The exit changes</strong> with the line. Lines in one country keep geolocated
+  sites behaving the same. Under <code>balance</code>, one site may see several exits in
+  a session, which some sites answer with a captcha or a new login.</li>
+<li><code>sudo morzer config set upstream_pin=isp-b</code> puts that line first whatever its
+  place, the others behind it as the mode has them; <code>none</code> (the default)
+  keeps the file's order.</li>
+<li><code>doctor</code> passes while any line carries. <code>exit-check</code> shows the exit in use.
+  If you <a href="../operations/#pin-the-exit-ip">pin the exit IP</a>, match every line's
+  address to stay quiet when another carries, such as
+  <code>'probe_expect=^(203\.0\.113\.7|198\.51\.100\.9)\s*$'</code>.</li>
+</ul>
+<h2 id="ipv6">IPv6<a class="headerlink" href="#ipv6" title="Permanent link">&para;</a></h2>
+<p><code>ipv6</code> decides where IPv6 destinations go:</p>
+<table>
+<thead>
+<tr>
+<th><code>ipv6</code></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>allow</code> (default)</td>
+<td>through the lines like any other: right when every line has IPv6</td>
+</tr>
+<tr>
+<td><code>separate</code></td>
+<td>through the lines marked <code>group=ipv6</code>, with <code>upstream_mode</code> applying to them alone, and never through the others</td>
+</tr>
+<tr>
+<td><code>block</code></td>
+<td>nowhere: names resolve to IPv4 only, so dual-stack sites still work over IPv4</td>
+</tr>
+</tbody>
+</table>
+<p>A proxy carries IPv6 when its own host has it. A WireGuard exit does when its
+<code>address</code> holds an IPv6 address and its exit routes IPv6, and an OpenVPN
+exit when its server pushes IPv6. For IPv4-only proxies and a provider's
+separate IPv6 one:</p>
+<div class="highlight"><pre><span></span><code>socks5://alice:secret@203.0.113.7:1080        name=isp-a
+socks5://alice:secret@[2001:db8::7]:1080      name=isp-a6 group=ipv6
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">ipv6</span><span class="o">=</span>separate
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>exit-check<span class="w"> </span>--output
 </code></pre></div>
+<p>Destinations with an IPv6 address, dual-stack ones included, leave through
+the IPv6 lines, the rest through the others, and neither falls back to the
+other. A dual-stack WireGuard exit can serve both: <code>group=upstream,ipv6</code>.
+<code>separate</code> needs <code>resolve=gateway</code> (the default); two providers show as
+<code>MISMATCH</code> in <code>exit-check</code>, as expected.</p>
+<h2 id="wireguard">WireGuard<a class="headerlink" href="#wireguard" title="Permanent link">&para;</a></h2>
+<p>The <code>wireguard-line</code> task turns a wg-quick file, as a router or a provider
+exports it, into its line:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>wireguard-line<span class="w"> </span>--output<span class="w"> </span>--input<span class="w"> </span><span class="nv">conf</span><span class="o">=</span>./wg0.conf
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>wireguard://oIpc…%3D@vpn.example:51820?publickey=n9B5…%3D&amp;address=10.34.0.3%2F32&amp;allowedips=0.0.0.0%2F0%2C::%2F0&amp;keepalive=25
+</code></pre></div>
 <ul>
+<li>Add it to <code>upstreams</code>, with a <code>name=</code> if you like. The line holds the
+  private key: treat it as the file.</li>
+<li>One <code>[Peer]</code> per line: a file with several needs splitting first.</li>
 <li>The gate runs Xray's own WireGuard, on its built-in network stack, so it
-  needs no extra privilege.</li>
-<li><code>DNS</code>, <code>PostUp</code> and the like are ignored: this server resolves names
-  itself and runs no scripts.</li>
-<li><code>apply</code> succeeds once a fetch gets out through the peer. With the peer down,
-  nothing gets out, and <code>doctor</code> names the WireGuard peer.</li>
+  needs no extra privilege. <code>DNS</code>, <code>PostUp</code> and the like are left out: this
+  server resolves names itself and runs no scripts.</li>
+<li>A link an app shares works too: <code>wireguard://&lt;key&gt;@host:port?publickey=…&amp;address=…</code>,
+  with <code>mtu</code>, <code>presharedkey</code>, <code>keepalive</code> and <code>allowedips</code> (all of
+  <code>0.0.0.0/0, ::/0</code> unless given).</li>
 </ul>
 <h2 id="openvpn">OpenVPN<a class="headerlink" href="#openvpn" title="Permanent link">&para;</a></h2>
-<p>The config is an OpenVPN client config with its keys inline (<code>&lt;ca&gt;</code>,
-<code>&lt;cert&gt;</code>, <code>&lt;key&gt;</code>, <code>&lt;tls-crypt&gt;</code>). A provider's login goes inline too:</p>
+<p>One OpenVPN exit per server: it runs in a container of its own, which the
+<code>openvpn</code> profile adds. Its config is an OpenVPN client config with its keys
+inline (<code>&lt;ca&gt;</code>, <code>&lt;cert&gt;</code>, <code>&lt;key&gt;</code>, <code>&lt;tls-crypt&gt;</code>), and a provider's login goes
+inline too:</p>
 <div class="highlight"><pre><span></span><code>&lt;auth-user-pass&gt;
 user
 password
 &lt;/auth-user-pass&gt;
 </code></pre></div>
-<p>OpenVPN runs in a container of its own, which the <code>openvpn</code> profile adds.
-Turn the profile on first: the container starts while the proxy still
-carries traffic, and the second step moves the traffic to it.</p>
+<p>Set it, turn the profile on (the container starts while the other lines
+still carry traffic), then add the <code>openvpn</code> line:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>upstream_openvpn<span class="w"> </span>&lt;<span class="w"> </span>client.ovpn
 sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>openvpn<span class="w">    </span><span class="c1"># with others, all of them: xdns,openvpn</span>
-sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">upstream_protocol</span><span class="o">=</span>openvpn
+sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>upstreams<span class="w">                       </span><span class="c1"># add: openvpn name=vpn</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>exit-check<span class="w"> </span>--output
 </code></pre></div>
 <ul>
@@ -2148,20 +2265,32 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
   route around the tunnel.</li>
 <li>It runs as root with <code>NET_ADMIN</code> and <code>/dev/net/tun</code>, the one container here
   that does: OpenVPN takes nothing less.</li>
-<li>A new config in <code>upstream_openvpn</code> while OpenVPN runs takes effect at
-  once: setting it restarts OpenVPN.</li>
-<li>If OpenVPN exits, its container starts it again within a minute, and
-  nothing leaves while it is down.</li>
+<li>A new config in <code>upstream_openvpn</code> takes effect at once: setting it
+  restarts OpenVPN. If OpenVPN exits, its container starts it again within a
+  minute, and nothing leaves through it while it is down.</li>
 <li>The config can't run scripts, or send OpenVPN's log anywhere but
-  <code>docker logs</code>.</li>
-<li>The servers' addresses are looked up when the container starts. A provider
-  that moves its server is reached again after <code>sudo morzer restart vpn</code>.</li>
+  <code>docker logs</code>. The servers' addresses are looked up when the container
+  starts: a provider that moves its server is reached again after
+  <code>sudo morzer restart vpn</code>.</li>
+<li>To drop it, remove the line, then the profile.</li>
 </ul>
-<h2 id="back-to-a-proxy">Back to a proxy<a class="headerlink" href="#back-to-a-proxy" title="Permanent link">&para;</a></h2>
-<p>The proxy in <code>upstream</code> is still there:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">upstream_protocol</span><span class="o">=</span>socks<span class="w">           </span><span class="c1"># or http</span>
-sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">unset</span><span class="w"> </span>installation.profile<span class="w">           </span><span class="c1"># from OpenVPN, then: or the profiles you had, such as xdns</span>
-</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Exits must be outside the restricted network</p>
+<p>WireGuard and OpenVPN are easy to detect and block. Between this server
+and an exit outside that doesn't matter; an exit inside the restricted
+network would be blocked, and would send the traffic back where it came
+from.</p>
+</div>
+<h2 id="udp">UDP<a class="headerlink" href="#udp" title="Permanent link">&para;</a></h2>
+<p><code>upstream_udp=true</code> carries devices' UDP, such as calls and QUIC, through the
+lines. Every line must carry it then: a WireGuard or OpenVPN line, or a SOCKS5
+proxy with UDP ASSOCIATE; an HTTP proxy drops it. Off, UDP is dropped here and
+apps fall back to TCP.</p>
+<h2 id="what-doctor-says">What doctor says<a class="headerlink" href="#what-doctor-says" title="Permanent link">&para;</a></h2>
+<p>When nothing gets out, <code>doctor</code> asks the first lines directly and names each
+by its <code>name=</code>: one that doesn't answer, one that refused the credentials in
+its line, a WireGuard peer that didn't carry it, an OpenVPN tunnel that is
+down. A line that answers when asked directly points at the gate instead.</p>
 
 
 
@@ -2199,7 +2328,7 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w">
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../backup-upstream/" class="md-footer__link md-footer__link--prev" aria-label="Previous: A backup proxy">
+          <a href="../mkcp/" class="md-footer__link md-footer__link--prev" aria-label="Previous: mKCP">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -2209,7 +2338,7 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w">
                 Previous
               </span>
               <div class="md-ellipsis">
-                A backup proxy
+                mKCP
               </div>
             </div>
           </a>

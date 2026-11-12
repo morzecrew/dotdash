@@ -685,10 +685,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -851,68 +847,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../ipv6-upstream/" class="md-nav__link">
+      <a href="../upstreams/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  IPv6 through a second proxy
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../backup-upstream/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  A backup proxy
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-                
-              
-                
-                  
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../tunnel-upstream/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  WireGuard or OpenVPN upstream
+  Upstreams
 
     
   </span>
@@ -1964,24 +1906,19 @@
 </thead>
 <tbody>
 <tr>
-<td><code>upstream_protocol</code></td>
-<td><code>socks</code></td>
-<td><code>socks</code> or <code>http</code>, the proxy in <code>upstream</code>, and <code>socks-tls</code> or <code>https</code> the same over TLS; <code>wireguard</code> or <code>openvpn</code>, a <a href="../tunnel-upstream/">tunnel</a> from <code>upstream_wireguard</code> or <code>upstream_openvpn</code></td>
+<td><code>upstream_mode</code></td>
+<td><code>failover</code></td>
+<td>how the <a href="../upstreams/#order-and-modes">upstreams</a> lines share the traffic: <code>failover</code> (the first that answers), <code>fastest</code> or <code>balance</code></td>
+</tr>
+<tr>
+<td><code>upstream_pin</code></td>
+<td><code>none</code></td>
+<td>the <code>name=</code> of the line that goes first; under <code>ipv6=separate</code>, a second name pins the IPv6 lines</td>
 </tr>
 <tr>
 <td><code>upstream_udp</code></td>
 <td><code>false</code></td>
-<td>relay UDP via a SOCKS5 upstream with UDP ASSOCIATE; otherwise dropped. A tunnel always carries UDP</td>
-</tr>
-<tr>
-<td><code>upstream6_protocol</code></td>
-<td><code>none</code></td>
-<td><code>socks</code>, <code>socks-tls</code>, <code>http</code> or <code>https</code> turns on the IPv6 proxy, the <code>upstream6</code> secret</td>
-</tr>
-<tr>
-<td><code>upstream_backup_protocol</code></td>
-<td><code>none</code></td>
-<td><code>socks</code>, <code>socks-tls</code>, <code>http</code> or <code>https</code> turns on the <a href="../backup-upstream/">backup proxy</a>, the <code>upstream_backup</code> secret</td>
+<td>carry UDP through the upstreams, every one of which must carry it (WireGuard, OpenVPN, SOCKS5 with UDP ASSOCIATE); otherwise dropped</td>
 </tr>
 <tr>
 <td><code>https_port</code></td>
@@ -2026,7 +1963,7 @@
 <tr>
 <td><code>probe_url</code></td>
 <td><code>https://www.gstatic.com/generate_204</code></td>
-<td>fetched through the upstream</td>
+<td>fetched through the upstreams, and through each line every 30 s</td>
 </tr>
 <tr>
 <td><code>probe_expect</code></td>
@@ -2036,17 +1973,17 @@
 <tr>
 <td><code>probe6_url</code></td>
 <td><code>http://api6.ipify.org</code></td>
-<td>IPv6-only URL fetched through the IPv6 proxy</td>
+<td>IPv6-only URL fetched through the IPv6 lines, with <code>ipv6=separate</code></td>
 </tr>
 <tr>
 <td><code>resolve</code></td>
 <td><code>gateway</code></td>
-<td><code>gateway</code>: this server resolves over <code>dns_resolver</code>; <code>upstream</code>: the upstream sees hostnames</td>
+<td><code>gateway</code>: this server resolves over <code>dns_resolver</code>; <code>upstream</code>: the upstream proxies see hostnames (no WireGuard or OpenVPN line then)</td>
 </tr>
 <tr>
 <td><code>ipv6</code></td>
 <td><code>allow</code></td>
-<td><code>block</code>: no IPv6 destination leaves; names resolve to IPv4 only and the upstream is dialled over IPv4, so dual-stack sites still work (with <code>resolve=upstream</code>, the upstream resolves names itself). Not with <code>upstream6_protocol</code></td>
+<td><code>allow</code>: IPv6 leaves like the rest; <code>separate</code>: through the <a href="../upstreams/#ipv6"><code>group=ipv6</code> lines</a> alone; <code>block</code>: no IPv6 destination leaves, names resolve to IPv4 only, so dual-stack sites still work (with <code>resolve=upstream</code>, the upstream resolves names itself)</td>
 </tr>
 <tr>
 <td><code>dns_resolver</code></td>
@@ -2093,11 +2030,8 @@
 <p>Set one with <code>sudo morzer config set &lt;name&gt;=&lt;value&gt;</code>, unset it with
 <code>sudo morzer config unset &lt;name&gt;</code>, edit <code>relays</code> or <code>pools</code> with
 <code>sudo morzer config edit &lt;name&gt;</code>. Profiles (<code>installation.profile</code>): <code>xdns</code>,
-<code>xhttp-reality</code>, <code>mkcp</code>, <code>openvpn</code> (for an <a href="../tunnel-upstream/">OpenVPN upstream</a>),
+<code>xhttp-reality</code>, <code>mkcp</code>, <code>openvpn</code> (for an <a href="../upstreams/#openvpn">OpenVPN line</a>),
 combined with commas, such as <code>xdns,xhttp-reality</code>.</p>
-<p><code>upstream_tls</code>, <code>upstream6_tls</code> and <code>upstream_backup_tls</code> are deprecated and go
-in 0.8.0: <code>true</code> still turns <code>socks</code> into <code>socks-tls</code> and <code>http</code> into <code>https</code>.
-Set the protocol instead, then unset them.</p>
 
 
 

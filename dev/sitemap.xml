@@ -43,9 +43,6 @@
         <loc>https://morzecrew.github.io/dotdash/dev/server/</loc>
       </url>
       <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/server/backup-upstream/</loc>
-      </url>
-      <url>
         <loc>https://morzecrew.github.io/dotdash/dev/server/cdn/</loc>
       </url>
       <url>
@@ -62,9 +59,6 @@
       </url>
       <url>
         <loc>https://morzecrew.github.io/dotdash/dev/server/install/</loc>
-      </url>
-      <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/server/ipv6-upstream/</loc>
       </url>
       <url>
         <loc>https://morzecrew.github.io/dotdash/dev/server/leaks/</loc>
@@ -88,7 +82,7 @@
         <loc>https://morzecrew.github.io/dotdash/dev/server/several-servers/</loc>
       </url>
       <url>
-        <loc>https://morzecrew.github.io/dotdash/dev/server/tunnel-upstream/</loc>
+        <loc>https://morzecrew.github.io/dotdash/dev/server/upstreams/</loc>
       </url>
       <url>
         <loc>https://morzecrew.github.io/dotdash/dev/server/xhttp-reality/</loc>
