@@ -104,7 +104,10 @@ services:
     environment:
       DOMAIN: ${DOTDASH_DOMAIN:?install with --domain}
       CERT_ISSUER: ${DOTDASH_PARAM_CERT_ISSUER:-acme}
-      SITE_UPSTREAM: ${DOTDASH_PARAM_SITE_UPSTREAM:-none}
+      COVER: ${DOTDASH_PARAM_COVER:-pages}
+    # host.docker.internal: the host, for an app published on one of its
+    # ports (cover).
+    extra_hosts: ["host.docker.internal:host-gateway"]
     # 80 and 443 inside, as above.
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
     volumes:
@@ -113,10 +116,12 @@ services:
         target: /etc/caddy/Caddyfile
         read_only: true
         bind: {create_host_path: false}
-      # The bundled page, and the operator's own site, served instead when it
-      # has the requested file (the Caddyfile decides).
+      # The bundled page, and the operator's own files, served first when one
+      # is there (the Caddyfile decides). A fixed directory, so that one
+      # parameter, cover, can name either pages or an app; a symlink there
+      # puts the files elsewhere.
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/site:/srv/default:ro
-      - ${DOTDASH_PARAM_SITE_DIR:-/srv/dotdash}:/srv/own:ro
+      - /srv/dotdash:/srv/own:ro
       # The ACME account and certificates. The image's /data/caddy is mode
       # 1777, and a fresh volume copies it, so uid 65532 can write there.
       - caddy_data:/data

@@ -2,7 +2,7 @@
 # The release's health checks, one per argument:
 #
 #   cover-site  Caddy reports healthy, and the app behind the site, if
-#               site_upstream names one, answers.
+#               cover names one, answers.
 #   egress      Xray fetches probe_url through the gate and the upstreams,
 #               now, and under ipv6=separate also probe6_url, which has an
 #               IPv6 address only, through the IPv6 lines. When it cannot,
@@ -22,16 +22,16 @@ set -euo pipefail
 project=${DOTDASH_COMPOSE_PROJECT:-dotdash}
 
 cover_site() {
-  local health out app=${DOTDASH_PARAM_SITE_UPSTREAM:-none}
+  local health out app=${DOTDASH_PARAM_COVER:-pages}
   health=$(docker compose -p "$project" ps --format '{{.Service}}={{.Health}}' | sed -n 's/^caddy=//p')
   [ "$health" = healthy ] || { echo "caddy is not healthy: ${health:-not running}" >&2; exit 1; }
-  # The app behind the site (site_upstream) answers, asked from Caddy as Caddy
+  # The app behind the site (cover) answers, asked from Caddy as Caddy
   # asks it. Any HTTP answer counts, a login wall's 401 included: only none
   # is a fault, which visitors would meet as a 502.
-  [ "$app" != none ] || return 0
+  [ "$app" != pages ] || return 0
   if ! out=$(docker compose -p "$project" exec -T caddy wget -q -O /dev/null -T 5 "$app" 2>&1) &&
     ! grep -q 'server returned error' <<<"$out"; then
-    echo "caddy is up, but the app behind the site (site_upstream) does not answer: ${out#wget: }; visitors get a 502" >&2
+    echo "caddy is up, but the app behind the site (cover) does not answer: ${out#wget: }; visitors get a 502" >&2
     exit 1
   fi
 }

@@ -48,7 +48,7 @@ secrets:
 compatibility:
   # The manager this bundle is verified and rehearsed with, and the first that
   # re-creates, on a parameter change, only the services the active profiles
-  # start, which site_dir's and cert_issuer's caddy needs.
+  # start, which cover's and cert_issuer's caddy needs.
   min_manager_version: "0.16.0"
   rollback_safe: true
   # No database, which an unattended update needs declared.
@@ -92,15 +92,10 @@ parameters:
     default: none
     description: "An opener in front of mKCP (the mkcp profile), as the server's kcp_open: quic sends a QUIC-Initial-shaped packet before the flow; relay-entry carries it to the server's relays line, so devices' links through this relay match"
     services: [xray]
-  site_dir:
+  cover:
     type: string
-    default: /srv/dotdash-relay
-    description: "With the own-site profile, the host directory of your own site, served in place of the bundled page; files must be readable by uid 65532"
-    services: [caddy]
-  site_upstream:
-    type: string
-    default: none
-    description: "With the own-site profile, your own app behind the site, such as http://cover-app:8080, a container on Caddy's network: Caddy passes it every request but a subscription's and XHTTP's, after site_dir's files. none serves pages only"
+    default: pages
+    description: "With the own-site profile, what the site serves past your own files in /srv/dotdash-relay (readable by uid 65532): pages, the bundled page; or your app's URL, http://cover-app:8080 for a container on the network dotdash-relay_default or http://host.docker.internal:8080 for one published on the host, which gets every request but a subscription's and XHTTP's"
     services: [caddy]
   cert_issuer:
     type: enum
