@@ -151,13 +151,16 @@ client_config() { # [verb] [server]: the client's config, inline keys
 started() { sudo docker inspect -f '{{.State.StartedAt}}' "$(service_container "$1")"; }
 # By the processes' namespaces, from here: Xray's image has no shell.
 netns() { sudo readlink "/proc/$(sudo docker inspect -f '{{.State.Pid}}' "$(service_container "$1")")/ns/net"; }
-# Until vpn is healthy and vpn-socks runs in its namespace, up to 90 s: secret
-# set returns once it restarted vpn, and an apply while Compose brings
-# vpn-socks after it fails to start services.
+# Until vpn is healthy and vpn-socks runs in its namespace, and Xray is
+# healthy, up to 120 s. An apply re-creates the gate with `up --wait`, which
+# waits on Xray too, whose healthcheck fetches through the upstreams, every
+# 30 s: after the outages above it is unhealthy for a while, and the apply,
+# and its rollback, fail to start services.
 settled() {
   local _
-  for _ in $(seq 45); do
-    [ "$(sudo docker inspect -f '{{.State.Health.Status}}' "$(service_container vpn)" 2>/dev/null)" = healthy ] &&
+  for _ in $(seq 60); do
+    [ "$(sudo docker inspect -f '{{.State.Health.Status}}' "$(service_container xray)" 2>/dev/null)" = healthy ] &&
+      [ "$(sudo docker inspect -f '{{.State.Health.Status}}' "$(service_container vpn)" 2>/dev/null)" = healthy ] &&
       [ "$(sudo docker inspect -f '{{.State.Running}}' "$(service_container vpn-socks)" 2>/dev/null)" = true ] &&
       [ "$(netns vpn)" = "$(netns vpn-socks)" ] && return 0
     sleep 2
