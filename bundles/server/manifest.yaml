@@ -25,15 +25,15 @@ runtimes:
       # VLESS over XHTTP with REALITY on xhttp_reality_port, beside the two
       # transports every install has.
       xhttp-reality: [compose/xhttp-reality.yaml]
-      # An OpenVPN client (vpn) and a SOCKS hop in its namespace (vpn-socks),
-      # which an `openvpn` line of the upstreams secret names: Xray has no
-      # OpenVPN of its own, and one client runs one tunnel.
+      # An OpenVPN client (vpn), with a tunnel for each openvpn:// line of the
+      # upstreams secret, and a SOCKS hop in its namespace (vpn-socks), which
+      # the gate dials for them: Xray has no OpenVPN of its own.
       openvpn: [compose/openvpn.yaml]
       # VLESS over mKCP on kcp_port: UDP, no TLS underneath, its packets
       # encrypted under kcp_seed and dressed in a kcp_header.
       mkcp: [compose/mkcp.yaml]
     # installation.profile=xdns,xhttp-reality runs both; any of them with
-    # openvpn, such as xdns,openvpn, adds the OpenVPN line.
+    # openvpn, such as xdns,openvpn, adds the OpenVPN tunnels.
     combinable: [xdns, xhttp-reality, openvpn, mkcp]
     options:
       project: dotdash
@@ -282,6 +282,15 @@ tasks:
     inputs:
       conf:
         description: The WireGuard exit's wg-quick client config, as a provider or router exports it
+        max_size: 64KiB
+    timeout: 1m
+  openvpn-line:
+    description: "Print the upstreams line for an OpenVPN exit from its client config, given as --input conf=<file>, keys and any login inline (output is its keys)"
+    service: client-config
+    command: ["sh", "/task/openvpn-line.sh", "{inputs.conf}"]
+    inputs:
+      conf:
+        description: The OpenVPN exit's client config, as a provider or router exports it
         max_size: 64KiB
     timeout: 1m
   facts:

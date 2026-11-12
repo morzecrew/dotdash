@@ -38,8 +38,8 @@ stands for your domain throughout.
 
     - `upstreams` lists the ways out, one per line, in order:
       `socks5://`, `socks5+tls://`, `http://` or `https://` and
-      `user:pass@host:port`, a WireGuard exit's `wireguard://` line, or
-      `openvpn`. The first that answers carries the traffic. See
+      `user:pass@host:port`, or a WireGuard or OpenVPN exit's `wireguard://`
+      or `openvpn://` line. The first that answers carries the traffic. See
       [Upstreams](upstreams.md) for backups, IPv6, WireGuard and OpenVPN.
     - Changing proxy later is one `secret edit upstreams` and one restart.
     - `init` prints the release's signing key and trusts it. To check even

@@ -1,11 +1,14 @@
-# The openvpn profile, for an `openvpn` line of the upstreams secret: Xray has
-# no OpenVPN, so an OpenVPN client (vpn) holds the tunnel and a SOCKS hop in
-# its namespace (vpn-socks) is what the gate dials, at vpn:1080 on the egress
-# network (XRAY_UPSTREAM_ALIASES, templates/gate.env.tmpl).
+# The openvpn profile, for the openvpn:// lines of the upstreams secret: Xray
+# has no OpenVPN, so an OpenVPN client (vpn) holds a tunnel for each line, the
+# k-th on tun<k>, and a SOCKS hop in its namespace (vpn-socks) sends what it
+# gets on port 1080+k into tun<k> alone. The gate dials the k-th line at
+# vpn:1080+k on the egress network (XRAY_UPSTREAM_ALIASES,
+# templates/gate.env.tmpl).
 # vpn's image swaps the default route for host routes to the servers in the
-# config before openvpn starts, so nothing in that namespace has a way out
-# but the tunnel, on the first start too (platform-images, images/openvpn).
-# hooks/policy checks that it has no default route around the tunnel.
+# configs before openvpn starts, and no tunnel takes the default route, so
+# nothing in that namespace has a way out but a tunnel's device, on the first
+# start too (platform-images, images/openvpn). hooks/policy checks that it has
+# no default route around the tunnels.
 services:
   vpn:
     image: ${DOTDASH_IMAGE_OPENVPN:?set by morzer}
@@ -20,19 +23,29 @@ services:
     # temporary directory at /dev/shm, which Docker keeps writable.
     read_only: true
     security_opt: ["no-new-privileges:true"]
-    pids_limit: 64
+    # An openvpn and its supervisor for each of up to 8 tunnels.
+    pids_limit: 128
     environment:
-      OPENVPN_CONFIG: /run/secrets/upstream_openvpn
-    secrets: [upstream_openvpn]
+      OPENVPN_UPSTREAMS: /run/secrets/upstreams
+    # Root reads the gate's list: it holds every way out, but this container
+    # can already send traffic anywhere a tunnel reaches.
+    secrets: [upstreams]
+    # Nothing routes into the tunnels, so reverse-path filtering would drop
+    # their replies; the image refuses to start with it on.
+    sysctls:
+      net.ipv4.conf.all.rp_filter: 0
+      net.ipv4.conf.default.rp_filter: 0
     # egress alone: not on inside, beside Xray.
     networks: [egress]
-    mem_limit: 128m
+    # About 20 MB for each openvpn.
+    mem_limit: 256m
     logging:
       driver: local
       options: {max-size: 10m, max-file: "3"}
     healthcheck:
-      # Passes while traffic is routed into the tunnel; vpn-socks proves that
-      # the tunnel carries it.
+      # Passes while any tunnel is up. Whether each carries traffic is the
+      # gate's to judge, which probes every line, and hooks/healthy's, which
+      # asks each one when nothing gets out.
       test: ["CMD", "/usr/local/bin/openvpn-entrypoint", "healthcheck"]
       interval: 30s
       timeout: 5s
@@ -48,9 +61,6 @@ services:
     security_opt: ["no-new-privileges:true"]
     pids_limit: 256
     network_mode: service:vpn
-    environment:
-      XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:10809
-      XRAY_HEALTHCHECK_URL: ${DOTDASH_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
     volumes:
       - type: bind
         source: /etc/dotdash/vpn-socks.json
@@ -73,6 +83,8 @@ services:
       driver: local
       options: {max-size: 10m, max-file: "3"}
     healthcheck:
+      # Liveness alone (no XRAY_HEALTHCHECK_PROXY): one tunnel down must not
+      # mark the others' hop unhealthy.
       test: ["CMD", "/usr/local/bin/xray-entrypoint", "healthcheck"]
       interval: 30s
       timeout: 15s

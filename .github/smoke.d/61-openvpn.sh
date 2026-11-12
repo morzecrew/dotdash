@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
-# An OpenVPN line in the upstreams secret (`openvpn`, the openvpn profile): an
-# OpenVPN client (vpn) and a SOCKS hop in its namespace (vpn-socks), which the
-# gate dials. A stand-in server, the bundle's openvpn image in server mode,
-# carries the rig's traffic on to the target, with the rig's HTTP proxy
-# stopped so nothing can leave through it:
+# OpenVPN lines in the upstreams secret (`openvpn://`, the openvpn profile): an
+# OpenVPN client (vpn) with a tunnel for each line, the k-th on tun<k>, and a
+# SOCKS hop in its namespace (vpn-socks) that the gate dials at vpn:1080+k. A
+# stand-in server, the bundle's openvpn image in server mode, carries the rig's
+# traffic on to the target, with the rig's HTTP proxy stopped so nothing can
+# leave through it:
 #
-# - setting upstream_openvpn changes nothing while the proxy is the line;
-# - with the profile and an openvpn line alone, the health check
-#   passes through the tunnel, a client reaches the target, doctor passes,
-#   and vpn has no default route around the tunnel;
-# - with the server stopped, nothing gets through, and doctor names the
-#   OpenVPN tunnel;
-# - a new config while OpenVPN runs restarts vpn, and vpn-socks after it in
+# - openvpn-line prints a config's line, which leads nowhere while the profile
+#   is off, the proxy still carrying traffic;
+# - with the profile on, a dead line first and a live one second, pinned, a
+#   client reaches the target through tun1, doctor passes, vpn reports each
+#   tunnel, and it has no default route around them;
+# - with the server stopped, nothing gets through, and doctor names each
+#   OpenVPN line by its tunnel;
+# - a new list while OpenVPN runs restarts vpn, and vpn-socks after it in
 #   vpn's new network namespace, and traffic flows again;
 # - openvpn killed inside vpn starts again in place: vpn doesn't restart,
 #   vpn-socks stays in its namespace, and traffic flows again;
@@ -20,8 +22,9 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -q '^  - name: upstreams$' /opt/dotdash/current/secrets.schema.yaml; then
-  echo "${0##*/}: skipped, the installed release predates the upstreams list"
+schema=/opt/dotdash/current/secrets.schema.yaml
+if ! sudo grep -q '^  - name: upstreams$' "${schema}" || sudo grep -q '^  - name: upstream_openvpn$' "${schema}"; then
+  echo "${0##*/}: skipped, the installed release keeps OpenVPN's config out of the upstreams list"
   exit 0
 fi
 one="http://$(cat /rig/upstream.conn) name=rig"
@@ -60,14 +63,18 @@ sudo docker run -d --name dotdash-rig-ovpn --network dotdash-rig --cap-add NET_A
   apk add --no-cache iptables >/dev/null && iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -j MASQUERADE &&
   exec openvpn --dev tun --proto udp --port 1194 --topology subnet --server 10.8.0.0 255.255.255.0 \
     --ca /pki/ca.crt --cert /pki/server.crt --key /pki/server.key --dh none \
-    --push "redirect-gateway def1" --keepalive 5 15 --verb 3' >/dev/null
+    --push "redirect-gateway def1" --keepalive 5 15 --duplicate-cn --verb 3' >/dev/null
 
+# Back to the proxy: its line beside an OpenVPN one first, as vpn refuses a
+# list with none, then the profile off, then the proxy's line alone.
 restore() {
   kill "${watcher:-}" 2>/dev/null || true
   sudo docker rm -f dotdash-rig-ovpnclient >/dev/null 2>&1 || true
-  sudo docker start dotdash-rig-upstream >/dev/null 2>&1 || true
-  list "${one}" || true
+  sudo docker start dotdash-rig-upstream dotdash-rig-ovpn >/dev/null 2>&1 || true
+  sudo morzer config set upstream_pin=none >/dev/null 2>&1 || true
+  list "${one}" "${good:-} name=vpn" || true
   sudo morzer config set installation.profile=xdns >/dev/null 2>&1 || true
+  list "${one}" || true
   sudo docker rm -f dotdash-rig-ovpn >/dev/null 2>&1 || true
 }
 trap restore EXIT
@@ -132,97 +139,102 @@ reaches() { # <url>: whether a client gets the target's "ok"
   return 1
 }
 
-client_config() { # [verb]: the client's config, inline keys
-  printf 'client\ndev tun\nproto udp\nremote %s 1194\nnobind\nremote-cert-tls server\nverb %s\n' "${host}" "${1:-3}"
+client_config() { # [verb] [server]: the client's config, inline keys
+  printf 'client\ndev tun\nproto udp\nremote %s 1194\nnobind\nremote-cert-tls server\nverb %s\n' "${2:-${host}}" "${1:-3}"
   printf '<ca>\n%s\n</ca>\n<cert>\n%s\n</cert>\n<key>\n%s\n</key>\n' \
     "$(cat "${pki}/ca.crt")" "$(cat "${pki}/client.crt")" "$(cat "${pki}/client.key")"
 }
 
-# morzer restarts nothing for the secret while the profile is off (0.15.1),
-# so this succeeds though it declares vpn.
-client_config | sudo morzer secret set upstream_openvpn >/dev/null ||
-  die "setting upstream_openvpn while the proxy is the upstream failed"
-reaches "${target}" || die "the proxy stopped carrying traffic once upstream_openvpn was set"
-echo "${0##*/}: upstream_openvpn set, and the proxy still the upstream"
+# Each config's line, from the task: openvpn:// and the config, gzipped.
+line_of() { # <file>
+  sudo morzer task run openvpn-line --output --input "conf=$1" | tail -n1
+}
+client_config >"${pki}/good.ovpn"
+client_config 4 >"${pki}/good4.ovpn"
+# A server where nothing answers, so its tunnel never comes up.
+client_config 3 192.0.2.1 >"${pki}/dead.ovpn"
+good=$(line_of "${pki}/good.ovpn") good4=$(line_of "${pki}/good4.ovpn") dead=$(line_of "${pki}/dead.ovpn")
+case ${good} in openvpn://H4sI*) ;; *) die "openvpn-line did not print an openvpn:// line" ;; esac
 
-# A setting and a parameter are set apart, the profile first: vpn starts
-# while the gate still dials the proxy, then the gate moves to it.
+# The gate knows the openvpn alias with the profile off, so the line comes
+# first, leading nowhere, and the proxy carries the traffic.
+list "${one}" "${good} name=vpn" || die "could not add an OpenVPN line with the profile off"
+reaches "${target}" || die "the proxy stopped carrying traffic once an OpenVPN line was added"
+echo "${0##*/}: openvpn-line's line, added with the profile off, leaves the proxy carrying traffic"
+
+# The profile on: vpn starts with the line while the gate still dials the
+# proxy. Then a dead tunnel before the live one, which the pin puts first, so
+# the gate dials vpn:1081 and the live tunnel is tun1.
 watch_tunnel
 sudo morzer config set installation.profile=xdns,openvpn >/dev/null ||
   { tunnel_logs; die "could not turn on the openvpn profile with the proxy still the upstream"; }
 reaches "${target}" || die "the proxy stopped carrying traffic once the openvpn profile was on"
-# Only now is the proxy stopped, so nothing can leave through it: before the
-# list moves, it is still the gate's line and Xray's egress check.
+list "${one}" "${dead} name=dead" "${good} name=vpn" || { tunnel_logs; die "could not list two OpenVPN lines"; }
+sudo morzer config set upstream_pin=vpn >/dev/null || { tunnel_logs; die "could not pin the live OpenVPN line"; }
+# Only now is the proxy stopped, so nothing can leave through it.
 sudo docker stop dotdash-rig-upstream >/dev/null
-list "openvpn name=vpn" || { tunnel_logs; die "could not switch the list to the OpenVPN line"; }
-reaches "${target}" || { tunnel_logs; die "a client does not reach the target through the OpenVPN line"; }
+list "${dead} name=dead" "${good} name=vpn" || { tunnel_logs; die "could not switch the list to the OpenVPN lines"; }
+reaches "${target}" || { tunnel_logs; die "a client does not reach the target through the second OpenVPN line"; }
 sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the OpenVPN server answering: $(doctor)"
+health=$(sudo docker exec "$(service_container vpn)" /usr/local/bin/openvpn-entrypoint healthcheck 2>&1 || true)
+[ "${health}" = "healthy: up: tun1; down: tun0" ] || die "vpn does not report the live tunnel up and the dead one down: ${health}"
 route=$(sudo docker exec "$(service_container vpn)" ip -4 route show default || true)
-case ${route} in '' | *" dev tun"*) ;; *) die "vpn has a default route around the tunnel: ${route}" ;; esac
+[ -z "${route}" ] || die "vpn has a default route: ${route}"
 kill "${watcher}" 2>/dev/null || true
-echo "${0##*/}: with the proxy stopped, the OpenVPN line carries the health check and a client"
+echo "${0##*/}: with the proxy stopped, the second OpenVPN line carries a client through tun1, beside a dead tun0"
 
 sudo docker stop dotdash-rig-ovpn >/dev/null
 [ -z "$(body "${target}")" ] || die "a client got through with the OpenVPN server stopped"
-grep -q 'vpn (OpenVPN): the tunnel is' <<<"$(doctor)" || die "doctor does not name the OpenVPN line with its server stopped: $(doctor)"
+out=$(doctor)
+if ! grep -q 'vpn (OpenVPN, tun1): the tunnel is' <<<"${out}" || ! grep -q 'dead (OpenVPN, tun0): the tunnel is down' <<<"${out}"; then
+  die "doctor does not name each OpenVPN line by its tunnel with the server stopped: ${out}"
+fi
 sudo docker start dotdash-rig-ovpn >/dev/null
-echo "${0##*/}: with the server stopped, nothing gets through, and doctor names the tunnel"
+echo "${0##*/}: with the server stopped, nothing gets through, and doctor names each line's tunnel"
 
 started() { sudo docker inspect -f '{{.State.StartedAt}}' "$(service_container "$1")"; }
 # By the processes' namespaces, from here: Xray's image has no shell.
 netns() { sudo readlink "/proc/$(sudo docker inspect -f '{{.State.Pid}}' "$(service_container "$1")")/ns/net"; }
 
-# A new config while OpenVPN runs takes effect when set: secret set restarts
+# A new list while OpenVPN runs takes effect when set: secret set restarts
 # vpn, and Compose restarts vpn-socks after it, into vpn's new network
-# namespace. Releases before morzer 0.15.1 declared no services for the
-# secret (the rehearsal runs these hooks on the published :main first).
-if sudo sed -n '/^  - name: upstream_openvpn$/,/^  - name:/p' /opt/dotdash/current/secrets.schema.yaml |
-  grep -q '^    services: \[vpn\]$'; then
-  vpn_started=$(started vpn)
-  socks_started=$(started vpn-socks)
-  watch_tunnel
-  client_config 4 | sudo morzer secret set upstream_openvpn >/dev/null ||
-    { tunnel_logs; die "changing upstream_openvpn while OpenVPN runs failed"; }
-  [ "$(started vpn)" != "${vpn_started}" ] || die "vpn did not restart when upstream_openvpn changed"
-  [ "$(started vpn-socks)" != "${socks_started}" ] || die "vpn-socks did not restart when upstream_openvpn changed"
-  [ "$(netns vpn)" = "$(netns vpn-socks)" ] || die "vpn-socks is not in vpn's network namespace after the restart"
-  reaches "${target}" || { tunnel_logs; die "a client does not reach the target after upstream_openvpn changed"; }
-  route=$(sudo docker exec "$(service_container vpn)" ip -4 route show default || true)
-  case ${route} in '' | *" dev tun"*) ;; *) die "vpn has a default route around the tunnel after its restart: ${route}" ;; esac
-  kill "${watcher}" 2>/dev/null || true
-  echo "${0##*/}: a new config while OpenVPN runs restarts vpn, vpn-socks joins it again, and a client gets through"
-else
-  echo "${0##*/}: skipped the change while OpenVPN runs: the installed release restarts nothing on upstream_openvpn"
-fi
+# namespace. The live line moves to tun0.
+vpn_started=$(started vpn)
+socks_started=$(started vpn-socks)
+watch_tunnel
+list "${good4} name=vpn" "${dead} name=dead" || { tunnel_logs; die "changing the OpenVPN lines while OpenVPN runs failed"; }
+[ "$(started vpn)" != "${vpn_started}" ] || die "vpn did not restart when the list changed"
+[ "$(started vpn-socks)" != "${socks_started}" ] || die "vpn-socks did not restart when the list changed"
+[ "$(netns vpn)" = "$(netns vpn-socks)" ] || die "vpn-socks is not in vpn's network namespace after the restart"
+reaches "${target}" || { tunnel_logs; die "a client does not reach the target after the list changed"; }
+route=$(sudo docker exec "$(service_container vpn)" ip -4 route show default || true)
+[ -z "${route}" ] || die "vpn has a default route after its restart: ${route}"
+kill "${watcher}" 2>/dev/null || true
+echo "${0##*/}: a new list while OpenVPN runs restarts vpn, vpn-socks joins it again, and a client gets through"
 
 # openvpn dies inside vpn, as a crash or an OOM kill would end it: the image
-# starts it again in place, so vpn's namespace, and vpn-socks in it, stay as
-# they are. Before it, the container exited, and the runtime's restart left
-# vpn-socks in the old namespace.
-if sudo docker exec "$(service_container vpn)" grep -q 'starting it again' /usr/local/bin/openvpn-entrypoint; then
-  vpn_started=$(started vpn)
-  socks_netns=$(netns vpn-socks)
-  watch_tunnel
-  sudo docker exec "$(service_container vpn)" pkill -KILL -x openvpn ||
-    die "could not kill openvpn inside vpn"
-  reaches "${target}" || { tunnel_logs; die "a client does not reach the target after openvpn died inside vpn"; }
-  [ "$(started vpn)" = "${vpn_started}" ] || die "vpn restarted when openvpn died inside it"
-  [ "$(netns vpn-socks)" = "${socks_netns}" ] && [ "$(netns vpn)" = "${socks_netns}" ] ||
-    die "vpn and vpn-socks no longer share the namespace after openvpn died"
-  sudo docker logs "$(service_container vpn)" 2>&1 | grep -c 'openvpn exited with' >/dev/null ||
-    die "vpn's log does not show openvpn exiting and starting again"
-  route=$(sudo docker exec "$(service_container vpn)" ip -4 route show default || true)
-  case ${route} in '' | *" dev tun"*) ;; *) die "vpn has a default route around the tunnel after openvpn came back: ${route}" ;; esac
-  kill "${watcher}" 2>/dev/null || true
-  echo "${0##*/}: openvpn killed inside vpn starts again in place, and a client gets through"
-else
-  echo "${0##*/}: skipped openvpn dying inside vpn: the installed image lets the container exit"
-fi
+# starts each again in place, so vpn's namespace, and vpn-socks in it, stay
+# as they are.
+vpn_started=$(started vpn)
+socks_netns=$(netns vpn-socks)
+watch_tunnel
+sudo docker exec "$(service_container vpn)" pkill -KILL -x openvpn ||
+  die "could not kill openvpn inside vpn"
+reaches "${target}" || { tunnel_logs; die "a client does not reach the target after openvpn died inside vpn"; }
+[ "$(started vpn)" = "${vpn_started}" ] || die "vpn restarted when openvpn died inside it"
+[ "$(netns vpn-socks)" = "${socks_netns}" ] && [ "$(netns vpn)" = "${socks_netns}" ] ||
+  die "vpn and vpn-socks no longer share the namespace after openvpn died"
+sudo docker logs "$(service_container vpn)" 2>&1 | grep -c 'openvpn on tun0 (line 1) exited with' >/dev/null ||
+  die "vpn's log does not show tun0's openvpn exiting and starting again"
+kill "${watcher}" 2>/dev/null || true
+echo "${0##*/}: openvpn killed inside vpn starts again in place, and a client gets through"
 
 sudo docker start dotdash-rig-upstream >/dev/null
-list "${one}" || die "could not switch back to the proxy's line"
+sudo morzer config set upstream_pin=none >/dev/null || die "could not drop the pin"
+list "${one}" "${good} name=vpn" || die "could not put the proxy's line back first"
 reaches "${target}" || die "a client does not reach the target back on the proxy, with the profile still on"
 sudo morzer config set installation.profile=xdns >/dev/null || die "could not drop the openvpn profile"
+list "${one}" || die "could not switch back to the proxy's line alone"
 reaches "${target}" || die "a client does not reach the target back on the proxy"
 [ -z "$(service_container vpn 2>/dev/null || true)" ] || die "vpn still runs after the openvpn profile was dropped"
 echo "${0##*/}: the proxy's line, then the xdns profile, go back to the proxy"
