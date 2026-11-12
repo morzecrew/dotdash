@@ -66,7 +66,8 @@ if sudo grep -q '^  upstream_mode:$' "${release}/manifest.yaml"; then
 fi
 echo "25-policy.sh: each injected violation is named"
 
-caddy=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' caddy | sed -n 1p)
+# The image Caddy runs, whichever repository the release pins it from.
+caddy=$(sudo docker inspect -f '{{.Config.Image}}' "$(service_container caddy)")
 sudo docker run -d --name dotdash-rig-intruder --label com.docker.compose.project=dotdash \
   --label com.docker.compose.service=intruder -p 10809:10809 "${caddy}" caddy respond --listen :10809 x >/dev/null
 out=$(policy) && { sudo docker rm -f dotdash-rig-intruder >/dev/null; die "policy passes a container publishing 10809"; }

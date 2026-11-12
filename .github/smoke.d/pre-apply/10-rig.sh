@@ -25,7 +25,10 @@ set -euo pipefail
 
 pinned() { sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' "$1" | sed -n 1p; }
 xray=$(pinned ghcr.io/morzecrew/xray)
-caddy=$(pinned caddy)
+# The bundle's Caddy: caddy-acmedns, or upstream's in a release before it,
+# which the rehearsal installs first.
+caddy=$(pinned ghcr.io/morzecrew/caddy-acmedns)
+[ -n "${caddy}" ] || caddy=$(pinned caddy)
 [ -n "${xray}" ] && [ -n "${caddy}" ] || die "the bundle's pinned images are not in the rig"
 host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
 

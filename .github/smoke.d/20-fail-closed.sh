@@ -29,7 +29,8 @@ fi
 through() { # <socks port> <url>: fetch through a client
   curl -fsS -o /dev/null --max-time 15 --socks5-hostname "127.0.0.1:$1" "$2"
 }
-caddy=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' caddy | sed -n 1p)
+# The image Caddy runs, whichever repository the release pins it from.
+caddy=$(sudo docker inspect -f '{{.Config.Image}}' "$(service_container caddy)")
 host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
 reaches() { # <service> <host> <port>
   sudo docker run --rm --network "container:$(service_container "$1")" "${caddy}" nc -z -w 3 "$2" "$3" 2>/dev/null
