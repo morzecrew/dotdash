@@ -104,6 +104,10 @@ services:
     environment:
       DOMAIN: ${DOTDASH_DOMAIN:?install with --domain}
       CERT_ISSUER: ${DOTDASH_PARAM_CERT_ISSUER:-acme}
+      COVER: ${DOTDASH_PARAM_COVER:-pages}
+    # host.docker.internal: the host, for an app published on one of its
+    # ports (cover).
+    extra_hosts: ["host.docker.internal:host-gateway"]
     # CERT_WILDCARD (templates/caddy.env.tmpl).
     env_file: /etc/dotdash/caddy.env
     # 80 and 443 inside, as above.
@@ -114,10 +118,12 @@ services:
         target: /etc/caddy/Caddyfile
         read_only: true
         bind: {create_host_path: false}
-      # The bundled page, and the operator's own site, served instead when it
-      # has the requested file (the Caddyfile decides).
+      # The bundled page, and the operator's own files, served first when one
+      # is there (the Caddyfile decides). A fixed directory, so that one
+      # parameter, cover, can name either pages or an app; a symlink there
+      # puts the files elsewhere.
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/site:/srv/default:ro
-      - ${DOTDASH_PARAM_SITE_DIR:-/srv/dotdash}:/srv/own:ro
+      - /srv/dotdash:/srv/own:ro
       # The ACME account and certificates. The image's /data/caddy is mode
       # 1777, and a fresh volume copies it, so uid 65532 can write there.
       - caddy_data:/data
@@ -213,6 +219,29 @@ services:
       DNS_RESOLVER: ${DOTDASH_PARAM_DNS_RESOLVER:-https://1.1.1.1/dns-query}
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
+
+  # One-shot behind a profile, started only by `morzer task run cdn-check`: a
+  # decoy subscription fetched through each CDN in front, from inside Xray's
+  # network namespace, so through the upstreams as devices' traffic leaves.
+  # The Xray image mounted for its probe, which speaks HTTPS through a proxy.
+  cdn-check:
+    <<: *hardened
+    restart: "no"
+    image: ${DOTDASH_IMAGE_CADDY:?set by morzer}
+    profiles: [tasks]
+    network_mode: service:xray
+    environment:
+      SUBSCRIPTION: ${DOTDASH_PARAM_SUBSCRIPTION:-false}
+      CDN_HOSTS: ${DOTDASH_PARAM_CDN_HOSTS:-none}
+      RELAYS: ${DOTDASH_PARAM_RELAYS:-}
+    volumes:
+      - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
+      - type: image
+        source: ${DOTDASH_IMAGE_XRAY:?set by morzer}
+        target: /opt/xray
+        image:
+          subpath: usr/local/bin
+    secrets: [subscription_key]
 
 networks:
   edge: {}

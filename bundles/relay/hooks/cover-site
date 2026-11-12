@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # The own-site profile's site: Caddy, which REALITY hands every probe, reports
-# healthy. Without the profile the relay borrows a site and has none of its
-# own to check, so it passes.
+# healthy, and the app behind it, if cover names one, answers. Without
+# the profile the relay borrows a site and has none of its own to check, so it
+# passes.
 set -euo pipefail
 
 case ",${DOTDASH_RELAY_PROFILE:-}," in
@@ -11,4 +12,13 @@ esac
 project=${DOTDASH_RELAY_COMPOSE_PROJECT:-dotdash-relay}
 health=$(docker compose -p "$project" ps --format '{{.Service}}={{.Health}}' | sed -n 's/^caddy=//p')
 [ "$health" = healthy ] || { echo "caddy, the relay's own site, is not healthy: ${health:-not running}" >&2; exit 1; }
+# The app behind the site (cover) answers, asked from Caddy as Caddy
+# asks it. Any HTTP answer counts, a login wall's 401 included: only none is a
+# fault, which visitors would meet as a 502.
+app=${DOTDASH_RELAY_PARAM_COVER:-pages}
+if [ "$app" != pages ] && ! out=$(docker compose -p "$project" exec -T caddy wget -q -O /dev/null -T 5 "$app" 2>&1) &&
+  ! grep -q 'server returned error' <<<"$out"; then
+  echo "caddy is up, but the app behind the relay's site (cover) does not answer: ${out#wget: }; visitors get a 502" >&2
+  exit 1
+fi
 echo "the relay's own site is up"

@@ -11,10 +11,11 @@
 # - a device whose link names the domain gets out through the relay, and
 #   doctor passes, the cover-site check included;
 # - a subscription path goes on to the dotdash servers through the relay's
-#   tunnel, any other path stays the relay's site, and relay-entry marks the
-#   line own-site;
+#   tunnel, unless a CDN marks it as passed on, any other path stays the
+#   relay's site, and relay-entry marks the line own-site;
 # - with the XHTTP path relay-entry adds, a device gets out over XHTTP behind
 #   the relay's site, under its certificate;
+# - an app behind the site (cover) serves it, and doctor passes;
 # - dropping the profile brings back the borrowed site, and devices on it.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
@@ -89,6 +90,11 @@ if sudo grep -q SUBSCRIPTION_UPSTREAMS /opt/dotdash-relay/current/caddy/Caddyfil
   body=$(curl -sk --max-time 40 --resolve "${domain}:443:127.0.0.1" "https://${domain}/${token}" || true)
   grep -qF 'Error 404 (Not Found)!!1' <<<"${body}" ||
     die "a subscription path did not reach the servers through the relay's tunnel: $(head -c 300 <<<"${body}")"
+  if sudo grep -q 'not header Via' /opt/dotdash-relay/current/caddy/Caddyfile; then
+    marked=$(curl -sk --max-time 40 --resolve "${domain}:443:127.0.0.1" -H 'X-Forwarded-For: 203.0.113.9' "https://${domain}/${token}" || true)
+    ! grep -qF 'Error 404 (Not Found)!!1' <<<"${marked}" ||
+      die "a subscription request a CDN marks as passed on still went on to the servers"
+  fi
   other=$(curl -sk --max-time 10 --resolve "${domain}:443:127.0.0.1" "https://${domain}/${token}0" || true)
   ! grep -qF 'Error 404 (Not Found)!!1' <<<"${other}" || die "a path that is no subscription went on to the servers"
   [ "$(awk '{ print $6 }' <<<"$(entry)")" = own-site ] || die "relay-entry does not mark the line own-site: $(entry | cut -d' ' -f1,2,6)"
@@ -154,6 +160,22 @@ if sudo jq -e '[.inbounds[].tag] | index("devices-xhttp")' /etc/dotdash-relay/xr
     [[ $(entry) != *cdn=* ]] || die "relay-entry still prints a cdn= field with cdn_hosts=none"
     echo "${0##*/}: cdn_hosts ends the line with cdn=, and a device shaped for a CDN gets out behind the relay's site"
   fi
+fi
+
+# An app behind the site (cover): Caddy's own image answering "cover
+# app", on Caddy's network as cover-app, serves the site, and doctor passes.
+if sudo grep -qx '  cover:' /opt/dotdash-relay/current/manifest.yaml; then
+  caddy=$(service_container caddy)
+  network=$(sudo docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{println $k}}{{end}}' "${caddy}" | sed -n 1p)
+  sudo docker run -d --name relay-rig-cover-app --network "${network}" --network-alias cover-app \
+    "$(sudo docker inspect -f '{{.Config.Image}}' "${caddy}")" caddy respond --listen :8080 --body "cover app" >/dev/null
+  set_config cover=http://cover-app:8080
+  page=$(curl -sk --max-time 10 --resolve "${domain}:443:127.0.0.1" "https://${domain}/" || true)
+  [ "${page}" = "cover app" ] || die "the relay's site is not the app's: $(head -c 200 <<<"${page}")"
+  sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the app up: $(sudo morzer doctor 2>&1 | tail -5)"
+  set_config cover=pages
+  sudo docker rm -f relay-rig-cover-app >/dev/null
+  echo "${0##*/}: an app behind the relay's site serves it, and doctor passes"
 fi
 
 sudo morzer config unset installation.profile >/dev/null || die "could not drop the own-site profile"

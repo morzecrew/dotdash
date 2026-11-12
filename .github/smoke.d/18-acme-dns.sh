@@ -24,7 +24,7 @@ printf '%s' '{"username": "u", "password": "p", "subdomain": "s", "server_url": 
 chmod -R a+rX "${dir}"
 adapt() { # <issuer> <wildcard>: the release's Caddyfile adapted in its Caddy image, as JSON
   sudo docker run --rm --network none -e CERT_ISSUER="$1" -e CERT_WILDCARD="$2" -e DOMAIN=x7k2.s.dotdash.test \
-    -e SITE_UPSTREAM=none -v /opt/dotdash/current/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
+    -e COVER=pages -v /opt/dotdash/current/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
     -v "${dir}/acme_dns:/run/secrets/acme_dns:ro" "${image}" \
     caddy adapt --config /etc/caddy/Caddyfile --adapter caddyfile 2>/dev/null
 }

@@ -188,10 +188,10 @@ parameters:
     default: false
     description: "Serve each device a subscription URL on the cover site, which client-config prints: its links, which the app refreshes, so a revocation or a key rotation reaches it without resending links. A URL is as secret as the links"
     services: [subscription]
-  site_dir:
+  cover:
     type: string
-    default: /srv/dotdash
-    description: "Host directory of your own cover site, served in place of the bundled page; files must be readable by uid 65532"
+    default: pages
+    description: "What the cover site serves past your own files in /srv/dotdash (readable by uid 65532): pages, the bundled page; or your app's URL, http://cover-app:8080 for a container on the network dotdash_edge or http://host.docker.internal:8080 for one published on the host, which gets every request but a subscription's and XHTTP's"
     services: [caddy]
   log_level:
     type: enum
@@ -279,6 +279,11 @@ tasks:
     service: exit-check
     command: ["sh", "/task/exit-check.sh"]
     args: true
+    timeout: 2m
+  cdn-check:
+    description: "Tell whether each CDN in front of this server and its relays is refused a subscription, as it should be, by fetching a decoy one through it; changes nothing"
+    service: cdn-check
+    command: ["sh", "/task/cdn-check.sh"]
     timeout: 2m
   canary-config:
     description: "Print the init command and secrets for a dotdash-canary machine acting as the client named after -- (output is credentials)"

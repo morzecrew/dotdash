@@ -77,9 +77,21 @@ http://127.0.0.1:8081 {
 
 	# A device's subscription (the subscription parameter): 32 hex characters
 	# naming a file the subscription service wrote. Any other path, a guessed
-	# one included, gets the site and its 404.
+	# one included, gets the site and its 404. So does a request a CDN or any
+	# other proxy passed on, which says so in one of these headers: a device
+	# asks this site, or an own-site relay that strips its own, so its links
+	# never pass through a CDN, which could read them. cdn-check tells whether
+	# a CDN is refused.
 	@subscription {
 		path_regexp ^/[0-9a-f]{32}$
+		not header X-Forwarded-For *
+		not header X-Forwarded-Host *
+		not header X-Forwarded-Proto *
+		not header Forwarded *
+		not header X-Real-IP *
+		not header True-Client-IP *
+		not header Via *
+		not header CDN-Loop *
 		file {
 			root /srv/sub
 			try_files {path}
@@ -109,8 +121,9 @@ http://127.0.0.1:8081 {
 		}
 	}
 
-	# The operator's site (site_dir) wherever it has the file; otherwise the
-	# bundled page, titled with the domain so no two servers serve one body.
+	# The operator's own files wherever one is there; then their app (cover);
+	# otherwise the bundled page, titled with the domain so no
+	# two servers serve one body.
 	@own file {
 		root /srv/own
 		try_files {path} {path}/index.html
@@ -118,6 +131,15 @@ http://127.0.0.1:8081 {
 	handle @own {
 		root * /srv/own
 		file_server
+	}
+	# The operator's app (cover), for everything else: a live site, which a
+	# probe or a reviewer finds behaving like one, rather than pages. Caddy
+	# has no conditional, so the matcher compares the value as the Caddyfile
+	# loads; with pages, the handler, whose upstream is then the word pages,
+	# is never reached.
+	@app expression `"{$COVER:pages}" != "pages"`
+	handle @app {
+		reverse_proxy {$COVER:pages}
 	}
 	handle {
 		root * /srv/default
