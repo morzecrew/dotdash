@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `direct=false` keeps every server's address out of devices' links, configs and subscriptions: devices reach the servers only through relays and CDN hosts, and fetch subscriptions only through own-site relays. `dotdash-manager` sets it on every server from the roster's `direct`.
+
 - An `ipv6` parameter on the server, the relay and the client: `block` keeps IPv6 out. The client refuses it before any rule, the relay drops it, and the server resolves names to IPv4 only and blocks IPv6 addresses, so dual-stack sites still work over IPv4.
 
 - `upstream_mode` decides how the upstreams share the traffic: `failover`, the first line that answers, then the fastest of the rest; `fastest`; or `balance`, connections spread over every line that answers. `upstream_pin` puts a named line first.
