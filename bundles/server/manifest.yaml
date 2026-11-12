@@ -212,7 +212,7 @@ images:
   xray: ghcr.io/morzecrew/xray:26.11.9@sha256:2089e0d4acee59b3999606fb18ff5d63e327bec3bd0ececa034b3e986867b5b9
   # Upstream's Caddy with the acme-dns DNS module, for cert_issuer=acme-dns;
   # otherwise as upstream's image, whose shell the tasks also use.
-  caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:34ecb4b3b10ff117e535e34ebdb9e1e5f45e8258a0f660c288025c7b42fb7cca
+  caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:93c19f705c2218d5fca7f7dcb694cae1ed3889588678aabb7af34c8892e2f2bb
   # The openvpn profile's OpenVPN client, whose kill switch drops the default
   # routes before anything runs (platform-images, images/openvpn).
   openvpn: ghcr.io/morzecrew/openvpn:2.6.20@sha256:30f3dd709b32475b0d90ce6cce884dacfea60dfdeab134d609c29b8c38e57a94

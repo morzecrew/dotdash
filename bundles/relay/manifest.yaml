@@ -151,7 +151,7 @@ images:
   xray: ghcr.io/morzecrew/xray:26.11.9@sha256:2089e0d4acee59b3999606fb18ff5d63e327bec3bd0ececa034b3e986867b5b9
   # The own-site profile's site; dotdash's own. Upstream's Caddy with the
   # acme-dns DNS module, for cert_issuer=acme-dns.
-  caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:34ecb4b3b10ff117e535e34ebdb9e1e5f45e8258a0f660c288025c7b42fb7cca
+  caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:93c19f705c2218d5fca7f7dcb694cae1ed3889588678aabb7af34c8892e2f2bb
 
 # What an authority's desired-state document may set here (morzer 0.16): the
 # devices, this relay's own client of the servers, and the servers' facts.
