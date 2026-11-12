@@ -61,13 +61,24 @@ To make losing an account cheap:
 The CDN ends one TLS connection and opens another, so it sees the requests'
 paths and headers. VLESS Encryption keeps what they carry from it.
 
-Don't give devices their subscription URL through the CDN
-(`https://cdn.example.net/<token>`), although it would answer. The CDN would
-read it in the clear: every link, the device's keys, every relay and CDN name.
-One request to the provider would then list every way in. A
-[relay with its own site](../relay/install.md#6-devices) serves the
-subscription inside the restricted network with nothing in between reading
-it.
+A CDN is refused subscriptions. A subscription read in the clear gives away
+every link, the device's keys and every relay and CDN name, so one request
+to the provider would list every way in. The server and
+[relays with their own site](../relay/install.md#6-devices) answer a
+subscription request a CDN passed on with the site's own 404. They recognise
+one by the headers a CDN adds to say so (`X-Forwarded-For`, `Via`, `Forwarded`
+and the like), which a device asking directly never sends. A CDN that adds
+none of them would still get one, so check yours:
+
+```sh
+sudo morzer task run cdn-check --output
+```
+
+It fetches a decoy subscription, with no links in it, through each CDN in
+front of this server and of its relays, and prints `refused` for each, or
+`SERVES SUBSCRIPTIONS` for one that got it. Keep such a CDN's name away from
+devices' subscriptions: an own-site relay serves them inside the restricted
+network with nothing in between reading them.
 
 ### In front of a relay
 

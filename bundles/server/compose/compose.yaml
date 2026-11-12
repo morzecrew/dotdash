@@ -212,6 +212,29 @@ services:
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
 
+  # One-shot behind a profile, started only by `morzer task run cdn-check`: a
+  # decoy subscription fetched through each CDN in front, from inside Xray's
+  # network namespace, so through the upstreams as devices' traffic leaves.
+  # The Xray image mounted for its probe, which speaks HTTPS through a proxy.
+  cdn-check:
+    <<: *hardened
+    restart: "no"
+    image: ${DOTDASH_IMAGE_CADDY:?set by morzer}
+    profiles: [tasks]
+    network_mode: service:xray
+    environment:
+      SUBSCRIPTION: ${DOTDASH_PARAM_SUBSCRIPTION:-false}
+      CDN_HOSTS: ${DOTDASH_PARAM_CDN_HOSTS:-none}
+      RELAYS: ${DOTDASH_PARAM_RELAYS:-}
+    volumes:
+      - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
+      - type: image
+        source: ${DOTDASH_IMAGE_XRAY:?set by morzer}
+        target: /opt/xray
+        image:
+          subpath: usr/local/bin
+    secrets: [subscription_key]
+
 networks:
   edge: {}
   # Caddy and Xray to each other only; no route out.

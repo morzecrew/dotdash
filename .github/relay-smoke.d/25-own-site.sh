@@ -11,8 +11,8 @@
 # - a device whose link names the domain gets out through the relay, and
 #   doctor passes, the cover-site check included;
 # - a subscription path goes on to the dotdash servers through the relay's
-#   tunnel, any other path stays the relay's site, and relay-entry marks the
-#   line own-site;
+#   tunnel, unless a CDN marks it as passed on, any other path stays the
+#   relay's site, and relay-entry marks the line own-site;
 # - with the XHTTP path relay-entry adds, a device gets out over XHTTP behind
 #   the relay's site, under its certificate;
 # - dropping the profile brings back the borrowed site, and devices on it.
@@ -89,6 +89,11 @@ if sudo grep -q SUBSCRIPTION_UPSTREAMS /opt/dotdash-relay/current/caddy/Caddyfil
   body=$(curl -sk --max-time 40 --resolve "${domain}:443:127.0.0.1" "https://${domain}/${token}" || true)
   grep -qF 'Error 404 (Not Found)!!1' <<<"${body}" ||
     die "a subscription path did not reach the servers through the relay's tunnel: $(head -c 300 <<<"${body}")"
+  if sudo grep -q 'not header Via' /opt/dotdash-relay/current/caddy/Caddyfile; then
+    marked=$(curl -sk --max-time 40 --resolve "${domain}:443:127.0.0.1" -H 'X-Forwarded-For: 203.0.113.9' "https://${domain}/${token}" || true)
+    ! grep -qF 'Error 404 (Not Found)!!1' <<<"${marked}" ||
+      die "a subscription request a CDN marks as passed on still went on to the servers"
+  fi
   other=$(curl -sk --max-time 10 --resolve "${domain}:443:127.0.0.1" "https://${domain}/${token}0" || true)
   ! grep -qF 'Error 404 (Not Found)!!1' <<<"${other}" || die "a path that is no subscription went on to the servers"
   [ "$(awk '{ print $6 }' <<<"$(entry)")" = own-site ] || die "relay-entry does not mark the line own-site: $(entry | cut -d' ' -f1,2,6)"
