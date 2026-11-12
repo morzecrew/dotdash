@@ -294,7 +294,17 @@ class Morzer:
 
     def publish(self, m: dict, doc: dict, dry_run: bool) -> subprocess.CompletedProcess:
         return self.run("state", "publish", *self.common, "--product", PRODUCTS[m["kind"]], "--installation", m["id"],
-                        "--file", "-", "--key", self.net["key"], *(["--dry-run"] if dry_run else []), stdin=json.dumps(doc))
+                        "--file", "-", "--key", self.net["key"], *(["--dry-run"] if dry_run else []), stdin=to_yaml(doc))
+
+
+def to_yaml(doc: dict) -> str:
+    """A change document as block YAML, which morzer reads: every value a JSON
+    string or list, both valid YAML in flow style."""
+    lines = []
+    for section, values in doc.items():
+        lines.append(f"{section}:")
+        lines += [f"  {name}: {json.dumps(value)}" for name, value in values.items()]
+    return "\n".join(lines) + "\n"
 
 
 def paths(roster: Path) -> tuple[Path, Path]:
@@ -480,6 +490,8 @@ device = "phone"
         except Refused:
             continue
         raise AssertionError(f"took {bad!r}")
+    assert to_yaml({"secrets": {"a": "x\ny"}, "unset": {"parameters": ["relays"]}}) == \
+        'secrets:\n  a: "x\\ny"\nunset:\n  parameters: ["relays"]\n'
     print("selftest: ok")
     return 0
 
