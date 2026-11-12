@@ -74,7 +74,8 @@ restore() {
   sudo docker rm -f dotdash-rig-ovpnclient >/dev/null 2>&1 || true
   sudo docker start dotdash-rig-upstream dotdash-rig-ovpn >/dev/null 2>&1 || true
   list "${one}" "${good:-} name=vpn" || true
-  settled || true
+  # On the way out after a pass, vpn is gone already.
+  [ -z "$(service_container vpn 2>/dev/null)" ] || settled || true
   sudo morzer config set upstream_pin=none >/dev/null 2>&1 || true
   sudo morzer config set installation.profile=xdns >/dev/null 2>&1 || true
   list "${one}" || true
@@ -159,10 +160,10 @@ netns() { sudo readlink "/proc/$(sudo docker inspect -f '{{.State.Pid}}' "$(serv
 settled() {
   local _
   for _ in $(seq 60); do
-    [ "$(sudo docker inspect -f '{{.State.Health.Status}}' "$(service_container xray)" 2>/dev/null)" = healthy ] &&
-      [ "$(sudo docker inspect -f '{{.State.Health.Status}}' "$(service_container vpn)" 2>/dev/null)" = healthy ] &&
-      [ "$(sudo docker inspect -f '{{.State.Running}}' "$(service_container vpn-socks)" 2>/dev/null)" = true ] &&
-      [ "$(netns vpn)" = "$(netns vpn-socks)" ] && return 0
+    [ "$(sudo docker inspect -f '{{.State.Health.Status}}' "$(service_container xray 2>/dev/null)" 2>/dev/null)" = healthy ] &&
+      [ "$(sudo docker inspect -f '{{.State.Health.Status}}' "$(service_container vpn 2>/dev/null)" 2>/dev/null)" = healthy ] &&
+      [ "$(sudo docker inspect -f '{{.State.Running}}' "$(service_container vpn-socks 2>/dev/null)" 2>/dev/null)" = true ] &&
+      [ "$(netns vpn 2>/dev/null)" = "$(netns vpn-socks 2>/dev/null)" ] && return 0
     sleep 2
   done
   return 1
