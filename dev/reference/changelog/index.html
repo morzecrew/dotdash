@@ -2654,6 +2654,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p><code>direct=false</code> keeps every server's address out of devices' links, configs and subscriptions: devices reach the servers only through relays and CDN hosts, and fetch subscriptions only through own-site relays. <code>dotdash-manager</code> sets it on every server from the roster's <code>direct</code>.</p>
+</li>
+<li>
 <p>An <code>ipv6</code> parameter on the server, the relay and the client: <code>block</code> keeps IPv6 out. The client refuses it before any rule, the relay drops it, and the server resolves names to IPv4 only and blocks IPv6 addresses, so dual-stack sites still work over IPv4.</p>
 </li>
 <li>

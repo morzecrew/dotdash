@@ -723,6 +723,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#keeping-the-servers-out-of-devices-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Keeping the servers out of devices' links
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#revoking-a-device" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1944,6 +1955,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#keeping-the-servers-out-of-devices-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Keeping the servers out of devices' links
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#revoking-a-device" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2129,6 +2151,27 @@ friends anna boris relay2.example.net
   a typo would otherwise leave a device in no pool, and so give it everything.</li>
 </ul>
 <p>Replacing a pool's relay then means new links only for that pool's devices.</p>
+<h2 id="keeping-the-servers-out-of-devices-links">Keeping the servers out of devices' links<a class="headerlink" href="#keeping-the-servers-out-of-devices-links" title="Permanent link">&para;</a></h2>
+<p>Pools hide relays and CDN hosts, but every device still gets the servers'
+own links, so one leaked device gives away every server. With <code>direct=false</code>
+devices get no server's address at all:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">direct</span><span class="o">=</span><span class="nb">false</span>
+</code></pre></div>
+<ul>
+<li>Links and the Xray config go through relays and CDN hosts only.</li>
+<li>The subscription URL is printed only through own-site relays, never on the
+  server's domain.</li>
+<li>The DNS tunnel goes: its zone is delegated to a server, so a lookup of it
+  names the address.</li>
+<li>A device that gets no relay and no CDN host gets no links, and one with no
+  own-site relay no subscription URL. <code>client-config</code> names each.</li>
+</ul>
+<p>Set it on every server alike: they print the same links. Relays then take
+the risk, and a burnt one is replaced the way a pool's is, while the servers
+keep their addresses. As with pools, a device that knew a server's address
+still reaches it: <code>direct=false</code> hides the servers, it does not lock devices
+out. To hide them from such a device too, rotate the shared keys as for
+<a href="#revoking-a-device">revoking</a> one.</p>
 <h2 id="revoking-a-device">Revoking a device<a class="headerlink" href="#revoking-a-device" title="Permanent link">&para;</a></h2>
 <p>Delete its line from <code>vless_clients</code>. A revoked device still knows the
 shared keys; to hide the server from it too, rotate them and resend links

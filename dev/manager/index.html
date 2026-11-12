@@ -1999,6 +1999,7 @@ bundles let it, devices and keys included.</p>
 <span class="n">authority</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"RWQ…"</span><span class="w">                          </span><span class="c1"># what state key generate printed</span>
 <span class="n">subscription</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w">                         </span><span class="c1"># every device gets a subscription URL</span>
 <span class="n">ipv6</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"allow"</span><span class="w">                              </span><span class="c1"># or block, on the relays</span>
+<span class="n">direct</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="w">                              </span><span class="c1"># optional: devices reach servers only through relays and CDNs</span>
 <span class="n">devices</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"phone"</span><span class="p">,</span><span class="w"> </span><span class="s2">"laptop"</span><span class="p">]</span>
 
 <span class="k">[pools]</span><span class="w">                                     </span><span class="c1"># optional: the server's pools, member by member</span>
@@ -2019,6 +2020,10 @@ bundles let it, devices and keys included.</p>
 <span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"home"</span>
 <span class="n">device</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"phone"</span><span class="w">                            </span><span class="c1"># the device whose subscription it follows</span>
 </code></pre></div>
+<p>With <code>direct = false</code> the servers keep their addresses out of devices'
+links (<a href="../server/devices/#keeping-the-servers-out-of-devices-links">direct</a>),
+and client machines fetch their subscription through an own-site relay,
+waiting for one. Left out, each server keeps its own setting.</p>
 <p>Names are lowercase letters, digits and dashes. <code>relay-</code> and <code>canary-</code> start
 the names the manager gives relays' and canaries' own devices.</p>
 <h2 id="add-a-machine">Add a machine<a class="headerlink" href="#add-a-machine" title="Permanent link">&para;</a></h2>
