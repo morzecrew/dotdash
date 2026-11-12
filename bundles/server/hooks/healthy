@@ -40,9 +40,11 @@ ask_line() {
     return 1 ;;
   openvpn | openvpn://*)
     local t k=$4
-    if ! docker compose -p "$project" ps --format '{{.Service}}' | grep -qx vpn; then
+    # Not from stdin, which is why()'s loop over the list: exec would read
+    # the lines after this one.
+    if ! docker compose -p "$project" ps --format '{{.Service}}' </dev/null | grep -qx vpn; then
       echo "$label (OpenVPN): the openvpn profile is off, so nothing carries the line"
-    elif ! t=$(docker compose -p "$project" exec -T vpn /usr/local/bin/openvpn-entrypoint healthcheck "$k" 2>&1); then
+    elif ! t=$(docker compose -p "$project" exec -T vpn /usr/local/bin/openvpn-entrypoint healthcheck "$k" </dev/null 2>&1); then
       echo "$label (OpenVPN, tun$k): the tunnel is down (${t##*unhealthy: }): its server may be down, unreachable from here, or refusing its config"
     else
       echo "$label (OpenVPN, tun$k): the tunnel is up, so the fault is past its server, or in the SOCKS hop beside it (vpn-socks)"

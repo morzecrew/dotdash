@@ -65,14 +65,16 @@ sudo docker run -d --name dotdash-rig-ovpn --network dotdash-rig --cap-add NET_A
     --ca /pki/ca.crt --cert /pki/server.crt --key /pki/server.key --dh none \
     --push "redirect-gateway def1" --keepalive 5 15 --duplicate-cn --verb 3' >/dev/null
 
-# Back to the proxy: its line beside an OpenVPN one first, as vpn refuses a
-# list with none, then the profile off, then the proxy's line alone.
+# Back to the proxy: its line first, beside the OpenVPN one the pin names, as
+# vpn refuses a list with no OpenVPN line; then no pin, which the proxy now
+# passes the health check for; then the profile off, then the proxy's line
+# alone.
 restore() {
   kill "${watcher:-}" 2>/dev/null || true
   sudo docker rm -f dotdash-rig-ovpnclient >/dev/null 2>&1 || true
   sudo docker start dotdash-rig-upstream dotdash-rig-ovpn >/dev/null 2>&1 || true
-  sudo morzer config set upstream_pin=none >/dev/null 2>&1 || true
   list "${one}" "${good:-} name=vpn" || true
+  sudo morzer config set upstream_pin=none >/dev/null 2>&1 || true
   sudo morzer config set installation.profile=xdns >/dev/null 2>&1 || true
   list "${one}" || true
   sudo docker rm -f dotdash-rig-ovpn >/dev/null 2>&1 || true
@@ -230,8 +232,8 @@ kill "${watcher}" 2>/dev/null || true
 echo "${0##*/}: openvpn killed inside vpn starts again in place, and a client gets through"
 
 sudo docker start dotdash-rig-upstream >/dev/null
-sudo morzer config set upstream_pin=none >/dev/null || die "could not drop the pin"
 list "${one}" "${good} name=vpn" || die "could not put the proxy's line back first"
+sudo morzer config set upstream_pin=none >/dev/null || die "could not drop the pin"
 reaches "${target}" || die "a client does not reach the target back on the proxy, with the profile still on"
 sudo morzer config set installation.profile=xdns >/dev/null || die "could not drop the openvpn profile"
 list "${one}" || die "could not switch back to the proxy's line alone"
