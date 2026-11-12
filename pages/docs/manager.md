@@ -41,6 +41,7 @@ identity = "./authority.age"
 authority = "RWQ…"                          # what state key generate printed
 subscription = true                         # every device gets a subscription URL
 ipv6 = "allow"                              # or block, on the relays
+direct = false                              # optional: devices reach servers only through relays and CDNs
 devices = ["phone", "laptop"]
 
 [pools]                                     # optional: the server's pools, member by member
@@ -61,6 +62,11 @@ watches = "r1"                              # a server or a relay
 name = "home"
 device = "phone"                            # the device whose subscription it follows
 ```
+
+With `direct = false` the servers keep their addresses out of devices'
+links ([direct](server/devices.md#keeping-the-servers-out-of-devices-links)),
+and client machines fetch their subscription through an own-site relay,
+waiting for one. Left out, each server keeps its own setting.
 
 Names are lowercase letters, digits and dashes. `relay-` and `canary-` start
 the names the manager gives relays' and canaries' own devices.

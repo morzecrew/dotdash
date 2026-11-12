@@ -109,6 +109,8 @@ def load_roster(path: Path) -> dict:
         names.add(d)
     if net.get("ipv6", "allow") not in ("allow", "block"):
         raise Refused(f"{path}: ipv6 is allow or block")
+    if not isinstance(net.get("direct", True), bool):
+        raise Refused(f"{path}: direct is true or false")
     for c in net["canary"]:
         if c.get("watches") not in {m["name"] for m in net["server"] + net["relay"]}:
             raise Refused(f"{path}: canary {c['name']} watches {c.get('watches')!r}, which is no server or relay here")
@@ -205,6 +207,9 @@ def render(net: dict, state: dict, facts: dict) -> tuple[dict, list[str]]:
             },
             "secrets": {"vless_clients": vless["server"], **keys},
         }
+        # Only when the roster says: a server released before direct refuses it.
+        if "direct" in net:
+            doc["parameters"]["direct"] = str(net["direct"]).lower()
         unset = [name for name, value in (("relays", relays), ("pools", pools)) if not value]
         doc["parameters"].update({name: value for name, value in (("relays", relays), ("pools", pools)) if value})
         if unset:
@@ -257,14 +262,22 @@ def render(net: dict, state: dict, facts: dict) -> tuple[dict, list[str]]:
             params.update(dotdash_kcp_port=str(f["kcp"]["port"]), dotdash_kcp_header=f["kcp"]["header"], dotdash_kcp_open=f["kcp"].get("open", "none"))
         docs[c["name"]] = {"parameters": params, "secrets": {"dotdash_id": ids[f"canary-{c['name']}"], **sec}}
 
+    # direct = false keeps the servers' domains out of what devices hold, so a
+    # client machine fetches through an own-site relay, as a phone does.
+    own_site = [facts[r["name"]]["site"] for r in net["relay"] if "own_site" in facts.get(r["name"], {})]
     for c in net["client"]:
         if not lead:
             waiting.append(f"{c['name']}: waits for a server that applied the keys")
             continue
         token = hashlib.sha256(f"{keys['subscription_key']}:{ids[c['device']]}".encode()).hexdigest()[:32]
         port = "" if lead["https_port"] == 443 else f":{lead['https_port']}"
-        docs[c["name"]] = {"secrets": {"subscription_url": f"https://{lead['domain']}{port}/{token}",
-                                       "proxy_password": state["passwords"][c["name"]]}}
+        url = f"https://{lead['domain']}{port}/{token}"
+        if net.get("direct") is False:
+            if not own_site:
+                waiting.append(f"{c['name']}: waits for an own-site relay: direct = false keeps the servers' URL out")
+                continue
+            url = f"https://{own_site[0]}/{token}"
+        docs[c["name"]] = {"secrets": {"subscription_url": url, "proxy_password": state["passwords"][c["name"]]}}
     return docs, waiting
 
 
@@ -477,6 +490,17 @@ device = "phone"
     assert c1["secrets"]["dotdash_kcp_seed"] == "K" and "dotdash_xhttp_path" not in c1["secrets"]
     token = hashlib.sha256(f"{state['keys']['subscription_key']}:{state['ids']['phone']}".encode()).hexdigest()[:32]
     assert docs["home"]["secrets"]["subscription_url"] == f"https://a.example.net/{token}"
+    assert "direct" not in sa["parameters"]
+
+    # direct = false: the servers are told, and a client machine fetches through
+    # an own-site relay, or waits for one.
+    net["direct"] = False
+    docs, waiting = render(net, state, {"a": a, "b": b, "r1": relay})
+    assert docs["a"]["parameters"]["direct"] == "false" and "home" not in docs
+    assert any(w.startswith("home: waits for an own-site relay") for w in waiting)
+    docs, _ = render(net, state, {"a": a, "b": b, "r1": {**relay, "own_site": {"xhttp_path": "X"}}})
+    assert docs["home"]["secrets"]["subscription_url"] == f"https://www.example.net/{token}"
+    del net["direct"]
 
     # Nothing applied yet: servers get their keys, everyone else waits.
     docs, waiting = render(net, state, {})
@@ -484,7 +508,7 @@ device = "phone"
     assert docs["a"]["parameters"]["servers"] == "self"
     assert any(w.startswith("r1: waits") for w in waiting) and any(w.startswith("home: waits") for w in waiting)
 
-    for bad in ('devices = ["relay-x"]', '[[canary]]\nname = "c"\nwatches = "nobody"', '[[server]]\nname = "Big"'):
+    for bad in ('direct = "no"', 'devices = ["relay-x"]', '[[canary]]\nname = "c"\nwatches = "nobody"', '[[server]]\nname = "Big"'):
         try:
             load_roster_text('target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n' + bad)
         except Refused:

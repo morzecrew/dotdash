@@ -178,6 +178,11 @@ parameters:
     default: "# One pool per line: <pool> <device name, relay host or CDN host>..."
     description: "Pools against a leaked device giving away every entry point, one \"<pool> <member>...\" line per pool, the members device names from vless_clients, relay hosts and CDN hosts; client-config and the subscriptions give a device in a pool its pools' relays and CDN hosts and those in no pool, and a device in none all of them"
     services: [subscription]
+  direct:
+    type: bool
+    default: true
+    description: "Give devices links straight to the servers. false keeps every server's address out of devices' links, configs and subscriptions: devices reach the servers only through relays and CDN hosts, fetch subscriptions only through own-site relays, and get no DNS tunnel, whose zone points at a server. A device that knew an address keeps reaching it: false hides the servers, it does not lock devices out"
+    services: [subscription]
   subscription:
     type: bool
     default: false
@@ -248,7 +253,7 @@ operations:
 # or anything else this machine alone knows. None of these reaches a command
 # line or a hook.
 managed:
-  parameters: [servers, relays, cdn_hosts, pools, subscription]
+  parameters: [servers, relays, cdn_hosts, pools, subscription, direct]
   secrets: [vless_clients, reality_key, vless_seed, reality_short_id, xhttp_path, kcp_seed, subscription_key]
 
 # What this machine tells the authority it follows, after every change, when

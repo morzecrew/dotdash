@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `direct=false` keeps every server's address out of devices' links, configs and subscriptions: devices reach the servers only through relays and CDN hosts, and fetch subscriptions only through own-site relays. `dotdash-manager` sets it on every server from the roster's `direct`.
+
 - A `cdn-check` task on the server tells whether each CDN in front of it and of its relays is refused a subscription, by fetching a decoy one, with no links in it, through each.
 
 - An `ipv6` parameter on the server, the relay and the client: `block` keeps IPv6 out. The client refuses it before any rule, the relay drops it, and the server resolves names to IPv4 only and blocks IPv6 addresses, so dual-stack sites still work over IPv4.

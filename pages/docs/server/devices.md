@@ -102,6 +102,31 @@ friends anna boris relay2.example.net
 
 Replacing a pool's relay then means new links only for that pool's devices.
 
+## Keeping the servers out of devices' links
+
+Pools hide relays and CDN hosts, but every device still gets the servers'
+own links, so one leaked device gives away every server. With `direct=false`
+devices get no server's address at all:
+
+```sh
+sudo morzer config set direct=false
+```
+
+- Links and the Xray config go through relays and CDN hosts only.
+- The subscription URL is printed only through own-site relays, never on the
+  server's domain.
+- The DNS tunnel goes: its zone is delegated to a server, so a lookup of it
+  names the address.
+- A device that gets no relay and no CDN host gets no links, and one with no
+  own-site relay no subscription URL. `client-config` names each.
+
+Set it on every server alike: they print the same links. Relays then take
+the risk, and a burnt one is replaced the way a pool's is, while the servers
+keep their addresses. As with pools, a device that knew a server's address
+still reaches it: `direct=false` hides the servers, it does not lock devices
+out. To hide them from such a device too, rotate the shared keys as for
+[revoking](#revoking-a-device) one.
+
 ## Revoking a device
 
 Delete its line from `vless_clients`. A revoked device still knows the

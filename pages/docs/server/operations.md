@@ -39,7 +39,7 @@ machine's own.
 
 | Bundle | An authority may set | It tells the authority (`facts`) |
 | --- | --- | --- |
-| server | `vless_clients`, the shared keys (`reality_key`, `vless_seed`, `reality_short_id`, `xhttp_path`, `kcp_seed`, `subscription_key`), `servers`, `relays`, `cdn_hosts`, `pools`, `subscription` | its domain and ports, the REALITY public key and the VLESS encryption string |
+| server | `vless_clients`, the shared keys (`reality_key`, `vless_seed`, `reality_short_id`, `xhttp_path`, `kcp_seed`, `subscription_key`), `servers`, `relays`, `cdn_hosts`, `pools`, `subscription`, `direct` | its domain and ports, the REALITY public key and the VLESS encryption string |
 | relay | `vless_clients`, `dotdash_id`, `dotdash_encryption`, `dotdash_short_id`, `dotdash_servers`, `dotdash_address`, `dotdash_port`, `dotdash_public_key`, `ipv6` | its `relay-entry` line, at [`entry_host`](../relay/reference.md) |
 | canary | every `dotdash_*` | nothing |
 | client | `subscription_url`, `proxy_password` | nothing |
