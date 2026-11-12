@@ -1972,9 +1972,9 @@
 upstream while it answers, so the exit stays the same, and through the backup
 while it doesn't. They go back by themselves once the upstream answers again.</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>upstream_backup<span class="w">                  </span><span class="c1"># user:pass@host:port, first</span>
-sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">upstream_backup_protocol</span><span class="o">=</span>socks<span class="w">   </span><span class="c1"># or http; upstream_backup_tls=true if needed</span>
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">upstream_backup_protocol</span><span class="o">=</span>socks<span class="w">   </span><span class="c1"># or socks-tls, http, https</span>
 </code></pre></div>
-<p>The gate probes both every 30 seconds, fetching <code>healthcheck_url</code> through
+<p>The gate probes both every 30 seconds, fetching <code>probe_url</code> through
 each. A failed upstream moves connections within about a minute. Connections
 open at that moment break, and apps reconnect. Off:
 <code>sudo morzer config set upstream_backup_protocol=none</code>.</p>
@@ -1984,7 +1984,7 @@ open at that moment break, and apps reconnect. Off:
 <li><strong><code>doctor</code> passes</strong> on the backup, since devices still get out.
   <code>exit-check</code> shows which exit is in use. If you <a href="../operations/#pin-the-exit-ip">pin the exit IP</a>,
   match both addresses to stay quiet on the backup, such as
-  <code>'healthcheck_expect=^(203\.0\.113\.7|198\.51\.100\.9)\s*$'</code>. Match the
+  <code>'probe_expect=^(203\.0\.113\.7|198\.51\.100\.9)\s*$'</code>. Match the
   upstream's alone to be told, but then <code>apply</code> fails too while the backup
   carries.</li>
 <li><strong>UDP</strong> goes through the backup only if it is SOCKS5 and <code>upstream_udp</code> is

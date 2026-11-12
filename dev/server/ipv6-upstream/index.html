@@ -1972,7 +1972,7 @@
 included, leave through the IPv6 proxy, the rest through the first. Neither
 falls back to the other.</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>upstream6<span class="w">                  </span><span class="c1"># user:pass@host:port, first</span>
-sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">upstream6_protocol</span><span class="o">=</span>socks<span class="w">   </span><span class="c1"># or http; upstream6_tls=true if needed</span>
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">upstream6_protocol</span><span class="o">=</span>socks<span class="w">   </span><span class="c1"># or socks-tls, http, https</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>exit-check<span class="w"> </span>--output
 </code></pre></div>
 <p>Needs <code>resolve=gateway</code> (the default). Two providers show as <code>MISMATCH</code> in

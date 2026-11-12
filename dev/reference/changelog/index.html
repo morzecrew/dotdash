@@ -1848,6 +1848,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Removed
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1888,7 +1899,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#removed" class="md-nav__link">
+  <a href="#removed_1" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Removed
@@ -2250,6 +2261,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Removed
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2290,7 +2312,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#removed" class="md-nav__link">
+  <a href="#removed_1" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Removed
@@ -2651,7 +2673,37 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
-<li>The server, the relay and the canary run Xray 26.11.9, and the client mihomo 1.19.34.</li>
+<li>
+<p><strong>Breaking:</strong> every bundle needs morzer 0.16.0, which health-checks a parameter change and undoes it when the check fails. Update morzer first: an older one refuses the release and changes nothing.</p>
+</li>
+<li>
+<p><strong>Breaking:</strong> the server's <code>healthcheck_url</code>, <code>healthcheck6_url</code> and <code>healthcheck_expect</code> are <code>probe_url</code>, <code>probe6_url</code> and <code>probe_expect</code>, as the other bundles name them. An update drops the old values, so set changed ones again after it.</p>
+</li>
+<li>
+<p>The upstream protocols take <code>socks-tls</code> and <code>https</code>, a proxy over TLS. <code>upstream_tls</code>, <code>upstream6_tls</code> and <code>upstream_backup_tls</code> still work until 0.8.0: set the protocol, then unset them.</p>
+</li>
+<li>
+<p><strong>Breaking:</strong> the canary names its target as the relay does, <code>dotdash_server</code>, <code>dotdash_address</code>, <code>dotdash_port</code>, <code>dotdash_public_key</code>, <code>dotdash_id</code>, <code>dotdash_encryption</code>, <code>dotdash_short_id</code>, and <code>dotdash_</code> before the XHTTP and mKCP ones. A canary is not updated to it but set up again from <code>canary-config</code>.</p>
+</li>
+<li>
+<p><code>canary-config</code> also prints the server's mKCP opener, as <code>dotdash_kcp_open</code>.</p>
+</li>
+<li>
+<p><strong>Breaking:</strong> the client's <code>dns_listen</code> is off at <code>none</code>, as every other parameter says it, rather than <code>off</code>.</p>
+</li>
+<li>
+<p><code>morzer rollback</code> from this release of the server or the canary is refused, since the earlier release lacks the new names; the pre-update backup is the way back.</p>
+</li>
+<li>
+<p>The relay's <code>site_dir</code> and <code>cert_issuer</code> take effect with <code>config set</code>, without a full apply.</p>
+</li>
+<li>
+<p>The server, the relay and the canary run Xray 26.11.9, and the client mihomo 1.19.34.</p>
+</li>
+</ul>
+<h3 id="removed">Removed<a class="headerlink" href="#removed" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Breaking:</strong> the relay's deprecated <code>dotdash_server</code>. <code>dotdash_servers</code> is now required: on a relay that still has only <code>dotdash_server</code>, set <code>dotdash_servers</code> before updating.</li>
 </ul>
 <h2 id="060-2026-11-11">[0.6.0] - 2026-11-11<a class="headerlink" href="#060-2026-11-11" title="Permanent link">&para;</a></h2>
 <h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
@@ -2723,7 +2775,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>The <code>upstream</code> secret is no longer required: an installation whose upstream is a tunnel needs none. With a proxy, the egress health check still fails, naming it, while it is unset.</p>
 </li>
 </ul>
-<h3 id="removed">Removed<a class="headerlink" href="#removed" title="Permanent link">&para;</a></h3>
+<h3 id="removed_1">Removed<a class="headerlink" href="#removed_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>The <code>xdns-xhttp-reality</code> profile, deprecated since 0.5.0: a server still set to it must switch before updating. <code>xdns,xhttp-reality</code> deploys the same: <code>sudo morzer config set installation.profile=xdns,xhttp-reality</code>.</li>
 </ul>

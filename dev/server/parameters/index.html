@@ -1966,12 +1966,7 @@
 <tr>
 <td><code>upstream_protocol</code></td>
 <td><code>socks</code></td>
-<td><code>socks</code> or <code>http</code>, the proxy in <code>upstream</code>; <code>wireguard</code> or <code>openvpn</code>, a <a href="../tunnel-upstream/">tunnel</a> from <code>upstream_wireguard</code> or <code>upstream_openvpn</code></td>
-</tr>
-<tr>
-<td><code>upstream_tls</code></td>
-<td><code>false</code></td>
-<td>TLS to the upstream</td>
+<td><code>socks</code> or <code>http</code>, the proxy in <code>upstream</code>, and <code>socks-tls</code> or <code>https</code> the same over TLS; <code>wireguard</code> or <code>openvpn</code>, a <a href="../tunnel-upstream/">tunnel</a> from <code>upstream_wireguard</code> or <code>upstream_openvpn</code></td>
 </tr>
 <tr>
 <td><code>upstream_udp</code></td>
@@ -1981,22 +1976,12 @@
 <tr>
 <td><code>upstream6_protocol</code></td>
 <td><code>none</code></td>
-<td><code>socks</code> or <code>http</code> turns on the IPv6 proxy, the <code>upstream6</code> secret</td>
-</tr>
-<tr>
-<td><code>upstream6_tls</code></td>
-<td><code>false</code></td>
-<td>TLS to the IPv6 proxy</td>
+<td><code>socks</code>, <code>socks-tls</code>, <code>http</code> or <code>https</code> turns on the IPv6 proxy, the <code>upstream6</code> secret</td>
 </tr>
 <tr>
 <td><code>upstream_backup_protocol</code></td>
 <td><code>none</code></td>
-<td><code>socks</code> or <code>http</code> turns on the <a href="../backup-upstream/">backup proxy</a>, the <code>upstream_backup</code> secret</td>
-</tr>
-<tr>
-<td><code>upstream_backup_tls</code></td>
-<td><code>false</code></td>
-<td>TLS to the backup proxy</td>
+<td><code>socks</code>, <code>socks-tls</code>, <code>http</code> or <code>https</code> turns on the <a href="../backup-upstream/">backup proxy</a>, the <code>upstream_backup</code> secret</td>
 </tr>
 <tr>
 <td><code>https_port</code></td>
@@ -2039,17 +2024,17 @@
 <td>Xray error log; <code>warning</code> and below name failed destinations</td>
 </tr>
 <tr>
-<td><code>healthcheck_url</code></td>
+<td><code>probe_url</code></td>
 <td><code>https://www.gstatic.com/generate_204</code></td>
 <td>fetched through the upstream</td>
 </tr>
 <tr>
-<td><code>healthcheck_expect</code></td>
+<td><code>probe_expect</code></td>
 <td><code>.*</code></td>
 <td>regex the response must match, such as the exit IP</td>
 </tr>
 <tr>
-<td><code>healthcheck6_url</code></td>
+<td><code>probe6_url</code></td>
 <td><code>http://api6.ipify.org</code></td>
 <td>IPv6-only URL fetched through the IPv6 proxy</td>
 </tr>
@@ -2110,6 +2095,9 @@
 <code>sudo morzer config edit &lt;name&gt;</code>. Profiles (<code>installation.profile</code>): <code>xdns</code>,
 <code>xhttp-reality</code>, <code>mkcp</code>, <code>openvpn</code> (for an <a href="../tunnel-upstream/">OpenVPN upstream</a>),
 combined with commas, such as <code>xdns,xhttp-reality</code>.</p>
+<p><code>upstream_tls</code>, <code>upstream6_tls</code> and <code>upstream_backup_tls</code> are deprecated and go
+in 0.8.0: <code>true</code> still turns <code>socks</code> into <code>socks-tls</code> and <code>http</code> into <code>https</code>.
+Set the protocol instead, then unset them.</p>
 
 
 

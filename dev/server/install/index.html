@@ -1958,8 +1958,8 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w">
 sudo<span class="w"> </span>morzer<span class="w"> </span>apply
 </code></pre></div>
 <ul>
-<li>Add <code>--set upstream_protocol=http</code> for an HTTP proxy, and
-  <code>--set upstream_tls=true</code> if it takes TLS. The default is SOCKS5. For
+<li>Add <code>--set upstream_protocol=http</code> for an HTTP proxy, or <code>https</code> or
+  <code>socks-tls</code> for one that takes TLS. The default is SOCKS5. For
   a WireGuard or OpenVPN exit instead, see
   <a href="../tunnel-upstream/">WireGuard or OpenVPN upstream</a>.</li>
 <li><code>upstream</code> is <code>user:pass@host:port</code>, or <code>host:port</code> with no login. The

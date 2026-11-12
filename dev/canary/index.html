@@ -2042,37 +2042,42 @@ relay's address no longer gets through for devices.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>server</code></td>
+<td><code>dotdash_server</code></td>
 <td>none, given at <code>init</code></td>
 <td>the server's domain, sent as the TLS server name; a relay's site</td>
 </tr>
 <tr>
-<td><code>address</code></td>
+<td><code>dotdash_address</code></td>
 <td>none, given at <code>init</code></td>
 <td>where to connect: normally the same domain; an IP, a CDN's name, or a relay's address</td>
 </tr>
 <tr>
-<td><code>port</code></td>
+<td><code>dotdash_port</code></td>
 <td><code>443</code></td>
 <td>the server's <code>https_port</code></td>
 </tr>
 <tr>
-<td><code>xhttp_reality_port</code></td>
+<td><code>dotdash_xhttp_reality_port</code></td>
 <td><code>8443</code></td>
 <td>the server's <code>xhttp_reality_port</code></td>
 </tr>
 <tr>
-<td><code>kcp_port</code></td>
+<td><code>dotdash_kcp_port</code></td>
 <td><code>8447</code></td>
 <td>the server's <code>kcp_port</code></td>
 </tr>
 <tr>
-<td><code>kcp_header</code></td>
+<td><code>dotdash_kcp_header</code></td>
 <td><code>dtls</code></td>
 <td>the server's <code>kcp_header</code></td>
 </tr>
 <tr>
-<td><code>reality_public_key</code></td>
+<td><code>dotdash_kcp_open</code></td>
+<td><code>none</code></td>
+<td>the server's <code>kcp_open</code></td>
+</tr>
+<tr>
+<td><code>dotdash_public_key</code></td>
 <td>none, given at <code>init</code></td>
 <td>the REALITY public key, the <code>pbk</code> of a link</td>
 </tr>
@@ -2097,23 +2102,23 @@ relay's address no longer gets through for devices.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>vless_id</code></td>
+<td><code>dotdash_id</code></td>
 <td>the canary's id, its line in the server's <code>vless_clients</code></td>
 </tr>
 <tr>
-<td><code>vless_encryption</code></td>
+<td><code>dotdash_encryption</code></td>
 <td>the <code>encryption=</code> value of a link</td>
 </tr>
 <tr>
-<td><code>reality_short_id</code></td>
+<td><code>dotdash_short_id</code></td>
 <td>the <code>sid=</code> value of a REALITY link</td>
 </tr>
 <tr>
-<td><code>kcp_seed</code></td>
+<td><code>dotdash_kcp_seed</code></td>
 <td>the <code>seed=</code> value of an mKCP link, for <code>--profile mkcp</code></td>
 </tr>
 <tr>
-<td><code>xhttp_path</code></td>
+<td><code>dotdash_xhttp_path</code></td>
 <td>the <code>path=</code> value of an XHTTP link, without the leading <code>%2F</code></td>
 </tr>
 </tbody>
