@@ -4,6 +4,27 @@
 # Port 443 here is reached only through Xray's REALITY inbound, which relays
 # every connection that does not carry its key. Port 80 is published directly,
 # for the ACME HTTP-01 challenge and the redirect to HTTPS.
+# Where the site's certificate comes from (the cert_issuer parameter), chosen
+# by name below: Caddy has no conditional, and a snippet must be defined before
+# the global options that import it.
+# - acme: Let's Encrypt, over HTTP-01.
+# - acme-dns: Let's Encrypt, over DNS-01 handed to an acme-dns server by the
+#   CNAME at _acme-challenge (the acme_dns secret, its registration). With a
+#   wildcard over the domain's parent (CERT_WILDCARD), which keeps the domain
+#   itself out of the Certificate Transparency logs.
+# - internal: Caddy's own CA, for a machine the internet cannot reach, such as
+#   a CI rig.
+(issuer-acme) {
+	cert_issuer acme
+}
+(issuer-acme-dns) {
+	cert_issuer acme
+	acme_dns acmedns /run/secrets/acme_dns
+}
+(issuer-internal) {
+	cert_issuer internal
+}
+
 {
 	admin off
 	# Errors only, and never the request they concern: its URI carries the
@@ -19,9 +40,7 @@
 		}
 		level ERROR
 	}
-	# acme: Let's Encrypt. internal: Caddy's own CA, for a machine the
-	# internet cannot reach, such as a CI rig (the cert_issuer parameter).
-	cert_issuer {$CERT_ISSUER}
+	import issuer-{$CERT_ISSUER}
 	# A CDN in front may send its own name as SNI: answer with this domain's
 	# certificate rather than none. A CDN that checks the origin's certificate
 	# against its own name still fails; tell it to send this domain.
@@ -107,7 +126,10 @@ http://127.0.0.1:8081 {
 	}
 }
 
-{$DOMAIN} {
+# CERT_WILDCARD, with cert_issuer=acme-dns, is the wildcard over the domain's
+# parent: Caddy then takes that one certificate, and none in the domain's own
+# name. Otherwise it is empty, and the certificate is the domain's.
+{$DOMAIN} {$CERT_WILDCARD} {
 	import site
 }
 

@@ -76,6 +76,7 @@ secrets:
   reality_key: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/reality_key"}
   reality_short_id: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/reality_short_id"}
   xhttp_path: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/xhttp_path"}
+  acme_dns: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/acme_dns"}
   dotdash_id: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/dotdash_id"}
   dotdash_encryption: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/dotdash_encryption"}
   dotdash_short_id: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/dotdash_short_id"}

@@ -99,9 +99,9 @@ parameters:
     services: [caddy]
   cert_issuer:
     type: enum
-    values: [acme, internal]
+    values: [acme, acme-dns, internal]
     default: acme
-    description: "With the own-site profile, where its certificate comes from: acme is Let's Encrypt, over port 80; internal is Caddy's own CA, for a machine the internet cannot reach"
+    description: "With the own-site profile, where its certificate comes from: acme is Let's Encrypt, over port 80; internal is Caddy's own CA, for a machine the internet cannot reach; acme-dns is Let's Encrypt over DNS-01, handed to an acme-dns server by a CNAME, for a wildcard over the domain's parent that keeps the domain out of the certificate logs (the acme_dns secret)"
     services: [caddy]
   # No services: relay-entry and facts, tasks, are all that read it.
   entry_host:

@@ -104,6 +104,8 @@ services:
     environment:
       DOMAIN: ${DOTDASH_DOMAIN:?install with --domain}
       CERT_ISSUER: ${DOTDASH_PARAM_CERT_ISSUER:-acme}
+    # CERT_WILDCARD (templates/caddy.env.tmpl).
+    env_file: /etc/dotdash/caddy.env
     # 80 and 443 inside, as above.
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
     volumes:
@@ -123,7 +125,7 @@ services:
       - subscription:/srv/sub:ro
     tmpfs:
       - /config:uid=65532,gid=65532,mode=0700,size=8m
-    secrets: [xhttp_path]
+    secrets: [xhttp_path, acme_dns]
     ports:
       - "80:80/tcp"
     networks: [edge, backend]
@@ -234,6 +236,8 @@ secrets:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/vless_clients
   xhttp_path:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/xhttp_path
+  acme_dns:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/acme_dns
   vless_seed:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/vless_seed
   kcp_seed:
