@@ -17,6 +17,7 @@ services:
     environment:
       DOMAIN: ${DOTDASH_RELAY_DOMAIN:?the own-site profile needs a domain, set with installation.domains}
       CERT_ISSUER: ${DOTDASH_RELAY_PARAM_CERT_ISSUER:-acme}
+      SITE_UPSTREAM: ${DOTDASH_RELAY_PARAM_SITE_UPSTREAM:-none}
     # SUBSCRIPTION_UPSTREAMS, the dotdash servers' HTTPS (templates/caddy.env.tmpl).
     env_file: /etc/dotdash-relay/caddy.env
     # The path it routes to Xray's XHTTP inbound.

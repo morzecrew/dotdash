@@ -23,7 +23,10 @@ address agree, as they do for any real site. It needs:
   `--set site=…`.
 
 Your own pages go in `/srv/dotdash-relay` (the `site_dir` parameter); without
-them it serves a plain bundled page titled with the domain.
+them it serves a plain bundled page titled with the domain. Better still, put
+an app behind it (`site_upstream`), as on a
+[server](../server/cover-site.md#an-app-instead-of-pages), on the network
+`dotdash-relay_default`.
 
 **A site next to the relay.** No domain needed: the relay borrows the name of
 a real site, and probes get that site's own handshake. But that name's DNS

@@ -22,6 +22,7 @@
 | `subscription` | `false` | a subscription URL per device |
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (offline machines) |
 | `site_dir` | `/srv/dotdash` | your own cover site |
+| `site_upstream` | `none` | your own [app](cover-site.md#an-app-instead-of-pages) behind the cover site, such as `http://cover-app:8080` on the network `dotdash_edge` |
 | `servers` | `self` | servers sharing these keys, comma-separated |
 | `cdn_hosts` | `none` | the names of local [CDNs](cdn.md#a-local-cdn-for-restricted-networks) in front of this server, comma-separated; a link through each |
 | `relays` | a comment | one `<host> <site> <public key> <short id> <encryption>` line per [relay](../relay/install.md), as its `relay-entry` prints it, with `own-site <path>`, `kcp=<port>,<header>,<seed>` and `cdn=<name>[,<name>]` after it where the relay has them |

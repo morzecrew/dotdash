@@ -90,8 +90,9 @@ http://127.0.0.1:8081 {
 		}
 	}
 
-	# The operator's site (site_dir) wherever it has the file; otherwise the
-	# bundled page, titled with the domain so no two servers serve one body.
+	# The operator's site (site_dir) wherever it has the file; then their app
+	# (site_upstream); otherwise the bundled page, titled with the domain so no
+	# two servers serve one body.
 	@own file {
 		root /srv/own
 		try_files {path} {path}/index.html
@@ -99,6 +100,15 @@ http://127.0.0.1:8081 {
 	handle @own {
 		root * /srv/own
 		file_server
+	}
+	# The operator's app (site_upstream), for everything else: a live site,
+	# which a probe or a reviewer finds behaving like one, rather than pages.
+	# Caddy has no conditional, so the matcher compares the value as the
+	# Caddyfile loads; with none, the handler, whose upstream is then the
+	# word none, is never reached.
+	@app expression `"{$SITE_UPSTREAM:none}" != "none"`
+	handle @app {
+		reverse_proxy {$SITE_UPSTREAM:none}
 	}
 	handle {
 		root * /srv/default

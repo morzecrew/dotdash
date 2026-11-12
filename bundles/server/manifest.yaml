@@ -188,6 +188,11 @@ parameters:
     default: /srv/dotdash
     description: "Host directory of your own cover site, served in place of the bundled page; files must be readable by uid 65532"
     services: [caddy]
+  site_upstream:
+    type: string
+    default: none
+    description: "Your own app behind the cover site, such as http://cover-app:8080, a container on Caddy's network: Caddy passes it every request but a subscription's and XHTTP's, after site_dir's files. none serves pages only"
+    services: [caddy]
   log_level:
     type: enum
     values: [debug, info, warning, error, none]

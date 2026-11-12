@@ -97,6 +97,11 @@ parameters:
     default: /srv/dotdash-relay
     description: "With the own-site profile, the host directory of your own site, served in place of the bundled page; files must be readable by uid 65532"
     services: [caddy]
+  site_upstream:
+    type: string
+    default: none
+    description: "With the own-site profile, your own app behind the site, such as http://cover-app:8080, a container on Caddy's network: Caddy passes it every request but a subscription's and XHTTP's, after site_dir's files. none serves pages only"
+    services: [caddy]
   cert_issuer:
     type: enum
     values: [acme, internal]
