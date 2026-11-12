@@ -22,8 +22,10 @@ address agree, as they do for any real site. It needs:
 - in step 3, `--domain relay.example.net --profile own-site` in place of
   `--set site=…`.
 
-Your own pages go in `/srv/dotdash-relay` (the `site_dir` parameter); without
-them it serves a plain bundled page titled with the domain.
+Your own pages go in `/srv/dotdash-relay`; without them it serves a plain
+bundled page titled with the domain. Better still, put an app behind it
+(`cover`), as on a [server](../server/cover-site.md#an-app-instead-of-pages),
+on the network `dotdash-relay_default`.
 
 **A site next to the relay.** No domain needed: the relay borrows the name of
 a real site, and probes get that site's own handshake. But that name's DNS

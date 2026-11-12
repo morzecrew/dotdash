@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A `cdn-check` task on the server tells whether each CDN in front of it and of its relays is refused a subscription, by fetching a decoy one, with no links in it, through each.
 
+- `cover` on the server and the own-site relay puts your own app behind the cover site, by its URL: Caddy passes it every request but a subscription's, XHTTP's and those for your own files, and `doctor` checks that it answers. An app published on a host port is reached as `host.docker.internal`.
+
 - An `ipv6` parameter on the server, the relay and the client: `block` keeps IPv6 out. The client refuses it before any rule, the relay drops it, and the server resolves names to IPv4 only and blocks IPv6 addresses, so dual-stack sites still work over IPv4.
 
 - `upstream_mode` decides how the upstreams share the traffic: `failover`, the first line that answers, then the fastest of the rest; `fastest`; or `balance`, connections spread over every line that answers. `upstream_pin` puts a named line first.
@@ -32,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The server and own-site relays answer a subscription request a CDN passed on with the site's 404, so a device's links never pass through a CDN, which could read them. They recognise one by the headers a CDN adds, such as `X-Forwarded-For` and `Via`.
+
+- **Breaking:** `site_dir` is gone from the server and the relay. Your own files are always read from `/srv/dotdash` (the relay's `/srv/dotdash-relay`), which a symlink can point elsewhere, so that one parameter, `cover`, names pages or an app. Move files kept elsewhere before updating.
 
 - **Breaking:** every bundle needs morzer 0.16.0, which health-checks a parameter change and undoes it when the check fails. Update morzer first: an older one refuses the release and changes nothing.
 

@@ -7,7 +7,7 @@ Set one with `sudo morzer config set <name>=<value>`.
 | Name | Default | |
 | --- | --- | --- |
 | `site` | `none` | without the `own-site` profile, a site next to the relay, in its own network, on TLS 1.3 and HTTP/2: devices send its name, and probes get its handshake |
-| `site_dir` | `/srv/dotdash-relay` | with `own-site`, your own pages, served in place of the bundled one; readable by uid 65532 |
+| `cover` | `pages` | with `own-site`, what the site serves past your own files in `/srv/dotdash-relay`: `pages`, the bundled page, or your [app](../server/cover-site.md#an-app-instead-of-pages)'s URL, such as `http://cover-app:8080` on the network `dotdash-relay_default` or `http://host.docker.internal:8080` |
 | `cert_issuer` | `acme` | with `own-site`, `acme` (Let's Encrypt, over port 80) or `internal` (Caddy's own CA, for a machine the internet can't reach) |
 | `entry_host` | `none` | the address devices reach the relay at, its IP without a domain, for `relay-entry` with no address and for `facts`; `none` under `own-site` is the relay's domain |
 | `cdn_hosts` | `none` | with `own-site`, the names devices use for [local CDNs](../server/cdn.md#in-front-of-a-relay) in front of the relay, comma-separated; `relay-entry` adds them to the relay's line |

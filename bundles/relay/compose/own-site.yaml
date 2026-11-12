@@ -17,6 +17,10 @@ services:
     environment:
       DOMAIN: ${DOTDASH_RELAY_DOMAIN:?the own-site profile needs a domain, set with installation.domains}
       CERT_ISSUER: ${DOTDASH_RELAY_PARAM_CERT_ISSUER:-acme}
+      COVER: ${DOTDASH_RELAY_PARAM_COVER:-pages}
+    # host.docker.internal: the host, for an app published on one of its
+    # ports (cover).
+    extra_hosts: ["host.docker.internal:host-gateway"]
     # SUBSCRIPTION_UPSTREAMS, the dotdash servers' HTTPS (templates/caddy.env.tmpl).
     env_file: /etc/dotdash-relay/caddy.env
     # The path it routes to Xray's XHTTP inbound.
@@ -30,7 +34,10 @@ services:
         read_only: true
         bind: {create_host_path: false}
       - ${DOTDASH_RELAY_RELEASE_DIR:?set by morzer}/site:/srv/default:ro
-      - ${DOTDASH_RELAY_PARAM_SITE_DIR:-/srv/dotdash-relay}:/srv/own:ro
+      # Your own files, served first when one is there: a fixed directory, so
+      # that cover can name either pages or an app; a symlink there puts them
+      # elsewhere.
+      - /srv/dotdash-relay:/srv/own:ro
       # The ACME account and certificates. The image's /data/caddy is mode
       # 1777, and a fresh volume copies it, so uid 65532 can write there.
       - caddy_data:/data
