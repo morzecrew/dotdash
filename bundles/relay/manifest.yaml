@@ -149,8 +149,9 @@ images:
   # The relay-entry task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
   xray: ghcr.io/morzecrew/xray:26.11.9@sha256:2089e0d4acee59b3999606fb18ff5d63e327bec3bd0ececa034b3e986867b5b9
-  # The own-site profile's site; dotdash's own.
-  caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
+  # The own-site profile's site; dotdash's own. Upstream's Caddy with the
+  # acme-dns DNS module, for cert_issuer=acme-dns.
+  caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:34ecb4b3b10ff117e535e34ebdb9e1e5f45e8258a0f660c288025c7b42fb7cca
 
 # What an authority's desired-state document may set here (morzer 0.16): the
 # devices, this relay's own client of the servers, and the servers' facts.
