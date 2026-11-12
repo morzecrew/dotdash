@@ -54,6 +54,10 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+      # Every 2 s while it starts, so vpn-socks, which waits for it, follows
+      # within seconds of a tunnel coming up: an edit of upstreams restarts
+      # vpn.
+      start_interval: 2s
 
   vpn-socks:
     image: ${DOTDASH_IMAGE_XRAY:?set by morzer}

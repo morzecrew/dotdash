@@ -74,7 +74,7 @@ restore() {
   sudo docker rm -f dotdash-rig-ovpnclient >/dev/null 2>&1 || true
   sudo docker start dotdash-rig-upstream dotdash-rig-ovpn >/dev/null 2>&1 || true
   list "${one}" "${good:-} name=vpn" || true
-  reaches "${target}" || true
+  settled || true
   sudo morzer config set upstream_pin=none >/dev/null 2>&1 || true
   sudo morzer config set installation.profile=xdns >/dev/null 2>&1 || true
   list "${one}" || true
@@ -148,6 +148,23 @@ client_config() { # [verb] [server]: the client's config, inline keys
     "$(cat "${pki}/ca.crt")" "$(cat "${pki}/client.crt")" "$(cat "${pki}/client.key")"
 }
 
+started() { sudo docker inspect -f '{{.State.StartedAt}}' "$(service_container "$1")"; }
+# By the processes' namespaces, from here: Xray's image has no shell.
+netns() { sudo readlink "/proc/$(sudo docker inspect -f '{{.State.Pid}}' "$(service_container "$1")")/ns/net"; }
+# Until vpn is healthy and vpn-socks runs in its namespace, up to 90 s: secret
+# set returns once it restarted vpn, and an apply while Compose brings
+# vpn-socks after it fails to start services.
+settled() {
+  local _
+  for _ in $(seq 45); do
+    [ "$(sudo docker inspect -f '{{.State.Health.Status}}' "$(service_container vpn)" 2>/dev/null)" = healthy ] &&
+      [ "$(sudo docker inspect -f '{{.State.Running}}' "$(service_container vpn-socks)" 2>/dev/null)" = true ] &&
+      [ "$(netns vpn)" = "$(netns vpn-socks)" ] && return 0
+    sleep 2
+  done
+  return 1
+}
+
 # Each config's line, from the task: openvpn:// and the config, gzipped.
 line_of() { # <file>
   sudo morzer task run openvpn-line --output --input "conf=$1" | tail -n1
@@ -173,6 +190,7 @@ sudo morzer config set installation.profile=xdns,openvpn >/dev/null ||
   { tunnel_logs; die "could not turn on the openvpn profile with the proxy still the upstream"; }
 reaches "${target}" || die "the proxy stopped carrying traffic once the openvpn profile was on"
 list "${one}" "${dead} name=dead" "${good} name=vpn" || { tunnel_logs; die "could not list two OpenVPN lines"; }
+settled || { tunnel_logs; die "vpn and vpn-socks did not settle after the list changed"; }
 sudo morzer config set upstream_pin=vpn >/dev/null || { tunnel_logs; die "could not pin the live OpenVPN line"; }
 # Only now is the proxy stopped, so nothing can leave through it.
 sudo docker stop dotdash-rig-upstream >/dev/null
@@ -196,9 +214,6 @@ fi
 sudo docker start dotdash-rig-ovpn >/dev/null
 echo "${0##*/}: with the server stopped, nothing gets through, and doctor names each line's tunnel"
 
-started() { sudo docker inspect -f '{{.State.StartedAt}}' "$(service_container "$1")"; }
-# By the processes' namespaces, from here: Xray's image has no shell.
-netns() { sudo readlink "/proc/$(sudo docker inspect -f '{{.State.Pid}}' "$(service_container "$1")")/ns/net"; }
 
 # A new list while OpenVPN runs takes effect when set: secret set restarts
 # vpn, and Compose restarts vpn-socks after it, into vpn's new network
@@ -235,8 +250,7 @@ echo "${0##*/}: openvpn killed inside vpn starts again in place, and a client ge
 
 sudo docker start dotdash-rig-upstream >/dev/null
 list "${one}" "${good} name=vpn" || die "could not put the proxy's line back first"
-# Once vpn, restarted for the list, is back: an apply meanwhile waits on it.
-reaches "${target}" || { tunnel_logs; die "a client does not reach the target with the proxy's line back"; }
+settled || { tunnel_logs; die "vpn and vpn-socks did not settle after the proxy's line came back"; }
 sudo morzer config set upstream_pin=none >/dev/null || die "could not drop the pin: $(sudo morzer status 2>&1 | tail -n 12)"
 reaches "${target}" || die "a client does not reach the target back on the proxy, with the profile still on"
 sudo morzer config set installation.profile=xdns >/dev/null || die "could not drop the openvpn profile"
