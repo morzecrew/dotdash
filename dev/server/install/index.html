@@ -1944,8 +1944,8 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>apply
 <ul>
 <li><code>upstreams</code> lists the ways out, one per line, in order:
   <code>socks5://</code>, <code>socks5+tls://</code>, <code>http://</code> or <code>https://</code> and
-  <code>user:pass@host:port</code>, a WireGuard exit's <code>wireguard://</code> line, or
-  <code>openvpn</code>. The first that answers carries the traffic. See
+  <code>user:pass@host:port</code>, or a WireGuard or OpenVPN exit's <code>wireguard://</code>
+  or <code>openvpn://</code> line. The first that answers carries the traffic. See
   <a href="../upstreams/">Upstreams</a> for backups, IPv6, WireGuard and OpenVPN.</li>
 <li>Changing proxy later is one <code>secret edit upstreams</code> and one restart.</li>
 <li><code>init</code> prints the release's signing key and trusts it. To check even

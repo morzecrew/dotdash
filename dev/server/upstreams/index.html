@@ -2131,7 +2131,7 @@
 
 <h1 id="upstreams">Upstreams<a class="headerlink" href="#upstreams" title="Permanent link">&para;</a></h1>
 <p>Every connection leaves through the ways out the <code>upstreams</code> secret lists:
-proxies, WireGuard exits and an OpenVPN exit, one per line, in order. A
+proxies, WireGuard exits and OpenVPN exits, one per line, in order. A
 change of provider, a backup or a second exit is one edit of that secret.</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>upstreams
 </code></pre></div>
@@ -2139,7 +2139,7 @@ change of provider, a backup or a second exit is one edit of that secret.</p>
 socks5://alice:secret@203.0.113.7:1080            name=isp-a
 https://bob:secret@proxy.example.net:443          name=isp-b
 wireguard://&lt;private key&gt;@198.51.100.4:51820?publickey=&lt;base64&gt;&amp;address=10.34.0.3/32 name=home
-openvpn                                           name=vpn
+openvpn://H4sIAAAAAAACA…                          name=vpn
 </code></pre></div>
 <table>
 <thead>
@@ -2170,8 +2170,8 @@ openvpn                                           name=vpn
 <td>a WireGuard exit, from its wg-quick file (<a href="#wireguard">below</a>)</td>
 </tr>
 <tr>
-<td><code>openvpn</code></td>
-<td>the OpenVPN exit in <code>upstream_openvpn</code> (<a href="#openvpn">below</a>)</td>
+<td><code>openvpn://…</code></td>
+<td>an OpenVPN exit, from its client config (<a href="#openvpn">below</a>)</td>
 </tr>
 </tbody>
 </table>
@@ -2284,37 +2284,52 @@ exports it, into its line:</p>
   <code>0.0.0.0/0, ::/0</code> unless given).</li>
 </ul>
 <h2 id="openvpn">OpenVPN<a class="headerlink" href="#openvpn" title="Permanent link">&para;</a></h2>
-<p>One OpenVPN exit per server: it runs in a container of its own, which the
-<code>openvpn</code> profile adds. Its config is an OpenVPN client config with its keys
-inline (<code>&lt;ca&gt;</code>, <code>&lt;cert&gt;</code>, <code>&lt;key&gt;</code>, <code>&lt;tls-crypt&gt;</code>), and a provider's login goes
-inline too:</p>
+<p>Up to 8 OpenVPN exits, one per line. They run in a container of their own,
+which the <code>openvpn</code> profile adds, each tunnel on its own device. A line holds
+the exit's client config, with its keys inline (<code>&lt;ca&gt;</code>, <code>&lt;cert&gt;</code>, <code>&lt;key&gt;</code>,
+<code>&lt;tls-crypt&gt;</code>), and a provider's login goes inline too:</p>
 <div class="highlight"><pre><span></span><code>&lt;auth-user-pass&gt;
 user
 password
 &lt;/auth-user-pass&gt;
 </code></pre></div>
-<p>Set it, turn the profile on (the container starts while the other lines
-still carry traffic), then add the <code>openvpn</code> line:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>upstream_openvpn<span class="w"> </span>&lt;<span class="w"> </span>client.ovpn
+<p>The <code>openvpn-line</code> task turns the config into its line:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>openvpn-line<span class="w"> </span>--output<span class="w"> </span>--input<span class="w"> </span><span class="nv">conf</span><span class="o">=</span>./client.ovpn
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>openvpn://H4sIAAAAAAACA0vOyUzNK-HlSkktUygpzePl…
+</code></pre></div>
+<p>Before an update from a release without the task, make it by hand:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">printf</span><span class="w"> </span><span class="s1">'openvpn://%s\n'</span><span class="w"> </span><span class="s2">"</span><span class="k">$(</span>gzip<span class="w"> </span>-c<span class="w"> </span>client.ovpn<span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-w0<span class="w"> </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span><span class="s1">'+/'</span><span class="w"> </span><span class="s1">'-_'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span>-d<span class="w"> </span><span class="s1">'='</span><span class="k">)</span><span class="s2">"</span>
+</code></pre></div>
+<p>Add the line, then turn the profile on. Until then the line leads nowhere and
+the other lines carry the traffic:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>upstreams<span class="w">                       </span><span class="c1"># add the line, with name=vpn if you like</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>openvpn<span class="w">    </span><span class="c1"># with others, all of them: xdns,openvpn</span>
-sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>upstreams<span class="w">                       </span><span class="c1"># add: openvpn name=vpn</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>exit-check<span class="w"> </span>--output
 </code></pre></div>
 <ul>
+<li>The line holds the keys: treat it as the config.</li>
 <li>Before OpenVPN starts, its container's default route is replaced by routes
-  to the servers in the config, so nothing leaves around the tunnel, even
-  while it connects. Every <code>apply</code> and <code>doctor</code> checks that it has no default
-  route around the tunnel.</li>
+  to the servers in the configs, so nothing leaves around a tunnel, even
+  while it connects. No tunnel takes a default route: each line's traffic
+  leaves through its own tunnel alone, and goes nowhere while that tunnel is
+  down. Every <code>apply</code> and <code>doctor</code> checks that the container has no default
+  route around the tunnels.</li>
 <li>It runs as root with <code>NET_ADMIN</code> and <code>/dev/net/tun</code>, the one container here
-  that does: OpenVPN takes nothing less.</li>
-<li>A new config in <code>upstream_openvpn</code> takes effect at once: setting it
-  restarts OpenVPN. If OpenVPN exits, its container starts it again within a
-  minute, and nothing leaves through it while it is down.</li>
-<li>The config can't run scripts, or send OpenVPN's log anywhere but
+  that does: OpenVPN takes nothing less. It reads its lines from the
+  <code>upstreams</code> secret, which is the gate's, with <code>DAC_READ_SEARCH</code>.</li>
+<li>An edit of <code>upstreams</code> restarts it, and every tunnel with it. If an OpenVPN
+  exits, it starts again within a minute, and nothing leaves through it while
+  it is down; the other tunnels carry on.</li>
+<li>A config can't run scripts, or send OpenVPN's log anywhere but
   <code>docker logs</code>. The servers' addresses are looked up when the container
   starts: a provider that moves its server is reached again after
   <code>sudo morzer restart vpn</code>.</li>
-<li>To drop it, remove the line, then the profile.</li>
+<li>The server's kernel must be Linux 5.7 or newer, which lets the SOCKS hop
+  beside the tunnels send each line's traffic into its own tunnel without
+  privilege.</li>
+<li>To drop them, turn the profile off, then remove the lines. The other way
+  round, the container restarts with no line to run, and refuses.</li>
 </ul>
 <div class="admonition warning">
 <p class="admonition-title">Exits must be outside the restricted network</p>

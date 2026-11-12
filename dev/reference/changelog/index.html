@@ -2660,7 +2660,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p><code>upstream_mode</code> decides how the upstreams share the traffic: <code>failover</code>, the first line that answers, then the fastest of the rest; <code>fastest</code>; or <code>balance</code>, connections spread over every line that answers. <code>upstream_pin</code> puts a named line first.</p>
 </li>
 <li>
-<p>The <code>wireguard-line</code> task turns a WireGuard exit's wg-quick file into its upstreams line.</p>
+<p>The <code>wireguard-line</code> task turns a WireGuard exit's wg-quick file into its upstreams line, and <code>openvpn-line</code> an OpenVPN exit's client config into its own.</p>
 </li>
 <li>
 <p>Every bundle names what an authority it follows may set: on a server the devices, the shared keys and the server, relay, CDN and pool lists; on a relay the devices and its way to the servers; on a canary its target; on a client its subscription and proxy password. The rest stays the machine's own.</p>
@@ -2687,7 +2687,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p><strong>Breaking:</strong> the server's <code>healthcheck_url</code>, <code>healthcheck6_url</code> and <code>healthcheck_expect</code> are <code>probe_url</code>, <code>probe6_url</code> and <code>probe_expect</code>, as the other bundles name them. An update drops the old values, so set changed ones again after it.</p>
 </li>
 <li>
-<p><strong>Breaking:</strong> every way out is a line of the new <code>upstreams</code> secret, in order: <code>socks5://</code>, <code>socks5+tls://</code>, <code>http://</code> or <code>https://</code> proxies, <code>wireguard://</code> exits and <code>openvpn</code>, any number of each but OpenVPN. Set it before updating, which is refused until it is: <code>sudo morzer secret set upstreams</code>.</p>
+<p><strong>Breaking:</strong> every way out is a line of the new <code>upstreams</code> secret, in order: <code>socks5://</code>, <code>socks5+tls://</code>, <code>http://</code> or <code>https://</code> proxies, <code>wireguard://</code> exits and up to 8 <code>openvpn://</code> exits. Set it before updating, which is refused until it is: <code>sudo morzer secret set upstreams</code>.</p>
 </li>
 <li>
 <p><strong>Breaking:</strong> <code>ipv6=separate</code> sends IPv6 destinations through the lines marked <code>group=ipv6</code> alone, in place of the IPv6 proxy, and a line may serve both groups. <code>upstream_udp</code> now needs every line to carry UDP, tunnels included.</p>
@@ -2714,7 +2714,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="removed">Removed<a class="headerlink" href="#removed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p><strong>Breaking:</strong> the <code>upstream</code>, <code>upstream6</code>, <code>upstream_backup</code> and <code>upstream_wireguard</code> secrets and the <code>upstream_protocol</code>, <code>upstream6_protocol</code> and <code>upstream_backup_protocol</code> parameters with their <code>*_tls</code> ones. Their ways out become lines of <code>upstreams</code>.</p>
+<p><strong>Breaking:</strong> the <code>upstream</code>, <code>upstream6</code>, <code>upstream_backup</code>, <code>upstream_wireguard</code> and <code>upstream_openvpn</code> secrets and the <code>upstream_protocol</code>, <code>upstream6_protocol</code> and <code>upstream_backup_protocol</code> parameters with their <code>*_tls</code> ones. Their ways out become lines of <code>upstreams</code>.</p>
 </li>
 <li>
 <p><strong>Breaking:</strong> the relay's deprecated <code>dotdash_server</code>. <code>dotdash_servers</code> is now required: on a relay that still has only <code>dotdash_server</code>, set <code>dotdash_servers</code> before updating.</p>
