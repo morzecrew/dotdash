@@ -2016,6 +2016,11 @@
 <td>with <code>own-site</code>, <code>acme</code> (Let's Encrypt, over port 80) or <code>internal</code> (Caddy's own CA, for a machine the internet can't reach)</td>
 </tr>
 <tr>
+<td><code>entry_host</code></td>
+<td><code>none</code></td>
+<td>the address devices reach the relay at, its IP without a domain, for <code>relay-entry</code> with no address and for <code>facts</code>; <code>none</code> under <code>own-site</code> is the relay's domain</td>
+</tr>
+<tr>
 <td><code>cdn_hosts</code></td>
 <td><code>none</code></td>
 <td>with <code>own-site</code>, the names devices use for <a href="../../server/cdn/#in-front-of-a-relay">local CDNs</a> in front of the relay, comma-separated; <code>relay-entry</code> adds them to the relay's line</td>
@@ -2145,7 +2150,11 @@ it on.</p>
 <tbody>
 <tr>
 <td><code>relay-entry --output -- &lt;address&gt;</code></td>
-<td>the relay's line for the server's <code>relays</code>, and how a canary checks the relay</td>
+<td>the relay's line for the server's <code>relays</code>, and how a canary checks the relay; with no address, at <code>entry_host</code></td>
+</tr>
+<tr>
+<td><code>facts --output</code></td>
+<td>the same line as JSON, which the relay publishes to an authority it <a href="../../server/operations/#managed-from-elsewhere">follows</a></td>
 </tr>
 </tbody>
 </table>

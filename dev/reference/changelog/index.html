@@ -2621,6 +2621,15 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>The <code>wireguard-line</code> task turns a WireGuard exit's wg-quick file into its upstreams line.</p>
 </li>
 <li>
+<p>Every bundle names what an authority it follows may set: on a server the devices, the shared keys and the server, relay, CDN and pool lists; on a relay the devices and its way to the servers; on a canary its target; on a client its subscription and proxy password. The rest stays the machine's own.</p>
+</li>
+<li>
+<p>A <code>facts</code> task on the server and the relay prints, as JSON, what each tells the authority it follows after every change: a server's domain, ports, public key and encryption string, and a relay's <code>relay-entry</code> line.</p>
+</li>
+<li>
+<p>The relay's <code>entry_host</code> parameter, the address devices reach it at, which <code>relay-entry</code> uses when given none; under <code>own-site</code> it is the relay's domain.</p>
+</li>
+<li>
 <p>When nothing gets out, <code>doctor</code> names each upstreams line it asked by its <code>name=</code>: no answer, refused credentials, a WireGuard peer that did not carry it, or an OpenVPN tunnel that is down.</p>
 </li>
 </ul>

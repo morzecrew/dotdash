@@ -1071,6 +1071,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#managed-from-elsewhere" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Managed from elsewhere
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pin-the-exit-ip" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1871,6 +1882,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#managed-from-elsewhere" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Managed from elsewhere
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#pin-the-exit-ip" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2066,6 +2088,47 @@ bundle.</p>
 sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>update.channel<span class="o">=</span>oci://ghcr.io/morzecrew/dotdash-server:stable
 sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>update.auto_apply<span class="o">=</span><span class="nb">true</span>
 </code></pre></div>
+<h2 id="managed-from-elsewhere">Managed from elsewhere<a class="headerlink" href="#managed-from-elsewhere" title="Permanent link">&para;</a></h2>
+<p>A machine can follow an authority, an operator key that publishes what it
+should hold, as
+<a href="https://morzecrew.github.io/morzer/latest/operating/managing-from-elsewhere/">morzer describes it</a>.
+Each bundle names what an authority may set; everything else stays the
+machine's own.</p>
+<table>
+<thead>
+<tr>
+<th>Bundle</th>
+<th>An authority may set</th>
+<th>It tells the authority (<code>facts</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>server</td>
+<td><code>vless_clients</code>, the shared keys (<code>reality_key</code>, <code>vless_seed</code>, <code>reality_short_id</code>, <code>xhttp_path</code>, <code>kcp_seed</code>, <code>subscription_key</code>), <code>servers</code>, <code>relays</code>, <code>cdn_hosts</code>, <code>pools</code>, <code>subscription</code></td>
+<td>its domain and ports, the REALITY public key and the VLESS encryption string</td>
+</tr>
+<tr>
+<td>relay</td>
+<td><code>vless_clients</code>, <code>dotdash_id</code>, <code>dotdash_encryption</code>, <code>dotdash_short_id</code>, <code>dotdash_servers</code>, <code>dotdash_address</code>, <code>dotdash_port</code>, <code>dotdash_public_key</code>, <code>ipv6</code></td>
+<td>its <code>relay-entry</code> line, at <a href="../../relay/reference/"><code>entry_host</code></a></td>
+</tr>
+<tr>
+<td>canary</td>
+<td>every <code>dotdash_*</code></td>
+<td>nothing</td>
+</tr>
+<tr>
+<td>client</td>
+<td><code>subscription_url</code>, <code>proxy_password</code></td>
+<td>nothing</td>
+</tr>
+</tbody>
+</table>
+<p>The upstreams stay each server's own. A relay's facts carry the short id, and
+with <code>own-site</code> or <code>mkcp</code> the XHTTP path or the mKCP seed: the credentials
+its devices' links carry anyway. <code>sudo morzer task run facts --output</code> prints
+them.</p>
 <h2 id="pin-the-exit-ip">Pin the exit IP<a class="headerlink" href="#pin-the-exit-ip" title="Permanent link">&para;</a></h2>
 <p><code>doctor</code> fails when the provider moves you:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">probe_url</span><span class="o">=</span>https://api.ipify.org<span class="w"> </span><span class="s1">'probe_expect=^203\.0\.113\.7\s*$'</span>
