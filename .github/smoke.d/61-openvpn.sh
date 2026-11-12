@@ -74,6 +74,7 @@ restore() {
   sudo docker rm -f dotdash-rig-ovpnclient >/dev/null 2>&1 || true
   sudo docker start dotdash-rig-upstream dotdash-rig-ovpn >/dev/null 2>&1 || true
   list "${one}" "${good:-} name=vpn" || true
+  reaches "${target}" || true
   sudo morzer config set upstream_pin=none >/dev/null 2>&1 || true
   sudo morzer config set installation.profile=xdns >/dev/null 2>&1 || true
   list "${one}" || true
@@ -188,7 +189,8 @@ echo "${0##*/}: with the proxy stopped, the second OpenVPN line carries a client
 sudo docker stop dotdash-rig-ovpn >/dev/null
 [ -z "$(body "${target}")" ] || die "a client got through with the OpenVPN server stopped"
 out=$(doctor)
-if ! grep -q 'vpn (OpenVPN, tun1): the tunnel is' <<<"${out}" || ! grep -q 'dead (OpenVPN, tun0): the tunnel is down' <<<"${out}"; then
+# doctor cuts a long message short, so the second line's verdict may be too.
+if ! grep -qF 'vpn (OpenVPN, tun1)' <<<"${out}" || ! grep -qF 'dead (OpenVPN, tun0): the tunnel is down' <<<"${out}"; then
   die "doctor does not name each OpenVPN line by its tunnel with the server stopped: ${out}"
 fi
 sudo docker start dotdash-rig-ovpn >/dev/null
@@ -233,7 +235,9 @@ echo "${0##*/}: openvpn killed inside vpn starts again in place, and a client ge
 
 sudo docker start dotdash-rig-upstream >/dev/null
 list "${one}" "${good} name=vpn" || die "could not put the proxy's line back first"
-sudo morzer config set upstream_pin=none >/dev/null || die "could not drop the pin"
+# Once vpn, restarted for the list, is back: an apply meanwhile waits on it.
+reaches "${target}" || { tunnel_logs; die "a client does not reach the target with the proxy's line back"; }
+sudo morzer config set upstream_pin=none >/dev/null || die "could not drop the pin: $(sudo morzer status 2>&1 | tail -n 12)"
 reaches "${target}" || die "a client does not reach the target back on the proxy, with the profile still on"
 sudo morzer config set installation.profile=xdns >/dev/null || die "could not drop the openvpn profile"
 list "${one}" || die "could not switch back to the proxy's line alone"
