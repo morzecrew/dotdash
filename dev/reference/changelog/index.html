@@ -2657,6 +2657,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p><code>direct=false</code> keeps every server's address out of devices' links, configs and subscriptions: devices reach the servers only through relays and CDN hosts, and fetch subscriptions only through own-site relays. <code>dotdash-manager</code> sets it on every server from the roster's <code>direct</code>.</p>
 </li>
 <li>
+<p>A <code>cdn-check</code> task on the server tells whether each CDN in front of it and of its relays is refused a subscription, by fetching a decoy one, with no links in it, through each.</p>
+</li>
+<li>
 <p>An <code>ipv6</code> parameter on the server, the relay and the client: <code>block</code> keeps IPv6 out. The client refuses it before any rule, the relay drops it, and the server resolves names to IPv4 only and blocks IPv6 addresses, so dual-stack sites still work over IPv4.</p>
 </li>
 <li>
@@ -2683,6 +2686,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
+<li>
+<p>The server and own-site relays answer a subscription request a CDN passed on with the site's 404, so a device's links never pass through a CDN, which could read them. They recognise one by the headers a CDN adds, such as <code>X-Forwarded-For</code> and <code>Via</code>.</p>
+</li>
 <li>
 <p><strong>Breaking:</strong> every bundle needs morzer 0.16.0, which health-checks a parameter change and undoes it when the check fails. Update morzer first: an older one refuses the release and changes nothing.</p>
 </li>

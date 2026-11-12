@@ -2170,13 +2170,21 @@ expect the account to be closed.</p>
 </ul>
 <p>The CDN ends one TLS connection and opens another, so it sees the requests'
 paths and headers. VLESS Encryption keeps what they carry from it.</p>
-<p>Don't give devices their subscription URL through the CDN
-(<code>https://cdn.example.net/&lt;token&gt;</code>), although it would answer. The CDN would
-read it in the clear: every link, the device's keys, every relay and CDN name.
-One request to the provider would then list every way in. A
-<a href="../../relay/install/#6-devices">relay with its own site</a> serves the
-subscription inside the restricted network with nothing in between reading
-it.</p>
+<p>A CDN is refused subscriptions. A subscription read in the clear gives away
+every link, the device's keys and every relay and CDN name, so one request
+to the provider would list every way in. The server and
+<a href="../../relay/install/#6-devices">relays with their own site</a> answer a
+subscription request a CDN passed on with the site's own 404. They recognise
+one by the headers a CDN adds to say so (<code>X-Forwarded-For</code>, <code>Via</code>, <code>Forwarded</code>
+and the like), which a device asking directly never sends. A CDN that adds
+none of them would still get one, so check yours:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>cdn-check<span class="w"> </span>--output
+</code></pre></div>
+<p>It fetches a decoy subscription, with no links in it, through each CDN in
+front of this server and of its relays, and prints <code>refused</code> for each, or
+<code>SERVES SUBSCRIPTIONS</code> for one that got it. Keep such a CDN's name away from
+devices' subscriptions: an own-site relay serves them inside the restricted
+network with nothing in between reading them.</p>
 <h3 id="in-front-of-a-relay">In front of a relay<a class="headerlink" href="#in-front-of-a-relay" title="Permanent link">&para;</a></h3>
 <p>A CDN can front a <a href="../../relay/install/#1-pick-the-site">relay with a site of its own</a>
 instead of this server. The CDN's account then names the relay, which is
