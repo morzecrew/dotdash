@@ -2093,8 +2093,10 @@ address agree, as they do for any real site. It needs:</p>
 <li>in step 3, <code>--domain relay.example.net --profile own-site</code> in place of
   <code>--set site=…</code>.</li>
 </ul>
-<p>Your own pages go in <code>/srv/dotdash-relay</code> (the <code>site_dir</code> parameter); without
-them it serves a plain bundled page titled with the domain.</p>
+<p>Your own pages go in <code>/srv/dotdash-relay</code>; without them it serves a plain
+bundled page titled with the domain. Better still, put an app behind it
+(<code>cover</code>), as on a <a href="../../server/cover-site/#an-app-instead-of-pages">server</a>,
+on the network <code>dotdash-relay_default</code>.</p>
 <p><strong>A site next to the relay.</strong> No domain needed: the relay borrows the name of
 a real site, and probes get that site's own handshake. But that name's DNS
 points at the site, not the relay, and an observer that compares the two

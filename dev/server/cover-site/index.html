@@ -766,6 +766,23 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Cover site
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="././" class="md-nav__link md-nav__link--active">
         
   
@@ -781,6 +798,48 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#your-own-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Your own files
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#an-app-instead-of-pages" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        An app instead of pages
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1808,6 +1867,11 @@
                       
                     
                     
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
                   
                   <div class="md-sidebar__inner">
                     
@@ -1819,6 +1883,36 @@
   
     
   
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#your-own-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Your own files
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#an-app-instead-of-pages" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        An app instead of pages
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -1950,14 +2044,66 @@
 <h1 id="cover-site">Cover site<a class="headerlink" href="#cover-site" title="Permanent link">&para;</a></h1>
 <p>Anyone who opens <code>https://example.com</code>, or probes 443, gets the cover site.
 The bundled page differs between servers only in its title, so one server
-seen reveals the others. Give each its own: static files in <code>/srv/dotdash</code>
-(the <code>site_dir</code> parameter), readable by uid 65532. Caddy serves them as they
-change, with no restart, and falls back to the bundled page for a file that
-isn't there.</p>
+seen reveals the others. Give each a site of its own. One parameter, <code>cover</code>,
+says what serves it:</p>
+<ul>
+<li><code>pages</code>, the default: your own files, then the bundled page;</li>
+<li>an app's URL: your own files, then the app.</li>
+</ul>
+<h2 id="your-own-files">Your own files<a class="headerlink" href="#your-own-files" title="Permanent link">&para;</a></h2>
+<p>Put static files in <code>/srv/dotdash</code>, readable by uid 65532. Caddy serves them
+as they change, with no restart. For a path with no file, it serves the rest
+of the site: the bundled page, or the app.</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/srv/dotdash
 sudo<span class="w"> </span>cp<span class="w"> </span>-r<span class="w"> </span>./my-site/.<span class="w"> </span>/srv/dotdash/
 sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </span>a+rX<span class="w"> </span>/srv/dotdash
 </code></pre></div>
+<p>To keep the files elsewhere, make <code>/srv/dotdash</code> a symlink to that directory.</p>
+<h2 id="an-app-instead-of-pages">An app instead of pages<a class="headerlink" href="#an-app-instead-of-pages" title="Permanent link">&para;</a></h2>
+<p>Static pages are what a probe or a provider's reviewer expects least from a
+busy server. A live app, with its own routes, API answers and login wall,
+looks like what it is: a site in use. Name the app in <code>cover</code>. Caddy then
+passes it every request except a subscription's, XHTTP's and those for your
+own files.</p>
+<p>How Caddy reaches the app depends on where it runs:</p>
+<ul>
+<li>
+<p><strong>A container on Caddy's network</strong>, <code>dotdash_edge</code>, by its name. This is the
+  one to prefer: the app needs no published port, and it never meets Xray,
+  which is on another network.</p>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--name<span class="w"> </span>cover-app<span class="w"> </span>--restart<span class="w"> </span>unless-stopped<span class="w"> </span>--network<span class="w"> </span>dotdash_edge<span class="w"> </span>&lt;image&gt;
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">cover</span><span class="o">=</span>http://cover-app:8080
+</code></pre></div>
+<p>For a container that's already running, attach it instead:
+<code>docker network connect dotdash_edge &lt;container&gt;</code>. In a Compose file of its
+own, list <code>dotdash_edge</code> under its <code>networks</code> as <code>external: true</code>, so the
+attachment survives the app being re-created.</p>
+</li>
+<li>
+<p><strong>Anything published on a port of the host,</strong> such as a container started
+  with <code>-p 8080:8080</code>, as <code>host.docker.internal</code>:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">cover</span><span class="o">=</span>http://host.docker.internal:8080
+</code></pre></div>
+<p>The app must listen where containers can reach the host. That is all
+addresses, as <code>-p 8080:8080</code> publishes, or Docker's bridge address, as
+<code>-p 172.17.0.1:8080:8080</code> publishes. Loopback alone, <code>127.0.0.1</code>, is
+unreachable from a container. Publishing on all addresses also opens the
+port to the internet, so close it in the firewall, or publish on the
+bridge address only.</p>
+</li>
+</ul>
+<p>Either way:</p>
+<ul>
+<li>The app gets requests for this domain as Host, as behind any reverse proxy.</li>
+<li><code>doctor</code> checks that the app answers, asking it from inside Caddy, as Caddy
+  does. Any HTTP answer counts, a 401 from a login wall included. With no
+  answer, visitors get a 502, so the cover-site check fails, and
+  <code>config set cover=…</code> is undone when the app it names doesn't answer.</li>
+<li><code>cover=pages</code> goes back to pages.</li>
+</ul>
+<p>Pick something people run on servers like this one, such as a wiki, a file
+share or a dashboard behind a login, and give it content. The same app on
+every server would link them, as the bundled page does, so vary it.</p>
 
 
 

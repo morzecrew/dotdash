@@ -2048,9 +2048,9 @@
 <td>without the <code>own-site</code> profile, a site next to the relay, in its own network, on TLS 1.3 and HTTP/2: devices send its name, and probes get its handshake</td>
 </tr>
 <tr>
-<td><code>site_dir</code></td>
-<td><code>/srv/dotdash-relay</code></td>
-<td>with <code>own-site</code>, your own pages, served in place of the bundled one; readable by uid 65532</td>
+<td><code>cover</code></td>
+<td><code>pages</code></td>
+<td>with <code>own-site</code>, what the site serves past your own files in <code>/srv/dotdash-relay</code>: <code>pages</code>, the bundled page, or your <a href="../../server/cover-site/#an-app-instead-of-pages">app</a>'s URL, such as <code>http://cover-app:8080</code> on the network <code>dotdash-relay_default</code> or <code>http://host.docker.internal:8080</code></td>
 </tr>
 <tr>
 <td><code>cert_issuer</code></td>
