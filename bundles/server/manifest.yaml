@@ -204,7 +204,7 @@ images:
   # hooks/policy reads the rendered config with it, run with no network, so
   # the host needs no jq of its own.
   jq: ghcr.io/jqlang/jq:1.8.1@sha256:4f34c6d23f4b1372ac789752cc955dc67c2ae177eb1b5860b75cdc5091ce6f91
-  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:67e1c89f35c744e95b8294d85d7edcac532c75221f8b309c0c5853f6139b5ba2
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:9d6c0112c03e921a786f9cbaf2efd65e89bf0bbd7027015b81abb535c58a2d19
   caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
   # The openvpn profile's OpenVPN client, whose kill switch drops the default
   # routes before anything runs (platform-images, images/openvpn).
