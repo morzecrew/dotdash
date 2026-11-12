@@ -4,7 +4,8 @@
 # once the subscription service reports healthy; a guessed URL gets the site's
 # own 404; a device whose line is deleted loses its URL, and a device added
 # gets one, each as soon as the secret is set; rotating subscription_key moves
-# every URL; and with it off, none answers.
+# every URL; and with it off, none answers. A request a CDN marks as passed on
+# gets the site's 404.
 # After 45-revocation.sh, so the links served are those of its rotated keys.
 # No URL or link is printed: a failure names the step, not the credentials.
 # shellcheck source=/dev/null
@@ -68,6 +69,22 @@ echo "${0##*/}: client-config prints a device's URL alone, and it serves exactly
 if sudo grep -q 'Cache-Control no-store' /opt/dotdash/current/caddy/Caddyfile; then
   grep -qix 'cache-control: no-store' <<<"$(headers "${url}")" || die "a subscription is served without Cache-Control: no-store"
   echo "${0##*/}: a subscription is served no-store, so nothing between keeps a copy"
+fi
+
+# A request a CDN passed on, which says so in a header, gets the site's 404;
+# cdn-check, with no CDN set, says there is none.
+if sudo grep -q 'not header Via' /opt/dotdash/current/caddy/Caddyfile; then
+  marked() { # <header>: the status of the URL asked with it
+    curl -s -o /dev/null -w '%{http_code}' --max-time 10 --cacert /rig/clients/root.pem \
+      --resolve "${domain}:443:127.0.0.1" -H "$1" "${url}" || true
+  }
+  for h in 'X-Forwarded-For: 203.0.113.9' 'Via: 1.1 edge' 'X-Real-IP: 203.0.113.9' 'Forwarded: for=203.0.113.9'; do
+    [ "$(marked "$h")" = 404 ] || die "a subscription request marked as passed on (${h%%:*}) is served"
+  done
+  [ -n "$(fetch "${url}")" ] || die "the subscription no longer answers a device asking directly"
+  grep -qx 'no CDN in front of this server or its relays' <<<"$(sudo morzer task run cdn-check --output)" ||
+    die "cdn-check does not say there is no CDN"
+  echo "${0##*/}: a subscription request a CDN marks as passed on gets the site's 404"
 fi
 
 # An own-site relay fetches the subscription for devices inside the
