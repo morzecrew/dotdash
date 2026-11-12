@@ -239,8 +239,6 @@ secrets:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/kcp_seed
   upstreams:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstreams
-  upstream_openvpn:
-    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstream_openvpn
   reality_key:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/reality_key
   reality_short_id:

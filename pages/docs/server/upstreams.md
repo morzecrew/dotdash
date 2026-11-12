@@ -1,7 +1,7 @@
 # Upstreams
 
 Every connection leaves through the ways out the `upstreams` secret lists:
-proxies, WireGuard exits and an OpenVPN exit, one per line, in order. A
+proxies, WireGuard exits and OpenVPN exits, one per line, in order. A
 change of provider, a backup or a second exit is one edit of that secret.
 
 ```sh
@@ -13,7 +13,7 @@ sudo morzer secret edit upstreams
 socks5://alice:secret@203.0.113.7:1080            name=isp-a
 https://bob:secret@proxy.example.net:443          name=isp-b
 wireguard://<private key>@198.51.100.4:51820?publickey=<base64>&address=10.34.0.3/32 name=home
-openvpn                                           name=vpn
+openvpn://H4sIAAAAAAACA…                          name=vpn
 ```
 
 | A line | Way out |
@@ -23,7 +23,7 @@ openvpn                                           name=vpn
 | `http://[user:pass@]host:port` | an HTTP proxy |
 | `https://[user:pass@]host:port` | an HTTP proxy over TLS |
 | `wireguard://…` | a WireGuard exit, from its wg-quick file ([below](#wireguard)) |
-| `openvpn` | the OpenVPN exit in `upstream_openvpn` ([below](#openvpn)) |
+| `openvpn://…` | an OpenVPN exit, from its client config ([below](#openvpn)) |
 
 - After the scheme, a proxy is `user:pass@host:port`, or `host:port` with no
   login. The password may contain `:` and `@`, and is not percent-encoded. An
@@ -117,10 +117,10 @@ wireguard://oIpc…%3D@vpn.example:51820?publickey=n9B5…%3D&address=10.34.0.3%
 
 ## OpenVPN
 
-One OpenVPN exit per server: it runs in a container of its own, which the
-`openvpn` profile adds. Its config is an OpenVPN client config with its keys
-inline (`<ca>`, `<cert>`, `<key>`, `<tls-crypt>`), and a provider's login goes
-inline too:
+Up to 8 OpenVPN exits, one per line. They run in a container of their own,
+which the `openvpn` profile adds, each tunnel on its own device. A line holds
+the exit's client config, with its keys inline (`<ca>`, `<cert>`, `<key>`,
+`<tls-crypt>`), and a provider's login goes inline too:
 
 ```text
 <auth-user-pass>
@@ -129,30 +129,53 @@ password
 </auth-user-pass>
 ```
 
-Set it, turn the profile on (the container starts while the other lines
-still carry traffic), then add the `openvpn` line:
+The `openvpn-line` task turns the config into its line:
 
 ```sh
-sudo morzer secret set upstream_openvpn < client.ovpn
+sudo morzer task run openvpn-line --output --input conf=./client.ovpn
+```
+
+```text
+openvpn://H4sIAAAAAAACA0vOyUzNK-HlSkktUygpzePl…
+```
+
+Before an update from a release without the task, make it by hand:
+
+```sh
+printf 'openvpn://%s\n' "$(gzip -c client.ovpn | base64 -w0 | tr '+/' '-_' | tr -d '=')"
+```
+
+Add the line, then turn the profile on. Until then the line leads nowhere and
+the other lines carry the traffic:
+
+```sh
+sudo morzer secret edit upstreams                       # add the line, with name=vpn if you like
 sudo morzer config set installation.profile=openvpn    # with others, all of them: xdns,openvpn
-sudo morzer secret edit upstreams                       # add: openvpn name=vpn
 sudo morzer task run exit-check --output
 ```
 
+- The line holds the keys: treat it as the config.
 - Before OpenVPN starts, its container's default route is replaced by routes
-  to the servers in the config, so nothing leaves around the tunnel, even
-  while it connects. Every `apply` and `doctor` checks that it has no default
-  route around the tunnel.
+  to the servers in the configs, so nothing leaves around a tunnel, even
+  while it connects. No tunnel takes a default route: each line's traffic
+  leaves through its own tunnel alone, and goes nowhere while that tunnel is
+  down. Every `apply` and `doctor` checks that the container has no default
+  route around the tunnels.
 - It runs as root with `NET_ADMIN` and `/dev/net/tun`, the one container here
-  that does: OpenVPN takes nothing less.
-- A new config in `upstream_openvpn` takes effect at once: setting it
-  restarts OpenVPN. If OpenVPN exits, its container starts it again within a
-  minute, and nothing leaves through it while it is down.
-- The config can't run scripts, or send OpenVPN's log anywhere but
+  that does: OpenVPN takes nothing less. It reads its lines from the
+  `upstreams` secret, which is the gate's, with `DAC_READ_SEARCH`.
+- An edit of `upstreams` restarts it, and every tunnel with it. If an OpenVPN
+  exits, it starts again within a minute, and nothing leaves through it while
+  it is down; the other tunnels carry on.
+- A config can't run scripts, or send OpenVPN's log anywhere but
   `docker logs`. The servers' addresses are looked up when the container
   starts: a provider that moves its server is reached again after
   `sudo morzer restart vpn`.
-- To drop it, remove the line, then the profile.
+- The server's kernel must be Linux 5.7 or newer, which lets the SOCKS hop
+  beside the tunnels send each line's traffic into its own tunnel without
+  privilege.
+- To drop them, turn the profile off, then remove the lines. The other way
+  round, the container restarts with no line to run, and refuses.
 
 !!! warning "Exits must be outside the restricted network"
     WireGuard and OpenVPN are easy to detect and block. Between this server

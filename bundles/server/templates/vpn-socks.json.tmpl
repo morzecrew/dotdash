@@ -1,27 +1,48 @@
 {{- /*
 The SOCKS hop of the openvpn profile, in the OpenVPN client's namespace, where
-the only route out is the tunnel: the gate dials it at vpn:1080, and its one
-direct outbound sends what it is given into the tunnel. Private destinations
-are blocked, so it cannot reach the egress network's other containers. A
-loopback HTTP inbound is the healthcheck's probe, which proves the tunnel
-carries traffic, not only that it is up. Rendered under every profile, as
-templates cannot drop a file; only the openvpn profile mounts it.
+no route leads out: what reaches port 1080+k, from the gate's k-th openvpn://
+line, leaves by a direct outbound bound to tun<k> (sockopt.interface, Linux
+5.7 or newer for a user without capabilities), the device of that line's
+tunnel, and goes nowhere while it is down. Eight, as many lines as the
+upstreams secret may hold. Private destinations are blocked, so it cannot
+reach the egress network's other containers. Rendered under every profile,
+as templates cannot drop a file; only the openvpn profile mounts it.
 */ -}}
 {
   "log": {"loglevel": "{{ .Parameters.log_level }}", "access": "none", "dnsLog": false},
   "inbounds": [
-    {"tag": "egress", "listen": "0.0.0.0", "port": 1080, "protocol": "socks",
-     "settings": {"auth": "noauth", "udp": true}},
-    {"tag": "probe", "listen": "127.0.0.1", "port": 10809, "protocol": "http"}
+    {"tag": "in0", "listen": "0.0.0.0", "port": 1080, "protocol": "socks", "settings": {"auth": "noauth", "udp": true}},
+    {"tag": "in1", "listen": "0.0.0.0", "port": 1081, "protocol": "socks", "settings": {"auth": "noauth", "udp": true}},
+    {"tag": "in2", "listen": "0.0.0.0", "port": 1082, "protocol": "socks", "settings": {"auth": "noauth", "udp": true}},
+    {"tag": "in3", "listen": "0.0.0.0", "port": 1083, "protocol": "socks", "settings": {"auth": "noauth", "udp": true}},
+    {"tag": "in4", "listen": "0.0.0.0", "port": 1084, "protocol": "socks", "settings": {"auth": "noauth", "udp": true}},
+    {"tag": "in5", "listen": "0.0.0.0", "port": 1085, "protocol": "socks", "settings": {"auth": "noauth", "udp": true}},
+    {"tag": "in6", "listen": "0.0.0.0", "port": 1086, "protocol": "socks", "settings": {"auth": "noauth", "udp": true}},
+    {"tag": "in7", "listen": "0.0.0.0", "port": 1087, "protocol": "socks", "settings": {"auth": "noauth", "udp": true}}
   ],
   "outbounds": [
-    {"tag": "tunnel", "protocol": "freedom"},
+    {"tag": "tun0", "protocol": "freedom", "streamSettings": {"sockopt": {"interface": "tun0"}}},
+    {"tag": "tun1", "protocol": "freedom", "streamSettings": {"sockopt": {"interface": "tun1"}}},
+    {"tag": "tun2", "protocol": "freedom", "streamSettings": {"sockopt": {"interface": "tun2"}}},
+    {"tag": "tun3", "protocol": "freedom", "streamSettings": {"sockopt": {"interface": "tun3"}}},
+    {"tag": "tun4", "protocol": "freedom", "streamSettings": {"sockopt": {"interface": "tun4"}}},
+    {"tag": "tun5", "protocol": "freedom", "streamSettings": {"sockopt": {"interface": "tun5"}}},
+    {"tag": "tun6", "protocol": "freedom", "streamSettings": {"sockopt": {"interface": "tun6"}}},
+    {"tag": "tun7", "protocol": "freedom", "streamSettings": {"sockopt": {"interface": "tun7"}}},
     {"tag": "block", "protocol": "blackhole"}
   ],
   "routing": {
     "rules": [
       {"ip": ["geoip:private"], "outboundTag": "block"},
-      {"network": "tcp,udp", "outboundTag": "tunnel"}
+      {"inboundTag": ["in0"], "outboundTag": "tun0"},
+      {"inboundTag": ["in1"], "outboundTag": "tun1"},
+      {"inboundTag": ["in2"], "outboundTag": "tun2"},
+      {"inboundTag": ["in3"], "outboundTag": "tun3"},
+      {"inboundTag": ["in4"], "outboundTag": "tun4"},
+      {"inboundTag": ["in5"], "outboundTag": "tun5"},
+      {"inboundTag": ["in6"], "outboundTag": "tun6"},
+      {"inboundTag": ["in7"], "outboundTag": "tun7"},
+      {"network": "tcp,udp", "outboundTag": "block"}
     ]
   }
 }

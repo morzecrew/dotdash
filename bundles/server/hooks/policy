@@ -14,7 +14,8 @@
 #   - the gate forwards its public inbounds to Xray only, carries Xray's hops
 #     to the upstreams lines alone, through balancers that pick among those
 #     lines and nothing else, and blocks everything else; its upstreams file
-#     is the release's own, and the list holds what its settings need;
+#     is the release's own, and the list holds what its settings need, with
+#     no more OpenVPN lines than the tunnels' SOCKS hop carries;
 #   - Xray is on internal networks only, so it has no route out at all, and
 #     publishes nothing; the gate publishes only https_port and, where it
 #     forwards them, 53 for the DNS tunnel, xhttp_reality_port and kcp_port,
@@ -132,16 +133,19 @@ want='{"outbounds": {"$upstreams": "/run/secrets/upstreams"}}'
 # URL, goes into a message: the file holds credentials.
 upstreams=${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstreams
 if [ -r "${upstreams}" ]; then
-  tunnels=0 v4=0 v6=0
+  tunnels=0 openvpn=0 v4=0 v6=0
   while read -r url opts || [ -n "${url:-}" ]; do
     case ${url} in '' | '#'*) continue ;; esac
-    case ${url} in wireguard://* | openvpn) tunnels=$((tunnels + 1)) ;; esac
+    case ${url} in wireguard://* | openvpn | openvpn://*) tunnels=$((tunnels + 1)) ;; esac
+    case ${url} in openvpn | openvpn://*) openvpn=$((openvpn + 1)) ;; esac
     groups=upstream
     for o in ${opts}; do case ${o} in group=*) groups=${o#group=} ;; esac; done
     case ",${groups}," in *,upstream,*) v4=$((v4 + 1)) ;; esac
     case ",${groups}," in *,ipv6,*) v6=$((v6 + 1)) ;; esac
   done <"${upstreams}"
   [ "${v4}" -gt 0 ] || violations+=$'\n'"no upstreams line is in the upstream group, which carries everything but IPv6"
+  # vpn-socks listens for eight (templates/vpn-socks.json.tmpl).
+  [ "${openvpn}" -le 8 ] || violations+=$'\n'"upstreams has ${openvpn} OpenVPN lines, and the tunnels' SOCKS hop carries 8"
   if [ "${DOTDASH_PARAM_RESOLVE:-gateway}" = upstream ] && [ "${tunnels}" -gt 0 ]; then
     violations+=$'\n'"resolve=upstream, but ${tunnels} upstreams line(s) are a WireGuard or OpenVPN tunnel, which resolves no names"
   fi
@@ -163,11 +167,12 @@ while IFS='|' read -r name privileged readonly user network caps ports; do
   [ "${readonly}" = true ] || violations+=$'\n'"${name} has a writable root filesystem"
   [ "${network}" != host ] || violations+=$'\n'"${name} is on the host's network"
   if [ "${name}" = vpn ]; then
-    # The OpenVPN client (the openvpn profile): root with NET_ADMIN alone,
-    # and, its kill switch holding, no default route but into the tunnel.
-    # Docker reports it with or without the CAP_ prefix, by version.
-    [ "${caps//CAP_/}" = '["NET_ADMIN"]' ] ||
-      violations+=$'\n'"vpn adds capabilities ${caps}, not NET_ADMIN alone"
+    # The OpenVPN client (the openvpn profile): root with NET_ADMIN and
+    # DAC_READ_SEARCH alone, and, its kill switch holding, no default route
+    # but into a tunnel. Docker reports them with or without the CAP_ prefix,
+    # by version, in any order.
+    [ "$(tr -d '[]" ' <<<"${caps//CAP_/}" | tr ',' '\n' | sort | paste -sd,)" = DAC_READ_SEARCH,NET_ADMIN ] ||
+      violations+=$'\n'"vpn adds capabilities ${caps}, not NET_ADMIN and DAC_READ_SEARCH alone"
     vpn_default=$(docker compose -p "${project}" exec -T vpn ip -4 route show default 2>/dev/null || true)
     case ${vpn_default} in '' | *" dev tun"*) ;; *) violations+=$'\n'"vpn has a default route around the tunnel: ${vpn_default}" ;; esac
   else

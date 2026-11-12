@@ -28,21 +28,26 @@ cover_site() {
 
 upstreams=${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstreams
 
-# ask_line <label> <url> <probe>: asks one upstreams line directly. Prints what
-# is wrong with it and returns 1, or returns 0 when it answers. Never prints
-# the URL, which holds the line's credentials.
+# ask_line <label> <line> <probe> <k>: asks one upstreams line directly, k
+# its number among the OpenVPN lines. Prints what is wrong with it and returns
+# 1, or returns 0 when it answers. Never prints the URL, which holds the
+# line's credentials.
 ask_line() {
   local label=$1 line=$2 url=$3 err errf rc code scheme
   case $line in
   wireguard://*)
     echo "$label (WireGuard): its peer did not carry it, and has no proxy to ask: it may be down, unreachable from here, or not know this key"
     return 1 ;;
-  openvpn)
-    local t
-    if ! t=$(docker compose -p "$project" exec -T vpn /usr/local/bin/openvpn-entrypoint healthcheck 2>&1); then
-      echo "$label (OpenVPN): the tunnel is down (${t##*unhealthy: }): its server in upstream_openvpn may be down, unreachable from here, or refusing this config"
+  openvpn | openvpn://*)
+    local t k=$4
+    # Not from stdin, which is why()'s loop over the list: exec would read
+    # the lines after this one.
+    if ! docker compose -p "$project" ps --format '{{.Service}}' </dev/null | grep -qx vpn; then
+      echo "$label (OpenVPN): the openvpn profile is off, so nothing carries the line"
+    elif ! t=$(docker compose -p "$project" exec -T vpn /usr/local/bin/openvpn-entrypoint healthcheck "$k" </dev/null 2>&1); then
+      echo "$label (OpenVPN, tun$k): the tunnel is down (${t##*unhealthy: }): its server may be down, unreachable from here, or refusing its config"
     else
-      echo "$label (OpenVPN): the tunnel is up, so the fault is past its server, or in the SOCKS hop beside it (vpn-socks)"
+      echo "$label (OpenVPN, tun$k): the tunnel is up, so the fault is past its server, or in the SOCKS hop beside it (vpn-socks)"
     fi
     return 1 ;;
   esac
@@ -116,10 +121,13 @@ why() {
   esac
   local probe=${DOTDASH_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
   [ "$group" = upstream ] || probe=${DOTDASH_PARAM_PROBE6_URL:-http://api6.ipify.org}
-  local n=0 asked=0 left=0 failed=() answered=() verdict line opts name groups o
+  local n=0 asked=0 left=0 ovpn=0 k failed=() answered=() verdict line opts name groups o
   while read -r line opts || [ -n "${line:-}" ]; do
     n=$((n + 1))
     case $line in '' | '#'*) continue ;; esac
+    # The k-th OpenVPN line in the file, whatever its groups, runs on tun<k>.
+    k=$ovpn
+    case $line in openvpn | openvpn://*) ovpn=$((ovpn + 1)) ;; esac
     name="line $n" groups=upstream
     for o in $opts; do
       case $o in name=*) name=${o#name=} ;; group=*) groups=${o#group=} ;; esac
@@ -127,7 +135,7 @@ why() {
     case ",$groups," in *",$group,"*) ;; *) continue ;; esac
     if [ "$asked" -ge 2 ]; then left=$((left + 1)); continue; fi
     asked=$((asked + 1))
-    if verdict=$(ask_line "$name" "$line" "$probe"); then answered+=("$name"); else failed+=("$verdict"); fi
+    if verdict=$(ask_line "$name" "$line" "$probe" "$k"); then answered+=("$name"); else failed+=("$verdict"); fi
   done <"$upstreams"
   if [ "$asked" = 0 ]; then
     echo "no upstreams line is in group $group: $out"

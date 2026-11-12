@@ -25,15 +25,15 @@ runtimes:
       # VLESS over XHTTP with REALITY on xhttp_reality_port, beside the two
       # transports every install has.
       xhttp-reality: [compose/xhttp-reality.yaml]
-      # An OpenVPN client (vpn) and a SOCKS hop in its namespace (vpn-socks),
-      # which an `openvpn` line of the upstreams secret names: Xray has no
-      # OpenVPN of its own, and one client runs one tunnel.
+      # An OpenVPN client (vpn), with a tunnel for each openvpn:// line of the
+      # upstreams secret, and a SOCKS hop in its namespace (vpn-socks), which
+      # the gate dials for them: Xray has no OpenVPN of its own.
       openvpn: [compose/openvpn.yaml]
       # VLESS over mKCP on kcp_port: UDP, no TLS underneath, its packets
       # encrypted under kcp_seed and dressed in a kcp_header.
       mkcp: [compose/mkcp.yaml]
     # installation.profile=xdns,xhttp-reality runs both; any of them with
-    # openvpn, such as xdns,openvpn, adds the OpenVPN line.
+    # openvpn, such as xdns,openvpn, adds the OpenVPN tunnels.
     combinable: [xdns, xhttp-reality, openvpn, mkcp]
     options:
       project: dotdash
@@ -204,11 +204,11 @@ images:
   # hooks/policy reads the rendered config with it, run with no network, so
   # the host needs no jq of its own.
   jq: ghcr.io/jqlang/jq:1.8.1@sha256:4f34c6d23f4b1372ac789752cc955dc67c2ae177eb1b5860b75cdc5091ce6f91
-  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:9d6c0112c03e921a786f9cbaf2efd65e89bf0bbd7027015b81abb535c58a2d19
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:2089e0d4acee59b3999606fb18ff5d63e327bec3bd0ececa034b3e986867b5b9
   caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
   # The openvpn profile's OpenVPN client, whose kill switch drops the default
   # routes before anything runs (platform-images, images/openvpn).
-  openvpn: ghcr.io/morzecrew/openvpn:2.6.20@sha256:12a7d3fe60c726d15c04f500fc1ad5696bc7e8a1ce0bfc41962267d1e2f31276
+  openvpn: ghcr.io/morzecrew/openvpn:2.6.20@sha256:30f3dd709b32475b0d90ce6cce884dacfea60dfdeab134d609c29b8c38e57a94
 
 # Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);
 # its content is JSON, which is also YAML. Secrets are not in it: it holds
@@ -282,6 +282,15 @@ tasks:
     inputs:
       conf:
         description: The WireGuard exit's wg-quick client config, as a provider or router exports it
+        max_size: 64KiB
+    timeout: 1m
+  openvpn-line:
+    description: "Print the upstreams line for an OpenVPN exit from its client config, given as --input conf=<file>, keys and any login inline (output is its keys)"
+    service: client-config
+    command: ["sh", "/task/openvpn-line.sh", "{inputs.conf}"]
+    inputs:
+      conf:
+        description: The OpenVPN exit's client config, as a provider or router exports it
         max_size: 64KiB
     timeout: 1m
   facts:
