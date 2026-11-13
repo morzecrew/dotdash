@@ -7,6 +7,9 @@ set -euo pipefail
 die() { echo "e2e: $*" >&2; exit 1; }
 
 apk add --no-cache --quiet python3 age
+python3 -m venv /rig/venv
+/rig/venv/bin/pip install --quiet --disable-pip-version-check -r /rig/manager-dist/requirements.txt /rig/manager-dist/*.whl ||
+  die "could not install the manager"
 m=/rig/manager t=/rig/state
 mkdir -p "${m}" "${t}"
 authority=$(morzer state key generate "${m}/authority.key")
@@ -34,7 +37,7 @@ name = "a"
 id = "${id}"
 key = "${key}"
 EOF
-mgr() { python3 /rig/dotdash_manager.py --roster "${m}/network.toml" "$@"; }
+mgr() { /rig/venv/bin/dotdash-manager --roster "${m}/network.toml" "$@"; }
 
 out=$(mgr sync) || die "the first sync failed: ${out}"
 grep -q '^a: published$' <<<"${out}" || die "the first sync published nothing for the server: ${out}"
@@ -44,8 +47,8 @@ sudo morzer config set sync.enabled=true >/dev/null
 sudo morzer sync now || die "the server did not apply the document: $(sudo morzer sync status 2>&1)"
 sudo morzer fleet publish >/dev/null || die "the server could not publish its row and facts"
 
-pbk=$(python3 -c "import json, sys; sys.path.insert(0, '/rig'); import dotdash_manager as d; \
-print(d.public_key(json.load(open('${m}/dotdash-state.json'))['keys']['reality_key']))")
+pbk=$(/rig/venv/bin/python -c "import json; from dotdash_manager.state import public_key; \
+print(public_key(json.load(open('${m}/dotdash-state.json'))['keys']['reality_key']))")
 links=$(sudo morzer task run client-config --output -- --full)
 grep -q '^== phone ==$' <<<"${links}" || die "the server's devices are not the roster's: ${links}"
 grep 'security=reality' <<<"${links}" | grep -qF "pbk=${pbk}" || die "the server's links do not carry the manager's key"
