@@ -68,7 +68,11 @@ to the provider would list every way in. The server and
 subscription request a CDN passed on with the site's own 404. They recognise
 one by the headers a CDN adds to say so (`X-Forwarded-For`, `Via`, `Forwarded`
 and the like), which a device asking directly never sends. A CDN that adds
-none of them would still get one, so check yours:
+none of them would still get one. If yours lets you add headers to its
+requests to the origin, add one of them, so every request it passes on says
+so: `CDN-Loop` is the one made for this, with any value, such as
+`CDN-Loop: edge`. Keep the value plain: the CDN's account shows it. Then
+check:
 
 ```sh
 sudo morzer task run cdn-check --output
