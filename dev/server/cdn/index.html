@@ -2208,7 +2208,11 @@ to the provider would list every way in. The server and
 subscription request a CDN passed on with the site's own 404. They recognise
 one by the headers a CDN adds to say so (<code>X-Forwarded-For</code>, <code>Via</code>, <code>Forwarded</code>
 and the like), which a device asking directly never sends. A CDN that adds
-none of them would still get one, so check yours:</p>
+none of them would still get one. If yours lets you add headers to its
+requests to the origin, add one of them, so every request it passes on says
+so: <code>CDN-Loop</code> is the one made for this, with any value, such as
+<code>CDN-Loop: edge</code>. Keep the value plain: the CDN's account shows it. Then
+check:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>cdn-check<span class="w"> </span>--output
 </code></pre></div>
 <p>It fetches a decoy subscription, with no links in it, through each CDN in
