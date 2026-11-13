@@ -18,6 +18,7 @@ nav = [
         "server/device-dns.md",
         { "Options" = [
             "server/cover-site.md",
+            "server/certificates.md",
             "server/dns-tunnel.md",
             "server/xhttp-reality.md",
             "server/mkcp.md",

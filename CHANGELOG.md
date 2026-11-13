@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `cert_issuer=acme-dns` on the server and the own-site relay takes a wildcard certificate over the domain's parent through a DNS-01 check handed to acme-dns by one CNAME (the `acme_dns` secret), keeping the machine's own name out of the certificate logs. Keep servers and relays under separate parents.
+
 - `direct=false` keeps every server's address out of devices' links, configs and subscriptions: devices reach the servers only through relays and CDN hosts, and fetch subscriptions only through own-site relays. `dotdash-manager` sets it on every server from the roster's `direct`.
 
 - A `cdn-check` task on the server tells whether each CDN in front of it and of its relays is refused a subscription, by fetching a decoy one, with no links in it, through each.

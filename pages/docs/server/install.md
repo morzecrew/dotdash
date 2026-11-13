@@ -9,6 +9,11 @@ stands for your domain throughout.
     example.com.  A  <server IP>
     ```
 
+    Every certificate the server takes names its domain in public logs. A name
+    one label under a parent kept for servers, such as `x7k2.s.example.com`,
+    can later take a wildcard that keeps it out of them, and keeps the servers
+    apart from relays: see [Certificates](certificates.md).
+
 2. **Firewall:** open 80/tcp and 443/tcp in the cloud provider's firewall
    (a VPC firewall rule, on some clouds). Docker's published ports bypass
    ufw and firewalld, so the provider's firewall is the one that counts.

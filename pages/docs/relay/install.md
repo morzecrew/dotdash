@@ -17,7 +17,12 @@ relay, and the `own-site` profile: the relay serves a site under that name,
 with a certificate from Let's Encrypt. To the network the name and the
 address agree, as they do for any real site. It needs:
 
-- a domain, `relay.example.net`, with an `A` record for the relay's address;
+- a domain, `relay.example.net`, with an `A` record for the relay's address.
+  Keep relays under a parent of their own, apart from the servers' (a
+  different domain, or `*.r.example.net` beside the servers' `*.s.example.net`):
+  a relay's name then tells nothing about the servers, and with a
+  [wildcard certificate](../server/certificates.md) its own name stays out of
+  the certificate logs;
 - port 80 open as well as 443, for the certificate;
 - in step 3, `--domain relay.example.net --profile own-site` in place of
   `--set site=…`.

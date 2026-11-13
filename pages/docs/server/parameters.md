@@ -20,7 +20,7 @@
 | `ipv6` | `allow` | `allow`: IPv6 leaves like the rest; `separate`: through the [`group=ipv6` lines](upstreams.md#ipv6) alone; `block`: no IPv6 destination leaves, names resolve to IPv4 only, so dual-stack sites still work (with `resolve=upstream`, the upstream resolves names itself) |
 | `dns_resolver` | `https://1.1.1.1/dns-query` | DoH server for `resolve=gateway` and device DNS; `https://` only |
 | `subscription` | `false` | a subscription URL per device |
-| `cert_issuer` | `acme` | `acme` (Let's Encrypt) or `internal` (offline machines) |
+| `cert_issuer` | `acme` | `acme` (Let's Encrypt), `acme-dns` (Let's Encrypt over a DNS-01 check handed to acme-dns, for a [wildcard](certificates.md) that keeps the name out of certificate logs) or `internal` (offline machines) |
 | `cover` | `pages` | what the [cover site](cover-site.md) serves past your own files in `/srv/dotdash`: `pages`, the bundled page, or your app's URL, such as `http://cover-app:8080` on the network `dotdash_edge` or `http://host.docker.internal:8080` for one published on the host |
 | `servers` | `self` | servers sharing these keys, comma-separated |
 | `cdn_hosts` | `none` | the names of local [CDNs](cdn.md#a-local-cdn-for-restricted-networks) in front of this server, comma-separated; a link through each |

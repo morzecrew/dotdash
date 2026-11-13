@@ -152,9 +152,9 @@ parameters:
     services: [xray]
   cert_issuer:
     type: enum
-    values: [acme, internal]
+    values: [acme, acme-dns, internal]
     default: acme
-    description: "Where the site certificate comes from: acme is Let's Encrypt, over ports 80 and 443; internal is Caddy's own CA, for a machine the internet cannot reach"
+    description: "Where the site certificate comes from: acme is Let's Encrypt, over ports 80 and 443; internal is Caddy's own CA, for a machine the internet cannot reach; acme-dns is Let's Encrypt over DNS-01, handed to an acme-dns server by a CNAME, for a wildcard over the domain's parent that keeps the domain out of the certificate logs (the acme_dns secret)"
     services: [caddy]
   servers:
     type: string
@@ -210,7 +210,9 @@ images:
   # the host needs no jq of its own.
   jq: ghcr.io/jqlang/jq:1.8.1@sha256:4f34c6d23f4b1372ac789752cc955dc67c2ae177eb1b5860b75cdc5091ce6f91
   xray: ghcr.io/morzecrew/xray:26.11.9@sha256:2089e0d4acee59b3999606fb18ff5d63e327bec3bd0ececa034b3e986867b5b9
-  caddy: docker.io/library/caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee
+  # Upstream's Caddy with the acme-dns DNS module, for cert_issuer=acme-dns;
+  # otherwise as upstream's image, whose shell the tasks also use.
+  caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:93c19f705c2218d5fca7f7dcb694cae1ed3889588678aabb7af34c8892e2f2bb
   # The openvpn profile's OpenVPN client, whose kill switch drops the default
   # routes before anything runs (platform-images, images/openvpn).
   openvpn: ghcr.io/morzecrew/openvpn:2.6.20@sha256:30f3dd709b32475b0d90ce6cce884dacfea60dfdeab134d609c29b8c38e57a94
@@ -228,6 +230,10 @@ configuration:
   # The gate's pin and aliases, for its image's $upstreams: an env file rather
   # than a mounted one, so a change re-creates the gate, as Compose hashes a
   # service's environment and never a mounted file's contents.
+  # Caddy's site names: the wildcard under cert_issuer=acme-dns.
+  - template: templates/caddy.env.tmpl
+    target: /etc/dotdash/caddy.env
+    mode: "0644"
   - template: templates/gate.env.tmpl
     target: /etc/dotdash/gate.env
     mode: "0644"
