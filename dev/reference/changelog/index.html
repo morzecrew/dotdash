@@ -694,6 +694,8 @@
       
         
       
+        
+      
     
     
     
@@ -753,6 +755,33 @@
     
   
   Cover site
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../server/certificates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Certificates
 
     
   </span>
@@ -2653,6 +2682,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
+<li>
+<p><code>cert_issuer=acme-dns</code> on the server and the own-site relay takes a wildcard certificate over the domain's parent through a DNS-01 check handed to acme-dns by one CNAME (the <code>acme_dns</code> secret), keeping the machine's own name out of the certificate logs. Keep servers and relays under separate parents.</p>
+</li>
 <li>
 <p><code>direct=false</code> keeps every server's address out of devices' links, configs and subscriptions: devices reach the servers only through relays and CDN hosts, and fetch subscriptions only through own-site relays. <code>dotdash-manager</code> sets it on every server from the roster's <code>direct</code>.</p>
 </li>

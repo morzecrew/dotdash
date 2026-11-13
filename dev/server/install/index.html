@@ -711,6 +711,8 @@
       
         
       
+        
+      
     
     
     
@@ -773,6 +775,33 @@
     
   
   Cover site
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../certificates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Certificates
 
     
   </span>
@@ -1915,6 +1944,10 @@ stands for your domain throughout.</p>
 <p><strong>DNS:</strong> point the domain at the server:</p>
 <div class="highlight"><pre><span></span><code>example.com.  A  &lt;server IP&gt;
 </code></pre></div>
+<p>Every certificate the server takes names its domain in public logs. A name
+one label under a parent kept for servers, such as <code>x7k2.s.example.com</code>,
+can later take a wildcard that keeps it out of them, and keeps the servers
+apart from relays: see <a href="../certificates/">Certificates</a>.</p>
 </li>
 <li>
 <p><strong>Firewall:</strong> open 80/tcp and 443/tcp in the cloud provider's firewall

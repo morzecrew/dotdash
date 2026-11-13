@@ -696,6 +696,8 @@
       
         
       
+        
+      
     
     
     
@@ -755,6 +757,33 @@
     
   
   Cover site
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../server/certificates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Certificates
 
     
   </span>
@@ -2055,7 +2084,7 @@
 <tr>
 <td><code>cert_issuer</code></td>
 <td><code>acme</code></td>
-<td>with <code>own-site</code>, <code>acme</code> (Let's Encrypt, over port 80) or <code>internal</code> (Caddy's own CA, for a machine the internet can't reach)</td>
+<td>with <code>own-site</code>, <code>acme</code> (Let's Encrypt, over port 80), <code>acme-dns</code> (a <a href="../../server/certificates/">wildcard</a> over a DNS-01 check handed to acme-dns, the <code>acme_dns</code> secret) or <code>internal</code> (Caddy's own CA, for a machine the internet can't reach)</td>
 </tr>
 <tr>
 <td><code>entry_host</code></td>

@@ -696,6 +696,8 @@
       
         
       
+        
+      
     
     
     
@@ -755,6 +757,33 @@
     
   
   Cover site
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../server/certificates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Certificates
 
     
   </span>
@@ -2088,7 +2117,12 @@ relay, and the <code>own-site</code> profile: the relay serves a site under that
 with a certificate from Let's Encrypt. To the network the name and the
 address agree, as they do for any real site. It needs:</p>
 <ul>
-<li>a domain, <code>relay.example.net</code>, with an <code>A</code> record for the relay's address;</li>
+<li>a domain, <code>relay.example.net</code>, with an <code>A</code> record for the relay's address.
+  Keep relays under a parent of their own, apart from the servers' (a
+  different domain, or <code>*.r.example.net</code> beside the servers' <code>*.s.example.net</code>):
+  a relay's name then tells nothing about the servers, and with a
+  <a href="../../server/certificates/">wildcard certificate</a> its own name stays out of
+  the certificate logs;</li>
 <li>port 80 open as well as 443, for the certificate;</li>
 <li>in step 3, <code>--domain relay.example.net --profile own-site</code> in place of
   <code>--set site=…</code>.</li>
