@@ -49,7 +49,7 @@ compatibility:
   # The manager this bundle is verified and rehearsed with, and the first that
   # re-creates, on a parameter change, only the services the active profiles
   # start, which cover's and cert_issuer's caddy needs.
-  min_manager_version: "0.16.0"
+  min_manager_version: "0.17.0"
   rollback_safe: true
   # No database, which an unattended update needs declared.
   database: none

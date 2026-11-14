@@ -20,7 +20,7 @@ and the canary reach it as phones do, directly or through a relay.
 
 ## What every machine needs
 
-Docker ≥ 28 with Compose ≥ 2.35, `sops`, `age`, and morzer ≥ 0.16.0. On a
+Docker ≥ 28 with Compose ≥ 2.35, `sops`, `age`, and morzer ≥ 0.17.0. On a
 fresh Debian or Ubuntu machine, `bootstrap.sh` installs them, turns on
 security updates, and sets SSH to keys only:
 
