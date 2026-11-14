@@ -1,12 +1,22 @@
 # dotdash
 
-A [morzer](https://github.com/morzecrew/morzer) bundle for one Docker host:
-Xray REALITY on 443 in front of a Caddy cover site, an optional DNS tunnel
-and XHTTP with REALITY, and all traffic out through your upstream proxy.
+Gets devices in a restricted network out to the open internet through a
+server of yours outside it, as [morzer](https://github.com/morzecrew/morzer)
+bundles released together from one tag.
 
 **Documentation: <https://morzecrew.github.io/dotdash/>**
 
-## Quick start
+| Bundle | Runs on |
+| --- | --- |
+| `dotdash-server` | a server outside the network: Xray REALITY in front of a cover site, out through your upstream proxy |
+| `dotdash-relay` | a machine inside it, carrying devices on to the servers |
+| `dotdash-client` | a Linux machine: a proxy port, the whole machine or a LAN |
+| `dotdash-canary` | a machine inside it, alerting when devices can't get through |
+| `dotdash-acme-dns` | a machine of its own, for the servers' and relays' wildcard certificates |
+
+[`dotdash-manager`](manager) runs a whole network of them from one roster.
+
+## A server
 
 On a fresh Debian or Ubuntu host, with `example.com` pointing at it and
 80/443 open:
@@ -22,28 +32,17 @@ sudo morzer apply
 sudo morzer task run client-config --output -- phone
 ```
 
-`init` trusts the signing key the release ships, and every later release must
-be signed by it; `--signing-key` checks even the first against the repository's
-`MINISIGN_RELEASE_PUBKEY` variable.
-The full steps, options and operations are in the
-[documentation](https://morzecrew.github.io/dotdash/).
-
-| Tag | |
-| --- | --- |
-| `ghcr.io/morzecrew/dotdash-server:stable` | releases (`vX.Y.Z` tags), release key |
-| `ghcr.io/morzecrew/dotdash-server:X.Y.Z` | one release |
-| `ghcr.io/morzecrew/dotdash-server:main` | every push to `main`, dev key; may be broken |
-
-The canary, relay and client bundles, `dotdash-canary`, `dotdash-relay` and
-`dotdash-client`, have the same tags.
+Every bundle is `ghcr.io/morzecrew/<bundle>`: `:stable` and `:X.Y.Z` are
+releases, signed with the release key; `:main` follows `main`, signed with the
+dev key. `init` trusts the key a release ships; `--signing-key` checks even
+the first against the repository's `MINISIGN_RELEASE_PUBKEY` variable.
 
 ## Development
 
-[bundle-ci](https://github.com/morzecrew/bundle-ci) builds, signs and
-smoke-tests every pull request; a `vX.Y.Z` tag releases all four bundles, which
-live in [`bundles/`](bundles): `server`, `relay`, `canary` and `client`. Check a
-bundle change with `morzer release verify ./bundles/server --render-check`. The docs
-live in [`pages/`](pages): `cd pages && uv run zensical serve`.
+The bundles live in [`bundles/`](bundles), the manager in
+[`manager/`](manager) and the docs in [`pages/`](pages)
+(`cd pages && uv run zensical serve`). Check a bundle change with
+`morzer release verify ./bundles/<name> --render-check`.
 
 ## Licence
 

@@ -53,9 +53,6 @@ jobs:
       init-args: >-
         --domain auth.rig.invalid --set address=127.0.0.1
         --set nameserver=ns.rig.invalid --set api_tls=none
-      # No :stable to update from before its first release. Back to true once
-      # dotdash-acme-dns 0.8.0 is on :stable.
-      smoke-update: false
       release-pubkey: ${{ vars.MINISIGN_RELEASE_PUBKEY }}
     secrets:
       minisign-key: ${{ secrets.MINISIGN_RELEASE_KEY }}
