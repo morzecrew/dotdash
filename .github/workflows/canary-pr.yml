@@ -41,9 +41,5 @@ jobs:
       init-args: >-
         --set dotdash_server=www.gstatic.com --set dotdash_address=rig.invalid
         --set dotdash_public_key=set-by-the-rig
-      # 0.7.0 renamed the target's parameters, which have no default, so a
-      # canary is set up again rather than updated to it. Back to true once
-      # 0.7.0 is on :main and :stable.
-      smoke-update: false
       # smoke-update installs the published :main first, trusting this key.
       dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}

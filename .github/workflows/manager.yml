@@ -77,18 +77,13 @@ jobs:
           # The smoke hooks' pre-apply alone, for the stand-in upstream and target.
           REHEARSE_HOOKS: .manager-hooks
           REHEARSE_PROBE_PATHS: ""
-          REHEARSE_OPERATOR_SECRETS: upstreams upstream
+          REHEARSE_OPERATOR_SECRETS: upstreams
           REHEARSE_INIT_ARGS: >-
-            --domain dotdash.test --set upstream_protocol=http
-            --set probe_url=http://11.99.0.10:8000/
-            --set healthcheck_url=http://11.99.0.10:8000/
+            --domain dotdash.test --set probe_url=http://11.99.0.10:8000/
             --set cert_issuer=internal
         run: |
           mkdir -p .manager-hooks && cp -R .github/smoke.d/pre-apply .manager-hooks/
-          # ponytail: the old package until dotdash-server:main is published,
-          # as in benchmark.yml; drop the fallback with it.
           from=ghcr.io/morzecrew/dotdash-server:main
-          oras manifest fetch "${from}" >/dev/null 2>&1 || from=ghcr.io/morzecrew/dotdash:main
           bash .bundle-ci/scripts/rehearse.sh --from "${from}" --keep
           GITHUB_TOKEN= bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal \
             sh -c 'bash /rig/smoke.sh update "$(ls /rig/dist/*.tar.zst | head -1)"'

@@ -44,8 +44,9 @@ jobs:
       init-args: >-
         --domain auth.rig.invalid --set address=127.0.0.1
         --set nameserver=ns.rig.invalid --set api_tls=none
-      # Nothing is published to update from yet. Back to true once
-      # dotdash-acme-dns is on :main (and, for releases, :stable).
+      # Off until :main carries the secret state the pre-update backup needs:
+      # the published bundle declares no secret, so its rig has no backup
+      # recipients. Back to true after 0.8.0.
       smoke-update: false
       dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}
     secrets:
