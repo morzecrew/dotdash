@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-14
+
 ### Added
 
 - `cert_issuer=acme-dns` on the server and the own-site relay takes a wildcard certificate over the domain's parent through a DNS-01 check handed to acme-dns by one CNAME (the `acme_dns` secret), keeping the machine's own name out of the certificate logs. Keep servers and relays under separate parents.
@@ -61,7 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `morzer rollback` from this release of the server or the canary is refused, since the earlier release lacks the new names; the pre-update backup is the way back.
 
-- The relay's `site_dir` and `cert_issuer` take effect with `config set`, without a full apply.
+- The relay's `cert_issuer` takes effect with `config set`, without a full apply.
 
 - The server, the relay and the canary run Xray 26.11.9, and the client mihomo 1.19.34.
 
