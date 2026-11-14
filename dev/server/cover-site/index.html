@@ -839,6 +839,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#an-app-installed-with-morzer" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        An app installed with morzer
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1941,6 +1952,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#an-app-installed-with-morzer" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        An app installed with morzer
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2135,6 +2157,18 @@ bridge address only.</p>
 <p>Pick something people run on servers like this one, such as a wiki, a file
 share or a dashboard behind a login, and give it content. The same app on
 every server would link them, as the bundled page does, so vary it.</p>
+<h2 id="an-app-installed-with-morzer">An app installed with morzer<a class="headerlink" href="#an-app-installed-with-morzer" title="Permanent link">&para;</a></h2>
+<p>An app shipped as a morzer bundle of its own installs beside this server as a
+second installation, updated and rolled back on its own. Its Compose file
+joins <code>dotdash_edge</code> as an external network, so install this server first,
+then the app, then point <code>cover</code> at it once the app reports healthy.</p>
+<p>With two installations on the machine, morzer no longer guesses which one a
+command means: each names it with <code>--product</code>, as in
+<code>sudo morzer --product dotdash config set cover=http://&lt;app&gt;:8080</code>.
+<code>sudo morzer shell dotdash</code> opens a shell where every command means this
+server. The commands on these pages leave <code>--product</code> out, as they do on a
+machine with one installation. On a relay the product is <code>dotdash-relay</code>, and
+the network <code>dotdash-relay_default</code>.</p>
 
 
 
