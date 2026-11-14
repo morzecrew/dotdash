@@ -113,6 +113,11 @@ parameters:
     type: string
     default: none
     description: "With the own-site profile, the names devices use for local CDNs in front of this relay, comma-separated, each fetching from https://<the relay's domain> with the Host header set to it; relay-entry carries them to the server's relays line, and devices get an XHTTP link through each. none for none"
+  # No services: relay-entry and facts, tasks, are all that read it.
+  cdn_only:
+    type: bool
+    default: false
+    description: "Give devices only the links through this relay's cdn_hosts, so its own address reaches none of them and it can stay the CDNs' origin while relays devices reach directly get blocked; relay-entry carries it to the server's relays line as cdn-only"
   dotdash_servers:
     type: string
     required: true

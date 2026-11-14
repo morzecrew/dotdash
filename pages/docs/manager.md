@@ -150,6 +150,8 @@ on a fresh address, then take the burnt one out of the roster.
   one out would cut them off.
 - **A relay no canary watches is never judged.** Run canaries where devices
   are: [on a mobile line](canary/index.md#on-a-mobile-line).
+- **Neither is a [CDN-only relay](server/cdn.md#the-cdns-origin-only).** Its
+  canaries check its own address, which no device gets.
 
 ## What it leaves alone
 

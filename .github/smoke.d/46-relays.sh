@@ -146,6 +146,23 @@ if sudo grep -q 'dotdash-relay-\$n-kcp' /opt/dotdash/current/tasks/client-config
   fi
 fi
 
+# A cdn-only relay (its relay-entry ends the line with cdn-only): devices get
+# its CDN link alone, and the config its CDN outbound alone, nothing to its own
+# address; the same flag on a relay with no CDN leaves it out.
+if sudo grep -q 'cdn-only) only=cdn-only' /opt/dotdash/current/tasks/client-config.sh; then
+  printf '%s\n' \
+    "198.51.100.12 relay-g.test pbkG 0123456789abcdef mlkem.g own-site 00112233445566778899aabbccddeeff kcp=9447,dtls,00112233445566778899aabbccddeeff cdn=cdn-g.test cdn-only" \
+    "198.51.100.13 site-h.test pbkH 0011223344556677 mlkem.h cdn-only" |
+    sudo morzer config set --set-file relays=- >/dev/null
+  text=$(out)
+  links=$(relay_links "${text}")
+  [ "$(grep -c . <<<"${links}")" = "${devices}" ] && ! grep -qv '%5Brelay%20198\.51\.100\.12%20cdn%20cdn-g\.test%5D$' <<<"${links}" ||
+    die "a cdn-only relay gave devices links besides its CDN's, or one with no CDN got links"
+  [ "$(outbound_tags "${text}" | tr '\n' ' ')" = "dotdash-relay-1-cdn-1 " ] ||
+    die "a cdn-only relay's outbounds are not its CDN's alone: $(outbound_tags "${text}" | tr '\n' ' ')"
+  echo "46-relays.sh: a cdn-only relay gives its CDN link and outbound alone, and one with no CDN nothing"
+fi
+
 sudo morzer config unset relays >/dev/null
 [ -z "$(relay_links "$(out)")" ] || die "relay links remain once relays is unset"
 echo "46-relays.sh: a link and an outbound per relay and device, none with relays unset"

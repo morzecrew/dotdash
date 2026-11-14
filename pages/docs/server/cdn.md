@@ -107,6 +107,31 @@ cheap to replace, rather than this server and its upstream.
    `phone [relay <host> cdn cdn.example.net]` link and an outbound, shaped as
    above, and [pools](devices.md#pools) take the relay's CDN names as members.
 
+#### The CDN's origin only
+
+Devices behind a CDN connect to the CDN's addresses, never to the relay's, so
+the relay behind it is not exposed the way a relay devices reach directly is.
+Unless you say otherwise, though, the relay's line still gives devices
+REALITY, XHTTP and mKCP links to its own address, which exposes it. With
+`cdn_only=true`, devices get its CDN links alone:
+
+```sh
+sudo morzer config set cdn_only=true
+sudo morzer task run relay-entry --output -- <address>   # now ends in cdn-only
+```
+
+Replace the relay's line here again. The relay then gives devices no link or
+subscription URL of its own. The [manager](../manager.md#burnt-relays) also
+stops judging it by its canaries, which check its own address. `relay-entry`
+refuses `cdn_only` without `cdn_hosts`, because devices would get nothing
+through the relay.
+
+A network then needs one or two CDNs in all, not one per relay. Each CDN
+fronts one origin relay, with `cdn_only=true`, and the relays devices reach
+directly need no CDN. A CDN's origin is one host. If that relay is lost,
+point the CDN at another relay with a site of its own, and move `cdn_hosts`
+and `cdn_only` to it. The name devices use stays the same.
+
 ## A CDN against address blocking
 
 The XHTTP link works through a CDN that proxies HTTP/2 to

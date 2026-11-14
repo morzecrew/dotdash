@@ -19,7 +19,7 @@ fi
 cat <<EOF
 On the dotdash server, add this line to the relays parameter (sudo morzer
 config edit relays):
-${host} ${SITE} ${pbk} ${sid} ${enc}${own}${kcp}${cdn:+ cdn=$cdn}
+${host} ${SITE} ${pbk} ${sid} ${enc}${own}${kcp}${cdn:+ cdn=$cdn}${only}
 
 A dotdash-canary checks this relay as it checks the server, without the xhttp
 profiles, with the dotdash_id of any device on the relay:

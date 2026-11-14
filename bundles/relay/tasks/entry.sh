@@ -36,3 +36,10 @@ case $cdn in
   *) [ "${OWN_SITE:-}" = true ] ||
        { echo "cdn_hosts needs the own-site profile, whose site a CDN fetches from; leaving it out" >&2; cdn=; } ;;
 esac
+# cdn_only: devices get the CDN links alone, so this relay's own address
+# reaches none of them; with no CDN that would be no link at all.
+only=
+if [ "${CDN_ONLY:-false}" = true ]; then
+  [ -n "$cdn" ] || { echo "cdn_only needs cdn_hosts, with the own-site profile: devices would get no link through this relay" >&2; exit 1; }
+  only=" cdn-only"
+fi
