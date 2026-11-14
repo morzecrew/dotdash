@@ -52,12 +52,14 @@ secrets:
 compatibility:
   # The manager this bundle is verified and rehearsed with.
   min_manager_version: "0.17.0"
-  # 0.7.0 renamed every parameter and secret that names the target to
-  # dotdash_*, as the relay names them, and an update retires the old values,
-  # so 0.6.x would come back with none. A canary is set up again from
-  # canary-config instead: an update can't take the new names' values, since
-  # they have no default.
-  rollback_safe: false
+  # 0.7.0 alone declared false: it renamed every parameter and secret that
+  # names the target to dotdash_*, as the relay names them, and an update
+  # retires the old values, so 0.6.x would come back with none. Going back
+  # from a later release to 0.7.0 or after loses nothing. A canary on 0.6.x
+  # is set up again from canary-config rather than updated, since the new
+  # names have no default: upgrade_from refuses the update.
+  rollback_safe: true
+  upgrade_from: ">=0.7.0"
   # No database, which an unattended update needs declared.
   database: none
 

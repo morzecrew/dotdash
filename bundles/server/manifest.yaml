@@ -42,12 +42,13 @@ compatibility:
   # The manager this bundle is verified and rehearsed with, and the first that
   # health-checks a parameter change and undoes it when the check fails.
   min_manager_version: "0.17.0"
-  # 0.7.0 renamed healthcheck_url, healthcheck6_url and healthcheck_expect to
-  # probe_*, and replaced the upstream settings with the upstreams secret; an
-  # update retires the old values, so 0.6.x would come back without them.
-  # 0.4.0 declared false too, when the upstream secret replaced upstream_host
-  # and its kin. An update from 0.3.x is still refused until `upstream` is set.
-  rollback_safe: false
+  # 0.7.0 alone declared false (0.4.0 before it): it renamed healthcheck_* to
+  # probe_* and replaced the upstream settings with the upstreams secret, and
+  # an update retires the old values, so 0.6.x would come back without them.
+  # Going back from a later release to 0.7.0 or after loses nothing. An update
+  # from 0.6.x straight to a later one is still refused until `upstreams` is
+  # set.
+  rollback_safe: true
   # No database, which an unattended update needs declared.
   database: none
 
