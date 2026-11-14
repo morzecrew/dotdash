@@ -11,7 +11,7 @@ from typing import Annotated
 
 import typer
 
-from . import Refused, roster, state
+from . import Refused, health, roster, state
 from .morzer import Morzer, write_roster
 from .render import render
 from .roster import IMAGES, Network
@@ -65,7 +65,13 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     o: Options = ctx.obj
     net, st = o.open()
     mz = Morzer(net, o.morzer_roster, o.morzer)
-    docs, waiting = render(net, st, mz.gather())
+    facts = mz.gather()
+    burnt, verdicts = health.judge(net, facts, st.setdefault("health", {}))
+    if not dry_run:
+        state.save(o.state, st)
+    for v in verdicts:
+        print(v)
+    docs, waiting = render(net, st, facts, burnt)
     failed = 0
     for m in net.machines:
         doc = docs.get(m.name)

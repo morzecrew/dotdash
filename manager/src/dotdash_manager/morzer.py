@@ -51,9 +51,9 @@ class Morzer:
             return None
 
     def gather(self) -> dict:
-        """The facts of every server and relay that joined, by name."""
+        """The facts of every server, relay and canary that joined, by name."""
         facts = {}
-        for m in [*self.net.server, *self.net.relay]:
+        for m in [*self.net.server, *self.net.relay, *self.net.canary]:
             if m.joined and (f := self.facts(m)) is not None:
                 facts[m.name] = f
         return facts
