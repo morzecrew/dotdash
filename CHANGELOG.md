@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `dotdash-manager`, installed with uv from the repository's `manager/`, runs a network from one roster: it makes the servers' shared keys, gives every server and relay the same devices, and keeps relays, canaries and client machines pointed at the servers, each machine following it through morzer's desired state.
 
+- `cdn_only` on the relay gives devices its CDN links alone, none to its own address, so a relay can stay the origin of the CDNs in front of it while the relays devices reach directly are blocked. `relay-entry` marks the line `cdn-only`.
+
 - The relay's `entry_host` parameter, the address devices reach it at, which `relay-entry` uses when given none; under `own-site` it is the relay's domain.
 
 - When nothing gets out, `doctor` names each upstreams line it asked by its `name=`: no answer, refused credentials, a WireGuard peer that did not carry it, or an OpenVPN tunnel that is down.

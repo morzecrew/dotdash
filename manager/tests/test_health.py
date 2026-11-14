@@ -2,7 +2,7 @@ from pathlib import Path
 
 from dotdash_manager import state
 from dotdash_manager.health import BURN_AFTER, judge
-from dotdash_manager.render import render
+from dotdash_manager.render import relay_line, render
 from dotdash_manager.roster import loads
 
 ROSTER = """
@@ -83,3 +83,11 @@ def test_a_burnt_relay_leaves_the_servers_relays_and_pools():
     assert params["pools"] == "a phone"
     docs = render(net, st, facts)[0]
     assert docs["s"]["parameters"]["pools"] == "a phone 203.0.113.5 c.example.net\nb 203.0.113.5"
+
+
+def test_a_cdn_only_relay_carries_the_flag_is_never_judged_and_serves_no_subscription():
+    net, health = loads(ROSTER), {"r1": {"fails": BURN_AFTER, "at": 1}}
+    only = {**R1, "cdn_only": True, "own_site": {"xhttp_path": "p"}}
+    facts = {"r1": only, "r2": R2, "c1": canary(R1, 5, False), "c2": canary(R2, 5, True)}
+    assert judge(net, facts, health)[0] == set() and "r1" not in health
+    assert relay_line(only).endswith(" cdn=c.example.net cdn-only")

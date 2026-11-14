@@ -23,6 +23,10 @@ def judge(net: Network, facts: dict, health: dict) -> tuple[set[str], list[str]]
     for t in targets:
         if t.name not in facts:
             continue
+        # A cdn-only relay's canaries check its own address, which no device gets.
+        if facts[t.name].get("cdn_only"):
+            health.pop(t.name, None)
+            continue
         expect = _watched(facts[t.name], t.kind)
         # Facts about another target are from before the canary was pointed
         # here; a canary offline itself says nothing about its target.
@@ -45,7 +49,7 @@ def judge(net: Network, facts: dict, health: dict) -> tuple[set[str], list[str]]
     burnt = {t.name for t in targets if health.get(t.name, {}).get("fails", 0) >= BURN_AFTER}
     say = [f"burnt: server {s.name}: its canaries got through none of its paths in {health[s.name]['fails']} readings; "
            "reported only, as relays reach the servers" for s in net.server if s.name in burnt]
-    relays = {r.name for r in net.relay if r.name in facts}
+    relays = {r.name for r in net.relay if r.name in facts and not facts[r.name].get("cdn_only")}
     out = {r.name for r in net.relay if r.name in burnt}
     if out and out >= relays:
         # Every relay down at once is likelier the canaries' own network than

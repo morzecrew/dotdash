@@ -17,6 +17,8 @@ def relay_line(f: dict) -> str:
         line += f" kcp={k['port']},{k['header']},{k['seed']}" + (",quic" if k.get("open") == "quic" else "")
     if f.get("cdn_hosts"):
         line += " cdn=" + ",".join(f["cdn_hosts"])
+    if f.get("cdn_only"):
+        line += " cdn-only"
     return line
 
 
@@ -106,7 +108,8 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
 
     # direct = false keeps the servers' domains out of what devices hold, so a
     # client machine fetches through an own-site relay, as a phone does.
-    own_site = [facts[r.name]["site"] for r in net.relay if "own_site" in facts.get(r.name, {}) and r.name not in burnt]
+    own_site = [facts[r.name]["site"] for r in net.relay if "own_site" in facts.get(r.name, {})
+                and r.name not in burnt and not facts[r.name].get("cdn_only")]
     for c in net.client:
         if not lead:
             waiting.append(f"{c.name}: waits for a server that applied the keys")

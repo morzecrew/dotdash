@@ -23,4 +23,5 @@ printf '{"entry_host": %s, "site": %s, "public_key": %s, "short_id": %s, "encryp
   printf ', "kcp": {"port": %s, "header": %s, "open": %s, "seed": %s}' \
     "$KCP_PORT" "$(str "${KCP_HEADER:-dtls}")" "$(str "${KCP_OPEN:-none}")" "$(str "$kcp_seed")"
 [ -z "$cdn" ] || printf ', "cdn_hosts": [%s]' "$(printf '%s' "$cdn" | sed 's/[^,]*/"&"/g; s/,/, /g')"
+[ -z "$only" ] || printf ', "cdn_only": true'
 printf '}\n'

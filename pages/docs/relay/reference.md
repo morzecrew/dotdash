@@ -11,6 +11,7 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `cert_issuer` | `acme` | with `own-site`, `acme` (Let's Encrypt, over port 80), `acme-dns` (a [wildcard](../server/certificates.md) over a DNS-01 check handed to acme-dns, the `acme_dns` secret) or `internal` (Caddy's own CA, for a machine the internet can't reach) |
 | `entry_host` | `none` | the address devices reach the relay at, its IP without a domain, for `relay-entry` with no address and for `facts`; `none` under `own-site` is the relay's domain |
 | `cdn_hosts` | `none` | with `own-site`, the names devices use for [local CDNs](../server/cdn.md#in-front-of-a-relay) in front of the relay, comma-separated; `relay-entry` adds them to the relay's line |
+| `cdn_only` | `false` | `true`: devices get the relay's CDN links alone, none to its own address, so it stays the [CDNs' origin](../server/cdn.md#the-cdns-origin-only); `relay-entry` ends the line with `cdn-only`, and refuses it without `cdn_hosts` |
 | `dotdash_servers` | none, given at `init` | the dotdash servers sharing one set of keys, comma-separated domains; the relay uses whichever answers fastest |
 | `dotdash_port` | `443` | the servers' `https_port` |
 | `dotdash_public_key` | none, given at `init` | the servers' REALITY public key, the `pbk` of their links |

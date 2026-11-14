@@ -31,6 +31,7 @@ xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghc
 set_config() { sudo morzer config set "$@" >/dev/null || die "config set $* failed"; }
 
 restore() {
+  sudo morzer config unset cdn_only >/dev/null 2>&1 || true
   sudo morzer config set cdn_hosts=none >/dev/null 2>&1 || true
   sudo morzer config unset installation.profile >/dev/null 2>&1 || true
   sudo docker rm -f relay-rig-own relay-rig-xhttp >/dev/null 2>&1 || true
@@ -155,6 +156,18 @@ if sudo jq -e '[.inbounds[].tag] | index("devices-xhttp")' /etc/dotdash-relay/xr
       gets_out 18084 || die "a device under a CDN's own name did not get out behind the relay's site: $(sudo docker logs relay-rig-xhttp 2>&1 | tail -2)"
       sudo docker rm -f relay-rig-xhttp >/dev/null
       echo "${0##*/}: a CDN sending its own name as SNI and Host gets through the relay's site"
+    fi
+    # cdn_only: the line ends with cdn-only, the facts say so, and with no CDN
+    # relay-entry refuses, as devices would get nothing through the relay.
+    if sudo grep -q '^  cdn_only:' /opt/dotdash-relay/current/manifest.yaml; then
+      set_config cdn_only=true
+      [[ $(entry) == *" cdn=${domain},cdn-b.test cdn-only" ]] || die "relay-entry does not end the line with cdn-only under cdn_only=true"
+      sudo morzer task run facts --output 2>/dev/null | grep -qF '"cdn_only": true' || die "the facts do not carry cdn_only"
+      set_config cdn_hosts=none
+      ! sudo morzer task run relay-entry --output -- 127.0.0.1 >/dev/null 2>&1 ||
+        die "relay-entry prints a line under cdn_only=true with no CDN"
+      set_config cdn_only=false
+      echo "${0##*/}: cdn_only ends the line with cdn-only, and relay-entry refuses it with no CDN"
     fi
     set_config cdn_hosts=none
     [[ $(entry) != *cdn=* ]] || die "relay-entry still prints a cdn= field with cdn_hosts=none"
