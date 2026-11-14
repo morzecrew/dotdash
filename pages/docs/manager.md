@@ -18,8 +18,15 @@ network.toml ──▶ dotdash-manager sync ──▶ one document per machine �
                          └──────────── servers' and relays' facts ◀─────────┘
 ```
 
-It needs Python 3.11 or newer, morzer and age-keygen, and is one file:
-`manager/dotdash_manager.py` in the repository.
+It needs morzer and age-keygen beside it, and installs with
+[uv](https://docs.astral.sh/uv/) at the tag of the release your machines run,
+such as `v0.7.0`:
+
+```sh
+uv tool install "git+https://github.com/morzecrew/dotdash@<tag>#subdirectory=manager"
+```
+
+To move to a later release, run it again with that tag and `--force`.
 
 ## Set it up
 
@@ -69,15 +76,16 @@ and client machines fetch their subscription through an own-site relay,
 waiting for one. Left out, each server keeps its own setting.
 
 Names are lowercase letters, digits and dashes. `relay-` and `canary-` start
-the names the manager gives relays' and canaries' own devices.
+the names the manager gives relays' and canaries' own devices. A field the
+roster doesn't know is refused, so a mistyped one can't pass unnoticed.
 
 ## Add a machine
 
 Name it in the roster first. Then:
 
 ```sh
-python3 manager/dotdash_manager.py sync          # the servers learn its device
-python3 manager/dotdash_manager.py join r1       # what to run on it
+dotdash-manager sync          # the servers learn its device
+dotdash-manager join r1       # what to run on it
 ```
 
 `join` prints the machine's `init`, its secrets and its sync settings, as
@@ -99,9 +107,9 @@ that has.
 ## Keep it current
 
 ```sh
-python3 manager/dotdash_manager.py sync --dry-run   # what would change
-python3 manager/dotdash_manager.py sync
-python3 manager/dotdash_manager.py status           # what each machine applied and refused
+dotdash-manager sync --dry-run   # what would change
+dotdash-manager sync
+dotdash-manager status           # what each machine applied and refused
 ```
 
 `sync` publishes only documents that changed, and renews the rest every three

@@ -1,4 +1,4 @@
-# dotdash-manager: its self-check, then a real server following it in a rig on
+# dotdash-manager: its tests, then a real server following it in a rig on
 # a GitHub-hosted runner (.github/manager/e2e.sh). The rig is bundle-ci's
 # rehearsal, as for the benchmark: the published :main with the smoke hooks'
 # stand-in upstream and target, and this tree's server bundle on top.
@@ -38,8 +38,21 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Self-check
-        run: python3 manager/dotdash_manager.py --selftest
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          enable-cache: false
+
+      - name: Tests
+        working-directory: manager
+        run: uv run --locked pytest
+
+      # The rig is Alpine: its python3 installs the wheel and the locked
+      # dependencies, which have musl wheels.
+      - name: Build the manager
+        working-directory: manager
+        run: |
+          uv build --wheel --out-dir dist
+          uv export --locked --no-dev --no-emit-project --no-hashes -o dist/requirements.txt
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -82,7 +95,7 @@ jobs:
 
       - name: A server follows the manager
         run: |
-          bash .bundle-ci/scripts/rig.sh cp dotdash-rehearsal manager/dotdash_manager.py /rig/dotdash_manager.py
+          bash .bundle-ci/scripts/rig.sh cp dotdash-rehearsal manager/dist /rig/manager-dist
           bash .bundle-ci/scripts/rig.sh cp dotdash-rehearsal .github/manager/e2e.sh /rig/e2e.sh
           bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal bash /rig/e2e.sh
 

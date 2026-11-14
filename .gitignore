@@ -6,3 +6,9 @@
 pages/site/
 pages/.cache/
 pages/.venv/
+
+# Python: the manager's environment and caches.
+manager/.venv/
+manager/dist/
+__pycache__/
+.pytest_cache/
