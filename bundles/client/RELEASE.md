@@ -1,60 +1,76 @@
-# dotdash-client 0.6.0
+# dotdash-client 0.7.0
 
-Released with dotdash 0.6.0, with no changes of its own. It needs morzer 0.15.0 or later, as before:
+Released with dotdash 0.7.0. **Before updating**, update morzer: every bundle needs 0.17.0, and an older manager refuses the release and changes nothing. `dns_listen` is off at `none` now, not `off`: if you set it to `off` yourself, unset it first.
 
 ```sh
+sudo morzer self-update
+sudo morzer config unset dns_listen   # only if you set it to off
 sudo morzer update --stage
-sudo morzer update --to 0.6.0
+sudo morzer update --to 0.7.0
 ```
 
-A 0.6.0 server's subscription may carry mKCP links, which mihomo cannot use: it reads them as TCP, and its url-test passes over them.
+New for the client: `ipv6=block` refuses IPv6 before any rule, and a client machine can follow `dotdash-manager`, which gives it its subscription and proxy password.
 
 ### Added
 
-- CDNs in front of a relay: with the `own-site` profile, the relay's new `cdn_hosts` parameter adds `cdn=<names>` to its line, and devices get an XHTTP link through each CDN, shaped as for the server's `cdn_hosts`. The CDN's account then names a relay rather than the server, and pools take these names too.
+- `cert_issuer=acme-dns` on the server and the own-site relay takes a wildcard certificate over the domain's parent through a DNS-01 check handed to acme-dns by one CNAME (the `acme_dns` secret), keeping the machine's own name out of the certificate logs. Keep servers and relays under separate parents.
 
-- A QUIC-shaped opener in front of mKCP: the new `kcp_open` parameter (`quic`) sends a QUIC-Initial-shaped packet before the flow, on the server, relays and canary; links carry it in `fm=` for v2rayN and v2rayNG. It is a fixed shape, off unless set, and no help where QUIC itself is blocked; measure it on a canary first.
+- `direct=false` keeps every server's address out of devices' links, configs and subscriptions: devices reach the servers only through relays and CDN hosts, and fetch subscriptions only through own-site relays. `dotdash-manager` sets it on every server from the roster's `direct`.
 
-- The canary's `measure` adds throughput: three downloads of the new `download_url` parameter (1 MB from speed.cloudflare.com unless set, `https://` only, `none` to skip) through each transport, with how many completed and the median Mbit/s.
+- A `cdn-check` task on the server tells whether each CDN in front of it and of its relays is refused a subscription, by fetching a decoy one, with no links in it, through each.
 
-- VLESS over mKCP, an opt-in UDP transport for networks that block the TCP ones: the new `mkcp` profile serves it on `kcp_port` (8447/udp), encrypted under the new `kcp_seed` secret, its packets starting with a fake `kcp_header` (`dtls` unless set). Devices get a `[kcp]` link and outbound per server (v2rayN, v2rayNG).
+- `cover` on the server and the own-site relay puts your own app behind the cover site, by its URL: Caddy passes it every request but a subscription's, XHTTP's and those for your own files, and `doctor` checks that it answers. An app published on a host port is reached as `host.docker.internal`.
 
-- mKCP on relays: the relay's `mkcp` profile serves it under its own `kcp_seed`, `relay-entry` adds `kcp=<port>,<header>,<seed>` to its line, and devices get a `[relay <host> kcp]` link and outbound through it. A server from before reads no such field.
+- An `ipv6` parameter on the server, the relay and the client: `block` keeps IPv6 out. The client refuses it before any rule, the relay drops it, and the server resolves names to IPv4 only and blocks IPv6 addresses, so dual-stack sites still work over IPv4.
 
-- The canary checks mKCP with `--profile mkcp`, with the server's `kcp_port`, `kcp_header` and `kcp_seed`, which `canary-config` prints for a server under the `mkcp` profile; `measure` reports it beside REALITY.
+- `upstream_mode` decides how the upstreams share the traffic: `failover`, the first line that answers, then the fastest of the rest; `fastest`; or `balance`, connections spread over every line that answers. `upstream_pin` puts a named line first.
 
-- Pools, so a leaked device no longer gives away every relay and CDN host: the new `pools` parameter lists, per pool, its devices, relay hosts and CDN hosts. A device in a pool gets its pools' entry points and those in no pool; a device in none gets them all, and a member that names nothing is reported.
+- The `wireguard-line` task turns a WireGuard exit's wg-quick file into its upstreams line, and `openvpn-line` an OpenVPN exit's client config into its own.
 
-- XHTTP through a relay with a site of its own: the site routes a secret path, the new `xhttp_path` secret, to the relay's Xray, `relay-entry` adds the path to the relay's line, and `client-config` and the subscriptions add an `[relay … xhttp]` link and outbound. The relay needs morzer 0.15.1.
+- Every bundle names what an authority it follows may set: on a server the devices, the shared keys and the server, relay, CDN and pool lists; on a relay the devices and its way to the servers; on a canary its target; on a client its subscription and proxy password. The rest stays the machine's own.
 
-- A backup proxy for when the upstream fails: `upstream_backup_protocol` with the new `upstream_backup` secret. Connections leave through the upstream while the gate's probes get through it, every 30 s, through the backup while they don't, and return by themselves.
+- A `facts` task on the server and the relay prints, as JSON, what each tells the authority it follows after every change: a server's domain, ports, public key and encryption string, and a relay's `relay-entry` line.
 
-- A relay with a site of its own serves devices their subscriptions inside the restricted network, fetched from the server through its tunnel. `client-config` prints `through the relay <domain>: https://<domain>/<token>` under the server's URL, and `relay-entry` ends such a relay's line with `own-site`.
+- The canary's `facts` task tells the authority it follows, before every fleet publish, whether each transport gets through to its target, and, with the new `control_url`, whether the canary's own network answers without dotdash.
 
-- Local CDNs, for restricted networks: with their names in the new `cdn_hosts` parameter, `client-config`, the Xray config and the subscriptions add an XHTTP link through each, uploading in `GET` requests with the data in headers, as such CDNs need. The CDN page covers the setup and the risks.
+- `dotdash-manager sync` leaves a relay out of the servers' relays and pools once every canary watching it got through none of its paths three readings in a row, and brings it back when one gets through. It keeps every relay if all would go at once, and only reports a burnt server.
 
-- A relay can serve a site of its own: with a domain pointing at it and the new `own-site` profile, devices send the relay's own name, and a prober meets a real site with a certificate for that name, so the name and the address agree as for any site. `relay-config` offers it first; a borrowed site (`site`) still works.
+- `dotdash-manager`, installed with uv from the repository's `manager/`, runs a network from one roster: it makes the servers' shared keys, gives every server and relay the same devices, and keeps relays, canaries and client machines pointed at the servers, each machine following it through morzer's desired state.
 
-- The upstream can be a WireGuard exit: `upstream_protocol=wireguard` takes the wg-quick client config in the new `upstream_wireguard` secret, such as a home router's or a VPN provider's, and the gate runs Xray's own WireGuard with no extra privilege. It carries UDP, and IPv6 when the exit has it.
+- `cdn_only` on the relay gives devices its CDN links alone, none to its own address, so a relay can stay the origin of the CDNs in front of it while the relays devices reach directly are blocked. `relay-entry` marks the line `cdn-only`.
 
-- The upstream can be an OpenVPN exit: `upstream_protocol=openvpn` with the new `openvpn` profile takes the client config in the new `upstream_openvpn` secret, and a new config takes effect when set. Its container drops its default route before OpenVPN starts, so nothing leaves around the tunnel.
+- The relay's `entry_host` parameter, the address devices reach it at, which `relay-entry` uses when given none; under `own-site` it is the relay's domain.
 
-- A tunnel's config has a secret of its own, so it is set while the proxy is still the upstream, and the switch never leaves the gate without a working upstream: one `config set` for WireGuard, the profile and then the protocol for OpenVPN.
+- When nothing gets out, `doctor` names each upstreams line it asked by its `name=`: no answer, refused credentials, a WireGuard peer that did not carry it, or an OpenVPN tunnel that is down.
 
 ### Changed
 
-- The server's and relays' sites answer under any name, so a CDN in front works on its defaults: no `Host` header to set at the provider. A CDN that sends its own name as SNI gets the site's certificate rather than a failed handshake.
+- The server and own-site relays answer a subscription request a CDN passed on with the site's 404, so a device's links never pass through a CDN, which could read them. They recognise one by the headers a CDN adds, such as `X-Forwarded-For` and `Via`.
 
-- Links list XHTTP before REALITY, for each server and each relay, in `client-config` and the subscriptions: an app tends to try the first link, and REALITY over raw TCP is blocked most often.
+- **Breaking:** `site_dir` is gone from the server and the relay. Your own files are always read from `/srv/dotdash` (the relay's `/srv/dotdash-relay`), which a symlink can point elsewhere, so that one parameter, `cover`, names pages or an app. Move files kept elsewhere before updating.
 
-- Subscriptions are served with `Cache-Control: no-store`, so nothing between the server and a device keeps a copy.
+- **Breaking:** every bundle needs morzer 0.17.0, which health-checks a parameter change, undoes it when the check fails, and waits only on the services the change re-creates. Update morzer first: an older one refuses the release and changes nothing.
 
-- The server bundle is published as `ghcr.io/morzecrew/dotdash-server`, and `ghcr.io/morzecrew/dotdash` gets no new versions. Switch with `sudo morzer update oci://ghcr.io/morzecrew/dotdash-server:stable`, and point `update.channel` there if set. The product, its paths and data stay `dotdash`.
+- **Breaking:** the server's `healthcheck_url`, `healthcheck6_url` and `healthcheck_expect` are `probe_url`, `probe6_url` and `probe_expect`, as the other bundles name them. An update drops the old values, so set changed ones again after it.
 
-- The server needs morzer 0.15.1: update morzer before updating dotdash.
+- **Breaking:** every way out is a line of the new `upstreams` secret, in order: `socks5://`, `socks5+tls://`, `http://` or `https://` proxies, `wireguard://` exits and up to 8 `openvpn://` exits. Set it before updating, which is refused until it is: `sudo morzer secret set upstreams`.
 
-- The `upstream` secret is no longer required: an installation whose upstream is a tunnel needs none. With a proxy, the egress health check still fails, naming it, while it is unset.
+- **Breaking:** `ipv6=separate` sends IPv6 destinations through the lines marked `group=ipv6` alone, in place of the IPv6 proxy, and a line may serve both groups. `upstream_udp` now needs every line to carry UDP, tunnels included.
+
+- **Breaking:** the canary names its target as the relay does, `dotdash_server`, `dotdash_address`, `dotdash_port`, `dotdash_public_key`, `dotdash_id`, `dotdash_encryption`, `dotdash_short_id`, and `dotdash_` before the XHTTP and mKCP ones. A canary is not updated to it but set up again from `canary-config`.
+
+- `canary-config` also prints the server's mKCP opener, as `dotdash_kcp_open`.
+
+- **Breaking:** the client's `dns_listen` is off at `none`, as every other parameter says it, rather than `off`.
+
+- `morzer rollback` from this release of the server or the canary is refused, since the earlier release lacks the new names; the pre-update backup is the way back.
+
+- The relay's `cert_issuer` takes effect with `config set`, without a full apply.
+
+- The server, the relay and the canary run Xray 26.11.9, and the client mihomo 1.19.34.
 
 ### Removed
 
-- The `xdns-xhttp-reality` profile, deprecated since 0.5.0: a server still set to it must switch before updating. `xdns,xhttp-reality` deploys the same: `sudo morzer config set installation.profile=xdns,xhttp-reality`.
+- **Breaking:** the `upstream`, `upstream6`, `upstream_backup`, `upstream_wireguard` and `upstream_openvpn` secrets and the `upstream_protocol`, `upstream6_protocol` and `upstream_backup_protocol` parameters with their `*_tls` ones. Their ways out become lines of `upstreams`.
+
+- **Breaking:** the relay's deprecated `dotdash_server`. `dotdash_servers` is now required: on a relay that still has only `dotdash_server`, set `dotdash_servers` before updating.
