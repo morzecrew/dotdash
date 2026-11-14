@@ -2710,7 +2710,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>A <code>facts</code> task on the server and the relay prints, as JSON, what each tells the authority it follows after every change: a server's domain, ports, public key and encryption string, and a relay's <code>relay-entry</code> line.</p>
 </li>
 <li>
-<p><code>dotdash-manager</code> (<code>manager/dotdash_manager.py</code>) runs a network from one roster: it makes the servers' shared keys, gives every server and relay the same devices, and keeps relays, canaries and client machines pointed at the servers, each machine following it through morzer's desired state.</p>
+<p><code>dotdash-manager</code>, installed with uv from the repository's <code>manager/</code>, runs a network from one roster: it makes the servers' shared keys, gives every server and relay the same devices, and keeps relays, canaries and client machines pointed at the servers, each machine following it through morzer's desired state.</p>
 </li>
 <li>
 <p>The relay's <code>entry_host</code> parameter, the address devices reach it at, which <code>relay-entry</code> uses when given none; under <code>own-site</code> it is the relay's domain.</p>

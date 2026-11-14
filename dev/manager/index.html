@@ -2012,8 +2012,12 @@ manager runs where you keep the authority key, never on a managed machine.</p>
                          ▲                                                  │
                          └──────────── servers' and relays' facts ◀─────────┘
 </code></pre></div>
-<p>It needs Python 3.11 or newer, morzer and age-keygen, and is one file:
-<code>manager/dotdash_manager.py</code> in the repository.</p>
+<p>It needs morzer and age-keygen beside it, and installs with
+<a href="https://docs.astral.sh/uv/">uv</a> at the tag of the release your machines run,
+such as <code>v0.7.0</code>:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/morzecrew/dotdash@&lt;tag&gt;#subdirectory=manager"</span>
+</code></pre></div>
+<p>To move to a later release, run it again with that tag and <code>--force</code>.</p>
 <h2 id="set-it-up">Set it up<a class="headerlink" href="#set-it-up" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>morzer<span class="w"> </span>state<span class="w"> </span>key<span class="w"> </span>generate<span class="w"> </span>./authority.key<span class="w">   </span><span class="c1"># prints the public key: authority below</span>
 age-keygen<span class="w"> </span>-o<span class="w"> </span>./authority.age<span class="w">               </span><span class="c1"># facts are encrypted to it</span>
@@ -2054,11 +2058,12 @@ links (<a href="../server/devices/#keeping-the-servers-out-of-devices-links">dir
 and client machines fetch their subscription through an own-site relay,
 waiting for one. Left out, each server keeps its own setting.</p>
 <p>Names are lowercase letters, digits and dashes. <code>relay-</code> and <code>canary-</code> start
-the names the manager gives relays' and canaries' own devices.</p>
+the names the manager gives relays' and canaries' own devices. A field the
+roster doesn't know is refused, so a mistyped one can't pass unnoticed.</p>
 <h2 id="add-a-machine">Add a machine<a class="headerlink" href="#add-a-machine" title="Permanent link">&para;</a></h2>
 <p>Name it in the roster first. Then:</p>
-<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>manager/dotdash_manager.py<span class="w"> </span>sync<span class="w">          </span><span class="c1"># the servers learn its device</span>
-python3<span class="w"> </span>manager/dotdash_manager.py<span class="w"> </span>join<span class="w"> </span>r1<span class="w">       </span><span class="c1"># what to run on it</span>
+<div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>sync<span class="w">          </span><span class="c1"># the servers learn its device</span>
+dotdash-manager<span class="w"> </span>join<span class="w"> </span>r1<span class="w">       </span><span class="c1"># what to run on it</span>
 </code></pre></div>
 <p><code>join</code> prints the machine's <code>init</code>, its secrets and its sync settings, as
 <code>relay-config</code> does, and the line that reads its installation id and signing
@@ -2073,9 +2078,9 @@ document replaces them, and relays, canaries and clients move to it once its
 facts show the manager's key. A relay, canary or client waits for a server
 that has.</p>
 <h2 id="keep-it-current">Keep it current<a class="headerlink" href="#keep-it-current" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>manager/dotdash_manager.py<span class="w"> </span>sync<span class="w"> </span>--dry-run<span class="w">   </span><span class="c1"># what would change</span>
-python3<span class="w"> </span>manager/dotdash_manager.py<span class="w"> </span>sync
-python3<span class="w"> </span>manager/dotdash_manager.py<span class="w"> </span>status<span class="w">           </span><span class="c1"># what each machine applied and refused</span>
+<div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>sync<span class="w"> </span>--dry-run<span class="w">   </span><span class="c1"># what would change</span>
+dotdash-manager<span class="w"> </span>sync
+dotdash-manager<span class="w"> </span>status<span class="w">           </span><span class="c1"># what each machine applied and refused</span>
 </code></pre></div>
 <p><code>sync</code> publishes only documents that changed, and renews the rest every three
 days: a document expires after seven. Run it from a timer to keep it ahead of
