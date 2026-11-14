@@ -125,7 +125,7 @@ parameters:
   control_url:
     type: string
     default: none
-    description: "A URL this canary's network reaches without dotdash, such as a local site, which facts fetches directly so an authority does not read the canary's own outage as its target blocked; none for no such check"
+    description: "A site this canary's network reaches without dotdash, which facts fetches directly, so an authority does not read the canary's own outage as its target blocked; none for none"
 
 images:
   # The measure task's shell; Xray's image has none.
@@ -148,7 +148,7 @@ published:
 
 tasks:
   facts:
-    description: "Print this canary's verdict on its target as JSON, which morzer publishes to the authority it follows: whether each transport gets through, and whether control_url answers without dotdash; no credentials"
+    description: "Print as JSON, for the authority this canary follows, whether each transport gets through to its target and whether control_url answers without dotdash"
     service: measure
     command: ["sh", "/task/facts.sh"]
     timeout: 3m
