@@ -41,5 +41,9 @@ jobs:
       init-args: >-
         --domain auth.rig.invalid --set address=127.0.0.1
         --set nameserver=ns.rig.invalid --set api_tls=none
+      # Off until :main carries the secret state the pre-update backup needs:
+      # the published bundle declares no secret, so its rig has no backup
+      # recipients. Back to true after 0.8.0.
+      smoke-update: false
       # smoke-update installs the published :main first, trusting this key.
       dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}
