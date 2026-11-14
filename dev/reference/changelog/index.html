@@ -2710,6 +2710,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>A <code>facts</code> task on the server and the relay prints, as JSON, what each tells the authority it follows after every change: a server's domain, ports, public key and encryption string, and a relay's <code>relay-entry</code> line.</p>
 </li>
 <li>
+<p>The canary's <code>facts</code> task tells the authority it follows, before every fleet publish, whether each transport gets through to its target, and, with the new <code>control_url</code>, whether the canary's own network answers without dotdash.</p>
+</li>
+<li>
+<p><code>dotdash-manager sync</code> leaves a relay out of the servers' relays and pools once every canary watching it got through none of its paths three readings in a row, and brings it back when one gets through. It keeps every relay if all would go at once, and only reports a burnt server.</p>
+</li>
+<li>
 <p><code>dotdash-manager</code>, installed with uv from the repository's <code>manager/</code>, runs a network from one roster: it makes the servers' shared keys, gives every server and relay the same devices, and keeps relays, canaries and client machines pointed at the servers, each machine following it through morzer's desired state.</p>
 </li>
 <li>

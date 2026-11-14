@@ -2031,6 +2031,13 @@ downloads <code>download_url</code> three times through each and adds the median
 Mbit/s:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>measure<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span><span class="m">50</span>
 </code></pre></div>
+<p>A canary that follows the <a href="../manager/">manager</a> tells it, before every
+fleet publish, whether each transport gets through (<code>facts</code>), and the manager
+leaves a relay its canaries can't get through out of devices' links. Set
+<code>control_url</code> to a site this canary's network reaches without dotdash, so the
+canary's own outage isn't read as its target burnt:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">control_url</span><span class="o">=</span>https://www.example.net/
+</code></pre></div>
 <h2 id="several-servers-and-relays">Several servers, and relays<a class="headerlink" href="#several-servers-and-relays" title="Permanent link">&para;</a></h2>
 <p>A canary watches one server. With <a href="../server/several-servers/">several servers</a>,
 <code>canary-config</code> prints how to point a canary at each of the others. To watch a
@@ -2104,6 +2111,11 @@ relay's address no longer gets through for devices.</p>
 <td><code>https://speed.cloudflare.com/__down?bytes=1000000</code></td>
 <td>what <code>measure</code> downloads for its Mbit/s, <code>https://</code> only; <code>none</code> skips the downloads</td>
 </tr>
+<tr>
+<td><code>control_url</code></td>
+<td><code>none</code></td>
+<td>a site this canary's network reaches without dotdash, which <code>facts</code> fetches directly; <code>none</code> for no such check</td>
+</tr>
 </tbody>
 </table>
 <table>
@@ -2147,6 +2159,10 @@ relay's address no longer gets through for devices.</p>
 <tr>
 <td><code>measure --output -- [count] [url] [timeout]</code></td>
 <td>each transport <code>count</code> times (20 by default), as JSON</td>
+</tr>
+<tr>
+<td><code>facts --output</code></td>
+<td>what it watches, whether each transport gets through, and whether <code>control_url</code> answers, as JSON; what the manager reads</td>
 </tr>
 </tbody>
 </table>

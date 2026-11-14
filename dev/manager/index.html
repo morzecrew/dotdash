@@ -1748,6 +1748,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#burnt-relays" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Burnt relays
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-it-leaves-alone" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1959,6 +1970,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#burnt-relays" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Burnt relays
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-it-leaves-alone" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2091,6 +2113,30 @@ cycle.</p>
 shared keys, every device's id and the client machines' proxy passwords. It is
 written with mode 0600 and holds every credential in the network: back it up
 like <code>authority.key</code>.</p>
+<h2 id="burnt-relays">Burnt relays<a class="headerlink" href="#burnt-relays" title="Permanent link">&para;</a></h2>
+<p>Before every fleet publish, about hourly, each canary that follows the manager
+reports whether each of its paths to the server or relay it watches gets
+through. When every canary watching a relay got through none of its paths
+three readings in a row, <code>sync</code> leaves that relay out of the servers' <code>relays</code>
+and <code>pools</code>, and of client machines' subscription URLs, and says so:</p>
+<div class="highlight"><pre><span></span><code>burnt: relay r1: its canaries got through none of its paths in 3 readings; left out of the servers' relays and pools until a canary gets through again; replace it
+</code></pre></div>
+<p>Devices stop getting its links at their next subscription refresh. The relay
+keeps its own document and its canaries keep watching it, so a single reading
+that gets through brings it back. To replace it, <a href="#add-a-machine">add</a> a relay
+on a fresh address, then take the burnt one out of the roster.</p>
+<ul>
+<li><strong>A canary whose own network is down says nothing</strong>, given a <code>control_url</code>:
+  a site its network reaches without dotdash. A reading where that fails
+  doesn't count. Without one, an offline canary looks like a burnt relay.</li>
+<li><strong>Every relay at once is kept.</strong> If every relay would be left out in the
+  same sync, the manager keeps them all and says to check the canaries'
+  network instead.</li>
+<li><strong>A burnt server is only reported.</strong> Relays reach the servers, so leaving
+  one out would cut them off.</li>
+<li><strong>A relay no canary watches is never judged.</strong> Run canaries where devices
+  are: <a href="../canary/#on-a-mobile-line">on a mobile line</a>.</li>
+</ul>
 <h2 id="what-it-leaves-alone">What it leaves alone<a class="headerlink" href="#what-it-leaves-alone" title="Permanent link">&para;</a></h2>
 <p>The upstreams, ports, profiles, domains and anything else a machine alone
 knows stay the operator's, set on that machine as before. A value the manager
