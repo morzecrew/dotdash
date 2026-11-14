@@ -2728,7 +2728,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p><strong>Breaking:</strong> <code>site_dir</code> is gone from the server and the relay. Your own files are always read from <code>/srv/dotdash</code> (the relay's <code>/srv/dotdash-relay</code>), which a symlink can point elsewhere, so that one parameter, <code>cover</code>, names pages or an app. Move files kept elsewhere before updating.</p>
 </li>
 <li>
-<p><strong>Breaking:</strong> every bundle needs morzer 0.16.0, which health-checks a parameter change and undoes it when the check fails. Update morzer first: an older one refuses the release and changes nothing.</p>
+<p><strong>Breaking:</strong> every bundle needs morzer 0.17.0, which health-checks a parameter change, undoes it when the check fails, and waits only on the services the change re-creates. Update morzer first: an older one refuses the release and changes nothing.</p>
 </li>
 <li>
 <p><strong>Breaking:</strong> the server's <code>healthcheck_url</code>, <code>healthcheck6_url</code> and <code>healthcheck_expect</code> are <code>probe_url</code>, <code>probe6_url</code> and <code>probe_expect</code>, as the other bundles name them. An update drops the old values, so set changed ones again after it.</p>
