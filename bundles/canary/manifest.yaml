@@ -121,6 +121,11 @@ parameters:
     type: string
     default: https://speed.cloudflare.com/__down?bytes=1000000
     description: "What measure downloads three times through each transport for its Mbit/s; none skips the downloads"
+  # No services: only the facts task reads it, when it runs.
+  control_url:
+    type: string
+    default: none
+    description: "A URL this canary's network reaches without dotdash, such as a local site, which facts fetches directly so an authority does not read the canary's own outage as its target blocked; none for no such check"
 
 images:
   # The measure task's shell; Xray's image has none.
@@ -134,7 +139,19 @@ managed:
   parameters: [dotdash_server, dotdash_address, dotdash_port, dotdash_xhttp_reality_port, dotdash_kcp_port, dotdash_kcp_header, dotdash_kcp_open, dotdash_public_key]
   secrets: [dotdash_id, dotdash_encryption, dotdash_short_id, dotdash_xhttp_path, dotdash_kcp_seed]
 
+# What this machine tells the authority it follows when sync.recipient is set:
+# the facts task's JSON, run again before every fleet publish (morzer 0.17),
+# so its verdict on its target is the current one.
+published:
+  task: facts
+  refresh: publish
+
 tasks:
+  facts:
+    description: "Print this canary's verdict on its target as JSON, which morzer publishes to the authority it follows: whether each transport gets through, and whether control_url answers without dotdash; no credentials"
+    service: measure
+    command: ["sh", "/task/facts.sh"]
+    timeout: 3m
   measure:
     description: "Measure each transport through dotdash as JSON: N fetches (20 unless given) for success and latency, 3 downloads of download_url for Mbit/s; arguments: [count] [url] [timeout]"
     service: measure
