@@ -72,3 +72,18 @@ Either way:
 Pick something people run on servers like this one, such as a wiki, a file
 share or a dashboard behind a login, and give it content. The same app on
 every server would link them, as the bundled page does, so vary it.
+
+## An app installed with morzer
+
+An app shipped as a morzer bundle of its own installs beside this server as a
+second installation, updated and rolled back on its own. Its Compose file
+joins `dotdash_edge` as an external network, so install this server first,
+then the app, then point `cover` at it once the app reports healthy.
+
+With two installations on the machine, morzer no longer guesses which one a
+command means: each names it with `--product`, as in
+`sudo morzer --product dotdash config set cover=http://<app>:8080`.
+`sudo morzer shell dotdash` opens a shell where every command means this
+server. The commands on these pages leave `--product` out, as they do on a
+machine with one installation. On a relay the product is `dotdash-relay`, and
+the network `dotdash-relay_default`.
