@@ -55,8 +55,10 @@ client() { # <name> <socks port> <link> [jq edit]: a client from the link, start
   sudo docker rm -f "dotdash-rig-$1" >/dev/null 2>&1 || true
   sudo docker run -d --name "dotdash-rig-$1" --network host -v "${dir}:/etc/xray:ro" "${xray}" >/dev/null
 }
+# Up to a minute of tries when each fails fast: after the upstream comes back,
+# the server's balancer sends nothing through it until its next probe, 30s apart.
 gets_through() { # <socks port>
-  [ "$(curl -fsS --max-time 15 --retry 5 --retry-delay 2 --retry-all-errors \
+  [ "$(curl -fsS --max-time 15 --retry 30 --retry-delay 2 --retry-all-errors \
     --socks5-hostname "127.0.0.1:$1" "${target}" 2>/dev/null)" = ok ]
 }
 locked_out() { # <socks port>

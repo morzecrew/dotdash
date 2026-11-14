@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Breaking:** `site_dir` is gone from the server and the relay. Your own files are always read from `/srv/dotdash` (the relay's `/srv/dotdash-relay`), which a symlink can point elsewhere, so that one parameter, `cover`, names pages or an app. Move files kept elsewhere before updating.
 
-- **Breaking:** every bundle needs morzer 0.16.0, which health-checks a parameter change and undoes it when the check fails. Update morzer first: an older one refuses the release and changes nothing.
+- **Breaking:** every bundle needs morzer 0.17.0, which health-checks a parameter change, undoes it when the check fails, and waits only on the services the change re-creates. Update morzer first: an older one refuses the release and changes nothing.
 
 - **Breaking:** the server's `healthcheck_url`, `healthcheck6_url` and `healthcheck_expect` are `probe_url`, `probe6_url` and `probe_expect`, as the other bundles name them. An update drops the old values, so set changed ones again after it.
 

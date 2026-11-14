@@ -51,7 +51,7 @@ secrets:
 
 compatibility:
   # The manager this bundle is verified and rehearsed with.
-  min_manager_version: "0.16.0"
+  min_manager_version: "0.17.0"
   # 0.7.0 renamed every parameter and secret that names the target to
   # dotdash_*, as the relay names them, and an update retires the old values,
   # so 0.6.x would come back with none. A canary is set up again from

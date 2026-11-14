@@ -41,7 +41,7 @@ runtimes:
 compatibility:
   # The manager this bundle is verified and rehearsed with, and the first that
   # health-checks a parameter change and undoes it when the check fails.
-  min_manager_version: "0.16.0"
+  min_manager_version: "0.17.0"
   # 0.7.0 renamed healthcheck_url, healthcheck6_url and healthcheck_expect to
   # probe_*, and replaced the upstream settings with the upstreams secret; an
   # update retires the old values, so 0.6.x would come back without them.
