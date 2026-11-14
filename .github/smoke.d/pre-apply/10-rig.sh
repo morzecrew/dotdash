@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # What a real machine has before its first apply and this rig does not: an
 # upstream proxy, and the URL the healthcheck fetches through it. The workflows'
-# init-args already gave init the domain, the upstream's protocol, that URL
-# (http://11.99.0.10:8000/) and cert_issuer=internal, which needs no Let's
-# Encrypt; only the upstream's address is known no earlier than here.
+# init-args already gave init the domain, that URL (http://11.99.0.10:8000/)
+# and cert_issuer=internal, which needs no Let's Encrypt; only the upstream's
+# address is known no earlier than here.
 #
 # The target has a fixed address in a subnet that is not private (11.99.0.0/24,
 # never routed publicly), so the hooks reach it by address: with resolve=gateway,
@@ -25,10 +25,7 @@ set -euo pipefail
 
 pinned() { sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' "$1" | sed -n 1p; }
 xray=$(pinned ghcr.io/morzecrew/xray)
-# The bundle's Caddy: caddy-acmedns, or upstream's in a release before it,
-# which the rehearsal installs first.
 caddy=$(pinned ghcr.io/morzecrew/caddy-acmedns)
-[ -n "${caddy}" ] || caddy=$(pinned caddy)
 [ -n "${xray}" ] && [ -n "${caddy}" ] || die "the bundle's pinned images are not in the rig"
 host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
 
@@ -70,15 +67,5 @@ sudo docker run -d --name dotdash-rig-target --network dotdash-rig --ip 11.99.0.
 sudo docker run -d --name dotdash-rig-upstream --network dotdash-rig -p 18080:8080 \
   -v /rig/upstream:/etc/xray:ro -v /rig/upstream-log:/log "${xray}" >/dev/null
 
-# Before the first apply morzer has nothing to restart, and says so. The list
-# is what this release reads; the line alone is what a release before it read,
-# which smoke-update installs first, and which keeps the list for its update.
+# Before the first apply morzer has nothing to restart, and says so.
 printf 'http://%s name=rig\n' "$(cat /rig/upstream.conn)" | sudo morzer secret set upstreams >/dev/null 2>&1 || true
-printf "%s" "$(cat /rig/upstream.conn)" | sudo morzer secret set upstream >/dev/null 2>&1 || true
-# A release from before the upstream secret, which smoke-update installs
-# first, takes a host and a port parameter and two secrets instead. Only such
-# a release accepts upstream_host; the secret above it ignores.
-if sudo morzer config set "upstream_host=${host}" upstream_port=18080 >/dev/null 2>&1; then
-  printf rig | sudo morzer secret set upstream_username >/dev/null 2>&1 || true
-  printf '%s' "${pass}" | sudo morzer secret set upstream_password >/dev/null 2>&1 || true
-fi

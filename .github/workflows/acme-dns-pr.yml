@@ -41,8 +41,5 @@ jobs:
       init-args: >-
         --domain auth.rig.invalid --set address=127.0.0.1
         --set nameserver=ns.rig.invalid --set api_tls=none
-      # Nothing is published to update from yet. Back to true once
-      # dotdash-acme-dns is on :main (and, for releases, :stable).
-      smoke-update: false
       # smoke-update installs the published :main first, trusting this key.
       dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}
