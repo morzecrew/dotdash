@@ -1953,7 +1953,7 @@
 
 <h1 id="dotdash">dotdash<a class="headerlink" href="#dotdash" title="Permanent link">&para;</a></h1>
 <p>dotdash gets devices in a restricted network out to the open internet through
-a server of yours outside it. It comes as four
+a server of yours outside it. It comes as five
 <a href="https://github.com/morzecrew/morzer">morzer</a> bundles, released together from
 one tag:</p>
 <p><img alt="The four bundles: phones, the client and the canary inside the restricted network reach the dotdash server outside it directly, or through the relay while only some addresses get through; the server leaves only through your upstream proxy" src="assets/diagrams/overview.light.svg#only-light" />
@@ -1994,8 +1994,9 @@ one tag:</p>
 </tr>
 </tbody>
 </table>
-<p>Start with the server: its tasks print the other three's setup. The client
-and the canary reach it as phones do, directly or through a relay.</p>
+<p>Start with the server: its tasks print the relay's, the client's and the
+canary's setup. The client and the canary reach it as phones do, directly or
+through a relay.</p>
 <h2 id="what-every-machine-needs">What every machine needs<a class="headerlink" href="#what-every-machine-needs" title="Permanent link">&para;</a></h2>
 <p>Docker ≥ 28 with Compose ≥ 2.35, <code>sops</code>, <code>age</code>, and morzer ≥ 0.17.0. On a
 fresh Debian or Ubuntu machine, <code>bootstrap.sh</code> installs them, turns on
