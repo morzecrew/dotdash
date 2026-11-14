@@ -1,7 +1,7 @@
 # dotdash
 
 dotdash gets devices in a restricted network out to the open internet through
-a server of yours outside it. It comes as four
+a server of yours outside it. It comes as five
 [morzer](https://github.com/morzecrew/morzer) bundles, released together from
 one tag:
 
@@ -16,8 +16,9 @@ one tag:
 | **[dotdash-canary](canary/index.md)** | a machine inside the restricted network | connects as a device would, and alerts when it can't get through |
 | **[dotdash-acme-dns](server/certificates.md#an-acme-dns-server)** | a small machine of its own | answers the DNS-01 checks of the servers' and relays' [wildcard certificates](server/certificates.md) |
 
-Start with the server: its tasks print the other three's setup. The client
-and the canary reach it as phones do, directly or through a relay.
+Start with the server: its tasks print the relay's, the client's and the
+canary's setup. The client and the canary reach it as phones do, directly or
+through a relay.
 
 ## What every machine needs
 
