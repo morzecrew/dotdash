@@ -1,0 +1,88 @@
+# The acme-dns bundle's stable channel, released with dotdash: the same tag
+# vX.Y.Z on main builds, signs and smoke-tests that commit's bundles/acme-dns/,
+# publishes dotdash-acme-dns:X.Y.Z, moves :stable and attaches the archive to
+# the tag's GitHub release, whichever release workflow creates it. The jobs are
+# bundle-ci's.
+name: acme-dns-release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+# One group per workflow: GitHub keeps one waiting run per group, so a group
+# the release workflows shared cancelled two of them on v0.5.0. Their
+# GitHub release is safe without it: github-release.yml uploads to the
+# release when another bundle created it first.
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    permissions:
+      contents: read
+    uses: morzecrew/bundle-ci/.github/workflows/guard.yml@11cf2fa664039ee7800e614ecce85dd041be99d0 # v0.12.1
+    with:
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+
+  bundle:
+    needs: guard
+    permissions:
+      contents: read
+      packages: read
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@11cf2fa664039ee7800e614ecce85dd041be99d0 # v0.12.1
+    with:
+      morzer-version: "0.17.0"
+      ref: ${{ github.sha }}
+      version: ${{ needs.guard.outputs.version }}
+      channel: stable
+      signing: release
+      # The key that signs, shipped as minisign.pub: init trusts it on first use.
+      ship-pubkey: true
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+      bundle-dir: bundles/acme-dns
+      version-paths: bundles/acme-dns
+      package: dotdash-acme-dns
+      smoke-hooks: .github/acme-dns-smoke.d
+      components: ""
+      probe-paths: ""
+      # The rig's zone and loopback address; the API on plain HTTP, since no CA
+      # reaches a rig.
+      init-args: >-
+        --domain auth.rig.invalid --set address=127.0.0.1
+        --set nameserver=ns.rig.invalid --set api_tls=none
+      # Nothing is published to update from yet. Back to true once
+      # dotdash-acme-dns is on :main (and, for releases, :stable).
+      smoke-update: false
+      release-pubkey: ${{ vars.MINISIGN_RELEASE_PUBKEY }}
+    secrets:
+      minisign-key: ${{ secrets.MINISIGN_RELEASE_KEY }}
+
+  publish:
+    needs: bundle
+    if: needs.bundle.outputs.proceed == 'true'
+    permissions:
+      contents: read
+      packages: write
+      # The provenance publish.yml attests for the bundle.
+      id-token: write
+      attestations: write
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@11cf2fa664039ee7800e614ecce85dd041be99d0 # v0.12.1
+    with:
+      version: ${{ needs.bundle.outputs.version }}
+      archive: ${{ needs.bundle.outputs.archive }}
+      channel: stable
+      package: dotdash-acme-dns
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+
+  github-release:
+    needs: [bundle, publish]
+    permissions:
+      contents: write
+    uses: morzecrew/bundle-ci/.github/workflows/github-release.yml@11cf2fa664039ee7800e614ecce85dd041be99d0 # v0.12.1
+    with:
+      version: ${{ needs.bundle.outputs.version }}
+      archive: ${{ needs.bundle.outputs.archive }}
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}

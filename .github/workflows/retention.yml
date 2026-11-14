@@ -47,3 +47,12 @@ jobs:
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
     secrets:
       token: ${{ secrets.GH_PAT }}
+
+  acme-dns:
+    permissions: {}
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@11cf2fa664039ee7800e614ecce85dd041be99d0 # v0.12.1
+    with:
+      package: dotdash-acme-dns
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+    secrets:
+      token: ${{ secrets.GH_PAT }}
