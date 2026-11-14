@@ -1987,6 +1987,11 @@ one tag:</p>
 <td>a machine inside the restricted network</td>
 <td>connects as a device would, and alerts when it can't get through</td>
 </tr>
+<tr>
+<td><strong><a href="server/certificates/#an-acme-dns-server">dotdash-acme-dns</a></strong></td>
+<td>a small machine of its own</td>
+<td>answers the DNS-01 checks of the servers' and relays' <a href="server/certificates/">wildcard certificates</a></td>
+</tr>
 </tbody>
 </table>
 <p>Start with the server: its tasks print the other three's setup. The client
@@ -2025,9 +2030,10 @@ trusts it, and requires every later release to be signed by it.</p>
 </tr>
 </tbody>
 </table>
-<p><code>&lt;bundle&gt;</code> is <code>dotdash</code>, <code>dotdash-relay</code>, <code>dotdash-client</code> or
-<code>dotdash-canary</code>. These docs are versioned with the releases: the version
-menu shows each released minor, and <code>dev</code> follows <code>main</code>.</p>
+<p><code>&lt;bundle&gt;</code> is <code>dotdash-server</code>, <code>dotdash-relay</code>, <code>dotdash-client</code>,
+<code>dotdash-canary</code> or <code>dotdash-acme-dns</code>. These docs are versioned with the
+releases: the version menu shows each released minor, and <code>dev</code> follows
+<code>main</code>.</p>
 
 
 

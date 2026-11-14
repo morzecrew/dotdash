@@ -866,6 +866,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#an-acme-dns-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        An acme-dns server
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1941,6 +1952,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#an-acme-dns-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        An acme-dns server
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2100,29 +2122,29 @@ about where the servers are.</p>
    would guess, such as <code>x7k2.s.example.net</code> for a server. Point it at the
    machine as usual, with an <code>A</code> record.</li>
 <li>
-<p><strong>Registration,</strong> once per parent:</p>
-<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://acme-dns.example.net/register
+<p><strong>Registration,</strong> once per parent, on the
+   <a href="#an-acme-dns-server">acme-dns server</a>:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>register<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>s.example.net
 </code></pre></div>
-<p>It answers with JSON holding <code>username</code>, <code>password</code>, <code>subdomain</code> and
-<code>fulldomain</code>. A self-hosted acme-dns server is better than a public one,
-since whoever runs the server can answer your checks. Its own address is
-public through the NS record that delegates its zone, so don't run it on a
-dotdash server or relay.</p>
+<p>It prints the CNAME for step 3 and the <code>acme_dns</code> secret for step 4. Keep
+the secret as you keep the servers' keys: every machine under the parent
+shares it.</p>
 </li>
 <li>
-<p><strong>The CNAME,</strong> once per parent, at your DNS host:</p>
-<div class="highlight"><pre><span></span><code>_acme-challenge.s.example.net.  CNAME  &lt;fulldomain&gt;.
+<p><strong>The CNAME,</strong> once per parent, at your DNS host, as <code>register</code> printed it:</p>
+<div class="highlight"><pre><span></span><code>_acme-challenge.s.example.net.  CNAME  &lt;uuid&gt;.auth.example.org.
 </code></pre></div>
 </li>
 <li>
-<p><strong>Each machine under that parent:</strong> the registration with the acme-dns
-   server's URL added, then the issuer:</p>
-<div class="highlight"><pre><span></span><code><span class="nb">printf</span><span class="w"> </span><span class="s1">'%s'</span><span class="w"> </span><span class="s1">'{"username": "…", "password": "…", "subdomain": "…", "server_url": "https://acme-dns.example.net"}'</span><span class="w"> </span><span class="p">|</span>
-<span class="w">  </span>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>acme_dns
+<p><strong>Each machine under that parent:</strong> the secret, then the issuer:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>acme_dns<span class="w">       </span><span class="c1"># the line register printed, then Ctrl-D</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">cert_issuer</span><span class="o">=</span>acme-dns
 </code></pre></div>
 <p>Caddy takes <code>*.s.example.net</code> over DNS-01 and serves it for the machine's
-name. On a relay it takes the same steps, under the <code>own-site</code> profile.</p>
+name. On a relay it takes the same steps, under the <code>own-site</code> profile.
+On a new machine, give <code>init</code> <code>--set cert_issuer=acme-dns</code> and set the
+secret before the first <code>apply</code>: a single <code>apply</code> under <code>acme</code> puts the
+machine's name in the logs.</p>
 </li>
 <li>
 <p>A domain with two labels, such as <code>example.net</code>, has no parent to take a
@@ -2136,6 +2158,46 @@ name. On a relay it takes the same steps, under the <code>own-site</code> profil
   gets no certificate, and its log says why:
   <code>sudo docker compose -p dotdash logs caddy</code>.</li>
 </ol>
+<h2 id="an-acme-dns-server">An acme-dns server<a class="headerlink" href="#an-acme-dns-server" title="Permanent link">&para;</a></h2>
+<p>Run your own: whoever runs an acme-dns server can answer your domains'
+checks, and the public one is meant only for testing. The
+<code>dotdash-acme-dns</code> bundle is one, installed with morzer like the others.</p>
+<p>Give it a machine of its own: the NS record that delegates its zone makes its
+address public, so not a dotdash server or relay, nor the manager's machine.
+Its zone goes under a domain apart from the servers' and the relays', such as
+<code>auth.example.org</code>: every domain it serves points a public CNAME into that
+zone, and one under the servers' domain would name it from the relays'.</p>
+<ol>
+<li><strong>Firewall:</strong> open 53/udp, 53/tcp and 443/tcp in the provider's firewall.
+   Install Docker and morzer as on <a href="../../#what-every-machine-needs">every machine</a>.</li>
+<li>
+<p><strong>DNS,</strong> at <code>example.org</code>'s DNS host, before the first <code>apply</code>:</p>
+<div class="highlight"><pre><span></span><code>acme-ns.example.org.  A   &lt;its IP&gt;
+auth.example.org.     NS  acme-ns.example.org.
+</code></pre></div>
+<p>The nameserver is outside the zone it serves, so the delegation needs no
+glue record, which some DNS hosts can't make.</p>
+</li>
+<li>
+<p><strong>Install:</strong></p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>init<span class="w"> </span>--release<span class="w"> </span>oci://ghcr.io/morzecrew/dotdash-acme-dns:stable<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--domain<span class="w"> </span>auth.example.org<span class="w"> </span>--recovery-recipient<span class="w"> </span>age1…<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span><span class="nv">address</span><span class="o">=</span>&lt;its<span class="w"> </span>IP&gt;<span class="w"> </span>--set<span class="w"> </span><span class="nv">nameserver</span><span class="o">=</span>acme-ns.example.org
+sudo<span class="w"> </span>morzer<span class="w"> </span>apply
+</code></pre></div>
+<p><code>address</code> must be on the machine's own interface (<code>ip -4 addr</code>): ports 53
+and 443 are published on it alone, apart from a local resolver on
+<code>127.0.0.53</code>. <code>apply</code> waits for the API's certificate, which acme-dns takes
+for <code>auth.example.org</code> through its own DNS, so it succeeds only once the
+NS record above resolves.</p>
+</li>
+<li>
+<p><strong>Register</strong> each parent, as in step 2 <a href="#setting-it-up">above</a>.</p>
+</li>
+</ol>
+<p>Its registrations are in its data volume, which morzer's backups hold. Lose
+them and every parent registers again, with a new CNAME and a new secret on
+each machine.</p>
 
 
 
