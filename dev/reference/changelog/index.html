@@ -2719,6 +2719,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p><code>dotdash-manager</code>, installed with uv from the repository's <code>manager/</code>, runs a network from one roster: it makes the servers' shared keys, gives every server and relay the same devices, and keeps relays, canaries and client machines pointed at the servers, each machine following it through morzer's desired state.</p>
 </li>
 <li>
+<p><code>cdn_only</code> on the relay gives devices its CDN links alone, none to its own address, so a relay can stay the origin of the CDNs in front of it while the relays devices reach directly are blocked. <code>relay-entry</code> marks the line <code>cdn-only</code>.</p>
+</li>
+<li>
 <p>The relay's <code>entry_host</code> parameter, the address devices reach it at, which <code>relay-entry</code> uses when given none; under <code>own-site</code> it is the relay's domain.</p>
 </li>
 <li>

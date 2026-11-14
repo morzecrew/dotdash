@@ -1000,6 +1000,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="In front of a relay">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-cdns-origin-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The CDN's origin only
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -1974,6 +1991,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="In front of a relay">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-cdns-origin-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The CDN's origin only
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -2243,6 +2277,25 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
    above, and <a href="../devices/#pools">pools</a> take the relay's CDN names as members.</p>
 </li>
 </ol>
+<h4 id="the-cdns-origin-only">The CDN's origin only<a class="headerlink" href="#the-cdns-origin-only" title="Permanent link">&para;</a></h4>
+<p>Devices behind a CDN connect to the CDN's addresses, never to the relay's, so
+the relay behind it is not exposed the way a relay devices reach directly is.
+Unless you say otherwise, though, the relay's line still gives devices
+REALITY, XHTTP and mKCP links to its own address, which exposes it. With
+<code>cdn_only=true</code>, devices get its CDN links alone:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">cdn_only</span><span class="o">=</span><span class="nb">true</span>
+sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>&lt;address&gt;<span class="w">   </span><span class="c1"># now ends in cdn-only</span>
+</code></pre></div>
+<p>Replace the relay's line here again. The relay then gives devices no link or
+subscription URL of its own. The <a href="../../manager/#burnt-relays">manager</a> also
+stops judging it by its canaries, which check its own address. <code>relay-entry</code>
+refuses <code>cdn_only</code> without <code>cdn_hosts</code>, because devices would get nothing
+through the relay.</p>
+<p>A network then needs one or two CDNs in all, not one per relay. Each CDN
+fronts one origin relay, with <code>cdn_only=true</code>, and the relays devices reach
+directly need no CDN. A CDN's origin is one host. If that relay is lost,
+point the CDN at another relay with a site of its own, and move <code>cdn_hosts</code>
+and <code>cdn_only</code> to it. The name devices use stays the same.</p>
 <h2 id="a-cdn-against-address-blocking">A CDN against address blocking<a class="headerlink" href="#a-cdn-against-address-blocking" title="Permanent link">&para;</a></h2>
 <p>The XHTTP link works through a CDN that proxies HTTP/2 to
 <code>https://example.com</code>: put the CDN's name in the link's address. Check its
