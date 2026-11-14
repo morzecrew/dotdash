@@ -53,6 +53,10 @@ services:
     environment:
       PROBE_URL: ${DOTDASH_CANARY_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
       DOWNLOAD_URL: ${DOTDASH_CANARY_PARAM_DOWNLOAD_URL:-https://speed.cloudflare.com/__down?bytes=1000000}
+      # The facts task's: what it watches, and its check without dotdash.
+      DOTDASH_SERVER: ${DOTDASH_CANARY_PARAM_DOTDASH_SERVER:?set by morzer}
+      DOTDASH_ADDRESS: ${DOTDASH_CANARY_PARAM_DOTDASH_ADDRESS:?set by morzer}
+      CONTROL_URL: ${DOTDASH_CANARY_PARAM_CONTROL_URL:-none}
     volumes:
       - ${DOTDASH_CANARY_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image

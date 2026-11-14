@@ -123,6 +123,34 @@ shared keys, every device's id and the client machines' proxy passwords. It is
 written with mode 0600 and holds every credential in the network: back it up
 like `authority.key`.
 
+## Burnt relays
+
+Before every fleet publish, about hourly, each canary that follows the manager
+reports whether each of its paths to the server or relay it watches gets
+through. When every canary watching a relay got through none of its paths
+three readings in a row, `sync` leaves that relay out of the servers' `relays`
+and `pools`, and of client machines' subscription URLs, and says so:
+
+```
+burnt: relay r1: its canaries got through none of its paths in 3 readings; left out of the servers' relays and pools until a canary gets through again; replace it
+```
+
+Devices stop getting its links at their next subscription refresh. The relay
+keeps its own document and its canaries keep watching it, so a single reading
+that gets through brings it back. To replace it, [add](#add-a-machine) a relay
+on a fresh address, then take the burnt one out of the roster.
+
+- **A canary whose own network is down says nothing**, given a `control_url`:
+  a site its network reaches without dotdash. A reading where that fails
+  doesn't count. Without one, an offline canary looks like a burnt relay.
+- **Every relay at once is kept.** If every relay would be left out in the
+  same sync, the manager keeps them all and says to check the canaries'
+  network instead.
+- **A burnt server is only reported.** Relays reach the servers, so leaving
+  one out would cut them off.
+- **A relay no canary watches is never judged.** Run canaries where devices
+  are: [on a mobile line](canary/index.md#on-a-mobile-line).
+
 ## What it leaves alone
 
 The upstreams, ports, profiles, domains and anything else a machine alone

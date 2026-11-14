@@ -48,6 +48,16 @@ Mbit/s:
 sudo morzer task run measure --output -- 50
 ```
 
+A canary that follows the [manager](../manager.md) tells it, before every
+fleet publish, whether each transport gets through (`facts`), and the manager
+leaves a relay its canaries can't get through out of devices' links. Set
+`control_url` to a site this canary's network reaches without dotdash, so the
+canary's own outage isn't read as its target burnt:
+
+```sh
+sudo morzer config set control_url=https://www.example.net/
+```
+
 ## Several servers, and relays
 
 A canary watches one server. With [several servers](../server/several-servers.md),
@@ -79,6 +89,7 @@ relay's address no longer gets through for devices.
 | `dotdash_public_key` | none, given at `init` | the REALITY public key, the `pbk` of a link |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what each check fetches through dotdash; any 2xx is healthy |
 | `download_url` | `https://speed.cloudflare.com/__down?bytes=1000000` | what `measure` downloads for its Mbit/s, `https://` only; `none` skips the downloads |
+| `control_url` | `none` | a site this canary's network reaches without dotdash, which `facts` fetches directly; `none` for no such check |
 
 | Secret | |
 | --- | --- |
@@ -91,3 +102,4 @@ relay's address no longer gets through for devices.
 | Task | |
 | --- | --- |
 | `measure --output -- [count] [url] [timeout]` | each transport `count` times (20 by default), as JSON |
+| `facts --output` | what it watches, whether each transport gets through, and whether `control_url` answers, as JSON; what the manager reads |

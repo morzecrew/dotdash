@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A `facts` task on the server and the relay prints, as JSON, what each tells the authority it follows after every change: a server's domain, ports, public key and encryption string, and a relay's `relay-entry` line.
 
+- The canary's `facts` task tells the authority it follows, before every fleet publish, whether each transport gets through to its target, and, with the new `control_url`, whether the canary's own network answers without dotdash.
+
+- `dotdash-manager sync` leaves a relay out of the servers' relays and pools once every canary watching it got through none of its paths three readings in a row, and brings it back when one gets through. It keeps every relay if all would go at once, and only reports a burnt server.
+
 - `dotdash-manager`, installed with uv from the repository's `manager/`, runs a network from one roster: it makes the servers' shared keys, gives every server and relay the same devices, and keeps relays, canaries and client machines pointed at the servers, each machine following it through morzer's desired state.
 
 - The relay's `entry_host` parameter, the address devices reach it at, which `relay-entry` uses when given none; under `own-site` it is the relay's domain.

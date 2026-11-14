@@ -20,8 +20,10 @@ def relay_line(f: dict) -> str:
     return line
 
 
-def render(net: Network, state: dict, facts: dict) -> tuple[dict, list[str]]:
-    """Every machine's document, by name, and what waits for facts not yet there."""
+def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[str] = frozenset()) -> tuple[dict, list[str]]:
+    """Every machine's document, by name, and what waits for facts not yet
+    there. Burnt relays (health.judge) are left out of the servers' relays and
+    pools, so devices stop getting them; they and their canaries keep theirs."""
     keys, ids = state["keys"], state["ids"]
     pbk = public_key(keys["reality_key"])
     known = [s for s in net.server if s.name in facts]
@@ -32,8 +34,11 @@ def render(net: Network, state: dict, facts: dict) -> tuple[dict, list[str]]:
     vless = {kind: "\n".join(f"{ids[n]} {n}" for n in net.clients_of(kind)) for kind in ("server", "relay")}
     docs = {}
 
-    relays = "\n".join(relay_line(facts[r.name]) for r in net.relay if r.name in facts)
-    pools = "\n".join(f"{p} {' '.join(ms)}" for p, ms in net.pools.items())
+    live = [facts[r.name] for r in net.relay if r.name in facts and r.name not in burnt]
+    relays = "\n".join(relay_line(f) for f in live)
+    # A pool naming a relay left out would name nothing: the server warns.
+    gone = {h for r in burnt if r in facts for h in [facts[r]["entry_host"], *facts[r].get("cdn_hosts", [])]}
+    pools = "\n".join(f"{p} {' '.join(kept)}" for p, ms in net.pools.items() if (kept := [m for m in ms if m not in gone]))
     for s in net.server:
         others = [facts[o.name]["domain"] for o in known if o is not s]
         doc = {
@@ -101,7 +106,7 @@ def render(net: Network, state: dict, facts: dict) -> tuple[dict, list[str]]:
 
     # direct = false keeps the servers' domains out of what devices hold, so a
     # client machine fetches through an own-site relay, as a phone does.
-    own_site = [facts[r.name]["site"] for r in net.relay if "own_site" in facts.get(r.name, {})]
+    own_site = [facts[r.name]["site"] for r in net.relay if "own_site" in facts.get(r.name, {}) and r.name not in burnt]
     for c in net.client:
         if not lead:
             waiting.append(f"{c.name}: waits for a server that applied the keys")
