@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Healthy while the container's own check passes (tasks/check.sh): the zone
+# answers over DNS and the API under its certificate.
+set -euo pipefail
+project=${DOTDASH_ACME_DNS_COMPOSE_PROJECT:-dotdash-acme-dns}
+health=$(docker compose -p "$project" ps --format '{{.Service}}={{.Health}}' | sed -n 's/^acme-dns=//p')
+if [ "$health" != healthy ]; then
+  echo "acme-dns is not healthy (${health:-not running}): its DNS or its API does not answer;" \
+    "before its first certificate, check that the NS record delegates the zone here" >&2
+  exit 1
+fi
+echo "acme-dns answers"

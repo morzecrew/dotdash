@@ -1,0 +1,85 @@
+# yaml-language-server: $schema=https://morzecrew.github.io/morzer/schemas/selfhost-v1alpha1-manifest.json
+api_version: selfhost/v1alpha1
+kind: application-release
+
+metadata:
+  name: dotdash-acme-dns
+  # Stamped by `morzer release build --version X`, together with VERSION.
+  version: 0.0.0
+  description: An acme-dns server, which answers the DNS-01 checks of the wildcard certificates dotdash servers and relays take under cert_issuer=acme-dns
+  vendor: morzecrew
+  release_notes: RELEASE.md
+
+providers:
+  runtime: {name: compose}
+  health: {name: http}
+
+runtimes:
+  compose:
+    files:
+      - compose/compose.yaml
+    options:
+      project: dotdash-acme-dns
+
+configuration:
+  - template: templates/config.cfg.tmpl
+    target: /etc/dotdash-acme-dns/config.cfg
+    mode: "0644"
+
+compatibility:
+  min_manager_version: "0.17.0"
+  rollback_safe: true
+  # acme-dns keeps its registrations in SQLite in the data volume and
+  # migrates it itself; there is no migrate step.
+  database: none
+
+requirements:
+  architectures: [amd64]
+  tools:
+    docker: ">=28.0.0"
+    compose: ">=2.35.0"
+  memory: 64MiB
+  disk: 256MiB
+
+# Install with --domain, the zone acme-dns answers for, such as
+# auth.example.org: a name under a domain of its own, apart from the servers'
+# and relays' domains, since each of theirs points a public CNAME into it.
+parameters:
+  address:
+    type: string
+    required: true
+    description: "This machine's public IPv4 address: the zone answers it for its own name, and ports 53 and 443 are published on it alone, apart from a local resolver's 127.0.0.53:53"
+    services: [acme-dns]
+  nameserver:
+    type: string
+    required: true
+    description: "The name your DNS host's NS record for the zone points to, such as acme-ns.example.org, with an A record there for address: outside the zone, so the delegation needs no glue record"
+    services: [acme-dns]
+  api_tls:
+    type: enum
+    values: [letsencrypt, none]
+    default: letsencrypt
+    description: "letsencrypt: the API on 443 under a certificate acme-dns takes for the zone's name through its own DNS; none: plain HTTP on 443, for a test machine only"
+    services: [acme-dns]
+
+images:
+  acme-dns: docker.io/joohoi/acme-dns:v2.0.2@sha256:8d327df58b1c9f6361c76734f9761a108fa4f12cf7ca94440a0404a28f75de62
+
+tasks:
+  register:
+    description: "Register a parent domain, such as s.example.com: prints the CNAME to add at its DNS host and the JSON for the acme_dns secret of each server or relay under it"
+    service: register
+    command: ["/task/register.sh"]
+    args: true
+    timeout: 1m
+
+health:
+  checks:
+    # The container's own check: the zone answers over DNS, and the API over
+    # HTTPS under its certificate, which the first start takes through
+    # acme-dns's own DNS once the NS record delegates the zone here.
+    - {name: acme-dns, type: command, command: ["hooks/healthy"], timeout: 30s, start_period: 5m}
+
+retention:
+  releases: 3
+  backups: 3

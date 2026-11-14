@@ -14,6 +14,7 @@ one tag:
 | **[dotdash-relay](relay/index.md)** | a machine inside the restricted network | carries phones, clients and canaries on to the server while only some addresses get through |
 | **[dotdash-client](client/index.md)** | a Linux machine on the client side | a proxy port, the whole machine, or a whole LAN through dotdash |
 | **[dotdash-canary](canary/index.md)** | a machine inside the restricted network | connects as a device would, and alerts when it can't get through |
+| **[dotdash-acme-dns](server/certificates.md#an-acme-dns-server)** | a small machine of its own | answers the DNS-01 checks of the servers' and relays' [wildcard certificates](server/certificates.md) |
 
 Start with the server: its tasks print the other three's setup. The client
 and the canary reach it as phones do, directly or through a relay.
@@ -43,6 +44,7 @@ trusts it, and requires every later release to be signed by it.
 | `ghcr.io/morzecrew/<bundle>:X.Y.Z` | one release |
 | `ghcr.io/morzecrew/<bundle>:main` | every push to `main`, dev key; may be broken |
 
-`<bundle>` is `dotdash`, `dotdash-relay`, `dotdash-client` or
-`dotdash-canary`. These docs are versioned with the releases: the version
-menu shows each released minor, and `dev` follows `main`.
+`<bundle>` is `dotdash-server`, `dotdash-relay`, `dotdash-client`,
+`dotdash-canary` or `dotdash-acme-dns`. These docs are versioned with the
+releases: the version menu shows each released minor, and `dev` follows
+`main`.

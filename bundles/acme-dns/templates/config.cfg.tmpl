@@ -1,0 +1,37 @@
+{{- /* acme-dns's configuration. It answers for the zone, the installation's
+domain, as an NS record at your DNS host delegates it: its own name's A
+record, the NS record naming the nameserver, and the TXT record each
+registration sets. The API registers parent domains and takes their DNS-01
+tokens. */ -}}
+{{- $zone := required "install with --domain, the zone, such as auth.example.org" .Installation.Domain -}}
+[general]
+listen = "0.0.0.0:53"
+protocol = "both"
+domain = "{{ $zone }}"
+nsname = "{{ .Parameters.nameserver }}"
+nsadmin = "hostmaster.{{ $zone }}"
+records = [
+  "{{ $zone }}. A {{ .Parameters.address }}",
+  "{{ $zone }}. NS {{ .Parameters.nameserver }}.",
+]
+debug = false
+
+[database]
+engine = "sqlite"
+connection = "/var/lib/acme-dns/acme-dns.db"
+
+[api]
+ip = "0.0.0.0"
+disable_registration = false
+port = "443"
+tls = "{{ .Parameters.api_tls }}"
+acme_cache_dir = "/var/lib/acme-dns/api-certs"
+notification_email = ""
+corsorigins = ["*"]
+use_header = false
+header_name = "X-Forwarded-For"
+
+[logconfig]
+loglevel = "info"
+logtype = "stdout"
+logformat = "text"

@@ -1,0 +1,79 @@
+# dotdash-acme-dns: one acme-dns server, which answers the DNS-01 checks of the
+# wildcard certificates dotdash servers and relays take (cert_issuer=acme-dns).
+#
+# Compose sees only what morzer gives it: DOTDASH_ACME_DNS_IMAGE_*,
+# DOTDASH_ACME_DNS_PARAM_*, DOTDASH_ACME_DNS_DOMAIN and
+# DOTDASH_ACME_DNS_RELEASE_DIR.
+
+x-env: &env
+  ZONE: ${DOTDASH_ACME_DNS_DOMAIN:?install with --domain}
+  API_TLS: ${DOTDASH_ACME_DNS_PARAM_API_TLS:-letsencrypt}
+
+services:
+  acme-dns:
+    image: ${DOTDASH_ACME_DNS_IMAGE_ACME_DNS:?set by morzer}
+    restart: unless-stopped
+    read_only: true
+    # Root in the image, holding nothing but the right to bind 53 and 443.
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 128m
+    logging:
+      driver: local
+      options: {max-size: 10m, max-file: "3"}
+    environment: *env
+    # On the public address alone: a local resolver's 127.0.0.53:53 stays
+    # where it is.
+    # ponytail: the address must be on the machine's own interface; a cloud
+    # that maps it from a private one needs a listen parameter, add it then.
+    ports:
+      - "${DOTDASH_ACME_DNS_PARAM_ADDRESS:?set by morzer}:53:53/udp"
+      - "${DOTDASH_ACME_DNS_PARAM_ADDRESS:?set by morzer}:53:53/tcp"
+      - "${DOTDASH_ACME_DNS_PARAM_ADDRESS:?set by morzer}:443:443/tcp"
+    volumes:
+      # Long form, so a missing file fails the start rather than becoming a
+      # directory morzer cannot render over.
+      - type: bind
+        source: /etc/dotdash-acme-dns/config.cfg
+        target: /etc/acme-dns/config.cfg
+        read_only: true
+        bind: {create_host_path: false}
+      # The registrations and the API's certificate.
+      - data:/var/lib/acme-dns
+      - ${DOTDASH_ACME_DNS_RELEASE_DIR:?set by morzer}/tasks:/task:ro
+    tmpfs:
+      - /tmp:size=16m
+    networks:
+      default:
+        # The zone's name reaches this container on the project's network,
+        # so the check and the register task ask the API by the name its
+        # certificate holds, without going out to the public address.
+        aliases: ["${DOTDASH_ACME_DNS_DOMAIN:?install with --domain}"]
+    healthcheck:
+      test: ["CMD", "sh", "/task/check.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      # The API's first certificate, over acme-dns's own DNS.
+      start_period: 5m
+      start_interval: 5s
+
+  # One-shot behind a profile, started only by `morzer task run register`.
+  register:
+    image: ${DOTDASH_ACME_DNS_IMAGE_ACME_DNS:?set by morzer}
+    restart: "no"
+    profiles: [tasks]
+    # The image's entrypoint is acme-dns itself; the task is a script.
+    entrypoint: ["sh"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    environment: *env
+    volumes:
+      - ${DOTDASH_ACME_DNS_RELEASE_DIR:?set by morzer}/tasks:/task:ro
+
+volumes:
+  data: {}
