@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A canary's `facts` also catch a freeze counted on what the device sends: each transport uploads 64 KB to `freeze_up_url`, and one whose upload gets no answer for 8 seconds twice counts as not getting through, named under `stalled_up`. `freeze_up_url=none` turns it off.
+
 - A canary's `facts` catch a connection frozen after its first 16-20 KB: each transport also downloads `freeze_url` (64 KB), and one whose download stops partway twice counts as not getting through, with the bytes it got under `stalled`. `freeze_url=none` turns it off.
 
 - `dotdash-manager` drops just a relay's blocked path when its canaries find one transport cut while another gets through: the relay's line gets `off=reality`, `off=xhttp` or `off=mkcp`, and devices get its other links. A path blocked on every relay is kept and reported.

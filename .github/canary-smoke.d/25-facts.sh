@@ -21,7 +21,7 @@ facts() {
 
 got=$(facts)
 jq -e '.server == "www.gstatic.com" and (.address | length > 0) and (.checked_at | type == "number")
-  and .internet == null and .paths == {reality: true} and .stalled == {}' <<<"${got}" >/dev/null ||
+  and .internet == null and .paths == {reality: true} and .stalled == {} and .stalled_up == []' <<<"${got}" >/dev/null ||
   die "facts with the server up: ${got}"
 
 sudo morzer config set control_url=https://www.gstatic.com/generate_204 >/dev/null || die "could not set control_url"
@@ -52,7 +52,20 @@ jq -e '.internet == true and .paths == {reality: false} and .stalled.reality > 0
   <<<"${got}" >/dev/null || die "facts with freeze_url stopping after 20 KB: ${got}"
 echo "25-facts.sh: freeze_url stopped after 20 KB: REALITY reads down after $(jq .stalled.reality <<<"${got}") bytes"
 got=$(facts)
-jq -e '.paths == {reality: true} and .stalled == {}' <<<"${got}" >/dev/null || die "facts after the freeze: ${got}"
+jq -e '.paths == {reality: true} and .stalled == {} and .stalled_up == []' <<<"${got}" >/dev/null ||
+  die "facts after the freeze: ${got}"
+
+# The other way: a stand-in for freeze_up_url reads each of facts' two
+# uploads and never answers, as a freeze on what the device sends looks.
+sleep 40 | openssl s_server -quiet -naccept 2 -accept "${host}:9443" -cert "${dir}/cert.pem" -key "${dir}/key.pem" \
+  >/dev/null 2>&1 &
+sleep 1
+sudo morzer config set "freeze_up_url=https://${host}:9443/up" >/dev/null || die "could not set freeze_up_url"
+got=$(facts) || true
+sudo morzer config unset freeze_up_url >/dev/null || die "could not unset freeze_up_url"
+jq -e '.paths == {reality: false} and .stalled == {} and .stalled_up == ["reality"]' <<<"${got}" >/dev/null ||
+  die "facts with freeze_up_url never answering: ${got}"
+echo "25-facts.sh: freeze_up_url never answered: REALITY reads down, stalled_up"
 
 sudo docker stop canary-rig-server >/dev/null
 got=$(facts) || true
