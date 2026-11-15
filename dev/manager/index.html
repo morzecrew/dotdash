@@ -1799,6 +1799,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#how-long-relays-last" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        How long relays last
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#blocked-paths" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2043,6 +2054,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#how-long-relays-last" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        How long relays last
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#blocked-paths" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2245,6 +2267,31 @@ burnt relay takes one spare, in roster order; with none left, <code>sync</code> 
 <p>A spare burnt while it waits was blocked without any device holding its
 address: for its network's range, say, or found by scanning. That's worth
 knowing when you pick where the next one goes.</p>
+<h2 id="how-long-relays-last">How long relays last<a class="headerlink" href="#how-long-relays-last" title="Permanent link">&para;</a></h2>
+<p>Every <code>sync</code> logs what changed: a server or relay its canaries start
+watching, one that burns or comes back, one that leaves the roster, a path
+going off or on, a spare standing in or waiting again. <code>report</code> reads that
+log:</p>
+<div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>report
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>machine      kind    status   watched          lasted burns     down  paths off
+s            server  up       2026-11-01      14d 3h+     0        -  -
+r1           relay   burnt    2026-11-01       10d 0h     2    4d 2h  reality×1
+r2           relay   up       2026-11-03      12d 1h+     0        -  -
+r3           spare   standing 2026-11-05            -     0        -  -; stood in 1×
+old          gone    gone     2026-10-20        4d 0h     1    1d 0h  -
+
+relays: 2 burnt, lasting 7d 0h at the median
+        1 never burnt, watched 12d 1h so far
+        1 burn(s) in the last 30 days; spares waiting: none
+</code></pre></div>
+<p><code>lasted</code> runs from the first reading to the first burn, or until now with
+a <code>+</code> for one that hasn't burnt yet; <code>down</code> adds up the time it spent
+burnt. A relay taken out of the roster stays in the report, as <code>gone</code>: how
+long the ones you replaced lasted is what tells whether a change (a
+transport, a network, a provider) makes the next ones last longer. The log
+keeps the newest 2000 events, and starts with the first <code>sync</code> of a manager
+that has it.</p>
 <h2 id="blocked-paths">Blocked paths<a class="headerlink" href="#blocked-paths" title="Permanent link">&para;</a></h2>
 <p>Short of burnt, a relay can lose one path while its others get through: its
 REALITY port cut while XHTTP through its own site still answers, mKCP

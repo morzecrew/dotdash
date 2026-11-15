@@ -2868,6 +2868,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p><code>dotdash-manager report</code>: how long each server and relay lasted before it first burnt, how often and how long it was burnt, which paths went off and how often a spare stood in, with the relays' median lifetime; relays taken out of the roster stay in it.</p>
+</li>
+<li>
 <p>Spare relays: a relay with <code>spare = true</code> in <code>dotdash-manager</code>'s roster runs and is watched but devices don't get it, until a relay burns; then it stands in for that relay, in its pools, at the next sync, and waits again once the relay is back.</p>
 </li>
 <li>
