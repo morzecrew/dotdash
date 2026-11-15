@@ -18,6 +18,9 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `dotdash_address` | `none` | where to connect when `dotdash_servers` names one server, such as its IP; `none` reaches each server by its name |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what the health check fetches through dotdash; any 2xx is healthy |
 | `ipv6` | `allow` | `block`: IPv6 destinations end at the relay and never reach a server; names go on |
+| `https_port` | `443` | host port for REALITY; devices always dial 443, so another is for [your own web server](../server/shared-machine.md) passing the relay's name through |
+| `http_port` | `80` | with `own-site`, host port for the site's plain HTTP, the ACME HTTP-01 check |
+| `listen` | `0.0.0.0` | host address for `https_port` and `http_port`; `127.0.0.1` beside your own web server |
 | `kcp_port` | `8447` | with `mkcp`, the UDP port devices reach the relay's mKCP on |
 | `kcp_header` | `dtls` | with `mkcp`, what its packets start with, as the server's [`kcp_header`](../server/mkcp.md) |
 

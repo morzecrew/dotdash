@@ -5,11 +5,14 @@
 | `upstream_mode` | `failover` | how the [upstreams](upstreams.md#order-and-modes) lines share the traffic: `failover` (the first that answers), `fastest` or `balance` |
 | `upstream_pin` | `none` | the `name=` of the line that goes first; under `ipv6=separate`, a second name pins the IPv6 lines |
 | `upstream_udp` | `false` | carry UDP through the upstreams, every one of which must carry it (WireGuard, OpenVPN, SOCKS5 with UDP ASSOCIATE); otherwise dropped |
-| `https_port` | `443` | host port for REALITY and the site |
+| `https_port` | `443` | host port for REALITY and the site; devices dial it too, unless `entry_port` |
+| `http_port` | `80` | host port for the site's plain HTTP: the ACME HTTP-01 check and the redirect to HTTPS |
+| `listen` | `0.0.0.0` | host address for `https_port` and `http_port`; `127.0.0.1` [beside your own web server](shared-machine.md) |
+| `entry_port` | `none` | the port devices, relays and the canary dial, when a web server of your own passes the domain through to `https_port`; `none` for `https_port` |
 | `xdns_domain` | `t` | tunnel zone (`xdns`); a name with no dot is under the domain |
 | `xdns_bind` | `0.0.0.0` | host address for UDP/53 |
 | `xdns_mtu` | `900` | tunnel reply size; lower it if replies get lost |
-| `xhttp_reality_port` | `8443` | port for XHTTP with REALITY; not `https_port` or 80 |
+| `xhttp_reality_port` | `8443` | port for XHTTP with REALITY; not `https_port` or `http_port` |
 | `kcp_port` | `8447` | UDP port for [mKCP](mkcp.md); not 53 with the DNS tunnel |
 | `kcp_header` | `dtls` | what mKCP's packets start with: `dtls`, `srtp`, `utp`, `wechat`, `wireguard` or `none` |
 | `log_level` | `error` | Xray error log; `warning` and below name failed destinations |

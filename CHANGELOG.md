@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A server or relay can share a machine with your own web server on 80 and 443, which passes dotdash's names through untouched. `listen`, `https_port` and `http_port` choose where dotdash publishes, such as spare ports on `127.0.0.1`; the server's `entry_port` keeps links on 443.
+
 ### Changed
+
+- The server's and relay's TLS and HTTP ports are published on every IPv4 address (`listen=0.0.0.0`), and no longer on IPv6 too. A domain with an AAAA record reaches dotdash over IPv4 only.
 
 - `dotdash-acme-dns` needs morzer 0.17.1, which backs up a machine set up without a recovery key, so updates there no longer depend on the placeholder secret the bundle carried; the secret is gone.
 

@@ -25,6 +25,7 @@ nav = [
             "server/upstreams.md",
             "server/cdn.md",
             "server/several-servers.md",
+            "server/shared-machine.md",
         ] },
         { "Operations" = [
             "server/operations.md",

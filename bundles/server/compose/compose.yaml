@@ -1,7 +1,7 @@
 # dotdash. Xray owns the public TLS port with REALITY: clients holding the key
 # get Xray, everything else is relayed to Caddy, which serves a cover site with
 # a Let's Encrypt certificate and passes one secret path back to Xray's XHTTP
-# inbound. Caddy publishes only port 80, for ACME. Every client connection
+# inbound. Caddy publishes only http_port (80), for ACME. Every client connection
 # leaves through the upstream proxy. The xdns profile adds the DNS tunnel
 # (xdns.yaml), xhttp-reality XHTTP with REALITY on a port of its own
 # (xhttp-reality.yaml), and xdns,xhttp-reality both.
@@ -80,8 +80,10 @@ services:
       - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
     secrets: [upstreams]
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
+    # At listen: 127.0.0.1 behind a web server of the operator's own that
+    # passes this domain's connections through from 443.
     ports:
-      - "${DOTDASH_PARAM_HTTPS_PORT:-443}:443/tcp"
+      - "${DOTDASH_PARAM_LISTEN:-0.0.0.0}:${DOTDASH_PARAM_HTTPS_PORT:-443}:443/tcp"
     networks: [inside, egress]
     # After Xray, not before: an update from a release where Xray published
     # https_port itself recreates Xray first, freeing the port the gate binds.
@@ -133,7 +135,7 @@ services:
       - /config:uid=65532,gid=65532,mode=0700,size=8m
     secrets: [xhttp_path, acme_dns]
     ports:
-      - "80:80/tcp"
+      - "${DOTDASH_PARAM_LISTEN:-0.0.0.0}:${DOTDASH_PARAM_HTTP_PORT:-80}:80/tcp"
     networks: [edge, backend]
     mem_limit: 256m
     depends_on:
@@ -158,6 +160,7 @@ services:
     environment: &client-env
       DOMAIN: ${DOTDASH_DOMAIN:?install with --domain}
       HTTPS_PORT: ${DOTDASH_PARAM_HTTPS_PORT:-443}
+      ENTRY_PORT: ${DOTDASH_PARAM_ENTRY_PORT:-none}
       SERVERS: ${DOTDASH_PARAM_SERVERS:-self}
       DNS_RESOLVER: ${DOTDASH_PARAM_DNS_RESOLVER:-https://1.1.1.1/dns-query}
       SUBSCRIPTION: ${DOTDASH_PARAM_SUBSCRIPTION:-false}

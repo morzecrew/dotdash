@@ -3,6 +3,9 @@
 # the init command and its secrets. The output is that client's credentials.
 set -eu
 : "${DOMAIN:?}" "${HTTPS_PORT:?}"
+# The port others dial: entry_port, when a proxy on this machine passes the
+# domain through to https_port.
+case ${ENTRY_PORT:-none} in none) ;; '' | *[!0-9]*) echo "entry_port is not a port: ${ENTRY_PORT}" >&2; exit 1 ;; *) HTTPS_PORT=$ENTRY_PORT ;; esac
 want=${1:?name the client the canary uses, as in vless_clients: canary-config -- <name>}
 
 id=

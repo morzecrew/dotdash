@@ -3,7 +3,7 @@
 #
 # Port 443 here is reached only through Xray's REALITY inbound, which relays
 # every connection that does not carry its key. Port 80 is published directly,
-# for the ACME HTTP-01 challenge and the redirect to HTTPS.
+# as http_port, for the ACME HTTP-01 challenge and the redirect to HTTPS.
 # Where the site's certificate comes from (the cert_issuer parameter), chosen
 # by name below: Caddy has no conditional, and a snippet must be defined before
 # the global options that import it.
