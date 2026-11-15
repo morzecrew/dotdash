@@ -159,7 +159,7 @@ published:
 
 tasks:
   facts:
-    description: "Print as JSON, for the authority this canary follows, whether each transport gets through to its target (freeze_url's download included), the bytes a stopped download got, and whether control_url answers without dotdash"
+    description: "Print as JSON, for the authority this canary follows, whether each transport gets through (freeze_url too) and whether control_url answers without dotdash"
     service: measure
     command: ["sh", "/task/facts.sh"]
     timeout: 5m
