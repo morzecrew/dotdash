@@ -32,9 +32,9 @@ def to_yaml(doc: dict) -> str:
 class Morzer:
     def __init__(self, net: Network, roster: Path, binary: str):
         self.net, self.binary = net, binary
-        self.common = ["--target", net.target, "--expect", str(roster)]
-        if net.credentials:
-            self.common += ["--credentials-file", net.credentials]
+        self.creds = ["--credentials-file", net.credentials] if net.credentials else []
+        self.roster = str(roster)
+        self.common = ["--target", net.target, "--expect", self.roster, *self.creds]
 
     def run(self, *args: str, stdin: str | None = None) -> subprocess.CompletedProcess:
         return subprocess.run([self.binary, *args], input=stdin, capture_output=True, text=True, check=False)
@@ -57,6 +57,26 @@ class Morzer:
             if m.joined and (f := self.facts(m)) is not None:
                 facts[m.name] = f
         return facts
+
+    def rows(self) -> dict:
+        """Each joined machine's own fleet row, by name, where its signature
+        verifies: its age, whether it missed three hourly publishes (stale), and
+        how many of its services run. What a burnt verdict needs to tell a
+        machine blocked on the way from one that is down."""
+        r = self.run("fleet", "ls", self.net.target, "--expect", self.roster, "--stale-after", "3h", "--json", *self.creds)
+        try:
+            rows = json.loads(r.stdout)["data"]["rows"]
+        except (ValueError, KeyError, TypeError):
+            return {}
+        names = {m.id: m.name for m in self.net.machines if m.id}
+        out = {}
+        for row in rows:
+            name = names.get(row.get("installation_id"))
+            if name and row.get("signature") == "verified" and isinstance(row.get("row"), dict):
+                h = row["row"].get("health") or {}
+                out[name] = {"age": row.get("age", "?"), "stale": bool(row.get("stale")), "services": h.get("services"),
+                             "running": h.get("running"), "problem": h.get("problem", "")}
+        return out
 
     def publish(self, m: Machine, doc: dict, dry_run: bool) -> subprocess.CompletedProcess:
         return self.run("state", "publish", *self.common, "--product", PRODUCTS[m.kind], "--installation", m.id,

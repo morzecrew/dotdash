@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `dotdash-manager` tells a burnt relay that's blocked from one that's down, by the relay's own hourly fleet row: running means blocked on the way, so replace its address; a row gone quiet or services down means fix the machine first.
+
 - A canary's `facts` catch a connection frozen after its first 16-20 KB: each transport also downloads `freeze_url` (64 KB), and one whose download stops partway twice counts as not getting through, with the bytes it got under `stalled`. `freeze_url=none` turns it off.
 
 - `dotdash-manager` drops just a relay's blocked path when its canaries find one transport cut while another gets through: the relay's line gets `off=reality`, `off=xhttp` or `off=mkcp`, and devices get its other links. A path blocked on every relay is kept and reported.

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from dotdash_manager import state
-from dotdash_manager.health import BURN_AFTER, blocked, judge
+from dotdash_manager.health import BURN_AFTER, alive, blocked, judge
 from dotdash_manager.render import relay_line, render
 from dotdash_manager.roster import loads
 
@@ -125,3 +125,29 @@ def test_a_path_blocked_on_every_relay_stays_and_every_path_blocked_burns_instea
     for at in range(1, BURN_AFTER + 1):
         _, (off, _) = paths_run(net, health, at, {"reality": False, "xhttp": False}, {"reality": True, "xhttp": True})
     assert off == {} and health["r1"]["fails"] == BURN_AFTER
+
+
+def row(age="40m", stale=False, services=5, running=5, problem=""):
+    return {"age": age, "stale": stale, "services": services, "running": running, "problem": problem}
+
+
+def test_a_machines_own_row_says_blocked_or_down():
+    assert alive(None) == ("", "")
+    assert alive(row())[0] == "blocked"
+    assert alive(row(stale=True, age="5h"))[0] == "down"
+    assert alive(row(running=3))[0] == "down" and "3 of 5" in alive(row(running=3))[1]
+    assert alive(row(services=None, running=None, problem="docker refused"))[0] == "down"
+    assert alive(row(services=None, running=None))[0] == "blocked"
+
+
+def test_a_burnt_relay_running_is_blocked_and_replaced_one_down_is_fixed():
+    net = loads(ROSTER)
+    for rows, has, lacks in (({"r1": row()}, ["blocked on the way", "replace it"], ["fix it"]),
+                             ({"r1": row(running=2)}, ["2 of 5", "fix it first"], ["replace it"]),
+                             ({}, ["replace it"], ["own fleet row"])):
+        health = {}
+        for at in range(1, BURN_AFTER + 1):
+            facts = {"r1": R1, "r2": R2, "c1": canary(R1, at, False), "c2": canary(R2, at, True)}
+            burnt, say = judge(net, facts, health, rows)
+        line = next(x for x in say if x.startswith("burnt: relay r1:"))
+        assert burnt == {"r1"} and all(h in line for h in has) and not any(x in line for x in lacks), line
