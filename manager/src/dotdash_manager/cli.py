@@ -1,5 +1,6 @@
 """The dotdash-manager command: sync, status and join."""
 
+import copy
 import hashlib
 import json
 import subprocess
@@ -14,6 +15,7 @@ import typer
 from . import Refused, health, roster, state
 from .morzer import Morzer, write_roster
 from .render import render
+from .report import report as report_lines
 from .roster import IMAGES, Network
 
 # A document lives 168 h (morzer's default): renew an unchanged one well before.
@@ -66,11 +68,16 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     net, st = o.open()
     mz = Morzer(net, o.morzer_roster, o.morzer)
     facts = mz.gather()
-    burnt, verdicts = health.judge(net, facts, st.setdefault("health", {}), mz.rows())
+    before = copy.deepcopy(st.setdefault("health", {}))
+    burnt, verdicts = health.judge(net, facts, st["health"], mz.rows())
     held, stands, more = health.spares(net, facts, st["health"], burnt)
     verdicts += more
     off, more = health.blocked(net, facts, st["health"], burnt)
     verdicts += more
+    log = st.setdefault("events", [])
+    log += health.events(before, st["health"], st.get("stands", {}), stands, int(time.time()))
+    del log[:-health.EVENTS]
+    st["stands"] = stands
     if not dry_run:
         state.save(o.state, st)
     for v in verdicts:
@@ -101,6 +108,16 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     for w in waiting:
         print(f"waiting: {w}")
     raise typer.Exit(1 if failed else 0)
+
+
+@app.command()
+def report(ctx: typer.Context) -> None:
+    """How long each server and relay lasted before it burnt, how often and for
+    how long it was burnt, which paths went off; from what sync logged."""
+    o: Options = ctx.obj
+    net, st = o.open()
+    for line in report_lines(net, st.get("events", []), int(time.time()), st.get("stands", {})):
+        print(line)
 
 
 @app.command()
