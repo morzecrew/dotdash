@@ -1788,6 +1788,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#spare-relays" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Spare relays
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#blocked-paths" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2021,6 +2032,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#spare-relays" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Spare relays
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#blocked-paths" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2196,6 +2218,33 @@ replace it. A row that doesn't verify says nothing either way.</p>
 <li><strong>Neither is a <a href="../server/cdn/#the-cdns-origin-only">CDN-only relay</a>.</strong> Its
   canaries check its own address, which no device gets.</li>
 </ul>
+<h2 id="spare-relays">Spare relays<a class="headerlink" href="#spare-relays" title="Permanent link">&para;</a></h2>
+<p>A burnt relay waits for you to replace it. A spare takes its place at the
+next sync instead, about an hour after the third failed reading. Install a
+relay as usual, <a href="#add-a-machine">add</a> it to the roster with <code>spare = true</code>,
+and point a canary at it:</p>
+<div class="highlight"><pre><span></span><code><span class="k">[[relay]]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"r3"</span>
+<span class="n">spare</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+
+<span class="k">[[canary]]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"c3"</span>
+<span class="n">watches</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"r3"</span>
+</code></pre></div>
+<p>A spare gets its document and runs like any relay, and its canary watches it,
+but devices don't get it: it's out of the servers' <code>relays</code> and <code>pools</code>. When
+a relay burns, the first spare that isn't burnt itself stands in for it, and
+takes its place in the pools. Spares a canary has got through to go first,
+in roster order; one no canary has checked yet still stands in, and <code>sync</code>
+says to check it:</p>
+<div class="highlight"><pre><span></span><code>spare: r3 stands in for burnt relay r1, in its pools; replace r1, then make r3 a regular relay (spare = false) and add a new spare
+</code></pre></div>
+<p>A spare stands in only while the relay it replaces is burnt. If a canary
+gets through to that relay again, it's back and the spare waits again. Each
+burnt relay takes one spare, in roster order; with none left, <code>sync</code> says so.</p>
+<p>A spare burnt while it waits was blocked without any device holding its
+address: for its network's range, say, or found by scanning. That's worth
+knowing when you pick where the next one goes.</p>
 <h2 id="blocked-paths">Blocked paths<a class="headerlink" href="#blocked-paths" title="Permanent link">&para;</a></h2>
 <p>Short of burnt, a relay can lose one path while its others get through: its
 REALITY port cut while XHTTP through its own site still answers, mKCP
