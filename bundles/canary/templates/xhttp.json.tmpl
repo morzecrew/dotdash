@@ -10,7 +10,7 @@
     },
     "streamSettings": {"network": "xhttp", "security": "tls",
       "tlsSettings": {"serverName": "{{ .Parameters.dotdash_server }}", "alpn": ["h2"], "fingerprint": "chrome"},
-      "xhttpSettings": {"path": {"$file": "/run/secrets/dotdash_xhttp_path"}, "host": "{{ .Parameters.dotdash_server }}", "mode": "packet-up"}
+      "xhttpSettings": {"path": {"$file": "/run/secrets/dotdash_xhttp_path"}, "host": "{{ .Parameters.dotdash_server }}", "mode": "auto"}
     }
   }]
 }

@@ -75,7 +75,7 @@ jq -n --arg host "${host}" --arg id "$(id "${xhttp}")" --arg enc "$(param "${xht
      streamSettings: {network: "xhttp", security: "tls",
        tlsSettings: {serverName: $sni, alpn: ["h2"], fingerprint: "chrome",
          certificates: [{usage: "verify", certificateFile: "/ca/root.pem"}]},
-       xhttpSettings: {path: $path, host: $sni, mode: "packet-up"}}}]}' \
+       xhttpSettings: {path: $path, host: $sni, mode: "auto"}}}]}' \
   >"${work}/xhttp/client.json"
 if [ -n "${xr}" ]; then
   port=${xr#*@} port=${port%%\?*}
@@ -88,7 +88,7 @@ if [ -n "${xr}" ]; then
        settings: {address: $host, port: $port, id: $id, encryption: $enc},
        streamSettings: {network: "xhttp", security: "reality",
          realitySettings: {serverName: $sni, fingerprint: "chrome", password: $pbk, shortId: $sid},
-         xhttpSettings: {path: $path, mode: "packet-up"}}}]}' \
+         xhttpSettings: {path: $path, mode: "auto"}}}]}' \
     >"${work}/xhttp-reality/client.json"
 fi
 if [ -n "${kcp}" ]; then
