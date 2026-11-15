@@ -10,6 +10,9 @@ set -euo pipefail
 "$(dirname "$0")/policy"
 
 port=${DOTDASH_PARAM_HTTPS_PORT:?}
+# Where the port is published: listen, or loopback for every address.
+addr=${DOTDASH_PARAM_LISTEN:-0.0.0.0}
+[ "$addr" != 0.0.0.0 ] || addr=127.0.0.1
 domain=${DOTDASH_DOMAIN:?}
 project=${DOTDASH_COMPOSE_PROJECT:-dotdash}
 
@@ -35,10 +38,10 @@ for _ in $(seq 18); do
     docker exec "$caddy" cat /data/caddy/pki/authorities/local/root.crt >"$root" 2>/dev/null || true
   fi
   if err=$(curl -sS --fail --noproxy '*' -o /dev/null --max-time 5 "${ca[@]}" \
-    --resolve "$domain:$port:127.0.0.1" "https://$domain:$port/" 2>&1); then
+    --resolve "$domain:$port:$addr" "https://$domain:$port/" 2>&1); then
     exit 0
   fi
   sleep 5
 done
-echo "cover site not served on 127.0.0.1:$port: $err" >&2
+echo "cover site not served on $addr:$port: $err" >&2
 exit 1

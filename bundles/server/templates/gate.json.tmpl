@@ -46,8 +46,9 @@ stops before anything is replaced. The template language has no fail: required
 fails on its empty value with the message. */ -}}
 {{- if $xhttpReality }}
 {{- if eq .Parameters.xhttp_reality_port .Parameters.https_port }}{{ required "xhttp_reality_port must differ from https_port" "" }}{{ end }}
-{{- if eq .Parameters.xhttp_reality_port "80" }}{{ required "xhttp_reality_port must not be 80, which Caddy publishes for ACME" "" }}{{ end }}
+{{- if eq .Parameters.xhttp_reality_port .Parameters.http_port }}{{ required "xhttp_reality_port must differ from http_port, which Caddy publishes" "" }}{{ end }}
 {{- end }}
+{{- if eq .Parameters.http_port .Parameters.https_port }}{{ required "http_port must differ from https_port" "" }}{{ end }}
 {{- if and $kcp $withXdns (eq .Parameters.kcp_port "53") }}{{ required "kcp_port must not be 53, which the DNS tunnel publishes" "" }}{{ end }}
 {
   "log": {"loglevel": "{{ .Parameters.log_level }}", "access": "none", "dnsLog": false},

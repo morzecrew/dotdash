@@ -64,14 +64,29 @@ requirements:
   # systemd-resolved stub holds 127.0.0.53:53, set xdns_bind to the public IP.
   # Nor are xhttp_reality_port and kcp_port: these fields see the parameters,
   # not the profile, and a default install must not need them free.
-  ports: ["80", "{{ .Parameters.https_port }}"]
+  ports: ["{{ .Parameters.http_port }}", "{{ .Parameters.https_port }}"]
 
 parameters:
   https_port:
     type: port
     default: 443
-    description: Host port of the REALITY inbound; anything without its key reaches the cover site
+    description: "Host port of the REALITY inbound, published at listen; anything without its key reaches the cover site. Devices, relays and the canary dial it too, unless entry_port names another"
     services: [gate, subscription]
+  http_port:
+    type: port
+    default: 80
+    description: "Host port of Caddy's plain HTTP, published at listen: the ACME HTTP-01 check under cert_issuer=acme, and the redirect to HTTPS. Behind a web server of your own on this machine, a spare port it forwards this domain's HTTP to; under cert_issuer=acme-dns nothing needs it"
+    services: [caddy]
+  listen:
+    type: string
+    default: 0.0.0.0
+    description: "Host address https_port and http_port are published on: 0.0.0.0 for every IPv4 address; 127.0.0.1 behind a web server of your own on this machine that holds 443 and passes this domain's TLS connections through untouched, with spare https_port and http_port and entry_port=443"
+    services: [gate, caddy]
+  entry_port:
+    type: string
+    default: none
+    description: "The port devices, relays and the canary dial REALITY on, when it isn't https_port: 443 behind a web server of your own that passes this domain through to https_port; none for https_port"
+    services: [subscription]
   upstream_mode:
     type: enum
     values: [failover, fastest, balance]
@@ -105,7 +120,7 @@ parameters:
   xhttp_reality_port:
     type: port
     default: 8443
-    description: "Host TCP port of XHTTP with REALITY (the xhttp-reality profile); must differ from https_port and 80"
+    description: "Host TCP port of XHTTP with REALITY (the xhttp-reality profile); must differ from https_port and http_port"
     services: [gate, subscription]
   kcp_port:
     type: port

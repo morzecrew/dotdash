@@ -6,6 +6,9 @@
 # send a password on.
 set -eu
 : "${DOMAIN:?}" "${HTTPS_PORT:?}"
+# The port others dial: entry_port, when a proxy on this machine passes the
+# domain through to https_port.
+case ${ENTRY_PORT:-none} in none) ;; '' | *[!0-9]*) echo "entry_port is not a port: ${ENTRY_PORT}" >&2; exit 1 ;; *) HTTPS_PORT=$ENTRY_PORT ;; esac
 full=false
 [ "${1:-}" != --full ] || { full=true; shift; }
 [ "${SUBSCRIPTION:-false}" = true ] || full=true

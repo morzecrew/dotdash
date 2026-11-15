@@ -44,7 +44,10 @@ services:
     # REALITY on 443 inside too (Xray warns on any other port), as uid 65532
     # with no capabilities.
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
-    ports: ["443:443"]
+    # Devices always dial 443: https_port and listen differ from 443 and
+    # every address only behind a web server of the operator's own on this
+    # machine that passes the relay's name through from 443.
+    ports: ["${DOTDASH_RELAY_PARAM_LISTEN:-0.0.0.0}:${DOTDASH_RELAY_PARAM_HTTPS_PORT:-443}:443"]
     # No healthcheck here: hooks/healthy runs the probe itself (see there).
 
   # One-shot behind a profile, started only by `morzer task run relay-entry`.

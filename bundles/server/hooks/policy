@@ -19,7 +19,7 @@
 #   - Xray is on internal networks only, so it has no route out at all, and
 #     publishes nothing; the gate publishes only https_port and, where it
 #     forwards them, 53 for the DNS tunnel, xhttp_reality_port and kcp_port,
-#     and Caddy only 80;
+#     and Caddy only http_port;
 #   - every container runs unprivileged: no added capability, read-only, uid
 #     65532, not on the host's network.
 #
@@ -41,6 +41,7 @@ config=${DOTDASH_CONFIG_FILE:-/etc/dotdash/application.yaml}
 gate=${DOTDASH_GATE_CONFIG:-/etc/dotdash/gate.json}
 release=${DOTDASH_RELEASE_DIR:?}
 https_port=${DOTDASH_PARAM_HTTPS_PORT:-443}
+http_port=${DOTDASH_PARAM_HTTP_PORT:-80}
 xhttp_reality_port=${DOTDASH_PARAM_XHTTP_REALITY_PORT:-8443}
 kcp_port=${DOTDASH_PARAM_KCP_PORT:-8447}
 jq_image=$(sed -n 's/^  jq: *//p' "${release}/manifest.yaml")
@@ -181,7 +182,7 @@ while IFS='|' read -r name privileged readonly user network caps ports; do
   fi
   for binding in ${ports//;/ }; do
     case ${name}/${binding} in
-    gate/443/tcp=*:"${https_port}" | caddy/80/tcp=*:80) ;;
+    gate/443/tcp=*:"${https_port}" | caddy/80/tcp=*:"${http_port}") ;;
     gate/5353/udp=*:53) forwards public-dns || violations+=$'\n'"the gate publishes 53/udp with no DNS tunnel configured" ;;
     gate/8443/tcp=*:"${xhttp_reality_port}") forwards public-xhttp-reality ||
       violations+=$'\n'"the gate publishes ${xhttp_reality_port}/tcp with no XHTTP with REALITY configured" ;;
