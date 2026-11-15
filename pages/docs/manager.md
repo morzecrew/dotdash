@@ -196,6 +196,38 @@ A spare burnt while it waits was blocked without any device holding its
 address: for its network's range, say, or found by scanning. That's worth
 knowing when you pick where the next one goes.
 
+## How long relays last
+
+Every `sync` logs what changed: a server or relay its canaries start
+watching, one that burns or comes back, one that leaves the roster, a path
+going off or on, a spare standing in or waiting again. `report` reads that
+log:
+
+```sh
+dotdash-manager report
+```
+
+```
+machine      kind    status   watched          lasted burns     down  paths off
+s            server  up       2026-11-01      14d 3h+     0        -  -
+r1           relay   burnt    2026-11-01       10d 0h     2    4d 2h  reality×1
+r2           relay   up       2026-11-03      12d 1h+     0        -  -
+r3           spare   standing 2026-11-05            -     0        -  -; stood in 1×
+old          gone    gone     2026-10-20        4d 0h     1    1d 0h  -
+
+relays: 2 burnt, lasting 7d 0h at the median
+        1 never burnt, watched 12d 1h so far
+        1 burn(s) in the last 30 days; spares waiting: none
+```
+
+`lasted` runs from the first reading to the first burn, or until now with
+a `+` for one that hasn't burnt yet; `down` adds up the time it spent
+burnt. A relay taken out of the roster stays in the report, as `gone`: how
+long the ones you replaced lasted is what tells whether a change (a
+transport, a network, a provider) makes the next ones last longer. The log
+keeps the newest 2000 events, and starts with the first `sync` of a manager
+that has it.
+
 ## Blocked paths
 
 Short of burnt, a relay can lose one path while its others get through: its

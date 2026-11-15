@@ -7,6 +7,8 @@ counts once."""
 from .roster import Network
 
 BURN_AFTER = 3
+# The event log keeps this many, the newest.
+EVENTS = 2000
 
 
 def _watched(f: dict, kind: str) -> tuple[str, str]:
@@ -147,3 +149,35 @@ def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[d
     say += [f"blocked: server {s.name}: {', '.join(sorted(gone))} in {BURN_AFTER} readings; reported only"
             for s in net.server if s.name not in burnt and (gone := out(s.name))]
     return off, say
+
+
+def events(before: dict, after: dict, stood: dict, stands: dict, now: int) -> list[list]:
+    """What changed between two health records (judge's, before and after a
+    sync), as [at, machine, what], for report: watched (its canaries' first
+    reading), burnt, back, gone (out of the roster), off:<path> and on:<path>;
+    and for a spare, stands-in:<relay> and waits, from health.spares' stands
+    before (stood) and now. at is the reading's checked_at, else now."""
+    out = []
+    for name in sorted(set(before) | set(after)):
+        b, a = before.get(name), after.get(name)
+        if a is None:
+            out.append([now, name, "gone"])
+            continue
+        at = a.get("at") or now
+        if b is None:
+            out.append([at, name, "watched"])
+            b = {}
+        was, fails = b.get("fails", 0), a.get("fails", 0)
+        if was < BURN_AFTER <= fails:
+            out.append([at, name, "burnt"])
+        elif was >= BURN_AFTER > fails:
+            out.append([at, name, "back"])
+        for p, n in sorted(a.get("paths", {}).items()):
+            m = b.get("paths", {}).get(p, 0)
+            if m < BURN_AFTER <= n:
+                out.append([at, name, f"off:{p}"])
+            elif m >= BURN_AFTER > n:
+                out.append([at, name, f"on:{p}"])
+    out += [[now, s, f"stands-in:{r}"] for s, r in sorted(stands.items()) if stood.get(s) != r]
+    out += [[now, s, "waits"] for s in sorted(stood) if s not in stands]
+    return out
