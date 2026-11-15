@@ -132,13 +132,20 @@ three readings in a row, `sync` leaves that relay out of the servers' `relays`
 and `pools`, and of client machines' subscription URLs, and says so:
 
 ```
-burnt: relay r1: its canaries got through none of its paths in 3 readings; left out of the servers' relays and pools until a canary gets through again; replace it
+burnt: relay r1: its canaries got through none of its paths in 3 readings; left out of the servers' relays and pools until a canary gets through again; its own fleet row (40m old) says it runs: blocked on the way, not down; replace it
 ```
 
 Devices stop getting its links at their next subscription refresh. The relay
 keeps its own document and its canaries keep watching it, so a single reading
 that gets through brings it back. To replace it, [add](#add-a-machine) a relay
 on a fresh address, then take the burnt one out of the roster.
+
+The verdict also says what the relay's own fleet row, which it publishes
+hourly, says of it. A relay whose row is fresh and whose services all run is
+blocked on the way, and replacing its address is the fix. One whose row has
+gone quiet for three hours, or whose services aren't all running, is likelier
+down than blocked: the verdict says to fix it first, and doesn't say to
+replace it. A row that doesn't verify says nothing either way.
 
 - **A canary whose own network is down says nothing**, given a `control_url`:
   a site its network reaches without dotdash. A reading where that fails

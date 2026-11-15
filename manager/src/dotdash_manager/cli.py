@@ -66,7 +66,7 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     net, st = o.open()
     mz = Morzer(net, o.morzer_roster, o.morzer)
     facts = mz.gather()
-    burnt, verdicts = health.judge(net, facts, st.setdefault("health", {}))
+    burnt, verdicts = health.judge(net, facts, st.setdefault("health", {}), mz.rows())
     off, more = health.blocked(net, facts, st["health"], burnt)
     verdicts += more
     if not dry_run:
