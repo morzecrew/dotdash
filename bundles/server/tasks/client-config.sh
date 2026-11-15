@@ -160,19 +160,19 @@ cdn_extra='%7B%22scMaxEachPostBytes%22%3A32768%2C%22scMinPostsIntervalMs%22%3A10
 # clients look up the parameters they know and pass over this one.
 # XHTTP first, then REALITY: an app tends to try the first link it holds, and
 # REALITY with Vision over raw TCP is the transport blocked most often. REALITY
-# stays, for networks where XHTTP is the one that fails. Every XHTTP link and
-# outbound uploads in packet-up: measured against nDPI's tunnel heuristics,
-# packet-up connections were flagged 1 time in 90, auto (one stream each way)
-# 11 times in 90, for pages about an eighth slower to load.
+# stays, for networks where XHTTP is the one that fails. XHTTP links keep
+# mode auto: measured on wire-sized captures with a round trip, packet-up was
+# flagged no less often (neither was, by nDPI or the lab's classifier) and
+# loaded pages up to an eighth slower.
 links() { # <id> <label> <server>: each named "<label> [<transport>]"
   cat <<EOF
 XHTTP over TLS via $3 (for a CDN in front: replace the address with the CDN's name):
-vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&security=tls&sni=$3&host=$3&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=packet-up#$2%20%5Bxhttp%5D
+vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&security=tls&sni=$3&host=$3&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=auto#$2%20%5Bxhttp%5D
 
 EOF
   [ -z "$xr_port" ] || cat <<EOF
 XHTTP with REALITY via $3, on port ${xr_port} (v2rayN, v2rayNG, mihomo):
-vless://$1@$3:${xr_port}?encryption=${enc}&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=xhttp&path=%2F${path}&mode=packet-up#$2%20%5Bxhttp%2Breality%5D
+vless://$1@$3:${xr_port}?encryption=${enc}&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=xhttp&path=%2F${path}&mode=auto#$2%20%5Bxhttp%2Breality%5D
 
 EOF
   cat <<EOF
@@ -203,7 +203,7 @@ relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]", "
     [ -n "$h" ] || continue
     [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp || cat <<EOF
 XHTTP over TLS through the relay $h, behind its own site (v2rayN, v2rayNG, Happ):
-vless://$1@$h:443?encryption=$e&security=tls&sni=$s&host=$s&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=packet-up#$2%20%5Brelay%20$h%20xhttp%5D
+vless://$1@$h:443?encryption=$e&security=tls&sni=$s&host=$s&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=auto#$2%20%5Brelay%20$h%20xhttp%5D
 
 EOF
     [ "$d" = - ] || for x in $(printf '%s' "$d" | tr ',' ' '); do cat <<EOF
@@ -281,7 +281,7 @@ EOF
      "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e"},
      "streamSettings": {"network": "xhttp", "security": "tls",
        "tlsSettings": {"serverName": "$s", "alpn": ["h2"], "fingerprint": "chrome"},
-       "xhttpSettings": {"path": "/$p", "host": "$s", "mode": "packet-up"}}},
+       "xhttpSettings": {"path": "/$p", "host": "$s", "mode": "auto"}}},
 EOF
     m=0
     [ "$d" = - ] || for x in $(printf '%s' "$d" | tr ',' ' '); do
@@ -312,14 +312,14 @@ outbounds() { # <id>: a REALITY and an XHTTP outbound per server, the third, mKC
      "settings": {"address": "$s", "port": ${HTTPS_PORT}, "id": "$1", "encryption": "${enc}"},
      "streamSettings": {"network": "xhttp", "security": "tls",
        "tlsSettings": {"serverName": "$s", "alpn": ["h2"], "fingerprint": "chrome"},
-       "xhttpSettings": {"path": "/${path}", "host": "$s", "mode": "packet-up"}}},
+       "xhttpSettings": {"path": "/${path}", "host": "$s", "mode": "auto"}}},
 EOF
     [ -z "$xr_port" ] || cat <<EOF
     {"tag": "dotdash-$n-xhttp-reality", "protocol": "vless",
      "settings": {"address": "$s", "port": ${xr_port}, "id": "$1", "encryption": "${enc}"},
      "streamSettings": {"network": "xhttp", "security": "reality",
        "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "${pbk}", "shortId": "${sid}"},
-       "xhttpSettings": {"path": "/${path}", "mode": "packet-up"}}},
+       "xhttpSettings": {"path": "/${path}", "mode": "auto"}}},
 EOF
     [ -z "$kcp_port" ] || cat <<EOF
     {"tag": "dotdash-$n-kcp", "protocol": "vless",
