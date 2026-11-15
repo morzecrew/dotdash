@@ -14,7 +14,7 @@
         "password": "{{ required "set dotdash_public_key" .Parameters.dotdash_public_key }}",
         "shortId": {"$file": "/run/secrets/dotdash_short_id"}
       },
-      "xhttpSettings": {"path": {"$file": "/run/secrets/dotdash_xhttp_path"}, "mode": "auto"}
+      "xhttpSettings": {"path": {"$file": "/run/secrets/dotdash_xhttp_path"}, "mode": "packet-up"}
     }
   }]
 }

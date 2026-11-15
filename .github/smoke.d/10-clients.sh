@@ -31,14 +31,14 @@ jq -n --arg id "$(id "${reality}")" --arg enc "$(param "${reality}" encryption)"
   >"${dir}/reality/client.json"
 path=$(param "${xhttp}" path)
 jq -n --arg id "$(id "${xhttp}")" --arg enc "$(param "${xhttp}" encryption)" \
-  --arg sni "$(param "${xhttp}" sni)" --arg path "/${path#%2F}" '
+  --arg sni "$(param "${xhttp}" sni)" --arg path "/${path#%2F}" --arg mode "$(param "${xhttp}" mode)" '
   {inbounds: [{listen: "127.0.0.1", port: 11081, protocol: "socks"}],
    outbounds: [{protocol: "vless",
      settings: {address: "127.0.0.1", port: 443, id: $id, encryption: $enc},
      streamSettings: {network: "xhttp", security: "tls",
        tlsSettings: {serverName: $sni, alpn: ["h2"], fingerprint: "chrome",
          certificates: [{usage: "verify", certificateFile: "/ca/root.pem"}]},
-       xhttpSettings: {path: $path, host: $sni, mode: "auto"}}}]}' \
+       xhttpSettings: {path: $path, host: $sni, mode: $mode}}}]}' \
   >"${dir}/xhttp/client.json"
 # client-config's Xray config: the lines from the "{" after its heading to the
 # matching "}" at the start of a line.

@@ -44,13 +44,13 @@ client() { # <name> <socks port> <link> [jq edit]: a client from the link, start
   jq -n --argjson socks "$2" --argjson port "$(port "${link}")" --arg id "$(id "${link}")" \
     --arg enc "$(param "${link}" encryption)" --arg sni "$(param "${link}" sni)" \
     --arg pbk "$(param "${link}" pbk)" --arg sid "$(param "${link}" sid)" \
-    --arg path "/$(param "${link}" path | sed 's/^%2F//')" '
+    --arg path "/$(param "${link}" path | sed 's/^%2F//')" --arg mode "$(param "${link}" mode)" '
     {inbounds: [{listen: "127.0.0.1", port: $socks, protocol: "socks"}],
      outbounds: [{protocol: "vless",
        settings: {address: "127.0.0.1", port: $port, id: $id, encryption: $enc},
        streamSettings: {network: "xhttp", security: "reality",
          realitySettings: {serverName: $sni, fingerprint: "chrome", password: $pbk, shortId: $sid},
-         xhttpSettings: {path: $path, mode: "auto"}}}]}' | jq "${4:-.}" >"${dir}/client.json"
+         xhttpSettings: {path: $path, mode: $mode}}}]}' | jq "${4:-.}" >"${dir}/client.json"
   chmod -R a+rX "${dir}"
   sudo docker rm -f "dotdash-rig-$1" >/dev/null 2>&1 || true
   sudo docker run -d --name "dotdash-rig-$1" --network host -v "${dir}:/etc/xray:ro" "${xray}" >/dev/null
