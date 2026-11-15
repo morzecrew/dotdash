@@ -2868,6 +2868,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>A canary's <code>facts</code> catch a connection frozen after its first 16-20 KB: each transport also downloads <code>freeze_url</code> (64 KB), and one whose download stops partway twice counts as not getting through, with the bytes it got under <code>stalled</code>. <code>freeze_url=none</code> turns it off.</p>
+</li>
+<li>
 <p><code>dotdash-manager</code> drops just a relay's blocked path when its canaries find one transport cut while another gets through: the relay's line gets <code>off=reality</code>, <code>off=xhttp</code> or <code>off=mkcp</code>, and devices get its other links. A path blocked on every relay is kept and reported.</p>
 </li>
 <li>
