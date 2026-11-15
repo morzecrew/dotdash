@@ -36,13 +36,17 @@ echo "25-facts.sh: ${got}"
 # OUTPUT whether the published port is NATed or proxied; its own connections
 # out, to the sites, leave from other ports. probe_url's fetch stays under it;
 # freeze_url doesn't.
+# connbytes counts what conntrack accounts, which is off by default; an
+# iptables that renders the match as nft's own ct bytes doesn't turn it on.
 pid=$(sudo docker inspect -f '{{.State.Pid}}' canary-rig-server)
+in_server() { sudo nsenter -t "${pid}" -n "$@"; }
 freeze=(OUTPUT -p tcp --sport 443 -m connbytes --connbytes 20000: --connbytes-dir reply --connbytes-mode bytes -j DROP)
-if sudo nsenter -t "${pid}" -n iptables -I "${freeze[@]}" 2>/dev/null; then
+if in_server sysctl -qw net.netfilter.nf_conntrack_acct=1 2>/dev/null && in_server iptables -I "${freeze[@]}" 2>/dev/null; then
   got=$(facts) || true
-  sudo nsenter -t "${pid}" -n iptables -D "${freeze[@]}"
+  seen=$(in_server iptables -L OUTPUT -v -n -x | grep connbytes || true)
+  in_server iptables -D "${freeze[@]}"
   jq -e '.internet == true and .paths == {reality: false} and .stalled.reality > 0 and .stalled.reality < 65536' \
-    <<<"${got}" >/dev/null || die "facts with the server's connections frozen past 20 KB: ${got}"
+    <<<"${got}" >/dev/null || die "facts with the server's connections frozen past 20 KB: ${got}; the rule: ${seen}"
   echo "25-facts.sh: frozen past 20 KB, REALITY reads down after $(jq .stalled.reality <<<"${got}") bytes"
   got=$(facts)
   jq -e '.paths == {reality: true} and .stalled == {}' <<<"${got}" >/dev/null || die "facts after the freeze: ${got}"
