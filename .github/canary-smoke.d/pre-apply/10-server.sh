@@ -3,8 +3,10 @@
 # out through. A stand-in Xray serves REALITY on the rig's port 443, XHTTP
 # with REALITY on 8443 (30-xhttp-reality.sh) and mKCP on 8447/udp
 # (31-mkcp.sh), with keys made here, borrowing
-# www.gstatic.com's handshake, and lets the probe straight out; the canary
-# reaches it on the rig's docker0 address. The workflows'
+# www.gstatic.com's handshake, and lets the probe straight out, to the rig's
+# own addresses too (25-facts.sh's stand-in freeze_url), which Xray's freedom
+# refuses unless a final rule allows them; the canary reaches it on the rig's
+# docker0 address. The workflows'
 # init-args gave init placeholders and smoke.sh random secrets; this sets the
 # real ones. It needs the internet, which a GitHub-hosted runner has.
 # shellcheck source=/dev/null
@@ -39,7 +41,9 @@ jq -n --arg id "${id}" --arg key "${private}" --arg sid "${sid}" --arg path "/${
        settings: {clients: [{id: $id}], decryption: "none"},
        streamSettings: {network: "kcp", finalmask: {udp: [
          {type: "mkcp-legacy", settings: {value: $seed}}, {type: "mkcp-legacy", settings: {header: "dtls"}}]}}}],
-    outbounds: [{protocol: "freedom"}]}' >/rig/server/config.json
+    outbounds: [{protocol: "freedom",
+      settings: {finalRules: [{action: "allow", ip: ["172.16.0.0/12", "10.0.0.0/8", "192.168.0.0/16"]}]}}]}' \
+  >/rig/server/config.json
 chmod -R a+rX /rig/server
 sudo docker run -d --name canary-rig-server -p 443:443 -p 8443:8443 -p 8447:8447/udp --sysctl net.ipv4.ip_unprivileged_port_start=0 \
   -v /rig/server:/etc/xray:ro "${xray}" >/dev/null

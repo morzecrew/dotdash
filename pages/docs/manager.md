@@ -156,8 +156,9 @@ on a fresh address, then take the burnt one out of the roster.
 ## Blocked paths
 
 Short of burnt, a relay can lose one path while its others get through: its
-REALITY port cut while XHTTP through its own site still answers, or mKCP
-dropped. When every canary watching a relay got through none of its readings
+REALITY port cut while XHTTP through its own site still answers, mKCP
+dropped, or one path's connections frozen after their first few kilobytes,
+which a canary's [freeze download](canary/index.md#what-it-checks) catches. When every canary watching a relay got through none of its readings
 on one path three times in a row, and another path got through, `sync` puts
 that path on the relay's line as `off=`:
 

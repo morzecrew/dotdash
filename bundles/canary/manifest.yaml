@@ -132,6 +132,11 @@ parameters:
     type: string
     default: none
     description: "A site this canary's network reaches without dotdash, which facts fetches directly, so an authority does not read the canary's own outage as its target blocked; none for none"
+  # No services: only the facts task reads it, when it runs.
+  freeze_url:
+    type: string
+    default: https://speed.cloudflare.com/__down?bytes=65536
+    description: "What facts download through each transport after its probe_url check, https:// only: past the first 16-20 KB, after which a network's DPI may freeze a connection to a hosting address abroad, which probe_url's fetch never reaches. A download that stops partway twice makes the path down; none skips it"
 
 images:
   # The measure task's shell; Xray's image has none.
@@ -154,10 +159,10 @@ published:
 
 tasks:
   facts:
-    description: "Print as JSON, for the authority this canary follows, whether each transport gets through to its target and whether control_url answers without dotdash"
+    description: "Print as JSON, for the authority this canary follows, whether each transport gets through (freeze_url too) and whether control_url answers without dotdash"
     service: measure
     command: ["sh", "/task/facts.sh"]
-    timeout: 3m
+    timeout: 5m
   measure:
     description: "Measure each transport through dotdash as JSON: N fetches (20 unless given) for success and latency, 3 downloads of download_url for Mbit/s; arguments: [count] [url] [timeout]"
     service: measure

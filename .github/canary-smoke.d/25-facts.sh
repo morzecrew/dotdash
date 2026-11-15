@@ -2,7 +2,8 @@
 # The facts task, which an authority reads before every fleet publish: what
 # the canary watches, whether each transport gets through, and with
 # control_url set, whether the canary's own network answers without dotdash.
-# Stopping the stand-in server (pre-apply/10-server.sh) fails REALITY.
+# A freeze_url that stops after 20 KB fails REALITY with the bytes it got;
+# stopping the stand-in server (pre-apply/10-server.sh) fails it outright.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -20,13 +21,38 @@ facts() {
 
 got=$(facts)
 jq -e '.server == "www.gstatic.com" and (.address | length > 0) and (.checked_at | type == "number")
-  and .internet == null and .paths == {reality: true}' <<<"${got}" >/dev/null ||
+  and .internet == null and .paths == {reality: true} and .stalled == {}' <<<"${got}" >/dev/null ||
   die "facts with the server up: ${got}"
 
 sudo morzer config set control_url=https://www.gstatic.com/generate_204 >/dev/null || die "could not set control_url"
 got=$(facts)
 jq -e '.internet == true' <<<"${got}" >/dev/null || die "facts with control_url set: ${got}"
 echo "25-facts.sh: ${got}"
+
+# A freeze as the canary meets one: the bytes stop partway. A stand-in for
+# freeze_url on the rig (openssl; the rig has no python) answers each of
+# facts' two tries with 20 KB of a 64 KB body and then closes: cut, which
+# counts as stalled does. The stand-in server reaches it on docker0.
+host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
+dir=$(mktemp -d)
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 1 -subj /CN=stall \
+  -keyout "${dir}/key.pem" -out "${dir}/cert.pem" 2>/dev/null
+for _ in 1 2; do
+  { printf 'HTTP/1.1 200 OK\r\nContent-Length: 65536\r\nConnection: close\r\n\r\n'; head -c 20000 /dev/zero; } |
+    openssl s_server -quiet -naccept 1 -accept "${host}:9443" -cert "${dir}/cert.pem" -key "${dir}/key.pem" \
+      >/dev/null 2>&1
+done &
+stall=$!
+sleep 1
+sudo morzer config set "freeze_url=https://${host}:9443/f" >/dev/null || die "could not set freeze_url"
+got=$(facts) || true
+sudo morzer config unset freeze_url >/dev/null || die "could not unset freeze_url"
+kill "${stall}" 2>/dev/null || true
+jq -e '.internet == true and .paths == {reality: false} and .stalled.reality > 0 and .stalled.reality < 65536' \
+  <<<"${got}" >/dev/null || die "facts with freeze_url stopping after 20 KB: ${got}"
+echo "25-facts.sh: freeze_url stopped after 20 KB: REALITY reads down after $(jq .stalled.reality <<<"${got}") bytes"
+got=$(facts)
+jq -e '.paths == {reality: true} and .stalled == {}' <<<"${got}" >/dev/null || die "facts after the freeze: ${got}"
 
 sudo docker stop canary-rig-server >/dev/null
 got=$(facts) || true
