@@ -7,8 +7,9 @@ from .roster import Network
 from .state import public_key
 
 
-def relay_line(f: dict) -> str:
-    """The relay's line for a server's relays, as its relay-entry task prints it."""
+def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset()) -> str:
+    """The relay's line for a server's relays, as its relay-entry task prints
+    it, with the paths its canaries find blocked (health.blocked) as off=."""
     line = f"{f['entry_host']} {f['site']} {f['public_key']} {f['short_id']} {f['encryption']}"
     if "own_site" in f:
         line += f" own-site {f['own_site']['xhttp_path']}"
@@ -19,13 +20,17 @@ def relay_line(f: dict) -> str:
         line += " cdn=" + ",".join(f["cdn_hosts"])
     if f.get("cdn_only"):
         line += " cdn-only"
+    if off:
+        line += " off=" + ",".join(sorted(off))
     return line
 
 
-def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[str] = frozenset()) -> tuple[dict, list[str]]:
+def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[str] = frozenset(),
+           off: dict[str, set[str]] | None = None) -> tuple[dict, list[str]]:
     """Every machine's document, by name, and what waits for facts not yet
     there. Burnt relays (health.judge) are left out of the servers' relays and
-    pools, so devices stop getting them; they and their canaries keep theirs."""
+    pools, so devices stop getting them; they and their canaries keep theirs.
+    A relay's blocked paths (health.blocked) go on its line as off=."""
     keys, ids = state["keys"], state["ids"]
     pbk = public_key(keys["reality_key"])
     known = [s for s in net.server if s.name in facts]
@@ -36,8 +41,9 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     vless = {kind: "\n".join(f"{ids[n]} {n}" for n in net.clients_of(kind)) for kind in ("server", "relay")}
     docs = {}
 
-    live = [facts[r.name] for r in net.relay if r.name in facts and r.name not in burnt]
-    relays = "\n".join(relay_line(f) for f in live)
+    off = off or {}
+    relays = "\n".join(relay_line(facts[r.name], off.get(r.name, frozenset()))
+                       for r in net.relay if r.name in facts and r.name not in burnt)
     # A pool naming a relay left out would name nothing: the server warns.
     gone = {h for r in burnt if r in facts for h in [facts[r]["entry_host"], *facts[r].get("cdn_hosts", [])]}
     pools = "\n".join(f"{p} {' '.join(kept)}" for p, ms in net.pools.items() if (kept := [m for m in ms if m not in gone]))
