@@ -703,6 +703,8 @@
       
         
       
+        
+      
     
     
     
@@ -954,6 +956,33 @@
     
   
   Several servers
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shared-machine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Beside your own web server
 
     
   </span>
@@ -1994,7 +2023,22 @@
 <tr>
 <td><code>https_port</code></td>
 <td><code>443</code></td>
-<td>host port for REALITY and the site</td>
+<td>host port for REALITY and the site; devices dial it too, unless <code>entry_port</code></td>
+</tr>
+<tr>
+<td><code>http_port</code></td>
+<td><code>80</code></td>
+<td>host port for the site's plain HTTP: the ACME HTTP-01 check and the redirect to HTTPS</td>
+</tr>
+<tr>
+<td><code>listen</code></td>
+<td><code>0.0.0.0</code></td>
+<td>host address for <code>https_port</code> and <code>http_port</code>; <code>127.0.0.1</code> <a href="../shared-machine/">beside your own web server</a></td>
+</tr>
+<tr>
+<td><code>entry_port</code></td>
+<td><code>none</code></td>
+<td>the port devices, relays and the canary dial, when a web server of your own passes the domain through to <code>https_port</code>; <code>none</code> for <code>https_port</code></td>
 </tr>
 <tr>
 <td><code>xdns_domain</code></td>
@@ -2014,7 +2058,7 @@
 <tr>
 <td><code>xhttp_reality_port</code></td>
 <td><code>8443</code></td>
-<td>port for XHTTP with REALITY; not <code>https_port</code> or 80</td>
+<td>port for XHTTP with REALITY; not <code>https_port</code> or <code>http_port</code></td>
 </tr>
 <tr>
 <td><code>kcp_port</code></td>

@@ -698,6 +698,8 @@
       
         
       
+        
+      
     
     
     
@@ -946,6 +948,33 @@
     
   
   Several servers
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../server/shared-machine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Beside your own web server
 
     
   </span>
@@ -2130,6 +2159,21 @@
 <td><code>ipv6</code></td>
 <td><code>allow</code></td>
 <td><code>block</code>: IPv6 destinations end at the relay and never reach a server; names go on</td>
+</tr>
+<tr>
+<td><code>https_port</code></td>
+<td><code>443</code></td>
+<td>host port for REALITY; devices always dial 443, so another is for <a href="../../server/shared-machine/">your own web server</a> passing the relay's name through</td>
+</tr>
+<tr>
+<td><code>http_port</code></td>
+<td><code>80</code></td>
+<td>with <code>own-site</code>, host port for the site's plain HTTP, the ACME HTTP-01 check</td>
+</tr>
+<tr>
+<td><code>listen</code></td>
+<td><code>0.0.0.0</code></td>
+<td>host address for <code>https_port</code> and <code>http_port</code>; <code>127.0.0.1</code> beside your own web server</td>
 </tr>
 <tr>
 <td><code>kcp_port</code></td>
