@@ -12,7 +12,6 @@ metadata:
 
 providers:
   runtime: {name: compose}
-  secrets: {name: sops-age}
   health: {name: http}
 
 runtimes:
@@ -27,15 +26,9 @@ configuration:
     target: /etc/dotdash-acme-dns/config.cfg
     mode: "0644"
 
-# One generated secret nothing reads (see secrets.schema.yaml): the
-# encrypted state it makes init create holds the backups' recipients.
-secrets:
-  source: /etc/dotdash-acme-dns/secrets.sops.yaml
-  render_to: /run/dotdash-acme-dns/secrets
-  schema: secrets.schema.yaml
-
 compatibility:
-  min_manager_version: "0.17.0"
+  # 0.17.1 backs up a release with no secrets, which update needs.
+  min_manager_version: "0.17.1"
   rollback_safe: true
   # acme-dns keeps its registrations in SQLite in the data volume and
   # migrates it itself; there is no migrate step.
