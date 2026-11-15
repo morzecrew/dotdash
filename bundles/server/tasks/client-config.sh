@@ -63,21 +63,24 @@ sid=$(cat /run/secrets/reality_short_id)
 pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # The dotdash-relay machines in front of this server (the relays parameter),
 # one "<host> <site> <public key> <short id> <encryption> [own-site [<xhttp
-# path>]] [kcp=<port>,<header>,<seed>[,<open>]] [cdn=<host>[,<host>]] [cdn-only]" per
+# path>]] [kcp=<port>,<header>,<seed>[,<open>]] [cdn=<host>[,<host>]] [cdn-only]
+# [off=<path>[,<path>]]" per
 # line; blank lines, "#" comments and shorter lines are not relays. own-site:
 # the site is the relay's own, which fetches subscriptions from here and, given
 # its path, routes XHTTP to the relay's Xray. kcp=: the relay serves mKCP on
 # that UDP port too, with the opener <open> (quic) if it names one. cdn=:
 # local CDNs front the relay's own site, as cdn_hosts fronts this server's;
 # they need its XHTTP path. cdn-only: devices get the relay's CDN links alone,
-# so its own address reaches none of them. Each becomes "<host> <site> <key>
+# so its own address reaches none of them. off=: the paths its canaries find
+# blocked (reality, xhttp, mkcp; dotdash-manager sets it), which devices then
+# don't get through it; its CDN links stay. Each becomes "<host> <site> <key>
 # <sid> <enc> <own-site|-> <path|-> <kcp|-> <cdn hosts, comma-separated|->
-# <cdn-only|->".
+# <cdn-only|-> <off paths, comma-separated|->".
 all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   case $line in '' | '#'*) continue ;; esac
-  c=- d=- only=- rest=
+  c=- d=- only=- x=- rest=
   for f in $line; do
-    case $f in kcp=*) c=${f#kcp=} ;; cdn=*) d=${f#cdn=} ;; cdn-only) only=cdn-only ;; *) rest="$rest $f" ;; esac
+    case $f in kcp=*) c=${f#kcp=} ;; cdn=*) d=${f#cdn=} ;; cdn-only) only=cdn-only ;; off=*) x=${f#off=} ;; *) rest="$rest $f" ;; esac
   done
   # shellcheck disable=SC2086 # one field per word
   set -- $rest
@@ -96,11 +99,15 @@ all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
       echo "relays: $1 names CDNs but no XHTTP path of its own site; no CDN link through it" >&2
       d=-; } ;;
   esac
+  case ,$x, in ,-, | ,,) x=- ;; *,mkcp,*) c=- ;; esac
+  for y in $(printf '%s' "$x" | tr ',' ' '); do
+    case $y in - | reality | xhttp | mkcp) ;; *) echo "relays: the off= field of $1 names $y, not reality, xhttp or mkcp; ignored" >&2 ;; esac
+  done
   if [ "$only" = cdn-only ] && [ "$d" = - ]; then
     echo "relays: $1 is cdn-only but has no CDN link; left out" >&2
     continue
   fi
-  if [ -n "${5:-}" ]; then echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $c $d $only"; fi
+  if [ -n "${5:-}" ]; then echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $c $d $only $x"; fi
 done)
 
 # The local CDNs in front of this server (the cdn_hosts parameter), each
@@ -120,13 +127,13 @@ sees() { [ -z "$mine" ] || has "$1" "$mine" || ! has "$1" "$pools"; }
 pick() { # <device name>: the relays, CDN hosts and subscription relays it gets
   mine=
   [ -z "$1" ] || mine=$(printf '%s\n' "$pools" | awk -v m="$1" '{ for (i = 2; i <= NF; i++) if ($i == m) { print; next } }')
-  relays=$(printf '%s\n' "$all_relays" | while read -r h s k i e o p c d only; do
+  relays=$(printf '%s\n' "$all_relays" | while read -r h s k i e o p c d only off; do
     if [ -z "$h" ] || ! sees "$h"; then continue; fi
     if [ "$d" != - ]; then
       d=$(for x in $(printf '%s' "$d" | tr ',' ' '); do if sees "$x"; then printf '%s,' "$x"; fi; done)
       d=${d%,}
     fi
-    echo "$h $s $k $i $e $o $p $c ${d:--} $only"
+    echo "$h $s $k $i $e $o $p $c ${d:--} $only $off"
   done)
   cdns=$(for h in $all_cdns; do if sees "$h"; then echo "$h"; fi; done)
   # The own-site relays' domains, where a device inside the restricted network
@@ -183,12 +190,15 @@ EOF
   fi
 }
 
+# blocked <off field> <path>: whether a relay's off= field names the path.
+blocked() { case ,$1, in *,"$2",*) ;; *) return 1 ;; esac; }
+
 # A relay takes REALITY on 443 under its neighbour site's name, with keys of its
 # own, and carries the device on to this server as its own client.
 relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]", "[relay <host> xhttp]" and "[relay <host> cdn <cdn>]" before it through an own-site one, "[relay <host> kcp]" after it with mKCP
-  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only; do
+  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off; do
     [ -n "$h" ] || continue
-    [ "$p" = - ] || [ "$only" = cdn-only ] || cat <<EOF
+    [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp || cat <<EOF
 XHTTP over TLS through the relay $h, behind its own site (v2rayN, v2rayNG, Happ):
 vless://$1@$h:443?encryption=$e&security=tls&sni=$s&host=$s&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=auto#$2%20%5Brelay%20$h%20xhttp%5D
 
@@ -200,7 +210,7 @@ vless://$1@$x:443?encryption=$e&security=tls&sni=$x&host=$x&alpn=h2&fp=chrome&ty
 EOF
     done
     [ "$only" != cdn-only ] || continue
-    cat <<EOF
+    blocked "$off" reality || cat <<EOF
 REALITY through the relay $h (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
 vless://$1@$h:443?encryption=$e&flow=xtls-rprx-vision&security=reality&sni=$s&fp=chrome&pbk=$k&sid=$i&support-x25519mlkem768=true&type=tcp#$2%20%5Brelay%20$h%5D
 
@@ -254,16 +264,16 @@ cdn_outbounds() { # <id>
 
 relay_outbounds() { # <id>
   n=0
-  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only; do
+  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off; do
     [ -n "$h" ] || continue
     n=$((n + 1))
-    [ "$only" = cdn-only ] || cat <<EOF
+    [ "$only" = cdn-only ] || blocked "$off" reality || cat <<EOF
     {"tag": "dotdash-relay-$n", "protocol": "vless",
      "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e", "flow": "xtls-rprx-vision"},
      "streamSettings": {"network": "raw", "security": "reality",
        "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "$k", "shortId": "$i"}}},
 EOF
-    [ "$p" = - ] || [ "$only" = cdn-only ] || cat <<EOF
+    [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp || cat <<EOF
     {"tag": "dotdash-relay-$n-xhttp", "protocol": "vless",
      "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e"},
      "streamSettings": {"network": "xhttp", "security": "tls",

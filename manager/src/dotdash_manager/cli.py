@@ -67,11 +67,13 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     mz = Morzer(net, o.morzer_roster, o.morzer)
     facts = mz.gather()
     burnt, verdicts = health.judge(net, facts, st.setdefault("health", {}))
+    off, more = health.blocked(net, facts, st["health"], burnt)
+    verdicts += more
     if not dry_run:
         state.save(o.state, st)
     for v in verdicts:
         print(v)
-    docs, waiting = render(net, st, facts, burnt)
+    docs, waiting = render(net, st, facts, burnt, off)
     failed = 0
     for m in net.machines:
         doc = docs.get(m.name)

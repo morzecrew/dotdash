@@ -153,6 +153,29 @@ on a fresh address, then take the burnt one out of the roster.
 - **Neither is a [CDN-only relay](server/cdn.md#the-cdns-origin-only).** Its
   canaries check its own address, which no device gets.
 
+## Blocked paths
+
+Short of burnt, a relay can lose one path while its others get through: its
+REALITY port cut while XHTTP through its own site still answers, or mKCP
+dropped. When every canary watching a relay got through none of its readings
+on one path three times in a row, and another path got through, `sync` puts
+that path on the relay's line as `off=`:
+
+```
+blocked: relay r1: reality got through for none of its canaries in 3 readings; devices get its other paths until one gets through again
+```
+
+Devices then get only its other links through it (and its CDN links, which
+canaries don't check), at their next subscription refresh. A reading where the
+path gets through again takes it off.
+
+- **A path blocked on every relay that has it is kept.** That's likelier the
+  canaries' network refusing the transport than every relay losing it at
+  once, so the manager says to check that network instead.
+- **A server's blocked paths are only reported**, as a burnt server is.
+- **A server released before `off=` ignores the field** and gives devices
+  every link through the relay, as before.
+
 ## What it leaves alone
 
 The upstreams, ports, profiles, domains and anything else a machine alone

@@ -163,6 +163,21 @@ if sudo grep -q 'cdn-only) only=cdn-only' /opt/dotdash/current/tasks/client-conf
   echo "46-relays.sh: a cdn-only relay gives its CDN link and outbound alone, and one with no CDN nothing"
 fi
 
+# A relay whose canaries find some paths blocked (dotdash-manager's off=):
+# devices get none of those through it, and its other links as before.
+if sudo grep -q 'off=\*)' /opt/dotdash/current/tasks/client-config.sh; then
+  printf '%s\n' "198.51.100.8 relay-c.test pbkC 0123456789abcdef mlkem.c own-site 00112233445566778899aabbccddeeff kcp=9447,dtls,00112233445566778899aabbccddeeff off=reality,mkcp" |
+    sudo morzer config set --set-file relays=- >/dev/null
+  text=$(out)
+  ! grep -q '%5Brelay%20198\.51\.100\.8%5D$' <<<"${text}" || die "off=reality left a REALITY link through the relay"
+  ! grep -q '%5Brelay%20198\.51\.100\.8%20kcp%5D$' <<<"${text}" || die "off=mkcp left an mKCP link through the relay"
+  [ "$(grep -c '%5Brelay%20198\.51\.100\.8%20xhttp%5D$' <<<"${text}")" = "${devices}" ] ||
+    die "off=reality,mkcp took the XHTTP links through the relay too"
+  [ "$(outbound_tags "${text}" | sort -u | tr '\n' ' ')" = "dotdash-relay-1-xhttp " ] ||
+    die "under off=reality,mkcp the relay's outbounds are not its XHTTP one alone: $(outbound_tags "${text}" | tr '\n' ' ')"
+  echo "46-relays.sh: off=reality,mkcp leaves the relay's XHTTP link and outbound alone"
+fi
+
 sudo morzer config unset relays >/dev/null
 [ -z "$(relay_links "$(out)")" ] || die "relay links remain once relays is unset"
 echo "46-relays.sh: a link and an outbound per relay and device, none with relays unset"

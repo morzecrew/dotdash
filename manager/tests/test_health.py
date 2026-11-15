@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from dotdash_manager import state
-from dotdash_manager.health import BURN_AFTER, judge
+from dotdash_manager.health import BURN_AFTER, blocked, judge
 from dotdash_manager.render import relay_line, render
 from dotdash_manager.roster import loads
 
@@ -49,7 +49,7 @@ def test_a_relay_is_burnt_after_its_readings_in_a_row_fail_and_back_once_one_get
     assert any(line.startswith("burnt: relay r1:") for line in say)
     # One path through, from one reading, and it is back.
     assert run(net, health, BURN_AFTER + 1, c1_up=True)[0] == set()
-    assert health["r1"] == {"fails": 0, "at": BURN_AFTER + 1}
+    assert health["r1"]["fails"] == 0 and health["r1"]["at"] == BURN_AFTER + 1 and "since" not in health["r1"]
 
 
 def test_a_reading_counts_once_and_an_offline_canary_or_stale_target_not_at_all():
@@ -91,3 +91,37 @@ def test_a_cdn_only_relay_carries_the_flag_is_never_judged_and_serves_no_subscri
     facts = {"r1": only, "r2": R2, "c1": canary(R1, 5, False), "c2": canary(R2, 5, True)}
     assert judge(net, facts, health)[0] == set() and "r1" not in health
     assert relay_line(only).endswith(" cdn=c.example.net cdn-only")
+
+
+def paths_run(net, health, at, r1: dict, r2: dict):
+    c = lambda relay, paths: {"server": relay["site"], "address": relay["entry_host"], "checked_at": at,
+                              "internet": True, "paths": paths}
+    facts = {"r1": R1, "r2": R2, "c1": c(R1, r1), "c2": c(R2, r2)}
+    burnt, _ = judge(net, facts, health)
+    return facts, blocked(net, facts, health, burnt)
+
+
+def test_a_path_blocked_on_one_relay_goes_off_its_line_and_comes_back():
+    net, health = loads(ROSTER), {}
+    for at in range(1, BURN_AFTER + 1):
+        facts, (off, say) = paths_run(net, health, at, {"reality": False, "xhttp": True}, {"reality": True, "xhttp": True})
+    assert off == {"r1": {"reality"}} and any(line.startswith("blocked: relay r1: reality") for line in say)
+    st = state.load(Path("/nonexistent"), net)
+    facts["s"] = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
+                  "encryption": "E"}
+    relays = render(net, st, facts, set(), off)[0]["s"]["parameters"]["relays"].splitlines()
+    assert relays[0].endswith(" cdn=c.example.net off=reality") and "off=" not in relays[1]
+    # One reading through, and the path is back.
+    _, (off, _) = paths_run(net, health, BURN_AFTER + 1, {"reality": True, "xhttp": True}, {"reality": True, "xhttp": True})
+    assert off == {}
+
+
+def test_a_path_blocked_on_every_relay_stays_and_every_path_blocked_burns_instead():
+    net, health = loads(ROSTER), {}
+    for at in range(1, BURN_AFTER + 1):
+        _, (off, say) = paths_run(net, health, at, {"reality": False, "xhttp": True}, {"reality": False, "xhttp": True})
+    assert off == {} and "check whether the canaries' network blocks reality" in say[0]
+    health = {}
+    for at in range(1, BURN_AFTER + 1):
+        _, (off, _) = paths_run(net, health, at, {"reality": False, "xhttp": False}, {"reality": True, "xhttp": True})
+    assert off == {} and health["r1"]["fails"] == BURN_AFTER

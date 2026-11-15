@@ -40,8 +40,12 @@ def judge(net: Network, facts: dict, health: dict) -> tuple[set[str], list[str]]
         if at <= h["at"]:
             continue
         h["at"] = at
-        if any(any(f["paths"].values()) for f in seen):
-            health[t.name] = {"fails": 0, "at": at}
+        # Per path too: up when any canary got through it this reading.
+        ups = {p for f in seen for p, ok in f["paths"].items() if ok}
+        h["paths"] = {p: 0 if p in ups else h.get("paths", {}).get(p, 0) + 1 for f in seen for p in f["paths"]}
+        if ups:
+            h["fails"] = 0
+            h.pop("since", None)
         else:
             h["fails"] += 1
             h.setdefault("since", at)
@@ -59,3 +63,32 @@ def judge(net: Network, facts: dict, health: dict) -> tuple[set[str], list[str]]
     say += [f"burnt: relay {r}: its canaries got through none of its paths in {health[r]['fails']} readings; "
             f"left out of the servers' relays and pools until a canary gets through again; replace it" for r in sorted(out)]
     return out, say
+
+
+def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[dict[str, set[str]], list[str]]:
+    """The paths (reality, xhttp, mkcp) each relay's canaries got through none
+    of in BURN_AFTER readings in a row while another path got through: devices
+    stop getting those through it, and keep the rest. A path blocked on every
+    relay that has it is likelier the canaries' network refusing that transport
+    than every relay losing it in the same hour: kept everywhere, and said.
+    A server's are reported only, as for a burnt server."""
+    def out(name: str) -> set[str]:
+        paths = health.get(name, {}).get("paths", {})
+        gone = {p for p, n in paths.items() if n >= BURN_AFTER}
+        return gone if gone != set(paths) else set()
+
+    judged = [r.name for r in net.relay if r.name not in burnt and r.name in facts and not facts[r.name].get("cdn_only")]
+    off = {r: gone for r in judged if (gone := out(r))}
+    say = []
+    for p in sorted({p for gone in off.values() for p in gone}):
+        having = [r for r in judged if p in health.get(r, {}).get("paths", {})]
+        if all(p in off.get(r, set()) for r in having):
+            for r in having:
+                off[r].discard(p)
+            say.append(f"blocked: {p} on every relay that has it ({', '.join(having)}); kept, check whether the canaries' network blocks {p}")
+    off = {r: gone for r, gone in off.items() if gone}
+    say += [f"blocked: relay {r}: {', '.join(sorted(gone))} got through for none of its canaries in {BURN_AFTER} readings; "
+            "devices get its other paths until one gets through again" for r, gone in sorted(off.items())]
+    say += [f"blocked: server {s.name}: {', '.join(sorted(gone))} in {BURN_AFTER} readings; reported only"
+            for s in net.server if s.name not in burnt and (gone := out(s.name))]
+    return off, say
