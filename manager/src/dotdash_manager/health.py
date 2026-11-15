@@ -90,6 +90,36 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None) -> 
     return out, say
 
 
+def spares(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[set[str], dict[str, str], list[str]]:
+    """Spare relays (spare = true) stand in for burnt ones at the next sync,
+    rather than when someone notices. Each burnt relay, in roster order, gets
+    the first spare not burnt itself, those its canaries got through to first,
+    and the spare takes its place in the pools. A spare stands in only while
+    the relay it replaces is burnt: one that comes back sends it back to
+    waiting. Returns the spares held back (left out, as burnt relays are), each
+    standing spare's burnt relay, and what to say."""
+    def warm(name: str) -> bool:
+        h = health.get(name, {})
+        return bool(h.get("at")) and h.get("fails", 0) == 0
+
+    ready = [r.name for r in net.relay
+             if r.spare and r.name in facts and r.name not in burnt and not facts[r.name].get("cdn_only")]
+    ready.sort(key=lambda name: not warm(name))
+    stands, say = {}, []
+    for r in [r.name for r in net.relay if not r.spare and r.name in burnt]:
+        if not ready:
+            say.append(f"spare: none left for burnt relay {r}; add a relay with spare = true, or replace {r}")
+            continue
+        s = ready.pop(0)
+        stands[s] = r
+        unchecked = "" if warm(s) else " (no canary has got through to it yet: check it)"
+        say.append(f"spare: {s} stands in for burnt relay {r}, in its pools{unchecked}; replace {r}, "
+                   f"then make {s} a regular relay (spare = false) and add a new spare")
+    # Every spare not standing in waits, a cdn-only one too, which never stands in.
+    held = {r.name for r in net.relay if r.spare and r.name in facts} - set(stands) - burnt
+    return held, stands, say
+
+
 def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[dict[str, set[str]], list[str]]:
     """The paths (reality, xhttp, mkcp) each relay's canaries got through none
     of in BURN_AFTER readings in a row while another path got through: devices

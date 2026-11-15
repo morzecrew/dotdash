@@ -53,6 +53,10 @@ class Server(Machine):
 
 class Relay(Machine):
     kind: ClassVar[str] = "relay"
+    # A spare: installed, given its document and watched by its canaries like
+    # any relay, but kept out of what devices get until a burnt relay's place
+    # needs it (health.spares).
+    spare: bool = False
 
 
 class Canary(Machine):
