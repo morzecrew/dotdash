@@ -117,7 +117,7 @@ if sudo jq -e '[.inbounds[].tag] | index("devices-xhttp")' /etc/dotdash-relay/xr
        streamSettings: {network: "xhttp", security: "tls",
          tlsSettings: {serverName: $site, alpn: ["h2"], fingerprint: "chrome",
            certificates: [{usage: "verify", certificateFile: "/ca/root.pem"}]},
-         xhttpSettings: {path: $path, host: $site, mode: "auto"}}}]}' >/rig/relay/xhttp/config.json
+         xhttpSettings: {path: $path, host: $site, mode: "packet-up"}}}]}' >/rig/relay/xhttp/config.json
   chmod -R a+rX /rig/relay/xhttp /rig/relay/xhttp-ca
   sudo docker rm -f relay-rig-xhttp >/dev/null 2>&1 || true
   sudo docker run -d --name relay-rig-xhttp --network host -v /rig/relay/xhttp:/etc/xray:ro \

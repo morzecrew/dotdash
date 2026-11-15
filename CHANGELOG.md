@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Devices' XHTTP links and the canary's XHTTP checks upload in `packet-up` mode instead of `auto`. Measured against nDPI's tunnel heuristics, `packet-up` connections were flagged 1 time in 90 and `auto` 11 times; pages load about an eighth slower.
+
 - The server's and relay's TLS and HTTP ports are published on every IPv4 address (`listen=0.0.0.0`), and no longer on IPv6 too. A domain with an AAAA record reaches dotdash over IPv4 only.
 
 - `dotdash-acme-dns` needs morzer 0.17.1, which backs up a machine set up without a recovery key, so updates there no longer depend on the placeholder secret the bundle carried; the secret is gone.
