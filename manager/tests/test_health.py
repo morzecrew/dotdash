@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from dotdash_manager import state
-from dotdash_manager.health import BURN_AFTER, alive, blocked, judge
+from dotdash_manager.health import BURN_AFTER, alive, blocked, judge, spares
 from dotdash_manager.render import relay_line, render
 from dotdash_manager.roster import loads
 
@@ -151,3 +151,66 @@ def test_a_burnt_relay_running_is_blocked_and_replaced_one_down_is_fixed():
             burnt, say = judge(net, facts, health, rows)
         line = next(x for x in say if x.startswith("burnt: relay r1:"))
         assert burnt == {"r1"} and all(h in line for h in has) and not any(x in line for x in lacks), line
+
+
+SPARES = ROSTER + """
+[[relay]]
+name = "r3"
+spare = true
+[[relay]]
+name = "r4"
+spare = true
+[[canary]]
+name = "c4"
+watches = "r4"
+"""
+R3 = {**R1, "entry_host": "203.0.113.7", "site": "three.example.net", "cdn_hosts": []}
+R4 = {**R1, "entry_host": "203.0.113.8", "site": "four.example.net", "cdn_hosts": ["d.example.net"]}
+
+
+def spare_run(net, health, at, r1_up=False, r4_up=True):
+    facts = {"r1": R1, "r2": R2, "r3": R3, "r4": R4, "c1": canary(R1, at, r1_up), "c2": canary(R2, at, True),
+             "c4": canary(R4, at, r4_up)}
+    burnt, _ = judge(net, facts, health)
+    return facts, burnt, spares(net, facts, health, burnt)
+
+
+def test_spares_wait_out_of_sight_then_the_watched_one_stands_in_for_a_burnt_relay():
+    net, health = loads(SPARES), {}
+    st = state.load(Path("/nonexistent"), net)
+    server = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
+              "encryption": "E"}
+    facts, burnt, (held, stands, say) = spare_run(net, health, 1)
+    assert burnt == set() and held == {"r3", "r4"} and stands == {} and say == []
+    params = render(net, st, {**facts, "s": server}, burnt | held, None, stands)[0]["s"]["parameters"]
+    assert "203.0.113.7" not in params["relays"] and "203.0.113.8" not in params["relays"]
+    for at in range(2, BURN_AFTER + 1):
+        facts, burnt, (held, stands, say) = spare_run(net, health, at)
+    # r4, which its canary got through to, before r3, which none watches.
+    assert burnt == {"r1"} and stands == {"r4": "r1"} and held == {"r3"}
+    assert say[0].startswith("spare: r4 stands in for burnt relay r1") and "check it" not in say[0]
+    docs = render(net, st, {**facts, "s": server}, burnt | held, None, stands)[0]
+    params = docs["s"]["parameters"]
+    assert "203.0.113.8 four.example.net" in params["relays"] and "203.0.113.5" not in params["relays"]
+    assert params["pools"] == "a phone 203.0.113.8 d.example.net\nb 203.0.113.8 d.example.net"
+    assert "r4" in docs and "c4" in docs
+    # r1 back: r4 waits again.
+    facts, burnt, (held, stands, say) = spare_run(net, health, BURN_AFTER + 1, r1_up=True)
+    assert burnt == set() and stands == {} and held == {"r3", "r4"}
+
+
+def test_a_burnt_spare_stands_in_for_nothing_and_none_left_is_said():
+    net, health = loads(SPARES), {}
+    for at in range(1, BURN_AFTER + 1):
+        facts, burnt, (held, stands, say) = spare_run(net, health, at, r4_up=False)
+    assert burnt == {"r1", "r4"} and stands == {"r3": "r1"} and held == set()
+    assert "no canary has got through to it yet" in say[0]
+    two = loads(SPARES.replace('name = "r3"\nspare = true\n', 'name = "r3"\n'))
+    health = {}
+    for at in range(1, BURN_AFTER + 1):
+        facts, burnt, (held, stands, say) = spare_run(two, health, at, r4_up=False)
+    assert stands == {} and say == ["spare: none left for burnt relay r1; add a relay with spare = true, or replace r1"]
+    # A cdn-only spare never stands in, and never shows either.
+    net, health = loads(SPARES), {}
+    facts = {"r1": R1, "r2": R2, "r3": {**R3, "cdn_only": True}, "r4": R4}
+    assert spares(net, facts, health, set())[0] == {"r3", "r4"}

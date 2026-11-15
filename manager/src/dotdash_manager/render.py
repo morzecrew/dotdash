@@ -26,11 +26,13 @@ def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset()) -> str:
 
 
 def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[str] = frozenset(),
-           off: dict[str, set[str]] | None = None) -> tuple[dict, list[str]]:
+           off: dict[str, set[str]] | None = None, stands: dict[str, str] | None = None) -> tuple[dict, list[str]]:
     """Every machine's document, by name, and what waits for facts not yet
-    there. Burnt relays (health.judge) are left out of the servers' relays and
-    pools, so devices stop getting them; they and their canaries keep theirs.
-    A relay's blocked paths (health.blocked) go on its line as off=."""
+    there. Burnt relays (health.judge) and spares held back (health.spares)
+    are left out of the servers' relays and pools, so devices stop getting
+    them; they and their canaries keep theirs. A spare standing in for a burnt
+    relay (stands: spare, its burnt relay) takes that relay's place in the
+    pools. A relay's blocked paths (health.blocked) go on its line as off=."""
     keys, ids = state["keys"], state["ids"]
     pbk = public_key(keys["reality_key"])
     known = [s for s in net.server if s.name in facts]
@@ -45,8 +47,18 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     relays = "\n".join(relay_line(facts[r.name], off.get(r.name, frozenset()))
                        for r in net.relay if r.name in facts and r.name not in burnt)
     # A pool naming a relay left out would name nothing: the server warns.
-    gone = {h for r in burnt if r in facts for h in [facts[r]["entry_host"], *facts[r].get("cdn_hosts", [])]}
-    pools = "\n".join(f"{p} {' '.join(kept)}" for p, ms in net.pools.items() if (kept := [m for m in ms if m not in gone]))
+    hosts = lambda name: [facts[name]["entry_host"], *facts[name].get("cdn_hosts", [])]
+    gone = {h for r in burnt if r in facts for h in hosts(r)}
+    stands = stands or {}
+
+    def members(ms: list[str]) -> list[str]:
+        kept = [m for m in ms if m not in gone]
+        for s, r in stands.items():
+            if r in facts and s in facts and set(hosts(r)) & set(ms):
+                kept += [h for h in hosts(s) if h not in kept]
+        return kept
+
+    pools = "\n".join(f"{p} {' '.join(kept)}" for p, ms in net.pools.items() if (kept := members(ms)))
     for s in net.server:
         others = [facts[o.name]["domain"] for o in known if o is not s]
         doc = {

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Spare relays: a relay with `spare = true` in `dotdash-manager`'s roster runs and is watched but devices don't get it, until a relay burns; then it stands in for that relay, in its pools, at the next sync, and waits again once the relay is back.
+
 - A canary's `facts` also catch a freeze counted on what the device sends: each transport uploads 64 KB to `freeze_up_url`, and one whose upload gets no answer for 8 seconds twice counts as not getting through, named under `stalled_up`. `freeze_up_url=none` turns it off.
 
 - `dotdash-manager` tells a burnt relay that's blocked from one that's down, by the relay's own hourly fleet row: running means blocked on the way, so replace its address; a row gone quiet or services down means fix the machine first.

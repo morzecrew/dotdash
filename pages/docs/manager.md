@@ -160,6 +160,42 @@ replace it. A row that doesn't verify says nothing either way.
 - **Neither is a [CDN-only relay](server/cdn.md#the-cdns-origin-only).** Its
   canaries check its own address, which no device gets.
 
+## Spare relays
+
+A burnt relay waits for you to replace it. A spare takes its place at the
+next sync instead, about an hour after the third failed reading. Install a
+relay as usual, [add](#add-a-machine) it to the roster with `spare = true`,
+and point a canary at it:
+
+```toml
+[[relay]]
+name = "r3"
+spare = true
+
+[[canary]]
+name = "c3"
+watches = "r3"
+```
+
+A spare gets its document and runs like any relay, and its canary watches it,
+but devices don't get it: it's out of the servers' `relays` and `pools`. When
+a relay burns, the first spare that isn't burnt itself stands in for it, and
+takes its place in the pools. Spares a canary has got through to go first,
+in roster order; one no canary has checked yet still stands in, and `sync`
+says to check it:
+
+```
+spare: r3 stands in for burnt relay r1, in its pools; replace r1, then make r3 a regular relay (spare = false) and add a new spare
+```
+
+A spare stands in only while the relay it replaces is burnt. If a canary
+gets through to that relay again, it's back and the spare waits again. Each
+burnt relay takes one spare, in roster order; with none left, `sync` says so.
+
+A spare burnt while it waits was blocked without any device holding its
+address: for its network's range, say, or found by scanning. That's worth
+knowing when you pick where the next one goes.
+
 ## Blocked paths
 
 Short of burnt, a relay can lose one path while its others get through: its
