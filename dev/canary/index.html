@@ -2071,7 +2071,12 @@ download that stops partway, with no byte for 8 seconds or cut, twice
 running, counts the transport as not getting through, and <code>facts</code> gives the
 bytes it got under <code>stalled</code>. A download that gets no byte at all says
 nothing about a freeze (<code>freeze_url</code>'s own host may be down) and leaves the
-transport as <code>probe_url</code> found it. Set
+transport as <code>probe_url</code> found it.</p>
+<p>The same goes the other way, for a network that counts what a device sends:
+<code>facts</code> uploads 64 KB to <code>freeze_up_url</code> through each transport. An upload
+that gets no answer for 8 seconds, twice running, counts the transport as not
+getting through, named under <code>stalled_up</code>; one that fails sooner (refused, an
+error page) says nothing about a freeze. Set
 <code>control_url</code> to a site this canary's network reaches without dotdash, so the
 canary's own outage isn't read as its target burnt:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">control_url</span><span class="o">=</span>https://www.example.net/
@@ -2158,6 +2163,11 @@ relay's address no longer gets through for devices.</p>
 <td><code>freeze_url</code></td>
 <td><code>https://speed.cloudflare.com/__down?bytes=65536</code></td>
 <td>what <code>facts</code> downloads through each transport after <code>probe_url</code>, past the 16-20 KB a freeze lets through, <code>https://</code> only; <code>none</code> skips it</td>
+</tr>
+<tr>
+<td><code>freeze_up_url</code></td>
+<td><code>https://speed.cloudflare.com/__up</code></td>
+<td>where <code>facts</code> uploads 64 KB through each transport, for a freeze counted on what the device sends, <code>https://</code> only; <code>none</code> skips it</td>
 </tr>
 </tbody>
 </table>

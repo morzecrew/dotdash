@@ -2868,6 +2868,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>A canary's <code>facts</code> also catch a freeze counted on what the device sends: each transport uploads 64 KB to <code>freeze_up_url</code>, and one whose upload gets no answer for 8 seconds twice counts as not getting through, named under <code>stalled_up</code>. <code>freeze_up_url=none</code> turns it off.</p>
+</li>
+<li>
 <p><code>dotdash-manager</code> tells a burnt relay that's blocked from one that's down, by the relay's own hourly fleet row: running means blocked on the way, so replace its address; a row gone quiet or services down means fix the machine first.</p>
 </li>
 <li>
