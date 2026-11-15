@@ -31,14 +31,16 @@ jq -e '.internet == true' <<<"${got}" >/dev/null || die "facts with control_url 
 echo "25-facts.sh: ${got}"
 
 # A network's DPI freezing a connection after its first 20 KB: the stand-in
-# server's packets to the canary dropped once their connection has carried
-# that much its way. probe_url's fetch stays under it; freeze_url doesn't.
-ip=$(sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' canary-rig-server)
-freeze=(DOCKER-USER -p tcp -s "${ip}" --sport 443 -m connbytes --connbytes 20000: --connbytes-dir reply
-  --connbytes-mode bytes -j DROP)
-if sudo iptables -I "${freeze[@]}" 2>/dev/null; then
+# server's packets on 443 dropped once their connection has carried that much
+# its way. In the server's own namespace, where every packet it sends passes
+# OUTPUT whether the published port is NATed or proxied; its own connections
+# out, to the sites, leave from other ports. probe_url's fetch stays under it;
+# freeze_url doesn't.
+pid=$(sudo docker inspect -f '{{.State.Pid}}' canary-rig-server)
+freeze=(OUTPUT -p tcp --sport 443 -m connbytes --connbytes 20000: --connbytes-dir reply --connbytes-mode bytes -j DROP)
+if sudo nsenter -t "${pid}" -n iptables -I "${freeze[@]}" 2>/dev/null; then
   got=$(facts) || true
-  sudo iptables -D "${freeze[@]}"
+  sudo nsenter -t "${pid}" -n iptables -D "${freeze[@]}"
   jq -e '.internet == true and .paths == {reality: false} and .stalled.reality > 0 and .stalled.reality < 65536' \
     <<<"${got}" >/dev/null || die "facts with the server's connections frozen past 20 KB: ${got}"
   echo "25-facts.sh: frozen past 20 KB, REALITY reads down after $(jq .stalled.reality <<<"${got}") bytes"
