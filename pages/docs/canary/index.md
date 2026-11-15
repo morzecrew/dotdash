@@ -60,7 +60,13 @@ download that stops partway, with no byte for 8 seconds or cut, twice
 running, counts the transport as not getting through, and `facts` gives the
 bytes it got under `stalled`. A download that gets no byte at all says
 nothing about a freeze (`freeze_url`'s own host may be down) and leaves the
-transport as `probe_url` found it. Set
+transport as `probe_url` found it.
+
+The same goes the other way, for a network that counts what a device sends:
+`facts` uploads 64 KB to `freeze_up_url` through each transport. An upload
+that gets no answer for 8 seconds, twice running, counts the transport as not
+getting through, named under `stalled_up`; one that fails sooner (refused, an
+error page) says nothing about a freeze. Set
 `control_url` to a site this canary's network reaches without dotdash, so the
 canary's own outage isn't read as its target burnt:
 
@@ -101,6 +107,7 @@ relay's address no longer gets through for devices.
 | `download_url` | `https://speed.cloudflare.com/__down?bytes=1000000` | what `measure` downloads for its Mbit/s, `https://` only; `none` skips the downloads |
 | `control_url` | `none` | a site this canary's network reaches without dotdash, which `facts` fetches directly; `none` for no such check |
 | `freeze_url` | `https://speed.cloudflare.com/__down?bytes=65536` | what `facts` downloads through each transport after `probe_url`, past the 16-20 KB a freeze lets through, `https://` only; `none` skips it |
+| `freeze_up_url` | `https://speed.cloudflare.com/__up` | where `facts` uploads 64 KB through each transport, for a freeze counted on what the device sends, `https://` only; `none` skips it |
 
 | Secret | |
 | --- | --- |
