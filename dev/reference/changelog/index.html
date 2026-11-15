@@ -2867,7 +2867,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
-<li>A server or relay can share a machine with your own web server on 80 and 443, which passes dotdash's names through untouched. <code>listen</code>, <code>https_port</code> and <code>http_port</code> choose where dotdash publishes, such as spare ports on <code>127.0.0.1</code>; the server's <code>entry_port</code> keeps links on 443.</li>
+<li>
+<p><code>dotdash-manager</code> drops just a relay's blocked path when its canaries find one transport cut while another gets through: the relay's line gets <code>off=reality</code>, <code>off=xhttp</code> or <code>off=mkcp</code>, and devices get its other links. A path blocked on every relay is kept and reported.</p>
+</li>
+<li>
+<p>A server or relay can share a machine with your own web server on 80 and 443, which passes dotdash's names through untouched. <code>listen</code>, <code>https_port</code> and <code>http_port</code> choose where dotdash publishes, such as spare ports on <code>127.0.0.1</code>; the server's <code>entry_port</code> keeps links on 443.</p>
+</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>

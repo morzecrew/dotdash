@@ -1788,6 +1788,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#blocked-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Blocked paths
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-it-leaves-alone" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2010,6 +2021,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#blocked-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Blocked paths
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-it-leaves-alone" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2167,6 +2189,25 @@ on a fresh address, then take the burnt one out of the roster.</p>
   are: <a href="../canary/#on-a-mobile-line">on a mobile line</a>.</li>
 <li><strong>Neither is a <a href="../server/cdn/#the-cdns-origin-only">CDN-only relay</a>.</strong> Its
   canaries check its own address, which no device gets.</li>
+</ul>
+<h2 id="blocked-paths">Blocked paths<a class="headerlink" href="#blocked-paths" title="Permanent link">&para;</a></h2>
+<p>Short of burnt, a relay can lose one path while its others get through: its
+REALITY port cut while XHTTP through its own site still answers, or mKCP
+dropped. When every canary watching a relay got through none of its readings
+on one path three times in a row, and another path got through, <code>sync</code> puts
+that path on the relay's line as <code>off=</code>:</p>
+<div class="highlight"><pre><span></span><code>blocked: relay r1: reality got through for none of its canaries in 3 readings; devices get its other paths until one gets through again
+</code></pre></div>
+<p>Devices then get only its other links through it (and its CDN links, which
+canaries don't check), at their next subscription refresh. A reading where the
+path gets through again takes it off.</p>
+<ul>
+<li><strong>A path blocked on every relay that has it is kept.</strong> That's likelier the
+  canaries' network refusing the transport than every relay losing it at
+  once, so the manager says to check that network instead.</li>
+<li><strong>A server's blocked paths are only reported</strong>, as a burnt server is.</li>
+<li><strong>A server released before <code>off=</code> ignores the field</strong> and gives devices
+  every link through the relay, as before.</li>
 </ul>
 <h2 id="what-it-leaves-alone">What it leaves alone<a class="headerlink" href="#what-it-leaves-alone" title="Permanent link">&para;</a></h2>
 <p>The upstreams, ports, profiles, domains and anything else a machine alone
