@@ -57,6 +57,7 @@ services:
       DOTDASH_SERVER: ${DOTDASH_CANARY_PARAM_DOTDASH_SERVER:?set by morzer}
       DOTDASH_ADDRESS: ${DOTDASH_CANARY_PARAM_DOTDASH_ADDRESS:?set by morzer}
       CONTROL_URL: ${DOTDASH_CANARY_PARAM_CONTROL_URL:-none}
+      FREEZE_URL: ${DOTDASH_CANARY_PARAM_FREEZE_URL:-https://speed.cloudflare.com/__down?bytes=65536}
     volumes:
       - ${DOTDASH_CANARY_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image

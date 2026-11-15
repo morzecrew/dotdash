@@ -50,7 +50,17 @@ sudo morzer task run measure --output -- 50
 
 A canary that follows the [manager](../manager.md) tells it, before every
 fleet publish, whether each transport gets through (`facts`), and the manager
-leaves a relay its canaries can't get through out of devices' links. Set
+leaves a relay its canaries can't get through out of devices' links.
+
+Getting through takes more than `probe_url`'s fetch. A network's DPI may
+freeze a connection to a hosting address abroad after its first 16-20 KB,
+leaving it open and silent, and a fetch that small never reaches the mark.
+So `facts` then downloads `freeze_url` (64 KB) through each transport. A
+download that stops partway, with no byte for 8 seconds or cut, twice
+running, counts the transport as not getting through, and `facts` gives the
+bytes it got under `stalled`. A download that gets no byte at all says
+nothing about a freeze (`freeze_url`'s own host may be down) and leaves the
+transport as `probe_url` found it. Set
 `control_url` to a site this canary's network reaches without dotdash, so the
 canary's own outage isn't read as its target burnt:
 
@@ -90,6 +100,7 @@ relay's address no longer gets through for devices.
 | `probe_url` | `https://www.gstatic.com/generate_204` | what each check fetches through dotdash; any 2xx is healthy |
 | `download_url` | `https://speed.cloudflare.com/__down?bytes=1000000` | what `measure` downloads for its Mbit/s, `https://` only; `none` skips the downloads |
 | `control_url` | `none` | a site this canary's network reaches without dotdash, which `facts` fetches directly; `none` for no such check |
+| `freeze_url` | `https://speed.cloudflare.com/__down?bytes=65536` | what `facts` downloads through each transport after `probe_url`, past the 16-20 KB a freeze lets through, `https://` only; `none` skips it |
 
 | Secret | |
 | --- | --- |
@@ -102,4 +113,4 @@ relay's address no longer gets through for devices.
 | Task | |
 | --- | --- |
 | `measure --output -- [count] [url] [timeout]` | each transport `count` times (20 by default), as JSON |
-| `facts --output` | what it watches, whether each transport gets through, and whether `control_url` answers, as JSON; what the manager reads |
+| `facts --output` | what it watches, whether each transport gets through (`freeze_url` included), the bytes a stopped download got, and whether `control_url` answers, as JSON; what the manager reads |
