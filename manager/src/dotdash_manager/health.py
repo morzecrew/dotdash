@@ -14,9 +14,28 @@ def _watched(f: dict, kind: str) -> tuple[str, str]:
     return (f["domain"], f["domain"]) if kind == "server" else (f["site"], f["entry_host"])
 
 
-def judge(net: Network, facts: dict, health: dict) -> tuple[set[str], list[str]]:
+def alive(row: dict | None) -> tuple[str, str]:
+    """What a machine's own fleet row says of it, when one verifies, as
+    (blocked | down | "", why): running while its canaries get nothing through
+    is blocked on the way; a row gone quiet, or services down, is likelier the
+    machine itself."""
+    if not row:
+        return "", ""
+    if row["stale"]:
+        return "down", f"its own fleet row is {row['age']} old, so it may be down rather than blocked: check it first"
+    services, running = row["services"], row["running"]
+    if row["problem"] or (services is not None and running is not None and running < services):
+        return "down", (f"its own fleet row says {'?' if running is None else running} of "
+                        f"{'?' if services is None else services} services run: likelier down than blocked, fix it first")
+    return "blocked", f"its own fleet row ({row['age']} old) says it runs: blocked on the way, not down"
+
+
+def judge(net: Network, facts: dict, health: dict, rows: dict | None = None) -> tuple[set[str], list[str]]:
     """Read the canaries' new verdicts into health, the state's record per
-    machine, and return the burnt relays to leave out and what to say."""
+    machine, and return the burnt relays to leave out and what to say. rows,
+    the machines' own fleet rows (Morzer.rows), say whether each looks
+    blocked or down."""
+    rows = rows or {}
     targets = [*net.server, *net.relay]
     for gone in set(health) - {t.name for t in targets}:
         del health[gone]
@@ -51,8 +70,13 @@ def judge(net: Network, facts: dict, health: dict) -> tuple[set[str], list[str]]
             h.setdefault("since", at)
 
     burnt = {t.name for t in targets if health.get(t.name, {}).get("fails", 0) >= BURN_AFTER}
+    def note(name: str, advice: str = "") -> str:
+        """The row's word on it, then the advice unless the row says it is down."""
+        verdict, why = alive(rows.get(name))
+        return (f"; {why}" if why else "") + (f"; {advice}" if advice and verdict != "down" else "")
+
     say = [f"burnt: server {s.name}: its canaries got through none of its paths in {health[s.name]['fails']} readings; "
-           "reported only, as relays reach the servers" for s in net.server if s.name in burnt]
+           f"reported only, as relays reach the servers{note(s.name)}" for s in net.server if s.name in burnt]
     relays = {r.name for r in net.relay if r.name in facts and not facts[r.name].get("cdn_only")}
     out = {r.name for r in net.relay if r.name in burnt}
     if out and out >= relays:
@@ -61,7 +85,8 @@ def judge(net: Network, facts: dict, health: dict) -> tuple[set[str], list[str]]
         say.append(f"burnt: every relay ({', '.join(sorted(out))}) at once; all kept, check the canaries' network")
         return set(), say
     say += [f"burnt: relay {r}: its canaries got through none of its paths in {health[r]['fails']} readings; "
-            f"left out of the servers' relays and pools until a canary gets through again; replace it" for r in sorted(out)]
+            f"left out of the servers' relays and pools until a canary gets through again{note(r, 'replace it')}"
+            for r in sorted(out)]
     return out, say
 
 
