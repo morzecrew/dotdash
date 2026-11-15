@@ -2886,9 +2886,6 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p>Devices' XHTTP links and the canary's XHTTP checks upload in <code>packet-up</code> mode instead of <code>auto</code>. Measured against nDPI's tunnel heuristics, <code>packet-up</code> connections were flagged 1 time in 90 and <code>auto</code> 11 times; pages load about an eighth slower.</p>
-</li>
-<li>
 <p>The server's and relay's TLS and HTTP ports are published on every IPv4 address (<code>listen=0.0.0.0</code>), and no longer on IPv6 too. A domain with an AAAA record reaches dotdash over IPv4 only.</p>
 </li>
 <li>
