@@ -2170,12 +2170,18 @@ reports whether each of its paths to the server or relay it watches gets
 through. When every canary watching a relay got through none of its paths
 three readings in a row, <code>sync</code> leaves that relay out of the servers' <code>relays</code>
 and <code>pools</code>, and of client machines' subscription URLs, and says so:</p>
-<div class="highlight"><pre><span></span><code>burnt: relay r1: its canaries got through none of its paths in 3 readings; left out of the servers' relays and pools until a canary gets through again; replace it
+<div class="highlight"><pre><span></span><code>burnt: relay r1: its canaries got through none of its paths in 3 readings; left out of the servers' relays and pools until a canary gets through again; its own fleet row (40m old) says it runs: blocked on the way, not down; replace it
 </code></pre></div>
 <p>Devices stop getting its links at their next subscription refresh. The relay
 keeps its own document and its canaries keep watching it, so a single reading
 that gets through brings it back. To replace it, <a href="#add-a-machine">add</a> a relay
 on a fresh address, then take the burnt one out of the roster.</p>
+<p>The verdict also says what the relay's own fleet row, which it publishes
+hourly, says of it. A relay whose row is fresh and whose services all run is
+blocked on the way, and replacing its address is the fix. One whose row has
+gone quiet for three hours, or whose services aren't all running, is likelier
+down than blocked: the verdict says to fix it first, and doesn't say to
+replace it. A row that doesn't verify says nothing either way.</p>
 <ul>
 <li><strong>A canary whose own network is down says nothing</strong>, given a <code>control_url</code>:
   a site its network reaches without dotdash. A reading where that fails
