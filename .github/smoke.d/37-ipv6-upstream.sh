@@ -53,7 +53,7 @@ restore() {
 }
 trap restore EXIT
 
-list "${one}" "http://rig6:${pass6}@${host}:18081 name=rig6 group=ipv6"
+list "${one}" "name=rig6 group=ipv6 | http://rig6:${pass6}@${host}:18081"
 sudo morzer config set ipv6=separate >/dev/null \
   || die "could not turn on ipv6=separate (its health check failed?)"
 

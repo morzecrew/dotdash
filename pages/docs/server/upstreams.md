@@ -9,11 +9,12 @@ sudo morzer secret edit upstreams
 ```
 
 ```text
-# <url> [name=<name>] [group=<group>]
-socks5://alice:secret@203.0.113.7:1080            name=isp-a
-https://bob:secret@proxy.example.net:443          name=isp-b
-wireguard://<private key>@198.51.100.4:51820?publickey=<base64>&address=10.34.0.3/32 name=home
-openvpn://H4sIAAAAAAACA…                          name=vpn
+# [name=<name>] [group=<group>] | <url>
+name=isp-a | socks5://alice:secret@203.0.113.7:1080
+name=isp-b | https://bob:secret@proxy.example.net:443
+name=home  | wireguard://<private key>@198.51.100.4:51820?publickey=<base64>&address=10.34.0.3/32
+name=vpn   | openvpn://H4sIAAAAAAACA…
+socks5://carol:secret@203.0.113.8:1080
 ```
 
 | A line | Way out |
@@ -28,6 +29,8 @@ openvpn://H4sIAAAAAAACA…                          name=vpn
 - After the scheme, a proxy is `user:pass@host:port`, or `host:port` with no
   login. The password may contain `:` and `@`, and is not percent-encoded. An
   IPv6 host goes in brackets.
+- Tags go before the URL, ending in `|`; a line with none is its URL alone.
+  Lines written with the tags after the URL, as before, still work.
 - `name=` is optional, lowercase letters, digits and dashes. `doctor` and the
   gate's log name each line by it, and [`upstream_pin`](#order-and-modes)
   takes it.
@@ -77,8 +80,8 @@ exit when its server pushes IPv6. For IPv4-only proxies and a provider's
 separate IPv6 one:
 
 ```text
-socks5://alice:secret@203.0.113.7:1080        name=isp-a
-socks5://alice:secret@[2001:db8::7]:1080      name=isp-a6 group=ipv6
+name=isp-a              | socks5://alice:secret@203.0.113.7:1080
+name=isp-a6 group=ipv6  | socks5://alice:secret@[2001:db8::7]:1080
 ```
 
 ```sh
@@ -149,7 +152,7 @@ Add the line, then turn the profile on. Until then the line leads nowhere and
 the other lines carry the traffic:
 
 ```sh
-sudo morzer secret edit upstreams                       # add the line, with name=vpn if you like
+sudo morzer secret edit upstreams                       # add the line, with "name=vpn | " before it if you like
 sudo morzer config set installation.profile=openvpn    # with others, all of them: xdns,openvpn
 sudo morzer task run exit-check --output
 ```

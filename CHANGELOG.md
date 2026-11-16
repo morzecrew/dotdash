@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `dotdash-client`'s `dns_server` (`1.1.1.1`): under `tun`, the DNS server asked directly for dotdash's server names, the direct rules and `.lan`, `.local` and `.home.arpa` names. Your router's address answers the LAN's own names.
 
+- An `upstreams` line can put its tags first, `name=isp-a group=ipv6 | socks5://…`, so each name stays at the start of its line however long the URL runs. Lines with the tags after the URL still work, and a line without tags is still just its URL.
+
 - Each device's subscription URL also serves its Xray config, the one `client-config --full` prints, to a request with `Accept: application/json` alone, and at the URL with `.json`: for a client that runs Xray itself. Own-site relays pass it on; a request a CDN passed on gets the site's 404.
 
 - `dotdash-manager report`: how long each server and relay lasted before it first burnt, how often and how long it was burnt, which paths went off and how often a spare stood in, with the relays' median lifetime; relays taken out of the roster stay in it.
