@@ -74,6 +74,16 @@ if sudo grep -q 'json' /opt/dotdash/current/tasks/subscription.sh; then
   grep -qix 'content-type: application/json' <<<"$(headers "${url}.json")" || die "<url>.json is not served as JSON"
   grep -qix 'cache-control: no-store' <<<"$(headers "${url}.json")" || die "<url>.json is served without Cache-Control: no-store"
   [ "$(status "${url}.txt")" = 404 ] || die "a subscription URL with another extension is served"
+  if sudo grep -q 'header Accept application/json' /opt/dotdash/current/caddy/Caddyfile; then
+    [ "$(fetch "${url}" -H 'Accept: application/json')" = "${config}" ] ||
+      die "the URL asked for as JSON does not serve the Xray config"
+    grep -qix 'content-type: application/json' <<<"$(curl -s -o /dev/null -D - --max-time 10 --cacert /rig/clients/root.pem \
+      --resolve "${domain}:443:127.0.0.1" -H 'Accept: application/json' "${url}" | tr -d '\r')" ||
+      die "the URL asked for as JSON is not served as JSON"
+    [ "$(fetch "${url}" -H 'Accept: */*' | base64 -d 2>/dev/null)" = "$(links_of)" ] ||
+      die "the URL asked for as anything does not serve the links"
+    echo "${0##*/}: the URL asked for as JSON serves the Xray config, and asked otherwise the links"
+  fi
   echo "${0##*/}: <url>.json serves the device's Xray config, as JSON and no-store"
 fi
 
