@@ -103,8 +103,19 @@ http://127.0.0.1:8081 {
 		root * /srv/sub
 		# no-store: neither a CDN nor a relay keeps a copy, which would outlive
 		# a revocation and hold every link.
+		# Asked for exactly as JSON, as dotdash-client's Xray asks, the URL
+		# serves the Xray config, so a device's one URL does for an app and for
+		# dotdash-client alike. An app asks for */* or nothing, and gets links.
+		@json {
+			path_regexp ^/[0-9a-f]{32}$
+			header Accept application/json
+		}
+		rewrite @json {path}.json
 		# The links as the apps read them; the .json goes as JSON, by its name.
-		@links path_regexp ^/[0-9a-f]{32}$
+		@links {
+			path_regexp ^/[0-9a-f]{32}$
+			not header Accept application/json
+		}
 		header @links Content-Type "text/plain; charset=utf-8"
 		header Cache-Control no-store
 		file_server
