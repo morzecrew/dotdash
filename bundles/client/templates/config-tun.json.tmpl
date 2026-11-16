@@ -51,11 +51,14 @@ back. */ -}}
      "settings": {"udp": true{{ if $lan }}, "auth": "password",
        "accounts": [{"user": "{{ required "set proxy_user" .Parameters.proxy_user }}", "pass": {"$file": "/run/secrets/proxy_password"}}]{{ end }}}},
     {"tag": "probe", "listen": "127.0.0.1", "port": 7891, "protocol": "socks", "settings": {"udp": true}},
-    {{- /* Every route the host has, IPv4 and IPv6, into the interface Meta
-    (the gateway check and its DOCKER-USER rules name it); Xray's own
-    sockets are bound to the main interface, outside it. */}}
+    {{- /* Everything, IPv4 and IPv6, into the interface Meta (the gateway
+    check and its DOCKER-USER rules name it), as two halves of each family:
+    Xray adds its routes at metric 1, which a default route at metric 0
+    would beat, and a half is more specific than any default. Networks the
+    host is on are more specific still, and stay direct. Xray's own sockets
+    are bound to the main interface, outside TUN. */}}
     {"tag": "tun", "protocol": "tun",
-     "settings": {"name": "Meta", "MTU": 1500, "autoSystemRoutingTable": ["0.0.0.0/0", "::/0"], "autoOutboundsInterface": "auto"},
+     "settings": {"name": "Meta", "MTU": 1500, "autoSystemRoutingTable": ["0.0.0.0/1", "128.0.0.0/1", "::/1", "8000::/1"], "autoOutboundsInterface": "auto"},
      "sniffing": {"enabled": true, "destOverride": ["fakedns", "http", "tls", "quic"]}},
     {"tag": "resolver", "listen": "127.53.0.1", "port": 53, "protocol": "dokodemo-door",
      "settings": {"address": "{{ $resolver }}", "port": 53, "network": "tcp,udp"}}

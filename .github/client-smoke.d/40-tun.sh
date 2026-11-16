@@ -48,6 +48,10 @@ sudo docker run -d --name client-rig-tun-sub --network host -v "${dir}/caddy:/et
 plain() { # <URL>: its status from the rig with no proxy, or 000
   curl -s -o /dev/null -w '%{http_code}' --noproxy '*' --max-time 10 "$1" || true
 }
+routes() { # what decides where a plain request goes, for a failure's message
+  { echo "--- ip rule"; ip rule; echo "--- ip route"; ip route; echo "--- ip -6 route"; ip -6 route
+    echo "--- resolv.conf"; cat /etc/resolv.conf; echo "--- tun-target.test"; getent hosts tun-target.test || true; } >&2
+}
 home=$(sudo docker volume inspect -f '{{.Mountpoint}}' dotdash-client_home)
 
 # ip netns, for the gateway's LAN device below; fetched now, as under TUN the
@@ -71,7 +75,7 @@ for _ in $(seq 15); do
   [ "${code}" = 200 ] && break
   sleep 2
 done
-[ "${code}" = 200 ] || die "a plain request did not go through TUN and dotdash (${code})"
+[ "${code}" = 200 ] || { routes; die "a plain request did not go through TUN and dotdash (${code})"; }
 
 # A gateway. A LAN device, a network namespace behind a veth with this machine
 # as its gateway (as in the router spike, #50), first resolves with a public
