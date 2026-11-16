@@ -89,8 +89,8 @@ http://127.0.0.1:8081 {
 		}
 	}
 
-	# A device's subscription, 32 hex characters as the server names it,
-	# fetched from the dotdash servers through this relay's own tunnel: Xray's
+	# A device's subscription, 32 hex characters as the server names it (and
+	# with .json, its Xray config), fetched from the dotdash servers through this relay's own tunnel: Xray's
 	# subscriptions inbound, which dotdash carries as it carries devices. A
 	# device that reaches only this machine still refreshes its links, and
 	# nothing between it and the server reads them. The first server that
@@ -99,7 +99,7 @@ http://127.0.0.1:8081 {
 	# which says so in one of these headers, gets the site's 404 instead, as
 	# on the server: a device's links never pass through a CDN.
 	@subscription {
-		path_regexp ^/[0-9a-f]{32}$
+		path_regexp ^/[0-9a-f]{32}(\.json)?$
 		not header X-Forwarded-For *
 		not header X-Forwarded-Host *
 		not header X-Forwarded-Proto *

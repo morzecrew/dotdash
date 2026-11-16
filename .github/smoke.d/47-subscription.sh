@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Subscriptions (the subscription parameter). With it on, client-config prints
 # each device's URL alone, which serves exactly the links --full prints, base64,
-# once the subscription service reports healthy; a guessed URL gets the site's
+# once the subscription service reports healthy, and with .json the Xray config
+# --full prints, as JSON; a guessed URL gets the site's
 # own 404; a device whose line is deleted loses its URL, and a device added
 # gets one, each as soon as the secret is set; rotating subscription_key moves
 # every URL; and with it off, none answers. A request a CDN marks as passed on
@@ -66,6 +67,16 @@ served=$(fetch "${url}" | base64 -d 2>/dev/null || true)
 [ "${served}" = "$(links_of)" ] || die "the subscription does not serve the links client-config prints"
 echo "${0##*/}: client-config prints a device's URL alone, and it serves exactly its links"
 
+if sudo grep -q 'json' /opt/dotdash/current/tasks/subscription.sh; then
+  config=$(sudo morzer task run client-config --output -- --full | sed -n '/^{$/,/^}$/p')
+  [ -n "${config}" ] || die "client-config --full prints no Xray config"
+  [ "$(fetch "${url}.json")" = "${config}" ] || die "<url>.json does not serve the Xray config client-config prints"
+  grep -qix 'content-type: application/json' <<<"$(headers "${url}.json")" || die "<url>.json is not served as JSON"
+  grep -qix 'cache-control: no-store' <<<"$(headers "${url}.json")" || die "<url>.json is served without Cache-Control: no-store"
+  [ "$(status "${url}.txt")" = 404 ] || die "a subscription URL with another extension is served"
+  echo "${0##*/}: <url>.json serves the device's Xray config, as JSON and no-store"
+fi
+
 if sudo grep -q 'Cache-Control no-store' /opt/dotdash/current/caddy/Caddyfile; then
   grep -qix 'cache-control: no-store' <<<"$(headers "${url}")" || die "a subscription is served without Cache-Control: no-store"
   echo "${0##*/}: a subscription is served no-store, so nothing between keeps a copy"
@@ -116,6 +127,7 @@ spare_url=$(url_of spare)
   || die "a device added to vless_clients gets no subscription"
 printf '%s\n' "${before}" | sudo morzer secret set vless_clients >/dev/null
 [ "$(status "${spare_url}")" = 404 ] || die "a deleted device's subscription still answers"
+[ "$(status "${spare_url}.json")" = 404 ] || die "a deleted device's Xray config still answers"
 [ -n "$(fetch "${url}")" ] || die "deleting one device's line took another's subscription"
 echo "${0##*/}: a device added gets a subscription, and a deleted one loses it"
 
