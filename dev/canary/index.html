@@ -2081,6 +2081,12 @@ error page) says nothing about a freeze. Set
 canary's own outage isn't read as its target burnt:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">control_url</span><span class="o">=</span>https://www.example.net/
 </code></pre></div>
+<p><code>facts</code> also times things, to 10 ms. <code>latency_ms</code> gives each transport that
+gets through the time its <code>probe_url</code> fetch took on a new connection:
+this network's leg, the target's, and on to the site. <code>direct_ms</code> is
+<code>control_url</code>'s fetch without dotdash, this network's leg alone. The
+manager's <a href="../manager/#where-the-time-goes">report</a> sets one against the
+other.</p>
 <h2 id="several-servers-and-relays">Several servers, and relays<a class="headerlink" href="#several-servers-and-relays" title="Permanent link">&para;</a></h2>
 <p>A canary watches one server. With <a href="../server/several-servers/">several servers</a>,
 <code>canary-config</code> prints how to point a canary at each of the others. To watch a
