@@ -22,6 +22,7 @@ nav = [
             "server/dns-tunnel.md",
             "server/xhttp-reality.md",
             "server/mkcp.md",
+            "server/hysteria2.md",
             "server/upstreams.md",
             "server/cdn.md",
             "server/several-servers.md",

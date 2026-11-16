@@ -32,9 +32,13 @@ runtimes:
       # VLESS over mKCP on kcp_port: UDP, no TLS underneath, its packets
       # encrypted under kcp_seed and dressed in a kcp_header.
       mkcp: [compose/mkcp.yaml]
+      # Hysteria2 on hysteria2_port (UDP, 443 by default): QUIC under the
+      # site's own certificate, each device's UUID its login, a probe
+      # answered by the cover site over HTTP/3.
+      hysteria2: [compose/hysteria2.yaml]
     # installation.profile=xdns,xhttp-reality runs both; any of them with
     # openvpn, such as xdns,openvpn, adds the OpenVPN tunnels.
-    combinable: [xdns, xhttp-reality, openvpn, mkcp]
+    combinable: [xdns, xhttp-reality, openvpn, mkcp, hysteria2]
     options:
       project: dotdash
 
@@ -139,6 +143,16 @@ parameters:
     default: none
     description: "An opener in front of mKCP (the mkcp profile): quic sends a QUIC-Initial-shaped packet (finalmask noise) before the flow, so a network that lets QUIC out sees the start as QUIC; none sends nothing extra. Both ends must match, so devices take a change from new links (carried as fm=) or their subscription. The opener is a fixed shape; measure it on a canary before relying on it"
     services: [xray, subscription]
+  hysteria2_port:
+    type: port
+    default: 443
+    description: "Host UDP port of Hysteria2 (the hysteria2 profile): 443, where an HTTP/3 site answers; must differ from kcp_port, and from 53 with the DNS tunnel on"
+    services: [gate, subscription]
+  hysteria2_up:
+    type: int
+    default: 0
+    description: "Mbit/s Hysteria2 sends each device at whatever is lost on the way (Brutal), for a device that asks for it with its own rate; 0 keeps BBR, which backs off as TCP does. Set it to this server's uplink share per device, never more"
+    services: [xray]
   xdns_mtu:
     type: int
     default: 900

@@ -22,6 +22,15 @@ kcp_open=quic a finalmask noise mask sends a QUIC-Initial-shaped packet before
 the flow, so a network that lets QUIC out sees the opening as QUIC; the client
 carries the whole mask list, this one included, in its link's fm=.
 
+The hysteria2 profile adds Hysteria2, Xray's own, on UDP (8448 here,
+hysteria2_port outside): QUIC with the site's own certificate, which Caddy
+takes (read from its data, reloaded hourly), so it is another protocol family
+again, and what the network sees is an HTTP/3 connection to this domain. Each
+device's UUID is its login ({"$hysteriaUsers": "<path>"}, from the same
+clients file), and a connection that brings none is answered by the cover
+site over HTTP/3. Its congestion control is BBR, or Brutal at hysteria2_up
+Mbit/s toward a device that asks for it.
+
 There is no direct (freedom) outbound: if the upstream proxy is down, traffic
 stops rather than leaving from this server's own IP. Nor could there be one:
 this container sits on internal networks only, and its one way out is the
@@ -60,6 +69,16 @@ ASSOCIATE. */ -}}
 {{- $withXdns := has "xdns" .Profiles -}}
 {{- $xhttpReality := has "xhttp-reality" .Profiles -}}
 {{- $kcp := has "mkcp" .Profiles -}}
+{{- $hy2 := has "hysteria2" .Profiles -}}
+{{- /* The site's certificate as Caddy keeps it (caddy/Caddyfile): Let's
+Encrypt's directory for acme and acme-dns, Caddy's own CA's for internal, and
+with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
+{{- $labels := split "." $domain -}}
+{{- $issuer := "acme-v02.api.letsencrypt.org-directory" -}}
+{{- if eq .Parameters.cert_issuer "internal" }}{{ $issuer = "local" }}{{ end -}}
+{{- $cert := $domain -}}
+{{- if and (eq .Parameters.cert_issuer "acme-dns") (gt (len $labels) 2) }}{{ $cert = printf "wildcard_.%s" (join (slice $labels 1) ".") }}{{ end -}}
+{{- if and $hy2 $kcp (eq .Parameters.hysteria2_port .Parameters.kcp_port) }}{{ required "hysteria2_port must differ from kcp_port" "" }}{{ end -}}
 {{- $kcpOpen := and $kcp (eq .Parameters.kcp_open "quic") -}}
 {{- $xdns := .Parameters.xdns_domain -}}
 {{- if not (contains $xdns ".") }}{{ $xdns = printf "%s.%s" $xdns $domain }}{{ end -}}
@@ -156,6 +175,26 @@ ASSOCIATE. */ -}}
           {"type": "noise", "settings": {"noise": [{"type": "hex", "packet": "c300000001088394c8f03e5157080000449e00000002", "delay": "0-0"}]}}
 {{- end }}
         ]}
+      },
+      "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
+    },
+{{- end }}
+{{- if $hy2 }}
+    {
+      "tag": "hysteria2",
+      "listen": "0.0.0.0",
+      "port": 8448,
+      "protocol": "hysteria",
+      "settings": {"version": 2, "users": {"$hysteriaUsers": "/run/secrets/vless_clients"}},
+      "streamSettings": {
+        "network": "hysteria",
+        "security": "tls",
+        "tlsSettings": {"alpn": ["h3"], "certificates": [{
+          "certificateFile": "/caddy-data/caddy/certificates/{{ $issuer }}/{{ $cert }}/{{ $cert }}.crt",
+          "keyFile": "/caddy-data/caddy/certificates/{{ $issuer }}/{{ $cert }}/{{ $cert }}.key"}]},
+        "hysteriaSettings": {"version": 2, "udpIdleTimeout": 60,
+          "masquerade": {"type": "proxy", "url": "https://caddy:443", "rewriteHost": true, "insecure": true}},
+        "finalmask": {"quicParams": {{ if eq (printf "%v" .Parameters.hysteria2_up) "0" }}{"congestion": "bbr"}{{ else }}{"congestion": "brutal", "brutalUp": "{{ .Parameters.hysteria2_up }} mbps"}{{ end }}}
       },
       "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
     },
