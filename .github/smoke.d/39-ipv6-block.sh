@@ -36,7 +36,7 @@ sudo jq -e '[.routing.rules[] | select(.ip == ["::/0"] and .outboundTag == "bloc
   die "IPv6 is blocked before ipv6=block is set"
 
 sudo morzer config set ipv6=block >/dev/null || die "could not set ipv6=block"
-sudo jq -e '.dns.queryStrategy == "UseIPv4"
+sudo jq -e '.dns.queryStrategy == "UseIPv4" and .dns.serveStale == true
   and ([.outbounds[] | select(.tag == "upstream")][0].targetStrategy == "ForceIPv4")
   and ([.routing.rules[] | select(.ip == ["::/0"])] == [{ip: ["::/0"], outboundTag: "block"}])
   and .routing.rules[-1] == {network: "tcp,udp", outboundTag: "upstream"}' "${config}" >/dev/null ||

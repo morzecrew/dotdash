@@ -403,7 +403,7 @@ DNS the device sends on port 53, in the app's VPN or TUN mode, is answered
 over DoH (${dns}) through the tunnel, with IPv4 addresses only; a
 link leaves DNS to the app's own settings:
 {
-  "dns": {"servers": ["${dns}"], "queryStrategy": "UseIPv4", "disableFallback": true, "tag": "dns"},
+  "dns": {"servers": ["${dns}"], "queryStrategy": "UseIPv4", "disableFallback": true, "serveStale": true, "serveExpiredTTL": 86400, "tag": "dns"},
   "inbounds": [
     {"listen": "127.0.0.1", "port": 10808, "protocol": "socks", "settings": {"udp": true}},
     {"listen": "127.0.0.1", "port": 10809, "protocol": "http"}

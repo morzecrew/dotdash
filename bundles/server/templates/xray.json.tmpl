@@ -66,7 +66,12 @@ ASSOCIATE. */ -}}
 {
   "log": {"loglevel": "{{ .Parameters.log_level }}", "access": "none", "dnsLog": false},
 {{- if $gateway }}
-  "dns": {"servers": ["{{ .Parameters.dns_resolver }}"], "queryStrategy": "{{ if $block6 }}UseIPv4{{ else }}UseIP{{ end }}", "disableFallback": true, "tag": "dns"},
+  {{- /* A name looked up before and since expired is answered from the cache
+  at once (TTL 1) while it is asked again in the background, so a site
+  revisited costs no round trip through the upstream to dns_resolver; for a
+  day at most, after which it is asked first. */}}
+  "dns": {"servers": ["{{ .Parameters.dns_resolver }}"], "queryStrategy": "{{ if $block6 }}UseIPv4{{ else }}UseIP{{ end }}", "disableFallback": true,
+    "serveStale": true, "serveExpiredTTL": 86400, "tag": "dns"},
 {{- end }}
   "inbounds": [
     {
