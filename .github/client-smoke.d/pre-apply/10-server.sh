@@ -15,7 +15,7 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-xray=ghcr.io/morzecrew/xray:26.11.9@sha256:2089e0d4acee59b3999606fb18ff5d63e327bec3bd0ececa034b3e986867b5b9
+xray=ghcr.io/morzecrew/xray:26.11.9@sha256:389e5c9713cd64e8cbb12c95df482bc14918fe7e95eb5ec57f5ff3496a3ea9b7
 caddy=ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:93c19f705c2218d5fca7f7dcb694cae1ed3889588678aabb7af34c8892e2f2bb
 sudo docker pull -q "${xray}" >/dev/null || die "pulling ${xray} failed"
 sudo docker pull -q "${caddy}" >/dev/null || die "pulling ${caddy} failed"

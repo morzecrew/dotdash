@@ -168,7 +168,7 @@ parameters:
 images:
   # The relay-entry task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
-  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:2089e0d4acee59b3999606fb18ff5d63e327bec3bd0ececa034b3e986867b5b9
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:389e5c9713cd64e8cbb12c95df482bc14918fe7e95eb5ec57f5ff3496a3ea9b7
   # The own-site profile's site; dotdash's own. Upstream's Caddy with the
   # acme-dns DNS module, for cert_issuer=acme-dns.
   caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:93c19f705c2218d5fca7f7dcb694cae1ed3889588678aabb7af34c8892e2f2bb
