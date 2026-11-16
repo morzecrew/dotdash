@@ -5,7 +5,7 @@
 # the base files, the machine's own routes are as before. First, the two
 # configs differ only where TUN needs them to.
 #
-# TUN binds mihomo's own dials to the main interface, so this stand-in sits on
+# TUN binds Xray's own sockets to the main interface, so this stand-in sits on
 # the rig's own network, reached over eth0, with a subscription of its link
 # there too (a real dotdash server is reached the same way). It resolves
 # tun-target.test to the subscription server's address on docker0 (pre-apply/
@@ -18,25 +18,32 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-a=$(sudo jq -S 'del(.ipv6, .listeners, .tun, .dns)' /etc/dotdash-client/config.json)
-b=$(sudo jq -S 'del(.ipv6, .listeners, .tun, .dns)' /etc/dotdash-client/config-tun.json)
-[ "${a}" = "${b}" ] || die "config-tun.json differs from config.json beyond ipv6, listeners, tun and dns: $(diff <(echo "${a}") <(echo "${b}") | head -20)"
+# Beyond the inbounds, DNS, the dns outbound and the rules naming a TUN-only
+# inbound or the DNS module's tag, the two are the same.
+same='del(.inbounds, .dns, .fakedns) | .outbounds |= map(select(.tag != "dns"))
+  | .routing.rules |= map(select((.inboundTag // []) | any(. == "tun" or . == "dns-in" or . == "resolver" or . == "dns-internal") | not))'
+a=$(sudo jq -S "${same}" /etc/dotdash-client/config.json)
+b=$(sudo jq -S "${same}" /etc/dotdash-client/config-tun.json)
+[ "${a}" = "${b}" ] || die "config-tun.json differs from config.json beyond what TUN needs: $(diff <(echo "${a}") <(echo "${b}") | head -20)"
 
 xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)
-busybox=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' busybox | sed -n 1p)
+caddy=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/caddy-acmedns | sed -n 1p)
 host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
 eth0=$(ip -4 -o addr show eth0 | awk '{ sub("/.*", "", $4); print $4 }')
 target=$(sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' client-rig-sub)
 dir=/rig/client/tun
-sudo mkdir -p "${dir}/server" "${dir}/www"
+sudo mkdir -p "${dir}/server" "${dir}/www" "${dir}/caddy"
 jq --arg target "${target}" '.inbounds[0].port = 9444 | .dns = {hosts: {"tun-target.test": $target}}
   | .outbounds[0].streamSettings = {sockopt: {domainStrategy: "UseIPv4"}}' /rig/client/server/config.json \
   | sudo tee "${dir}/server/config.json" >/dev/null
 base64 -d </rig/client/www/sub | sed "s/@${host}:9443/@${eth0}:9444/" | base64 -w0 | sudo tee "${dir}/www/sub" >/dev/null
+jq --arg eth0 "${eth0}" '.outbounds[0].settings.address = $eth0 | .outbounds[0].settings.port = 9444' \
+  /rig/client/www/sub.json | sudo tee "${dir}/www/sub.json" >/dev/null
+sed 's/^:8080 {/:8089 {/' /rig/client/caddy/Caddyfile | sudo tee "${dir}/caddy/Caddyfile" >/dev/null
 sudo chmod -R a+rX "${dir}"
 sudo docker run -d --name client-rig-tun-server --network host -v "${dir}/server:/etc/xray:ro" "${xray}" >/dev/null
-sudo docker run -d --name client-rig-tun-sub --network host -v "${dir}/www:/www:ro" "${busybox}" \
-  httpd -f -p 8089 -h /www >/dev/null
+sudo docker run -d --name client-rig-tun-sub --network host -v "${dir}/caddy:/etc/caddy:ro" -v "${dir}/www:/www:ro" \
+  "${caddy}" >/dev/null
 
 plain() { # <URL>: its status from the rig with no proxy, or 000
   curl -s -o /dev/null -w '%{http_code}' --noproxy '*' --max-time 10 "$1" || true
@@ -50,10 +57,10 @@ sudo apk add -q iproute2 >/dev/null || die "apk add iproute2 failed"
 # Its subscription, the direct rule, no cached links, and a probe the stand-in
 # answers. The cache goes before the probe moves: morzer (0.16) health-checks
 # that change, and the cached links are the old stand-in's, which resolves no
-# tun-target.test; with none, mihomo starts on the new subscription.
+# tun-target.test; with none, Xray starts on the new subscription.
 printf 'http://%s:8089/sub' "${eth0}" | sudo morzer secret set subscription_url >/dev/null
 printf 'DOMAIN,www.gstatic.com\n' | sudo morzer config set --set-file direct_rules=- >/dev/null
-sudo rm -f "${home}/proxies/dotdash.yaml"
+sudo rm -f "${home}/subscription_url.json"
 sudo morzer config set probe_url=http://tun-target.test:8080/sub >/dev/null
 sudo morzer config set installation.profile=tun >/dev/null
 ip -o link show Meta >/dev/null 2>&1 || die "under the tun profile there is no TUN interface"
@@ -131,8 +138,8 @@ ip -o link show Meta >/dev/null 2>&1 && die "back on the base files, the TUN int
 printf 'http://%s:8088/sub' "${host}" | sudo morzer secret set subscription_url >/dev/null
 sudo morzer config unset probe_url >/dev/null
 sudo morzer config unset direct_rules >/dev/null
-sudo rm -f "${home}/proxies/dotdash.yaml"
-sudo docker restart "$(service_container mihomo)" >/dev/null
+sudo rm -f "${home}/subscription_url.json"
+sudo docker restart "$(service_container xray)" >/dev/null
 sudo docker rm -f client-rig-tun-server client-rig-tun-sub >/dev/null
 [ "$(plain https://www.gstatic.com/generate_204)" = 204 ] || die "back on the base files, the rig's own requests don't get out"
 echo "40-tun.sh: under tun, plain requests, the machine's and a LAN's, go through dotdash and never around it; back to the base files cleanly"

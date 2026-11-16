@@ -57,8 +57,9 @@ sudo morzer task run client-config --output -- --full phone    # plus links and 
 - Add the URL as a subscription in the app (v2rayN, v2rayNG, Hiddify, Happ,
   Streisand) and refresh every few hours: revocations, key rotations and new
   relays then reach devices with nothing to resend.
-- mihomo reads the URL as an `http` proxy provider; the
-  [client bundle](../client/index.md) runs it on a Linux machine for you.
+- The same URL, asked with `Accept: application/json`, serves the device's
+  Xray config: the [client bundle](../client/index.md) runs Xray on it on a
+  Linux machine for you.
 - A URL is as secret as the links. `sudo morzer secret rotate subscription_key`
   moves every URL; any other path gets the site's 404.
 - A [relay](../relay/install.md#6-devices) with a site of its own serves the

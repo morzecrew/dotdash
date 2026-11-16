@@ -2,9 +2,9 @@
 # The gateway check, with the gateway parameter on: the tun profile's TUN
 # interface is up, the host forwards IPv4, and its firewall lets LAN traffic
 # into TUN and the replies back out. Docker sets FORWARD's policy to DROP on
-# hosts where it turned forwarding on itself, and a drop there can't be undone
-# from mihomo's own nftables table, so the two accepts go in Docker's
-# DOCKER-USER chain, which Docker leaves to the operator. Off, it passes.
+# hosts where it turned forwarding on itself, and a drop there is out of
+# Xray's reach, so the two accepts go in Docker's DOCKER-USER chain, which
+# Docker leaves to the operator. Off, it passes.
 set -euo pipefail
 
 [ "${DOTDASH_CLIENT_PARAM_GATEWAY:-false}" = true ] || { echo "not this LAN's gateway (gateway=false)"; exit 0; }

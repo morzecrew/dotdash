@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `dotdash-client`'s `dns_server` (`1.1.1.1`): under `tun`, the DNS server asked directly for dotdash's server names, the direct rules and `.lan`, `.local` and `.home.arpa` names. Your router's address answers the LAN's own names.
+
 - Each device's subscription URL also serves its Xray config, the one `client-config --full` prints, to a request with `Accept: application/json` alone, and at the URL with `.json`: for a client that runs Xray itself. Own-site relays pass it on; a request a CDN passed on gets the site's 404.
 
 - `dotdash-manager report`: how long each server and relay lasted before it first burnt, how often and how long it was burnt, which paths went off and how often a spare stood in, with the relays' median lifetime; relays taken out of the roster stay in it.
@@ -26,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A server or relay can share a machine with your own web server on 80 and 443, which passes dotdash's names through untouched. `listen`, `https_port` and `http_port` choose where dotdash publishes, such as spare ports on `127.0.0.1`; the server's `entry_port` keeps links on 443.
 
 ### Changed
+
+- `dotdash-client` runs Xray instead of mihomo. It asks the subscription URL for the device's Xray config and uses whichever outbound answers fastest. Update the server first: an older one serves no config, and the client then refuses traffic rather than send it around dotdash.
+
+- `dotdash-client`'s rule parameters keep their form. A line whose type isn't DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, DOMAIN-REGEX, GEOSITE, IP-CIDR, IP-CIDR6, GEOIP or DST-PORT stops the change, naming the line. IP rules never look a name up, so `no-resolve` changes nothing.
 
 - The server's and relay's TLS and HTTP ports are published on every IPv4 address (`listen=0.0.0.0`), and no longer on IPv6 too. A domain with an AAAA record reaches dotdash over IPv4 only.
 

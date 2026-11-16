@@ -30,10 +30,16 @@ configuration:
   - template: templates/config.json.tmpl
     target: /etc/dotdash-client/config.json
     mode: "0644"
-  # Rendered under every profile, since templates can't see which is on; only
-  # the tun profile mounts it.
+  - template: templates/subscription.json.tmpl
+    target: /etc/dotdash-client/subscription.json
+    mode: "0644"
+  # Rendered under every profile, as the base files are; only the tun
+  # profile mounts them.
   - template: templates/config-tun.json.tmpl
     target: /etc/dotdash-client/config-tun.json
+    mode: "0644"
+  - template: templates/resolv.conf.tmpl
+    target: /etc/dotdash-client/resolv.conf
     mode: "0644"
 
 secrets:
@@ -62,60 +68,65 @@ parameters:
     type: string
     default: 127.0.0.1
     description: "The address the proxy port is published on: 127.0.0.1 for this machine alone; anything else, such as 0.0.0.0 for the network, and devices need proxy_user and the proxy_password secret"
-    services: [mihomo]
+    services: [xray]
   port:
     type: port
     default: 7890
     description: The SOCKS5 and HTTP proxy port, both on one
-    services: [mihomo]
+    services: [xray]
   proxy_user:
     type: string
     default: dotdash
     description: The username devices give, with the proxy_password secret, when listen is not 127.0.0.1
-    services: [mihomo]
+    services: [xray]
   subscription_interval:
     type: int
     default: 3600
     description: Seconds between fetches of the subscription, through dotdash where it gets through and directly otherwise
-    services: [mihomo]
+    services: [xray]
   gateway:
     type: bool
     default: false
     description: "Under the tun profile, this machine is its LAN's gateway: doctor then checks that the host forwards LAN traffic into TUN, which Docker's FORWARD policy DROP blocks until two DOCKER-USER rules accept it"
-    services: [mihomo]
+    services: [xray]
   dns_listen:
     type: string
     default: none
-    description: "Under the tun profile, the address and port mihomo answers DNS on for the LAN, such as 192.168.1.10:53, with the same fake addresses; none for none. 0.0.0.0:53 clashes with systemd-resolved's stub"
-    services: [mihomo]
+    description: "Under the tun profile, the address and port Xray answers DNS on for the LAN, such as 192.168.1.10:53, with the same fake addresses; none for none. 0.0.0.0:53 clashes with systemd-resolved's stub"
+    services: [xray]
+  dns_server:
+    type: string
+    default: 1.1.1.1
+    description: "Under the tun profile, the DNS server asked directly, around dotdash, for the addresses of dotdash's servers, of what direct rules send around it, and of .lan, .local and .home.arpa names; your router's address answers the LAN's own names, and works where public resolvers don't"
+    services: [xray]
   # morzer wants a default for every parameter it doesn't ask for at init:
   # a comment, which the templates skip, showing a rule's form.
   block_rules:
     type: text
     default: "# One rule per line, without its target, such as DOMAIN-SUFFIX,ads.example"
-    description: "Destinations refused, one mihomo classical rule per line without its target, such as DOMAIN-SUFFIX,example.com; \"#\" starts a comment"
-    services: [mihomo]
+    description: "Destinations refused, one rule per line without its target, such as DOMAIN-SUFFIX,example.com: DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, DOMAIN-REGEX, GEOSITE, IP-CIDR, IP-CIDR6, GEOIP or DST-PORT, an IP rule matching addresses apps give, never looked up; \"#\" starts a comment"
+    services: [xray]
   direct_rules:
     type: text
-    default: "# One rule per line, without its target, such as IP-CIDR,192.168.0.0/16,no-resolve"
-    description: "Destinations reached directly, not through dotdash, one mihomo classical rule per line without its target, such as IP-CIDR,192.168.0.0/16,no-resolve; \"#\" starts a comment"
-    services: [mihomo]
+    default: "# One rule per line, without its target, such as IP-CIDR,192.168.0.0/16"
+    description: "Destinations reached directly, not through dotdash, one rule per line without its target, such as IP-CIDR,192.168.0.0/16, of the types block_rules takes; \"#\" starts a comment"
+    services: [xray]
   ipv6:
     type: enum
     values: [allow, block]
     default: allow
     description: "IPv6 destinations. allow: through dotdash like the rest. block: refused before any other rule, a direct rule's included, so apps fall back to IPv4; under tun it is still taken in, so nothing leaves around dotdash"
-    services: [mihomo]
+    services: [xray]
   probe_url:
     type: string
     default: https://www.gstatic.com/generate_204
     description: What picking the fastest link and the health check fetch through dotdash; any 2xx is healthy
-    services: [mihomo]
+    services: [xray]
 
 images:
-  # The proxy-config task's shell; mihomo's image has none.
+  # The proxy-config task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
-  mihomo: ghcr.io/morzecrew/mihomo:1.19.34@sha256:193e4a376dc1f1b54e6fac495de35eb0bea2d2020a1c8e388717d8cc20594fec
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:389e5c9713cd64e8cbb12c95df482bc14918fe7e95eb5ec57f5ff3496a3ea9b7
 
 # What an authority's desired-state document may set here (morzer 0.16): the
 # device's subscription and the password of its local proxy. Neither reaches

@@ -1,49 +1,70 @@
-{{- /* Published beyond this machine, the proxy asks for a password. */ -}}
+{{- /* dotdash-client's Xray config, beside the subscription's outbounds
+(subscription.json.tmpl): a SOCKS5 and HTTP proxy port, and an unpublished
+probe port for the health check and the subscription's refresh. Traffic goes
+to whichever dotdash- outbound answers fastest, except what the rule
+parameters refuse or send directly. Published beyond this machine, the proxy
+asks for proxy_user and proxy_password. config-tun.json.tmpl repeats it, with
+TUN and DNS added: keep the outbounds, observatory, balancer and the rules
+both have the same, as the smoke test compares them.
+
+A rule line is a classical rule without its target ("DOMAIN-SUFFIX,
+example.com"), as the apps write them; "match" turns one into the fields of an
+Xray routing rule. An IP rule matches an address the app gave, never one
+looked up for a name (routing's domainStrategy AsIs), as no-resolve did. */ -}}
+{{- define "match" -}}
+{{- $f := split "," . -}}
+{{- if lt (len $f) 2 }}{{ required (print "a rule needs a type and a value, such as DOMAIN-SUFFIX,example.com: " .) "" }}{{ end -}}
+{{- $t := upper (index $f 0) -}}{{- $v := index $f 1 -}}
+{{- if eq $t "DOMAIN" }}"domain": [{{ quote (print "full:" $v) }}]
+{{- else if eq $t "DOMAIN-SUFFIX" }}"domain": [{{ quote (print "domain:" $v) }}]
+{{- else if eq $t "DOMAIN-KEYWORD" }}"domain": [{{ quote (print "keyword:" $v) }}]
+{{- else if eq $t "DOMAIN-REGEX" }}"domain": [{{ quote (print "regexp:" $v) }}]
+{{- else if eq $t "GEOSITE" }}"domain": [{{ quote (print "geosite:" (lower $v)) }}]
+{{- else if or (eq $t "IP-CIDR") (eq $t "IP-CIDR6") }}"ip": [{{ quote $v }}]
+{{- else if eq $t "GEOIP" }}"ip": [{{ quote (print "geoip:" (lower $v)) }}]
+{{- else if eq $t "DST-PORT" }}"port": {{ quote $v }}
+{{- else }}{{ required (print "a rule's type is none of DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, DOMAIN-REGEX, GEOSITE, IP-CIDR, IP-CIDR6, GEOIP, DST-PORT: " .) "" }}
+{{- end -}}
+{{- end -}}
 {{- $lan := ne (default "127.0.0.1" .Parameters.listen) "127.0.0.1" -}}
 {{- $probe := required "set probe_url" .Parameters.probe_url -}}
 {
-  "mode": "rule",
-  "log-level": "warning",
-  "ipv6": false,
-  "listeners": [
-    {"name": "proxy", "type": "mixed", "listen": "0.0.0.0", "port": 7890,
-     "users": [{{ if $lan }}{"username": "{{ required "set proxy_user" .Parameters.proxy_user }}", "password": {"$file": "/run/secrets/proxy_password"}}{{ end }}]},
-    {"name": "probe", "type": "mixed", "listen": "127.0.0.1", "port": 7891, "users": []}
+  "log": {"loglevel": "warning"},
+  "inbounds": [
+    {"tag": "proxy", "listen": "0.0.0.0", "port": 7890, "protocol": "socks",
+     "settings": {"udp": true{{ if $lan }}, "auth": "password",
+       "accounts": [{"user": "{{ required "set proxy_user" .Parameters.proxy_user }}", "pass": {"$file": "/run/secrets/proxy_password"}}]{{ end }}}},
+    {"tag": "probe", "listen": "127.0.0.1", "port": 7891, "protocol": "socks", "settings": {"udp": true}}
   ],
-  "proxy-providers": {
-    "dotdash": {
-      "type": "http",
-      "url": {"$file": "/run/secrets/subscription_url"},
-      "interval": {{ .Parameters.subscription_interval }},
-      {{- /* Fetched through the fetch group below, so it refreshes where only
-      dotdash gets through. Without a proxy here, mihomo would send the fetch
-      through the rules, into the dotdash group, which refuses while empty. */}}
-      "proxy": "fetch",
-      "path": "./proxies/dotdash.yaml",
-      "health-check": {"enable": true, "url": "{{ $probe }}", "interval": 300}
-    }
-  },
-  {{- /* An empty group falls back to COMPATIBLE, mihomo's DIRECT. So the
-  group traffic takes refuses while there are no links, as before a first
-  fetch, and nothing leaves around dotdash. The fetch group, which no rule
-  sends traffic to, keeps COMPATIBLE: the subscription goes through dotdash's
-  links when there are any, and directly when there are none. */}}
-  "proxy-groups": [
-    {"name": "dotdash", "type": "url-test", "use": ["dotdash"], "url": "{{ $probe }}", "interval": 300,
-     "empty-fallback": "REJECT"},
-    {"name": "fetch", "type": "url-test", "use": ["dotdash"], "url": "{{ $probe }}", "interval": 300}
+  {{- /* The first outbound takes what no rule routes, and what the balancer
+  can't place, as while the subscription has given no links yet: so nothing
+  leaves around dotdash. */}}
+  "outbounds": [
+    {"tag": "block", "protocol": "blackhole"},
+    {"tag": "direct", "protocol": "freedom"}
   ],
-  {{- /* The rule parameters, inline: each line a classical rule without its
-  target, blank and "#" lines skipped. A rule that matches nothing
-  (never.invalid) leads each list, so every kept line can follow a comma.
-  Backslashes are doubled before quote, which escapes only quotes. */}}
-  "rule-providers": {
-    "block": {"type": "inline", "behavior": "classical", "payload": ["DOMAIN,never.invalid"
-      {{- range lines .Parameters.block_rules }}{{ $l := trim . }}{{ if and $l (ne (slice $l 0 1) "#") }}, {{ quote (replace $l "\\" "\\\\") }}{{ end }}{{ end }}]},
-    "direct": {"type": "inline", "behavior": "classical", "payload": ["DOMAIN,never.invalid"
-      {{- range lines .Parameters.direct_rules }}{{ $l := trim . }}{{ if and $l (ne (slice $l 0 1) "#") }}, {{ quote (replace $l "\\" "\\\\") }}{{ end }}{{ end }}]}
-  },
-  {{- /* ipv6=block: every IPv6 destination refused first, before a direct
-  rule could send it around dotdash; names resolve to IPv4 (dns.ipv6 false). */}}
-  "rules": [{{ if eq .Parameters.ipv6 "block" }}"IP-CIDR6,::/0,REJECT,no-resolve", {{ end }}"RULE-SET,block,REJECT", "RULE-SET,direct,DIRECT", "MATCH,dotdash"]
+  "observatory": {"subjectSelector": ["dotdash-"], "probeUrl": "{{ $probe }}", "probeInterval": "1m", "enableConcurrency": true},
+  "routing": {
+    "domainStrategy": "AsIs",
+    "balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}}],
+    "rules": [
+      {{- /* ipv6=block: every IPv6 address refused first, a direct rule's
+      included. */}}
+      {{- if eq .Parameters.ipv6 "block" }}
+      {"type": "field", "ip": ["::/0"], "outboundTag": "block"},
+      {{- end }}
+      {{- /* The health check and the subscription's refresh go to dotdash
+      whatever the rules say. */}}
+      {"type": "field", "inboundTag": ["probe"], "balancerTag": "dotdash"},
+      {{- /* Each kept line of the rule parameters, blank and "#" lines
+      skipped; backslashes doubled before quote, which escapes only quotes. */}}
+      {{- range lines .Parameters.block_rules }}{{ $l := replace (trim .) "\\" "\\\\" }}{{ if and $l (ne (slice $l 0 1) "#") }}
+      {"type": "field", {{ template "match" $l }}, "outboundTag": "block"},
+      {{- end }}{{ end }}
+      {{- range lines .Parameters.direct_rules }}{{ $l := replace (trim .) "\\" "\\\\" }}{{ if and $l (ne (slice $l 0 1) "#") }}
+      {"type": "field", {{ template "match" $l }}, "outboundTag": "direct"},
+      {{- end }}{{ end }}
+      {"type": "field", "network": "tcp,udp", "balancerTag": "dotdash"}
+    ]
+  }
 }

@@ -6,7 +6,8 @@
 # subscription_interval, the subscription server then logs a fetch from the
 # stand-in dotdash server's address. The fetch at install, with no links to go
 # through yet, came directly: the install would not have got out otherwise
-# (10-rules.sh).
+# (10-rules.sh). A restart, as for the new interval, fetches directly too, as
+# Xray isn't up yet, and fails here; the refresh after it goes through Xray.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -16,8 +17,8 @@ server=$(address client-rig-server)
 sub=$(address client-rig-sub)
 [ -n "${server}" ] && [ -n "${sub}" ] || die "a stand-in has no address"
 host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
-# busybox logs an IPv4 peer as "[::ffff:172.18.0.2]:port".
-through() { sudo docker logs client-rig-sub 2>&1 | grep -cE "(^|[^0-9.])${server//./\\.}\\]?:[0-9]" || true; }
+# Caddy logs each request's peer as "remote_ip":"172.18.0.2".
+through() { sudo docker logs client-rig-sub 2>&1 | grep -cF "\"remote_ip\":\"${server}\"" || true; }
 
 before=$(through)
 printf 'http://%s:8080/sub' "${sub}" | sudo morzer secret set subscription_url >/dev/null

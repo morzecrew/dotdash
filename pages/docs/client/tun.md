@@ -10,17 +10,24 @@ sudo morzer config unset installation.profile     # back to the proxy port alone
 ```
 
 - DNS answers with fake addresses, and the names go to dotdash, which
-  resolves them. The machine's own resolver answers only for dotdash's
-  server names and the direct rules.
+  resolves them. `dns_server` (`1.1.1.1`), asked directly, answers only for
+  dotdash's server names, the direct rules, and `.lan`, `.local` and
+  `.home.arpa` names. Set it to your router's address for the LAN's own
+  names, or where public resolvers don't answer:
+
+    ```sh
+    sudo morzer config set dns_server=192.168.1.1
+    ```
+
 - With dotdash out of reach, nothing gets out around it.
 - Networks the machine is directly on, such as its LAN, stay reachable
   directly.
 - The subscription and the dotdash server must be reachable over the
   machine's main interface, as they normally are.
 
-mihomo then runs as root with `NET_ADMIN` and `DAC_OVERRIDE`, on the host's
-network, with `/dev/net/tun`: a TUN interface takes nothing less. Its root
-filesystem stays read-only.
+Xray then runs as root with `NET_ADMIN`, `DAC_OVERRIDE` and
+`NET_BIND_SERVICE`, on the host's network, with `/dev/net/tun`: a TUN
+interface takes nothing less. Its root filesystem stays read-only.
 
 ## A gateway for the LAN
 

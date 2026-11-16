@@ -2,11 +2,11 @@
 
 The `dotdash-client` bundle (`ghcr.io/morzecrew/dotdash-client`) runs on a
 Linux machine on the client side: a home server, a Raspberry Pi, an office
-VM. It runs mihomo from one device's subscription URL and sends traffic
+VM. It runs Xray from one device's subscription URL and sends traffic
 through dotdash, over whichever of that device's links answers fastest.
 
-![Apps set to a proxy, the machine's own connections, and LAN devices that use it as their gateway all reach mihomo, which sends the direct rules around dotdash and everything else through it](../assets/diagrams/client.light.svg#only-light)
-![Apps set to a proxy, the machine's own connections, and LAN devices that use it as their gateway all reach mihomo, which sends the direct rules around dotdash and everything else through it](../assets/diagrams/client.dark.svg#only-dark)
+![Apps set to a proxy, the machine's own connections, and LAN devices that use it as their gateway all reach Xray, which sends the direct rules around dotdash and everything else through it](../assets/diagrams/client.light.svg#only-light)
+![Apps set to a proxy, the machine's own connections, and LAN devices that use it as their gateway all reach Xray, which sends the direct rules around dotdash and everything else through it](../assets/diagrams/client.dark.svg#only-dark)
 
 Three ways in, from least to most:
 
@@ -56,10 +56,13 @@ The port is on `127.0.0.1`, for this machine alone. Next:
 
 ## The subscription
 
-mihomo fetches the subscription every `subscription_interval` seconds (an
-hour), through dotdash, so it stays current where only dotdash gets through,
-such as through a [relay](../relay/index.md) while only some addresses
-do. When that fails, as on a first start, it fetches directly. It keeps the
-last copy, so a restart while the URL is out of reach starts on the links it
-fetched last. Relays in the subscription are links like the others: while
-only a relay gets through, the client goes through it.
+The client fetches the subscription every `subscription_interval` seconds
+(an hour), through dotdash, so it stays current where only dotdash gets
+through, such as through a [relay](../relay/index.md) while only some
+addresses do. When that fails, as on a first start, it fetches directly. It
+asks the URL for the device's Xray config, the one `client-config --full`
+prints, and takes its outbounds; when they changed and Xray accepts them, it
+restarts Xray on them. It keeps the last ones Xray accepted, so a restart
+while the URL is out of reach starts on them. Relays in the subscription are
+outbounds like the others: while only a relay gets through, the client goes
+through it.
