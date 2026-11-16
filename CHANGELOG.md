@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Each device's subscription also serves its Xray config, the one `client-config --full` prints, at the same URL with `.json`: for a client that runs Xray itself rather than turning links into a config. Own-site relays pass it on too, and a request a CDN passed on gets the site's 404, as for the links.
+
 - `dotdash-manager report`: how long each server and relay lasted before it first burnt, how often and how long it was burnt, which paths went off and how often a spare stood in, with the relays' median lifetime; relays taken out of the roster stay in it.
 
 - Spare relays: a relay with `spare = true` in `dotdash-manager`'s roster runs and is watched but devices don't get it, until a relay burns; then it stands in for that relay, in its pools, at the next sync, and waits again once the relay is back.

@@ -76,14 +76,16 @@ http://127.0.0.1:8081 {
 	}
 
 	# A device's subscription (the subscription parameter): 32 hex characters
-	# naming a file the subscription service wrote. Any other path, a guessed
+	# naming a file the subscription service wrote, its links, and the same
+	# with .json, its Xray config, for a client that runs Xray itself (as
+	# dotdash-client does) rather than turning links into one. Any other path, a guessed
 	# one included, gets the site and its 404. So does a request a CDN or any
 	# other proxy passed on, which says so in one of these headers: a device
 	# asks this site, or an own-site relay that strips its own, so its links
 	# never pass through a CDN, which could read them. cdn-check tells whether
 	# a CDN is refused.
 	@subscription {
-		path_regexp ^/[0-9a-f]{32}$
+		path_regexp ^/[0-9a-f]{32}(\.json)?$
 		not header X-Forwarded-For *
 		not header X-Forwarded-Host *
 		not header X-Forwarded-Proto *
@@ -101,7 +103,9 @@ http://127.0.0.1:8081 {
 		root * /srv/sub
 		# no-store: neither a CDN nor a relay keeps a copy, which would outlive
 		# a revocation and hold every link.
-		header Content-Type "text/plain; charset=utf-8"
+		# The links as the apps read them; the .json goes as JSON, by its name.
+		@links path_regexp ^/[0-9a-f]{32}$
+		header @links Content-Type "text/plain; charset=utf-8"
 		header Cache-Control no-store
 		file_server
 	}

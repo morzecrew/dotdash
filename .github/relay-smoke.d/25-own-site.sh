@@ -96,6 +96,11 @@ if sudo grep -q SUBSCRIPTION_UPSTREAMS /opt/dotdash-relay/current/caddy/Caddyfil
     ! grep -qF 'Error 404 (Not Found)!!1' <<<"${marked}" ||
       die "a subscription request a CDN marks as passed on still went on to the servers"
   fi
+  if sudo grep -q 'json' /opt/dotdash-relay/current/caddy/Caddyfile; then
+    body=$(curl -sk --max-time 40 --resolve "${domain}:443:127.0.0.1" "https://${domain}/${token}.json" || true)
+    grep -qF 'Error 404 (Not Found)!!1' <<<"${body}" ||
+      die "a device's Xray config path did not reach the servers through the relay's tunnel: $(head -c 300 <<<"${body}")"
+  fi
   other=$(curl -sk --max-time 10 --resolve "${domain}:443:127.0.0.1" "https://${domain}/${token}0" || true)
   ! grep -qF 'Error 404 (Not Found)!!1' <<<"${other}" || die "a path that is no subscription went on to the servers"
   [ "$(awk '{ print $6 }' <<<"$(entry)")" = own-site ] || die "relay-entry does not mark the line own-site: $(entry | cut -d' ' -f1,2,6)"

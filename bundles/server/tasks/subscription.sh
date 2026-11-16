@@ -1,6 +1,7 @@
 #!/bin/sh
 # Each device's subscription: its links from client-config, base64-encoded as
-# the apps read them, in /sub/<token>. The token is the first 32 hex
+# the apps read them, in /sub/<token>, and its Xray config, the one --full
+# prints, in /sub/<token>.json. The token is the first 32 hex
 # characters of SHA-256("<subscription_key>:<uuid>"): different per device,
 # and unguessable without the key. Caddy serves the files and holds none of
 # the keys they are made from.
@@ -19,13 +20,19 @@ if [ "${SUBSCRIPTION:-false}" = true ]; then
   while read -r id _ || [ -n "${id:-}" ]; do
     case $id in '' | '#'*) continue ;; esac
     token=$(printf '%s:%s' "$key" "$id" | sha256sum | cut -c1-32)
-    sh /task/client-config.sh --full "$id" | grep '^vless://' | base64 -w 0 >"$out/$token.new"
+    sh /task/client-config.sh --full "$id" >"$out/.full"
+    grep '^vless://' "$out/.full" | base64 -w 0 >"$out/$token.new"
+    # The config: the lines from its opening brace to its closing one, each
+    # alone on its line, as client-config prints it.
+    sed -n '/^{$/,/^}$/p' "$out/.full" >"$out/$token.json.new"
     mv "$out/$token.new" "$out/$token"
+    mv "$out/$token.json.new" "$out/$token.json"
     n=$((n + 1))
   done </run/secrets/vless_clients
   # A decoy beside them, with no links, for cdn-check to fetch through each
   # CDN: named from the key, so no one else can ask for it.
   : >"$out/$(printf '%s:cdn-check' "$key" | sha256sum | cut -c1-32)"
+  rm -f "$out/.full"
   echo "subscription: ${n} device(s)"
 else
   echo "subscription: off"
