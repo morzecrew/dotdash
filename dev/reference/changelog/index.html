@@ -2868,7 +2868,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p>Each device's subscription also serves its Xray config, the one <code>client-config --full</code> prints, at the same URL with <code>.json</code>: for a client that runs Xray itself rather than turning links into a config. Own-site relays pass it on too, and a request a CDN passed on gets the site's 404, as for the links.</p>
+<p>Each device's subscription URL also serves its Xray config, the one <code>client-config --full</code> prints, to a request with <code>Accept: application/json</code> alone, and at the URL with <code>.json</code>: for a client that runs Xray itself. Own-site relays pass it on; a request a CDN passed on gets the site's 404.</p>
 </li>
 <li>
 <p><code>dotdash-manager report</code>: how long each server and relay lasted before it first burnt, how often and how long it was burnt, which paths went off and how often a spare stood in, with the relays' median lifetime; relays taken out of the roster stay in it.</p>
