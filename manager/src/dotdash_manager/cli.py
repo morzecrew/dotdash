@@ -113,10 +113,11 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
 @app.command()
 def report(ctx: typer.Context) -> None:
     """How long each server and relay lasted before it burnt, how often and for
-    how long it was burnt, which paths went off; from what sync logged."""
+    how long it was burnt, which paths went off, and each path's latency
+    against the canaries' own network; from what sync logged."""
     o: Options = ctx.obj
     net, st = o.open()
-    for line in report_lines(net, st.get("events", []), int(time.time()), st.get("stands", {})):
+    for line in report_lines(net, st.get("events", []), int(time.time()), st.get("stands", {}), st.get("health", {})):
         print(line)
 
 

@@ -3,7 +3,8 @@
 # the canary watches, whether each transport gets through, and with
 # control_url set, whether the canary's own network answers without dotdash.
 # A freeze_url that stops after 20 KB fails REALITY with the bytes it got;
-# stopping the stand-in server (pre-apply/10-server.sh) fails it outright.
+# stopping the stand-in server (pre-apply/10-server.sh) fails it outright. A
+# path that is up has its fetch's milliseconds, and control_url its own.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -21,12 +22,13 @@ facts() {
 
 got=$(facts)
 jq -e '.server == "www.gstatic.com" and (.address | length > 0) and (.checked_at | type == "number")
-  and .internet == null and .paths == {reality: true} and .stalled == {} and .stalled_up == []' <<<"${got}" >/dev/null ||
+  and .internet == null and .paths == {reality: true} and .stalled == {} and .stalled_up == []
+  and (.latency_ms | keys) == ["reality"] and .latency_ms.reality > 0 and .direct_ms == null' <<<"${got}" >/dev/null ||
   die "facts with the server up: ${got}"
 
 sudo morzer config set control_url=https://www.gstatic.com/generate_204 >/dev/null || die "could not set control_url"
 got=$(facts)
-jq -e '.internet == true' <<<"${got}" >/dev/null || die "facts with control_url set: ${got}"
+jq -e '.internet == true and .direct_ms > 0' <<<"${got}" >/dev/null || die "facts with control_url set: ${got}"
 echo "25-facts.sh: ${got}"
 
 # A freeze as the canary meets one: the bytes stop partway. A stand-in for
@@ -48,7 +50,8 @@ sudo morzer config set "freeze_url=https://${host}:9443/f" >/dev/null || die "co
 got=$(facts) || true
 sudo morzer config unset freeze_url >/dev/null || die "could not unset freeze_url"
 kill "${stall}" 2>/dev/null || true
-jq -e '.internet == true and .paths == {reality: false} and .stalled.reality > 0 and .stalled.reality < 65536' \
+jq -e '.internet == true and .paths == {reality: false} and .stalled.reality > 0 and .stalled.reality < 65536
+  and .latency_ms == {}' \
   <<<"${got}" >/dev/null || die "facts with freeze_url stopping after 20 KB: ${got}"
 echo "25-facts.sh: freeze_url stopped after 20 KB: REALITY reads down after $(jq .stalled.reality <<<"${got}") bytes"
 got=$(facts)

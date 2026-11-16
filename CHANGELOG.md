@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A canary's `facts` time each path that gets through (`latency_ms`) and its own network without dotdash (`direct_ms`). `dotdash-manager report` ends with each server's and relay's median per path beside its canaries' network, and what each relay adds over the servers.
+
 - `dotdash-client`'s `dns_server` (`1.1.1.1`): under `tun`, the DNS server asked directly for dotdash's server names, the direct rules and `.lan`, `.local` and `.home.arpa` names. Your router's address answers the LAN's own names.
 
 - An `upstreams` line can put its tags first, `name=isp-a group=ipv6 | socks5://…`, so each name stays at the start of its line however long the URL runs. Lines with the tags after the URL still work, and a line without tags is still just its URL.

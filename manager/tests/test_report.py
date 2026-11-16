@@ -52,3 +52,26 @@ def test_a_relays_history_and_the_fleets_median():
     assert "2 burnt, lasting 7d 0h at the median" in "\n".join(lines)  # r1 10d, old 4d
     assert "1 never burnt, watched 40d 0h so far" in "\n".join(lines)
     assert lines[-1].endswith("spares waiting: none")
+
+
+def test_latency_against_the_canaries_network_and_the_servers():
+    from dotdash_manager.health import LATENCIES, record
+
+    h: dict = {}
+    for ms in (300, 200, 210, 220):
+        record(h, [{"latency_ms": {"reality": ms, "mkcp": ms + 50}, "direct_ms": 100},
+                   {"latency_ms": {"reality": ms + 4}, "direct_ms": "slow"}])
+    assert h["latency"]["reality"] == [300, 200, 210, 220] and h["latency"]["direct"] == [100] * 4
+    record(h, [{"paths": {"reality": True}}])  # a canary from before latencies: nothing
+    assert len(h["latency"]["reality"]) == 4
+    for _ in range(LATENCIES + 5):
+        record(h, [{"latency_ms": {"reality": 1}}])
+    assert len(h["latency"]["reality"]) == LATENCIES
+
+    health = {"s": {"latency": {"reality": [200, 210, 220], "direct": [100]}},
+              "r1": {"latency": {"reality": [290, 300], "xhttp": [400]}}}
+    lines = report(loads(ROSTER), [], DAY, {}, health)
+    assert lines[-3].startswith("latency, ms")
+    assert lines[-2].split() == ["s", "network", "100", "reality", "210"]
+    assert lines[-1] == "r1           network     -   reality 290 (+80 over the servers), xhttp 400"
+    assert not any(line.startswith("r2 ") for line in lines[-3:])
