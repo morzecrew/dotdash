@@ -2197,11 +2197,12 @@ proxies, WireGuard exits and OpenVPN exits, one per line, in order. A
 change of provider, a backup or a second exit is one edit of that secret.</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>upstreams
 </code></pre></div>
-<div class="highlight"><pre><span></span><code># &lt;url&gt; [name=&lt;name&gt;] [group=&lt;group&gt;]
-socks5://alice:secret@203.0.113.7:1080            name=isp-a
-https://bob:secret@proxy.example.net:443          name=isp-b
-wireguard://&lt;private key&gt;@198.51.100.4:51820?publickey=&lt;base64&gt;&amp;address=10.34.0.3/32 name=home
-openvpn://H4sIAAAAAAACA…                          name=vpn
+<div class="highlight"><pre><span></span><code># [name=&lt;name&gt;] [group=&lt;group&gt;] | &lt;url&gt;
+name=isp-a | socks5://alice:secret@203.0.113.7:1080
+name=isp-b | https://bob:secret@proxy.example.net:443
+name=home  | wireguard://&lt;private key&gt;@198.51.100.4:51820?publickey=&lt;base64&gt;&amp;address=10.34.0.3/32
+name=vpn   | openvpn://H4sIAAAAAAACA…
+socks5://carol:secret@203.0.113.8:1080
 </code></pre></div>
 <table>
 <thead>
@@ -2241,6 +2242,8 @@ openvpn://H4sIAAAAAAACA…                          name=vpn
 <li>After the scheme, a proxy is <code>user:pass@host:port</code>, or <code>host:port</code> with no
   login. The password may contain <code>:</code> and <code>@</code>, and is not percent-encoded. An
   IPv6 host goes in brackets.</li>
+<li>Tags go before the URL, ending in <code>|</code>; a line with none is its URL alone.
+  Lines written with the tags after the URL, as before, still work.</li>
 <li><code>name=</code> is optional, lowercase letters, digits and dashes. <code>doctor</code> and the
   gate's log name each line by it, and <a href="#order-and-modes"><code>upstream_pin</code></a>
   takes it.</li>
@@ -2316,8 +2319,8 @@ clients' destinations still reach them as addresses. <code>upstream_mode</code> 
 <code>address</code> holds an IPv6 address and its exit routes IPv6, and an OpenVPN
 exit when its server pushes IPv6. For IPv4-only proxies and a provider's
 separate IPv6 one:</p>
-<div class="highlight"><pre><span></span><code>socks5://alice:secret@203.0.113.7:1080        name=isp-a
-socks5://alice:secret@[2001:db8::7]:1080      name=isp-a6 group=ipv6
+<div class="highlight"><pre><span></span><code>name=isp-a              | socks5://alice:secret@203.0.113.7:1080
+name=isp-a6 group=ipv6  | socks5://alice:secret@[2001:db8::7]:1080
 </code></pre></div>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">ipv6</span><span class="o">=</span>separate
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>exit-check<span class="w"> </span>--output
@@ -2365,7 +2368,7 @@ password
 </code></pre></div>
 <p>Add the line, then turn the profile on. Until then the line leads nowhere and
 the other lines carry the traffic:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>upstreams<span class="w">                       </span><span class="c1"># add the line, with name=vpn if you like</span>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>upstreams<span class="w">                       </span><span class="c1"># add the line, with "name=vpn | " before it if you like</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>openvpn<span class="w">    </span><span class="c1"># with others, all of them: xdns,openvpn</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>exit-check<span class="w"> </span>--output
 </code></pre></div>
