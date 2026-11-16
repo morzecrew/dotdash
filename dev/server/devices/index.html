@@ -2171,8 +2171,9 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
 <li>Add the URL as a subscription in the app (v2rayN, v2rayNG, Hiddify, Happ,
   Streisand) and refresh every few hours: revocations, key rotations and new
   relays then reach devices with nothing to resend.</li>
-<li>mihomo reads the URL as an <code>http</code> proxy provider; the
-  <a href="../../client/">client bundle</a> runs it on a Linux machine for you.</li>
+<li>The same URL, asked with <code>Accept: application/json</code>, serves the device's
+  Xray config: the <a href="../../client/">client bundle</a> runs Xray on it on a
+  Linux machine for you.</li>
 <li>A URL is as secret as the links. <code>sudo morzer secret rotate subscription_key</code>
   moves every URL; any other path gets the site's 404.</li>
 <li>A <a href="../../relay/install/#6-devices">relay</a> with a site of its own serves the

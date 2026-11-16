@@ -2032,18 +2032,26 @@ port and the <a href="../rules/">rules</a> stay as they are.</p>
 sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">unset</span><span class="w"> </span>installation.profile<span class="w">     </span><span class="c1"># back to the proxy port alone</span>
 </code></pre></div>
 <ul>
-<li>DNS answers with fake addresses, and the names go to dotdash, which
-  resolves them. The machine's own resolver answers only for dotdash's
-  server names and the direct rules.</li>
-<li>With dotdash out of reach, nothing gets out around it.</li>
+<li>
+<p>DNS answers with fake addresses, and the names go to dotdash, which
+  resolves them. <code>dns_server</code> (<code>1.1.1.1</code>), asked directly, answers only for
+  dotdash's server names, the direct rules, and <code>.lan</code>, <code>.local</code> and
+  <code>.home.arpa</code> names. Set it to your router's address for the LAN's own
+  names, or where public resolvers don't answer:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">dns_server</span><span class="o">=</span><span class="m">192</span>.168.1.1
+</code></pre></div>
+</li>
+<li>
+<p>With dotdash out of reach, nothing gets out around it.</p>
+</li>
 <li>Networks the machine is directly on, such as its LAN, stay reachable
   directly.</li>
 <li>The subscription and the dotdash server must be reachable over the
   machine's main interface, as they normally are.</li>
 </ul>
-<p>mihomo then runs as root with <code>NET_ADMIN</code> and <code>DAC_OVERRIDE</code>, on the host's
-network, with <code>/dev/net/tun</code>: a TUN interface takes nothing less. Its root
-filesystem stays read-only.</p>
+<p>Xray then runs as root with <code>NET_ADMIN</code>, <code>DAC_OVERRIDE</code> and
+<code>NET_BIND_SERVICE</code>, on the host's network, with <code>/dev/net/tun</code>: a TUN
+interface takes nothing less. Its root filesystem stays read-only.</p>
 <h2 id="a-gateway-for-the-lan">A gateway for the LAN<a class="headerlink" href="#a-gateway-for-the-lan" title="Permanent link">&para;</a></h2>
 <p>Under <code>tun</code>, the machine can be its LAN's gateway: devices whose gateway is
 its address go through dotdash too, with nothing to set up on them.</p>

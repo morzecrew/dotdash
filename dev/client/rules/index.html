@@ -1606,10 +1606,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#no-resolving-for-ip-rules" class="md-nav__link">
+  <a href="#ip-rules-match-addresses-not-names" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        No resolving for IP rules
+        IP rules match addresses, not names
       </span>
     </span>
   </a>
@@ -1938,10 +1938,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#no-resolving-for-ip-rules" class="md-nav__link">
+  <a href="#ip-rules-match-addresses-not-names" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        No resolving for IP rules
+        IP rules match addresses, not names
       </span>
     </span>
   </a>
@@ -2053,21 +2053,63 @@ hold the rules:</p>
 <li><code>direct_rules</code>: destinations reached directly, around dotdash;</li>
 <li><code>block_rules</code>: destinations refused.</li>
 </ul>
-<p>Each is mihomo's
-<a href="https://wiki.metacubex.one/en/config/rules/">classical rules</a> without the
-target, one per line, with <code>#</code> for comments:</p>
+<p>Each holds rules in the apps' classical form without the target, one per
+line, with <code>#</code> for comments:</p>
 <div class="highlight"><pre><span></span><code># around dotdash
 DOMAIN-SUFFIX,example.net
-IP-CIDR,192.168.0.0/16,no-resolve
+IP-CIDR,192.168.0.0/16
 </code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Matches</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DOMAIN,&lt;name&gt;</code></td>
+<td>that name alone</td>
+</tr>
+<tr>
+<td><code>DOMAIN-SUFFIX,&lt;name&gt;</code></td>
+<td>the name and every name under it</td>
+</tr>
+<tr>
+<td><code>DOMAIN-KEYWORD,&lt;word&gt;</code></td>
+<td>names that contain the word</td>
+</tr>
+<tr>
+<td><code>DOMAIN-REGEX,&lt;expression&gt;</code></td>
+<td>names the regular expression matches</td>
+</tr>
+<tr>
+<td><code>GEOSITE,&lt;list&gt;</code></td>
+<td>names on a list of Xray's geosite data, such as <code>category-ads-all</code></td>
+</tr>
+<tr>
+<td><code>IP-CIDR,&lt;range&gt;</code>, <code>IP-CIDR6,&lt;range&gt;</code></td>
+<td>addresses in the range</td>
+</tr>
+<tr>
+<td><code>GEOIP,&lt;list&gt;</code></td>
+<td>addresses on a list of Xray's geoip data, such as <code>private</code></td>
+</tr>
+<tr>
+<td><code>DST-PORT,&lt;port&gt;</code></td>
+<td>that port, or a range such as <code>8000-9000</code></td>
+</tr>
+</tbody>
+</table>
+<p>A line of another type stops the change: <code>morzer</code> says which line.</p>
 <p>Edit them in an editor, or set them from a file:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>edit<span class="w"> </span>direct_rules
 sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>--set-file<span class="w"> </span><span class="nv">direct_rules</span><span class="o">=</span>rules.txt
 </code></pre></div>
-<h2 id="no-resolving-for-ip-rules">No resolving for IP rules<a class="headerlink" href="#no-resolving-for-ip-rules" title="Permanent link">&para;</a></h2>
-<p>Give IP rules <code>no-resolve</code>. Without it, mihomo looks up every name on this
-machine's resolver to match them, which tells that resolver every name that
-goes through dotdash.</p>
+<h2 id="ip-rules-match-addresses-not-names">IP rules match addresses, not names<a class="headerlink" href="#ip-rules-match-addresses-not-names" title="Permanent link">&para;</a></h2>
+<p>An IP rule matches only an address an app gives. A name is never looked up
+to match one, so this machine's resolver never learns the names that go
+through dotdash. <code>no-resolve</code>, which older rules carry, changes nothing.</p>
 <h2 id="when-dotdash-is-out-of-reach">When dotdash is out of reach<a class="headerlink" href="#when-dotdash-is-out-of-reach" title="Permanent link">&para;</a></h2>
 <p>With no links at all, as on a first start that can't fetch the subscription,
 everything but the direct rules is refused: nothing leaves around dotdash by

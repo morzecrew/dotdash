@@ -2868,6 +2868,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p><code>dotdash-client</code>'s <code>dns_server</code> (<code>1.1.1.1</code>): under <code>tun</code>, the DNS server asked directly for dotdash's server names, the direct rules and <code>.lan</code>, <code>.local</code> and <code>.home.arpa</code> names. Your router's address answers the LAN's own names.</p>
+</li>
+<li>
 <p>An <code>upstreams</code> line can put its tags first, <code>name=isp-a group=ipv6 | socks5://…</code>, so each name stays at the start of its line however long the URL runs. Lines with the tags after the URL still work, and a line without tags is still just its URL.</p>
 </li>
 <li>
@@ -2897,6 +2900,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
+<li>
+<p><code>dotdash-client</code> runs Xray instead of mihomo. It asks the subscription URL for the device's Xray config and uses whichever outbound answers fastest. Update the server first: an older one serves no config, and the client then refuses traffic rather than send it around dotdash.</p>
+</li>
+<li>
+<p><code>dotdash-client</code>'s rule parameters keep their form. A line whose type isn't DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, DOMAIN-REGEX, GEOSITE, IP-CIDR, IP-CIDR6, GEOIP or DST-PORT stops the change, naming the line. IP rules never look a name up, so <code>no-resolve</code> changes nothing.</p>
+</li>
 <li>
 <p>The server's and relay's TLS and HTTP ports are published on every IPv4 address (<code>listen=0.0.0.0</code>), and no longer on IPv6 too. A domain with an AAAA record reaches dotdash over IPv4 only.</p>
 </li>
