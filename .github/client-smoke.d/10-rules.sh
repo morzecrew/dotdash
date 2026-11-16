@@ -11,7 +11,7 @@ fetch() { # the status of probe_url through the proxy port, or 000
   curl -s -o /dev/null -w '%{http_code}' --max-time 8 --proxy http://127.0.0.1:7890 \
     https://www.gstatic.com/generate_204 || true
 }
-until_status() { # <want|!want> <what>: poll for a minute, as morzer restarts mihomo
+until_status() { # <want|!want> <what>: poll for a minute, as morzer restarts Xray
   local code
   for _ in $(seq 30); do
     code=$(fetch)
@@ -23,7 +23,7 @@ until_status() { # <want|!want> <what>: poll for a minute, as morzer restarts mi
 unset_rules() { sudo morzer config unset "$1" >/dev/null; }
 
 # morzer (0.16) health-checks every config change and undoes one that fails,
-# and the health check fetches probe_url through mihomo: so it probes a host
+# and the health check fetches probe_url through Xray: so it probes a host
 # these rules leave alone, and every change is made while dotdash is up.
 sudo morzer config set probe_url=https://www.google.com/generate_204 >/dev/null \
   || die "could not move probe_url off the host the rules refuse"
@@ -48,13 +48,13 @@ echo "10-rules.sh: out through dotdash, a block rule refuses, a direct rule need
 # ipv6=block: every IPv6 destination refused before any other rule, a direct
 # rule's included; names still go out through dotdash.
 if sudo grep -q '^  ipv6:$' /opt/dotdash-client/current/manifest.yaml; then
-  first() { sudo jq -r '.rules[0]' /etc/dotdash-client/config.json; }
+  first() { sudo jq -c '.routing.rules[0] | del(.type)' /etc/dotdash-client/config.json; }
   sudo morzer config set ipv6=block >/dev/null || die "could not set ipv6=block"
-  [ "$(first)" = "IP-CIDR6,::/0,REJECT,no-resolve" ] || { sudo morzer config set ipv6=allow >/dev/null 2>&1 || true
+  [ "$(first)" = '{"ip":["::/0"],"outboundTag":"block"}' ] || { sudo morzer config set ipv6=allow >/dev/null 2>&1 || true
     die "ipv6=block does not refuse IPv6 first: $(first)"; }
   until_status 204 "with ipv6=block the proxy port no longer gets out by name"
   sudo morzer config set ipv6=allow >/dev/null || die "could not set ipv6=allow"
-  [ "$(first)" = "RULE-SET,block,REJECT" ] || die "back on ipv6=allow, the IPv6 rule remains: $(first)"
+  [ "$(first)" = '{"inboundTag":["probe"],"balancerTag":"dotdash"}' ] || die "back on ipv6=allow, the IPv6 rule remains: $(first)"
   until_status 204 "back on ipv6=allow the proxy port does not get out"
   echo "10-rules.sh: ipv6=block refuses IPv6 first, and names still get out"
 fi

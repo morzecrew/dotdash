@@ -1,81 +1,96 @@
 {{- /* The tun profile's config (compose/tun.yaml mounts it in place of
-config.json.tmpl's): the same providers, groups and rules, plus TUN, which takes
-every connection on the machine, its containers' and IPv6 included, and DNS
-answered with fake addresses whose names go to dotdash. On the host's network,
-so the proxy port listens on the listen address itself. Keep everything but
-"ipv6", "listeners", "tun" and "dns" as in config.json.tmpl; the smoke test
-compares them. */ -}}
+config.json.tmpl's): the same outbounds, observatory, balancer and rules, plus
+TUN, which takes every connection on the machine, its containers' and IPv6
+included, and DNS answered with fake addresses whose names go to dotdash.
+On the host's network, so the proxy port listens on the listen address
+itself. Rules only this file has name a TUN-only inbound (tun, dns-in,
+resolver) or the DNS module's tag (dns-internal); the smoke test drops those,
+the dns outbound, the inbounds, dns and fakedns, and compares the rest.
+
+Xray's own lookups, of dotdash's server names and of what direct rules send
+around it, go through the system resolver, which /etc/resolv.conf
+(resolv.conf.tmpl) points at the resolver inbound on 127.53.0.1:53: that
+forwards them directly, from Xray's own socket outside TUN, to dns_server.
+The host's own resolver would send them into TUN and get fake addresses
+back. */ -}}
+{{- define "match" -}}
+{{- $f := split "," . -}}
+{{- if lt (len $f) 2 }}{{ required (print "a rule needs a type and a value, such as DOMAIN-SUFFIX,example.com: " .) "" }}{{ end -}}
+{{- $t := upper (index $f 0) -}}{{- $v := index $f 1 -}}
+{{- if eq $t "DOMAIN" }}"domain": [{{ quote (print "full:" $v) }}]
+{{- else if eq $t "DOMAIN-SUFFIX" }}"domain": [{{ quote (print "domain:" $v) }}]
+{{- else if eq $t "DOMAIN-KEYWORD" }}"domain": [{{ quote (print "keyword:" $v) }}]
+{{- else if eq $t "DOMAIN-REGEX" }}"domain": [{{ quote (print "regexp:" $v) }}]
+{{- else if eq $t "GEOSITE" }}"domain": [{{ quote (print "geosite:" (lower $v)) }}]
+{{- else if or (eq $t "IP-CIDR") (eq $t "IP-CIDR6") }}"ip": [{{ quote $v }}]
+{{- else if eq $t "GEOIP" }}"ip": [{{ quote (print "geoip:" (lower $v)) }}]
+{{- else if eq $t "DST-PORT" }}"port": {{ quote $v }}
+{{- else }}{{ required (print "a rule's type is none of DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, DOMAIN-REGEX, GEOSITE, IP-CIDR, IP-CIDR6, GEOIP, DST-PORT: " .) "" }}
+{{- end -}}
+{{- end -}}
 {{- $lan := ne (default "127.0.0.1" .Parameters.listen) "127.0.0.1" -}}
 {{- $probe := required "set probe_url" .Parameters.probe_url -}}
+{{- $resolver := required "set dns_server" .Parameters.dns_server -}}
 {
-  "mode": "rule",
-  "log-level": "warning",
-  {{- /* IPv6 on, so TUN routes it too and it can't leave around dotdash; DNS
-  below still answers no AAAA records, so apps mostly use IPv4. With
-  ipv6=block, the first rule refuses what TUN takes in. */}}
-  "ipv6": true,
-  "listeners": [
-    {"name": "proxy", "type": "mixed", "listen": "{{ default "127.0.0.1" .Parameters.listen }}", "port": {{ .Parameters.port }},
-     "users": [{{ if $lan }}{"username": "{{ required "set proxy_user" .Parameters.proxy_user }}", "password": {"$file": "/run/secrets/proxy_password"}}{{ end }}]},
-    {"name": "probe", "type": "mixed", "listen": "127.0.0.1", "port": 7891, "users": []}
-  ],
-  {{- /* auto-detect-interface binds mihomo's own connections, to dotdash and
-  for the subscription, to the main interface, outside TUN. */}}
-  "tun": {
-    "enable": true,
-    "stack": "mixed",
-    "auto-route": true,
-    {{- /* TCP by an nftables redirect rather than through the TUN stack:
-    faster, and for a gateway's LAN too. */}}
-    "auto-redirect": true,
-    "auto-detect-interface": true,
-    "dns-hijack": ["any:53", "tcp://any:53"]
-  },
-  {{- /* Fake addresses: the name itself goes to dotdash, which resolves it.
-  Nameserver lookups follow the rules, so through dotdash too; the machine's
-  own resolver answers only for dotdash's server names and direct rules, as it
-  would without TUN, and on networks where only it answers. */}}
+  "log": {"loglevel": "warning"},
+  {{- /* Names asked on port 53 through TUN, or on dns_listen, get a fake
+  address from 198.18.0.0/15; a connection to it goes to dotdash with the
+  name, which the server resolves. IPv4 only: AAAA questions get no answer,
+  so apps use IPv4. The LAN's own names are asked of dns_server, as is. */}}
   "dns": {
-    "enable": true,
+    "tag": "dns-internal",
+    "queryStrategy": "UseIPv4",
+    "servers": [
+      {"address": "{{ $resolver }}", "domains": ["domain:lan", "domain:local", "domain:home.arpa"], "skipFallback": true},
+      "fakedns"
+    ]
+  },
+  "fakedns": [{"ipPool": "198.18.0.0/15", "poolSize": 65535}],
+  "inbounds": [
+    {"tag": "proxy", "listen": "{{ default "127.0.0.1" .Parameters.listen }}", "port": {{ .Parameters.port }}, "protocol": "socks",
+     "settings": {"udp": true{{ if $lan }}, "auth": "password",
+       "accounts": [{"user": "{{ required "set proxy_user" .Parameters.proxy_user }}", "pass": {"$file": "/run/secrets/proxy_password"}}]{{ end }}}},
+    {"tag": "probe", "listen": "127.0.0.1", "port": 7891, "protocol": "socks", "settings": {"udp": true}},
+    {{- /* Everything, IPv4 and IPv6, into the interface Meta (the gateway
+    check and its DOCKER-USER rules name it), as two halves of each family:
+    Xray adds its routes at metric 1, which a default route at metric 0
+    would beat, and a half is more specific than any default. Networks the
+    host is on are more specific still, and stay direct. Xray's own sockets
+    are bound to the main interface, outside TUN. */}}
+    {"tag": "tun", "protocol": "tun",
+     "settings": {"name": "Meta", "MTU": 1500, "autoSystemRoutingTable": ["0.0.0.0/1", "128.0.0.0/1", "::/1", "8000::/1"], "autoOutboundsInterface": "auto"},
+     "sniffing": {"enabled": true, "destOverride": ["fakedns", "http", "tls", "quic"]}},
+    {"tag": "resolver", "listen": "127.53.0.1", "port": 53, "protocol": "dokodemo-door",
+     "settings": {"address": "{{ $resolver }}", "port": 53, "network": "tcp,udp"}}
     {{- /* morzer wants a default for every parameter, so "none" means none. */}}
-    {{- if ne .Parameters.dns_listen "none" }}
-    "listen": "{{ .Parameters.dns_listen }}",
+    {{- if ne .Parameters.dns_listen "none" }}{{ $d := split ":" .Parameters.dns_listen }},
+    {"tag": "dns-in", "listen": "{{ index $d 0 }}", "port": {{ index $d 1 }}, "protocol": "dokodemo-door",
+     "settings": {"address": "{{ $resolver }}", "port": 53, "network": "tcp,udp"}}
     {{- end }}
-    "ipv6": false,
-    "enhanced-mode": "fake-ip",
-    "fake-ip-range": "198.18.0.1/16",
-    "fake-ip-filter": ["+.lan", "+.local", "+.home.arpa"],
-    "respect-rules": true,
-    "nameserver": ["https://1.1.1.1/dns-query"],
-    "proxy-server-nameserver": ["system://"],
-    "direct-nameserver": ["system://"]
-  },
-  "proxy-providers": {
-    "dotdash": {
-      "type": "http",
-      "url": {"$file": "/run/secrets/subscription_url"},
-      "interval": {{ .Parameters.subscription_interval }},
-      "proxy": "fetch",
-      "path": "./proxies/dotdash.yaml",
-      "health-check": {"enable": true, "url": "{{ $probe }}", "interval": 300}
-    }
-  },
-  "proxy-groups": [
-    {"name": "dotdash", "type": "url-test", "use": ["dotdash"], "url": "{{ $probe }}", "interval": 300,
-     "empty-fallback": "REJECT"},
-    {"name": "fetch", "type": "url-test", "use": ["dotdash"], "url": "{{ $probe }}", "interval": 300}
   ],
-  {{- /* The rule parameters, inline: each line a classical rule without its
-  target, blank and "#" lines skipped. A rule that matches nothing
-  (never.invalid) leads each list, so every kept line can follow a comma.
-  Backslashes are doubled before quote, which escapes only quotes. */}}
-  "rule-providers": {
-    "block": {"type": "inline", "behavior": "classical", "payload": ["DOMAIN,never.invalid"
-      {{- range lines .Parameters.block_rules }}{{ $l := trim . }}{{ if and $l (ne (slice $l 0 1) "#") }}, {{ quote (replace $l "\\" "\\\\") }}{{ end }}{{ end }}]},
-    "direct": {"type": "inline", "behavior": "classical", "payload": ["DOMAIN,never.invalid"
-      {{- range lines .Parameters.direct_rules }}{{ $l := trim . }}{{ if and $l (ne (slice $l 0 1) "#") }}, {{ quote (replace $l "\\" "\\\\") }}{{ end }}{{ end }}]}
-  },
-  {{- /* ipv6=block: every IPv6 destination refused first, before a direct
-  rule could send it around dotdash; names resolve to IPv4 (dns.ipv6 false). */}}
-  "rules": [{{ if eq .Parameters.ipv6 "block" }}"IP-CIDR6,::/0,REJECT,no-resolve", {{ end }}"RULE-SET,block,REJECT", "RULE-SET,direct,DIRECT", "MATCH,dotdash"]
+  "outbounds": [
+    {"tag": "block", "protocol": "blackhole"},
+    {"tag": "direct", "protocol": "freedom"},
+    {"tag": "dns", "protocol": "dns"}
+  ],
+  "observatory": {"subjectSelector": ["dotdash-"], "probeUrl": "{{ $probe }}", "probeInterval": "1m", "enableConcurrency": true},
+  "routing": {
+    "domainStrategy": "AsIs",
+    "balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}}],
+    "rules": [
+      {"type": "field", "inboundTag": ["resolver", "dns-internal"], "outboundTag": "direct"},
+      {"type": "field", "inboundTag": ["tun", "dns-in"], "port": "53", "outboundTag": "dns"},
+      {{- if eq .Parameters.ipv6 "block" }}
+      {"type": "field", "ip": ["::/0"], "outboundTag": "block"},
+      {{- end }}
+      {"type": "field", "inboundTag": ["probe"], "balancerTag": "dotdash"},
+      {{- range lines .Parameters.block_rules }}{{ $l := replace (trim .) "\\" "\\\\" }}{{ if and $l (ne (slice $l 0 1) "#") }}
+      {"type": "field", {{ template "match" $l }}, "outboundTag": "block"},
+      {{- end }}{{ end }}
+      {{- range lines .Parameters.direct_rules }}{{ $l := replace (trim .) "\\" "\\\\" }}{{ if and $l (ne (slice $l 0 1) "#") }}
+      {"type": "field", {{ template "match" $l }}, "outboundTag": "direct"},
+      {{- end }}{{ end }}
+      {"type": "field", "network": "tcp,udp", "balancerTag": "dotdash"}
+    ]
+  }
 }

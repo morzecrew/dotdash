@@ -2,9 +2,9 @@
 # Fail closed: with no links at all, as on a first start that cannot fetch the
 # subscription, the proxy port refuses what would go through dotdash rather
 # than sending it directly, while a direct rule still reaches its destination,
-# which shows mihomo is up and routing. The real URL then brings the links
-# back. Without "empty-fallback": "REJECT" the group would fall back to
-# COMPATIBLE, mihomo's DIRECT.
+# which shows Xray is up and routing. The real URL then brings the links
+# back. What the balancer can't place, with no dotdash- outbound to pick, goes
+# to the first outbound, block.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -18,8 +18,8 @@ fetch() { # <URL>: its status through the proxy port, or 000
 printf 'http://%s:8088/none' "${host}" | sudo morzer secret set subscription_url >/dev/null
 printf 'DOMAIN,example.com\n' | sudo morzer config set --set-file direct_rules=- >/dev/null
 home=$(sudo docker volume inspect -f '{{.Mountpoint}}' dotdash-client_home)
-sudo rm -f "${home}/proxies/dotdash.yaml"
-sudo docker restart "$(service_container mihomo)" >/dev/null
+sudo rm -f "${home}/subscription_url.json"
+sudo docker restart "$(service_container xray)" >/dev/null
 
 up=
 for _ in $(seq 30); do

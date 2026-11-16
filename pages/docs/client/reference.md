@@ -17,6 +17,7 @@ with `sudo morzer config edit <name>`.
 | `ipv6` | `allow` | `block`: every IPv6 destination refused before any other rule, a direct rule's included, so apps fall back to IPv4; with `tun` it is still taken in, so nothing leaves around dotdash |
 | `gateway` | `false` | under `tun`, this machine is its LAN's gateway, and `doctor` checks the host for it ([gateway](tun.md#a-gateway-for-the-lan)) |
 | `dns_listen` | `none` | under `tun`, the address and port that answers the LAN's DNS, such as `192.168.1.10:53` |
+| `dns_server` | `1.1.1.1` | under `tun`, the DNS server asked directly, around dotdash, for dotdash's server names, the direct rules and the LAN's own names ([tun](tun.md)) |
 
 Profiles (`installation.profile`): `tun`, the [whole machine](tun.md).
 

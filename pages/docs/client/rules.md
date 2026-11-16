@@ -6,15 +6,27 @@ hold the rules:
 - `direct_rules`: destinations reached directly, around dotdash;
 - `block_rules`: destinations refused.
 
-Each is mihomo's
-[classical rules](https://wiki.metacubex.one/en/config/rules/) without the
-target, one per line, with `#` for comments:
+Each holds rules in the apps' classical form without the target, one per
+line, with `#` for comments:
 
 ```text
 # around dotdash
 DOMAIN-SUFFIX,example.net
-IP-CIDR,192.168.0.0/16,no-resolve
+IP-CIDR,192.168.0.0/16
 ```
+
+| Rule | Matches |
+| --- | --- |
+| `DOMAIN,<name>` | that name alone |
+| `DOMAIN-SUFFIX,<name>` | the name and every name under it |
+| `DOMAIN-KEYWORD,<word>` | names that contain the word |
+| `DOMAIN-REGEX,<expression>` | names the regular expression matches |
+| `GEOSITE,<list>` | names on a list of Xray's geosite data, such as `category-ads-all` |
+| `IP-CIDR,<range>`, `IP-CIDR6,<range>` | addresses in the range |
+| `GEOIP,<list>` | addresses on a list of Xray's geoip data, such as `private` |
+| `DST-PORT,<port>` | that port, or a range such as `8000-9000` |
+
+A line of another type stops the change: `morzer` says which line.
 
 Edit them in an editor, or set them from a file:
 
@@ -23,11 +35,11 @@ sudo morzer config edit direct_rules
 sudo morzer config set --set-file direct_rules=rules.txt
 ```
 
-## No resolving for IP rules
+## IP rules match addresses, not names
 
-Give IP rules `no-resolve`. Without it, mihomo looks up every name on this
-machine's resolver to match them, which tells that resolver every name that
-goes through dotdash.
+An IP rule matches only an address an app gives. A name is never looked up
+to match one, so this machine's resolver never learns the names that go
+through dotdash. `no-resolve`, which older rules carry, changes nothing.
 
 ## When dotdash is out of reach
 

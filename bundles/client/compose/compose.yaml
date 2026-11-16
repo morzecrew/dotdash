@@ -1,16 +1,22 @@
-# dotdash-client. mihomo, with a SOCKS5 and HTTP proxy port that goes out
+# dotdash-client. Xray, with a SOCKS5 and HTTP proxy port that goes out
 # through dotdash, over whichever link of the device's subscription answers
 # fastest, except what the rules refuse or send directly. It asks for
 # proxy_user and proxy_password when published beyond 127.0.0.1
 # (templates/config.json.tmpl). A second, unpublished port inside the
-# container is the health check's.
+# container is the health check's and the subscription's.
+#
+# The subscription's outbounds come from the device's subscription URL, asked
+# for its Xray config: the image's {"$subscription": ...} fetches it at start
+# and every subscription_interval, through dotdash first and directly when
+# that fails, and restarts Xray on it when it changed and passes
+# `xray run -test` (templates/subscription.json.tmpl).
 #
 # Compose sees only what morzer gives it: DOTDASH_CLIENT_IMAGE_*,
 # DOTDASH_CLIENT_PARAM_*, DOTDASH_CLIENT_RELEASE_DIR, DOTDASH_CLIENT_SECRETS_DIR.
 
 services:
-  mihomo:
-    image: ${DOTDASH_CLIENT_IMAGE_MIHOMO:?set by morzer}
+  xray:
+    image: ${DOTDASH_CLIENT_IMAGE_XRAY:?set by morzer}
     restart: unless-stopped
     user: "65532:65532"
     read_only: true
@@ -18,25 +24,40 @@ services:
     security_opt: ["no-new-privileges:true"]
     pids_limit: 256
     mem_limit: 256m
+    # Room for Xray to exit when the image restarts it on a new subscription.
+    stop_grace_period: 15s
     logging:
       driver: local
       options: {max-size: 10m, max-file: "3"}
     environment:
-      MIHOMO_HEALTHCHECK_PROXY: http://127.0.0.1:7891
-      MIHOMO_HEALTHCHECK_URL: ${DOTDASH_CLIENT_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
-      MIHOMO_HEALTHCHECK_TIMEOUT: 7s
+      XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:7891
+      XRAY_HEALTHCHECK_URL: ${DOTDASH_CLIENT_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
+      XRAY_HEALTHCHECK_TIMEOUT: 7s
+      XRAY_SUBSCRIPTION_INTERVAL: ${DOTDASH_CLIENT_PARAM_SUBSCRIPTION_INTERVAL:-3600}s
+      # The probe port: through dotdash where it gets through, so it
+      # refreshes where only dotdash does.
+      XRAY_SUBSCRIPTION_PROXY: socks5h://127.0.0.1:7891
+      # The subscription's outbounds as Xray last accepted them, so a restart
+      # while the URL can't be reached starts on them.
+      XRAY_SUBSCRIPTION_CACHE: /var/lib/xray
     ports: ["${DOTDASH_CLIENT_PARAM_LISTEN:-127.0.0.1}:${DOTDASH_CLIENT_PARAM_PORT:-7890}:7890"]
+    tmpfs: ["/run/xray:mode=0700,uid=65532,gid=65532"]
     volumes:
       # Long form, so a missing file fails the start rather than becoming a
       # directory morzer cannot render over.
       - type: bind
         source: /etc/dotdash-client/config.json
-        target: /etc/mihomo/config.json
+        target: /etc/xray/10-client.json
         read_only: true
         bind: {create_host_path: false}
-      # The subscription as last fetched, so a restart while the URL can't be
-      # reached starts on it; mihomo's cache.db; the geodata.
-      - home:/var/lib/mihomo
+      # "tail": Xray puts this file's outbounds after the local ones, whose
+      # first, block, takes what nothing routes.
+      - type: bind
+        source: /etc/dotdash-client/subscription.json
+        target: /etc/xray/20-subscription-tail.json
+        read_only: true
+        bind: {create_host_path: false}
+      - home:/var/lib/xray
     secrets: [subscription_url, proxy_password]
     # No healthcheck here: hooks/healthy runs the probe itself (see there).
 

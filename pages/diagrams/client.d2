@@ -1,4 +1,4 @@
-# dotdash-client: the ways traffic reaches mihomo, and where it goes from there.
+# dotdash-client: the ways traffic reaches Xray, and where it goes from there.
 # Rendered by render.sh.
 direction: down
 
@@ -7,17 +7,17 @@ gw: "LAN devices whose\ngateway is this machine\n(tun, gateway=true)"
 
 machine: Client machine {
   own: "Its own connections\n(the tun profile)"
-  mihomo: mihomo {
-    label: "mihomo\nblock_rules, direct_rules,\nthe subscription's fastest link"
+  xray: Xray {
+    label: "Xray\nblock_rules, direct_rules,\nthe subscription's fastest link"
   }
-  own -> mihomo: TUN
+  own -> xray: TUN
 }
 
-apps -> machine.mihomo: port 7890
-gw -> machine.mihomo: TUN
+apps -> machine.xray: port 7890
+gw -> machine.xray: TUN
 
 dotdash: dotdash server\nor a relay
 direct: Direct {shape: cloud}
 
-machine.mihomo -> dotdash: everything else
-machine.mihomo -> direct: direct_rules {style.stroke-dash: 4}
+machine.xray -> dotdash: everything else
+machine.xray -> direct: direct_rules {style.stroke-dash: 4}
