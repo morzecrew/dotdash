@@ -36,7 +36,7 @@ sudo docker run -d --name dotdash-rig-backup --network dotdash-rig -p 18082:8080
   -v /rig/backup:/etc/xray:ro "${xray}" >/dev/null
 
 one="http://$(cat /rig/upstream.conn) name=rig"
-two="http://rigb:${pass}@${host}:18082 name=backup"
+two="name=backup | http://rigb:${pass}@${host}:18082"
 list() { printf '%s\n' "$@" | sudo morzer secret set upstreams >/dev/null; }
 restore() {
   sudo docker start dotdash-rig-upstream >/dev/null 2>&1 || true
