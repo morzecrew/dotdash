@@ -111,7 +111,7 @@ parameters:
     type: string
     default: t
     description: Zone delegated to this server for the DNS tunnel (xdns profile); a name with no dot is taken under the domain, so t is t.example.com
-    services: [xray]
+    services: [xray, subscription]
   xdns_bind:
     type: string
     default: 0.0.0.0
