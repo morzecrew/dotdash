@@ -193,7 +193,7 @@ watch_tunnel
 sudo morzer config set installation.profile=xdns,openvpn >/dev/null ||
   { tunnel_logs; die "could not turn on the openvpn profile with the proxy still the upstream"; }
 reaches "${target}" || die "the proxy stopped carrying traffic once the openvpn profile was on"
-list "${one}" "${dead} name=dead" "${good} name=vpn" || { tunnel_logs; die "could not list two OpenVPN lines"; }
+list "${one}" "name=dead | ${dead}" "${good} name=vpn" || { tunnel_logs; die "could not list two OpenVPN lines"; }
 settled || { tunnel_logs; die "vpn and vpn-socks did not settle after the list changed"; }
 sudo morzer config set upstream_pin=vpn >/dev/null || { tunnel_logs; die "could not pin the live OpenVPN line"; }
 # Only now is the proxy stopped, so nothing can leave through it.
