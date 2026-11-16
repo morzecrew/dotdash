@@ -2904,6 +2904,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>A server that resolves names itself (<code>resolve=gateway</code>), and the Xray config <code>client-config</code> prints, answer a name looked up before from the cache at once, even after it expired, and ask again in the background, for a day at most. A site revisited no longer waits for a lookup through the upstream.</p>
+</li>
+<li>
 <p><code>dotdash-client</code> runs Xray instead of mihomo. It asks the subscription URL for the device's Xray config and uses whichever outbound answers fastest. Update the server first: an older one serves no config, and the client then refuses traffic rather than send it around dotdash.</p>
 </li>
 <li>
