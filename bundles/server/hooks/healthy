@@ -137,7 +137,7 @@ why() {
     case $line in '' | '#'*) continue ;; esac
     # "[name=..] [group=..] | <url>", or the URL first with its tags after it.
     case $line in
-      '|'* | name=* | group=*) opts=${line%%|*}; read -r url <<<"${line#*|}" ;;
+      '|'* | name=* | group=*) opts=${line%%|*}; read -r url _ <<<"${line#*|}" ;;
       *) read -r url opts <<<"$line" ;;
     esac
     # The k-th OpenVPN line in the file, whatever its groups, runs on tun<k>.
