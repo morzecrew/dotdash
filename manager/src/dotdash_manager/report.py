@@ -3,6 +3,7 @@ since when its canaries watch it, how long it lasted before it first burnt,
 how often it burnt and for how long, which of its paths went off, how often
 a spare stood in; and across the relays, how long one lasts. Machines gone
 from the roster stay in it: how long a replaced relay lasted is the point.
+Then where the time goes, from the canaries' latencies (health.record).
 Pure: it reads nothing and writes nothing."""
 
 import statistics
@@ -50,8 +51,49 @@ def history(events: list, name: str, now: int) -> dict:
     return h
 
 
-def report(net: Network, events: list, now: int, stands: dict | None = None) -> list[str]:
-    """The report's lines; stands, the spares standing in now (state's stands)."""
+PATHS = ("reality", "xhttp", "xhttp-reality", "mkcp")
+
+
+def _median(values: list) -> int:
+    values = sorted(values)
+    return values[(len(values) - 1) // 2]
+
+
+def latency(net: Network, health: dict) -> list[str]:
+    """Each server's and relay's latencies, the median of its kept readings
+    per path, beside the canaries' own network leg (direct): the path's
+    time less that is what the target, its upstream and the site add. A
+    relay's path also shows what it adds over the servers' median on that
+    path: the hop to the server, as near as canaries on different networks
+    can tell. Machines with no latencies yet are left out."""
+    def med(name: str, p: str) -> int | None:
+        values = health.get(name, {}).get("latency", {}).get(p)
+        return _median(values) if values else None
+
+    servers = {p: [m for s in net.server if (m := med(s.name, p)) is not None] for p in PATHS}
+    lines = []
+    for m in [*net.server, *net.relay]:
+        cells = []
+        for p in PATHS:
+            ms = med(m.name, p)
+            if ms is None:
+                continue
+            hop = f" ({ms - _median(servers[p]):+d} over the servers)" if m.kind == "relay" and servers[p] else ""
+            cells.append(f"{p} {ms}{hop}")
+        if not cells:
+            continue
+        direct = med(m.name, "direct")
+        lines.append(f"{m.name:12} network {'-' if direct is None else direct:>5}   " + ", ".join(cells))
+    if not lines:
+        return []
+    return ["", "latency, ms (median of the last readings): the canaries' own network, then each path through it",
+            *lines]
+
+
+def report(net: Network, events: list, now: int, stands: dict | None = None,
+           health: dict | None = None) -> list[str]:
+    """The report's lines; stands, the spares standing in now (state's stands);
+    health, the state's record per machine, for the latencies."""
     stands = stands or {}
     kinds = {m.name: ("spare" if getattr(m, "spare", False) else m.kind) for m in [*net.server, *net.relay]}
     rank = {"server": 0, "relay": 1, "spare": 2}
@@ -84,4 +126,4 @@ def report(net: Network, events: list, now: int, stands: dict | None = None) -> 
         watched = span(min(going)) if min(going) == max(going) else f"{span(min(going))} to {span(max(going))}"
         lines.append(f"        {len(going)} never burnt, watched {watched} so far")
     lines.append(f"        {month} burn(s) in the last 30 days; spares waiting: {', '.join(waiting) or 'none'}")
-    return lines
+    return lines + latency(net, health or {})

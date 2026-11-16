@@ -74,6 +74,13 @@ canary's own outage isn't read as its target burnt:
 sudo morzer config set control_url=https://www.example.net/
 ```
 
+`facts` also times things, to 10 ms. `latency_ms` gives each transport that
+gets through the time its `probe_url` fetch took on a new connection:
+this network's leg, the target's, and on to the site. `direct_ms` is
+`control_url`'s fetch without dotdash, this network's leg alone. The
+manager's [report](../manager.md#where-the-time-goes) sets one against the
+other.
+
 ## Several servers, and relays
 
 A canary watches one server. With [several servers](../server/several-servers.md),

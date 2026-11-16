@@ -228,6 +228,25 @@ transport, a network, a provider) makes the next ones last longer. The log
 keeps the newest 2000 events, and starts with the first `sync` of a manager
 that has it.
 
+## Where the time goes
+
+Each canary's `facts` time its paths and its own network
+([`latency_ms` and `direct_ms`](canary/index.md)), and `sync` keeps each
+machine's last 24 readings. The report ends with their medians:
+
+```
+latency, ms (median of the last readings): the canaries' own network, then each path through it
+s            network    90   reality 210, xhttp 180
+r1           network   100   reality 290 (+80 over the servers)
+```
+
+A path's time less `network` is what dotdash adds: the target, its upstream
+and the site. For a relay, the figure in brackets is what it adds over the
+servers on the same path, which is the hop to the server. That's close
+enough to compare relays, but canaries sit on different networks, so it is
+no exact measure. A machine whose canaries predate these timings is left out
+until they update.
+
 ## Blocked paths
 
 Short of burnt, a relay can lose one path while its others get through: its

@@ -23,6 +23,11 @@
 # internet is whether control_url answers without dotdash, so a canary whose
 # own network is down is not read as its target blocked; null when
 # control_url is none.
+#
+# latency_ms gives each path that is up the time its probe_url fetch took, a
+# new connection's worth: this network's leg, the target's, and on to the
+# site. direct_ms is control_url's fetch without dotdash, this network's leg
+# alone, null when it didn't answer or is none. To 10 ms (/proc/uptime).
 set -eu
 : "${DOTDASH_SERVER:?}" "${DOTDASH_ADDRESS:?}" "${PROBE_URL:?}"
 freeze_url=${FREEZE_URL:-none}
@@ -36,10 +41,17 @@ str() {
 	case $1 in *[[:cntrl:]]*) echo "facts: a value holds a control character" >&2; exit 1 ;; esac
 	printf '"%s"' "$(printf '%s' "$1" | sed 's/[\\"]/\\&/g')"
 }
-up() { # <service>
+# %.0f, not %d: busybox awk's %d is 32 bits, which uptime in milliseconds
+# outgrows after 25 days.
+now_ms() { awk '{ printf "%.0f\n", $1 * 1000 }' /proc/uptime; }
+up() { # <service>: prints the milliseconds of the fetch that succeeded
 	for try in 1 2 3; do
-		XRAY_HEALTHCHECK_PROXY="http://$1:10809" XRAY_HEALTHCHECK_URL="$PROBE_URL" XRAY_HEALTHCHECK_TIMEOUT=7s \
-			/opt/xray/xray-entrypoint healthcheck >/dev/null 2>&1 && return 0
+		start=$(now_ms)
+		if XRAY_HEALTHCHECK_PROXY="http://$1:10809" XRAY_HEALTHCHECK_URL="$PROBE_URL" XRAY_HEALTHCHECK_TIMEOUT=7s \
+			/opt/xray/xray-entrypoint healthcheck >/dev/null 2>&1; then
+			echo $(($(now_ms) - start))
+			return 0
+		fi
 		[ "$try" = 3 ] || sleep 2
 	done
 	return 1
@@ -72,15 +84,23 @@ frozen_up() { # <service>: succeeds when a 64 KB upload to freeze_up_url gets no
 }
 
 # busybox wget checks no certificate: this asks only whether anything answers.
+direct=null
 case ${CONTROL_URL:-none} in
 none) internet=null ;;
-*) if wget -q -T 10 -O /dev/null "$CONTROL_URL" 2>/dev/null; then internet=true; else internet=false; fi ;;
+*)
+	start=$(now_ms)
+	if wget -q -T 10 -O /dev/null "$CONTROL_URL" 2>/dev/null; then
+		internet=true direct=$(($(now_ms) - start))
+	else
+		internet=false
+	fi
+	;;
 esac
 
-paths='' stalled='' stalled_up=''
+paths='' stalled='' stalled_up='' latency=''
 for svc in reality xhttp xhttp-reality mkcp; do
 	nc -z -w 2 "$svc" 10809 2>/dev/null || continue
-	if ! up "$svc"; then
+	if ! ms=$(up "$svc"); then
 		ok=false
 	elif [ -n "$freeze_url" ] && got=$(frozen "$svc"); then
 		ok=false
@@ -90,10 +110,12 @@ for svc in reality xhttp xhttp-reality mkcp; do
 		stalled_up="${stalled_up:+$stalled_up, }\"$svc\""
 	else
 		ok=true
+		latency="${latency:+$latency, }\"$svc\": $ms"
 	fi
 	paths="${paths:+$paths, }\"$svc\": $ok"
 done
 [ -n "$paths" ] || { echo "no transport answers: is the canary running?" >&2; exit 1; }
 
-printf '{"server": %s, "address": %s, "checked_at": %s, "internet": %s, "paths": {%s}, "stalled": {%s}, "stalled_up": [%s]}\n' \
-	"$(str "$DOTDASH_SERVER")" "$(str "$DOTDASH_ADDRESS")" "$(date +%s)" "$internet" "$paths" "$stalled" "$stalled_up"
+printf '{"server": %s, "address": %s, "checked_at": %s, "internet": %s, "paths": {%s}, "stalled": {%s}, "stalled_up": [%s], "latency_ms": {%s}, "direct_ms": %s}\n' \
+	"$(str "$DOTDASH_SERVER")" "$(str "$DOTDASH_ADDRESS")" "$(date +%s)" "$internet" "$paths" "$stalled" "$stalled_up" \
+	"$latency" "$direct"

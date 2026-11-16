@@ -9,6 +9,8 @@ from .roster import Network
 BURN_AFTER = 3
 # The event log keeps this many, the newest.
 EVENTS = 2000
+# Each machine keeps this many of its readings' latencies per path, the newest.
+LATENCIES = 24
 
 
 def _watched(f: dict, kind: str) -> tuple[str, str]:
@@ -30,6 +32,29 @@ def alive(row: dict | None) -> tuple[str, str]:
         return "down", (f"its own fleet row says {'?' if running is None else running} of "
                         f"{'?' if services is None else services} services run: likelier down than blocked, fix it first")
     return "blocked", f"its own fleet row ({row['age']} old) says it runs: blocked on the way, not down"
+
+
+def _median(values: list) -> int:
+    values = sorted(values)
+    return values[(len(values) - 1) // 2]
+
+
+def record(h: dict, seen: list[dict]) -> None:
+    """One reading's latencies into a machine's record: per path, the
+    median of what its canaries took through it (latency_ms), and
+    "direct", the median of their own network's leg (direct_ms); the
+    newest LATENCIES of each. Canaries from before facts carried them add
+    nothing."""
+    got: dict[str, list] = {}
+    for f in seen:
+        for p, ms in (f.get("latency_ms") or {}).items():
+            if isinstance(ms, int) and ms >= 0:
+                got.setdefault(p, []).append(ms)
+        if isinstance(f.get("direct_ms"), int) and f["direct_ms"] >= 0:
+            got.setdefault("direct", []).append(f["direct_ms"])
+    for p, values in got.items():
+        h.setdefault("latency", {}).setdefault(p, []).append(_median(values))
+        del h["latency"][p][:-LATENCIES]
 
 
 def judge(net: Network, facts: dict, health: dict, rows: dict | None = None) -> tuple[set[str], list[str]]:
@@ -63,6 +88,7 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None) -> 
         h["at"] = at
         # Per path too: up when any canary got through it this reading.
         ups = {p for f in seen for p, ok in f["paths"].items() if ok}
+        record(h, seen)
         h["paths"] = {p: 0 if p in ups else h.get("paths", {}).get(p, 0) + 1 for f in seen for p in f["paths"]}
         if ups:
             h["fails"] = 0
