@@ -30,7 +30,8 @@ grep -m1 '^{' <<<"${out}" | jq -e '.paths.hysteria2 == true and (.latency_ms.hys
   || die "facts under hysteria2: ${out}"
 echo "32-hysteria2.sh: under hysteria2 the canary gets through Hysteria2 too: ${got}"
 
-sudo morzer config unset installation.profile dotdash_hysteria2_pin >/dev/null || die "could not go back to no profile"
+sudo morzer config unset installation.profile >/dev/null || die "could not go back to no profile"
+sudo morzer config unset dotdash_hysteria2_pin >/dev/null || die "could not unset the pin"
 got=$(transports 1)
 jq -e 'keys == ["reality"]' <<<"${got}" >/dev/null || die "measure after going back: ${got}"
 echo "32-hysteria2.sh: back to no profile, the canary checks REALITY alone"
