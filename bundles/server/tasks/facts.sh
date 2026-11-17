@@ -24,4 +24,5 @@ printf ', "subscription": %s' "$([ "${SUBSCRIPTION:-false}" = true ] && echo tru
 [ -z "${XHTTP_REALITY_PORT:-}" ] || printf ', "xhttp_reality_port": %s' "$XHTTP_REALITY_PORT"
 [ -z "${KCP_PORT:-}" ] ||
   printf ', "kcp": {"port": %s, "header": %s, "open": %s}' "$KCP_PORT" "$(str "${KCP_HEADER:-dtls}")" "$(str "${KCP_OPEN:-none}")"
+[ -z "${HYSTERIA2_PORT:-}" ] || printf ', "hysteria2_port": %s' "$HYSTERIA2_PORT"
 printf '}\n'

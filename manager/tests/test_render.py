@@ -100,3 +100,11 @@ def test_nothing_applied_yet(net, st):
     assert set(docs) == {"a", "b"} and docs["a"]["unset"] == {"parameters": ["relays"]}
     assert docs["a"]["parameters"]["servers"] == "self"
     assert any(w.startswith("r1: waits") for w in waiting) and any(w.startswith("home: waits") for w in waiting)
+
+
+def test_a_canary_on_a_server_gets_its_hysteria2_port(st, facts):
+    net = loads(ROSTER.replace('watches = "r1"', 'watches = "a"'))
+    docs, _ = render(net, st, facts)
+    assert "dotdash_hysteria2_port" not in docs["c1"]["parameters"]
+    docs, _ = render(net, st, {**facts, "a": {**facts["a"], "hysteria2_port": 8443}})
+    assert docs["c1"]["parameters"]["dotdash_hysteria2_port"] == "8443"

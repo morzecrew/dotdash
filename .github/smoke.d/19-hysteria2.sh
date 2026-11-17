@@ -91,6 +91,8 @@ full_config | jq -e --arg auth "$(auth "${hl}")" '
     and $h[0].streamSettings.hysteriaSettings.auth == $auth' >/dev/null \
   || die "client-config's Xray config has no Hysteria2 outbound matching the link"
 published 443 udp || die "443/udp is not published under xdns,hysteria2"
+sudo morzer task run facts --output | jq -e '.hysteria2_port == 443' >/dev/null \
+  || die "the facts carry no hysteria2_port under xdns,hysteria2"
 published 53 udp || die "the DNS tunnel is not published under xdns,hysteria2"
 data=$(sudo docker volume inspect -f '{{.Mountpoint}}' dotdash_caddy_data)
 sudo cp "${data}/caddy/pki/authorities/local/root.crt" "${ca_dir}/root.crt"
@@ -131,6 +133,8 @@ echo "19-hysteria2.sh: hysteria2_up turns Brutal on toward a device that asks, a
 # 3. Back.
 set_config installation.profile=xdns
 ! published 443 udp || die "443/udp is still published after going back to xdns"
+sudo morzer task run facts --output | jq -e 'has("hysteria2_port") | not' >/dev/null \
+  || die "the facts still carry hysteria2_port after going back to xdns"
 published 53 udp || die "the DNS tunnel is not published after going back to xdns"
 [ "$(links)" = "${before}" ] || die "client-config prints other links after going back to xdns"
 locked_out 11096 || die "Hysteria2 still gets through after going back to xdns"

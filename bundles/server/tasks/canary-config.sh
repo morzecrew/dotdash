@@ -61,6 +61,15 @@ This server also serves XHTTP with REALITY: init with --profile xhttp-reality
 xhttp, to check that path beside REALITY.
 EOF
 fi
+# Set under the hysteria2 profile only, as for client-config.
+if [ -n "${HYSTERIA2_PORT:-}" ]; then
+  cat <<EOF
+
+This server also serves Hysteria2: init with --profile hysteria2
+--set dotdash_hysteria2_port=${HYSTERIA2_PORT}, in place of another profile, to
+check that path beside REALITY. It logs in as the same client.
+EOF
+fi
 # Set under the mkcp profile only, as for client-config.
 [ -n "${KCP_PORT:-}" ] || exit 0
 cat <<EOF

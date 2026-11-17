@@ -1,0 +1,13 @@
+{
+  "log": {"loglevel": "warning", "access": "none"},
+  "inbounds": [{"tag": "probe", "listen": "0.0.0.0", "port": 10809, "protocol": "http"}],
+  "outbounds": [{
+    "tag": "dotdash", "protocol": "hysteria",
+    "settings": {"version": 2, "address": "{{ required "set dotdash_address" .Parameters.dotdash_address }}", "port": {{ .Parameters.dotdash_hysteria2_port }}},
+    "streamSettings": {"network": "hysteria", "security": "tls",
+      "tlsSettings": {"serverName": "{{ .Parameters.dotdash_server }}", "alpn": ["h3"]
+{{- if ne .Parameters.dotdash_hysteria2_pin "none" }}, "pinnedPeerCertSha256": "{{ .Parameters.dotdash_hysteria2_pin }}"{{ end }}},
+      "hysteriaSettings": {"version": 2, "auth": {"$file": "/run/secrets/dotdash_id"}}
+    }
+  }]
+}

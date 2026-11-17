@@ -1,6 +1,6 @@
 #!/bin/sh
 # Measures each transport this canary runs, REALITY and, under their profiles,
-# XHTTP, XHTTP with REALITY or mKCP: N fetches of a URL through each, as JSON, with how many succeeded,
+# XHTTP, XHTTP with REALITY, mKCP or Hysteria2: N fetches of a URL through each, as JSON, with how many succeeded,
 # timed out or failed otherwise, and the latency of the ones that succeeded;
 # then three downloads of download_url through each, with how many completed
 # and the median Mbit/s. What it measures is the way through dotdash from this
@@ -97,7 +97,7 @@ measure() { # <service>: one JSON object
 }
 
 services=
-for svc in reality xhttp xhttp-reality mkcp; do
+for svc in reality xhttp xhttp-reality mkcp hysteria2; do
 	nc -z -w 2 "$svc" 10809 2>/dev/null && services="$services $svc"
 done
 [ -n "$services" ] || { echo "no transport answers: is the canary running?" >&2; exit 1; }

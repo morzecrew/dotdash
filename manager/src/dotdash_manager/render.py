@@ -113,6 +113,8 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
                    "dotdash_xhttp_path": keys["xhttp_path"], "dotdash_kcp_seed": keys["kcp_seed"]}
             if "xhttp_reality_port" in f:
                 params["dotdash_xhttp_reality_port"] = str(f["xhttp_reality_port"])
+            if "hysteria2_port" in f:
+                params["dotdash_hysteria2_port"] = str(f["hysteria2_port"])
         else:
             params = {"dotdash_server": f["site"], "dotdash_address": f["entry_host"], "dotdash_port": "443", "dotdash_public_key": f["public_key"]}
             sec = {"dotdash_encryption": f["encryption"], "dotdash_short_id": f["short_id"]}

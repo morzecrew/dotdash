@@ -98,7 +98,7 @@ none) internet=null ;;
 esac
 
 paths='' stalled='' stalled_up='' latency=''
-for svc in reality xhttp xhttp-reality mkcp; do
+for svc in reality xhttp xhttp-reality mkcp hysteria2; do
 	nc -z -w 2 "$svc" 10809 2>/dev/null || continue
 	if ! ms=$(up "$svc"); then
 		ok=false
