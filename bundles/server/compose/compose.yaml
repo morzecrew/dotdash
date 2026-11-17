@@ -79,7 +79,11 @@ services:
     tmpfs:
       - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
     secrets: [upstreams]
-    sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
+    # It ends devices' TCP on the published ports, so it sends their
+    # downloads: on BBR (tcp_congestion), which keeps its pace through the
+    # losses of a mobile or busy last mile where cubic halves at each one.
+    # This container's own namespace alone; the host keeps its own.
+    sysctls: {net.ipv4.ip_unprivileged_port_start: 0, net.ipv4.tcp_congestion_control: "${DOTDASH_PARAM_TCP_CONGESTION:-bbr}"}
     # At listen: 127.0.0.1 behind a web server of the operator's own that
     # passes this domain's connections through from 443.
     ports:

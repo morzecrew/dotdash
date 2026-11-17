@@ -58,4 +58,12 @@ if sudo grep -q '^  ipv6:$' /opt/dotdash-relay/current/manifest.yaml; then
     die "back on ipv6=allow, the block remains"
   echo "10-through.sh: ipv6=block ends IPv6 at the relay, and the device still gets out"
 fi
+# The relay ends devices' TCP, so it sends their downloads, on BBR in its own
+# namespace (tcp_congestion); running at all is the kernel's acceptance.
+if sudo grep -qF '  tcp_congestion:' /opt/dotdash-relay/current/manifest.yaml; then
+  cc=$(sudo docker inspect -f '{{index .HostConfig.Sysctls "net.ipv4.tcp_congestion_control"}}' "$(service_container xray)")
+  [ "${cc}" = bbr ] || die "the relay's congestion control is '${cc}', not bbr"
+  [ "$(fetch 18081)" = 204 ] || die "the listed device does not get out with the relay on BBR"
+  echo "10-through.sh: the relay sends on BBR in its own namespace"
+fi
 sudo docker rm -f relay-rig-phone >/dev/null
