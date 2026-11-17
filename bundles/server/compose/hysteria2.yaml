@@ -1,0 +1,33 @@
+# The hysteria2 profile: Hysteria2 (Xray's own), on a host UDP port of its
+# own (hysteria2_port). The inbound is in the Xray template under the same
+# profile, and the gate's forward in gate.json.tmpl.
+#
+# Its TLS is the site's own certificate, which Caddy takes and keeps: Xray
+# reads it from Caddy's data, read-only, and reloads it hourly. So Caddy
+# starts first here, and Xray after it, retrying until the certificate is
+# there on a fresh install; without the profile Caddy waits for Xray, as the
+# REALITY inbound hands it what has no key.
+services:
+  # Published by the gate, which forwards it to Xray's inbound on 8448.
+  gate:
+    ports:
+      - "${DOTDASH_PARAM_HYSTERIA2_PORT:-443}:8448/udp"
+
+  xray:
+    volumes:
+      - caddy_data:/caddy-data:ro
+    depends_on:
+      caddy:
+        condition: service_started
+
+  caddy:
+    depends_on: !reset {}
+
+  # Set under this profile only, as kcp_port is: with it, client-config
+  # prints the Hysteria2 link, and the subscriptions carry it.
+  client-config:
+    environment:
+      HYSTERIA2_PORT: ${DOTDASH_PARAM_HYSTERIA2_PORT:-443}
+  subscription:
+    environment:
+      HYSTERIA2_PORT: ${DOTDASH_PARAM_HYSTERIA2_PORT:-443}

@@ -37,6 +37,10 @@ kcp_header=${KCP_HEADER:-dtls}
 kcp_open=${KCP_OPEN:-none}
 kcp_seed=
 [ -z "$kcp_port" ] || kcp_seed=$(cat /run/secrets/kcp_seed)
+# Set by the hysteria2 profile's overlay only: Hysteria2, on UDP, a link and
+# outbound per server after the others. Its login is the device's UUID, its
+# TLS the site's own certificate, so the link carries no key but the name.
+hy2_port=${HYSTERIA2_PORT:-}
 # kcp_open=quic: a finalmask noise mask sends a QUIC-Initial-shaped packet
 # before the flow. headerType cannot carry it, so such a link gives the whole
 # mask list in fm= (url-encoded JSON) in place of seed and headerType, and the
@@ -191,6 +195,11 @@ vless://$1@$3:${kcp_port}?encryption=${enc}&type=kcp&headerType=${kcp_header}&se
 
 EOF
   fi
+  [ -z "$hy2_port" ] || cat <<EOF
+Hysteria2 via $3, on UDP port ${hy2_port} (Happ, v2rayN, v2rayNG, Hiddify, Streisand, mihomo, sing-box):
+hysteria2://$1@$3:${hy2_port}/?sni=$3#$2%20%5Bhy2%5D
+
+EOF
 }
 
 # blocked <off field> <path>: whether a relay's off= field names the path.
@@ -326,6 +335,13 @@ EOF
      "settings": {"address": "$s", "port": ${kcp_port}, "id": "$1", "encryption": "${enc}"},
      "streamSettings": {"network": "kcp", "finalmask": {"udp": [$(kcp_masks "$kcp_seed" "$kcp_header" "$kcp_open")]}}},
 EOF
+    [ -z "$hy2_port" ] || cat <<EOF
+    {"tag": "dotdash-$n-hy2", "protocol": "hysteria",
+     "settings": {"version": 2, "address": "$s", "port": ${hy2_port}},
+     "streamSettings": {"network": "hysteria", "security": "tls",
+       "tlsSettings": {"serverName": "$s", "alpn": ["h3"]},
+       "hysteriaSettings": {"version": 2, "auth": "$1"}}},
+EOF
   done; relay_outbounds "$1"; cdn_outbounds "$1"; } | sed '$ s/,$//'
 }
 
@@ -386,6 +402,7 @@ EOF
   elif [ -n "$xr_port" ]; then which="REALITY, XHTTP and XHTTP with REALITY"
   else which="REALITY and XHTTP"; fi
   [ -z "$kcp_port" ] || [ "$direct" = false ] || which="${which}, or mKCP"
+  [ -z "$hy2_port" ] || [ "$direct" = false ] || which="${which}, or Hysteria2"
   [ -z "$relays" ] || which="${which:+${which}, or }a relay"
   [ -z "$cdns" ] || which="${which:+${which}, or }XHTTP through a CDN"
   case $which in *', or '*) which="${which}," ;; esac

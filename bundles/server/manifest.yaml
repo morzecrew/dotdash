@@ -32,9 +32,13 @@ runtimes:
       # VLESS over mKCP on kcp_port: UDP, no TLS underneath, its packets
       # encrypted under kcp_seed and dressed in a kcp_header.
       mkcp: [compose/mkcp.yaml]
+      # Hysteria2 on hysteria2_port (UDP, 443 by default): QUIC under the
+      # site's own certificate, each device's UUID its login, a probe
+      # answered by the cover site over HTTP/3.
+      hysteria2: [compose/hysteria2.yaml]
     # installation.profile=xdns,xhttp-reality runs both; any of them with
     # openvpn, such as xdns,openvpn, adds the OpenVPN tunnels.
-    combinable: [xdns, xhttp-reality, openvpn, mkcp]
+    combinable: [xdns, xhttp-reality, openvpn, mkcp, hysteria2]
     options:
       project: dotdash
 
@@ -139,6 +143,16 @@ parameters:
     default: none
     description: "An opener in front of mKCP (the mkcp profile): quic sends a QUIC-Initial-shaped packet (finalmask noise) before the flow, so a network that lets QUIC out sees the start as QUIC; none sends nothing extra. Both ends must match, so devices take a change from new links (carried as fm=) or their subscription. The opener is a fixed shape; measure it on a canary before relying on it"
     services: [xray, subscription]
+  hysteria2_port:
+    type: port
+    default: 443
+    description: "Host UDP port of Hysteria2 (the hysteria2 profile): 443, where an HTTP/3 site answers; must differ from kcp_port, and from 53 with the DNS tunnel on"
+    services: [gate, subscription]
+  hysteria2_up:
+    type: int
+    default: 0
+    description: "Mbit/s Hysteria2 sends each device at whatever is lost on the way (Brutal), for a device that asks for it with its own rate; 0 keeps BBR, which backs off as TCP does. Set it to this server's uplink share per device, never more"
+    services: [xray]
   xdns_mtu:
     type: int
     default: 900
@@ -231,7 +245,7 @@ images:
   # hooks/policy reads the rendered config with it, run with no network, so
   # the host needs no jq of its own.
   jq: ghcr.io/jqlang/jq:1.8.1@sha256:4f34c6d23f4b1372ac789752cc955dc67c2ae177eb1b5860b75cdc5091ce6f91
-  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:389e5c9713cd64e8cbb12c95df482bc14918fe7e95eb5ec57f5ff3496a3ea9b7
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:e39b11531a5dc3f7214ddb58335055ed9e559b13557f094b177b625dbd35ee76
   # Upstream's Caddy with the acme-dns DNS module, for cert_issuer=acme-dns;
   # otherwise as upstream's image, whose shell the tasks also use.
   caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:93c19f705c2218d5fca7f7dcb694cae1ed3889588678aabb7af34c8892e2f2bb

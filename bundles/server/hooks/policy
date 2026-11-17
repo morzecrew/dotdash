@@ -10,7 +10,8 @@
 #     on), or here over DoH routed through the upstream, with the upstream
 #     handed addresses only (ForceIP, never UseIP's fallback to the name);
 #   - every VLESS inbound demands a listed client and VLESS decryption, no
-#     XHTTP inbound sets a flow, and anything else listens on loopback only;
+#     XHTTP inbound sets a flow, the Hysteria2 inbound demands a listed user,
+#     and anything else listens on loopback only;
 #   - the gate forwards its public inbounds to Xray only, carries Xray's hops
 #     to the upstreams lines alone, through balancers that pick among those
 #     lines and nothing else, and blocks everything else; its upstreams file
@@ -18,7 +19,8 @@
 #     no more OpenVPN lines than the tunnels' SOCKS hop carries;
 #   - Xray is on internal networks only, so it has no route out at all, and
 #     publishes nothing; the gate publishes only https_port and, where it
-#     forwards them, 53 for the DNS tunnel, xhttp_reality_port and kcp_port,
+#     forwards them, 53 for the DNS tunnel, xhttp_reality_port, kcp_port and
+#     hysteria2_port,
 #     and Caddy only http_port;
 #   - every container runs unprivileged: no added capability, read-only, uid
 #     65532, not on the host's network.
@@ -44,6 +46,7 @@ https_port=${DOTDASH_PARAM_HTTPS_PORT:-443}
 http_port=${DOTDASH_PARAM_HTTP_PORT:-80}
 xhttp_reality_port=${DOTDASH_PARAM_XHTTP_REALITY_PORT:-8443}
 kcp_port=${DOTDASH_PARAM_KCP_PORT:-8447}
+hysteria2_port=${DOTDASH_PARAM_HYSTERIA2_PORT:-443}
 jq_image=$(sed -n 's/^  jq: *//p' "${release}/manifest.yaml")
 [ -n "${jq_image}" ] || { echo "policy: the release pins no jq image" >&2; exit 1; }
 docker image inspect "${jq_image}" >/dev/null 2>&1 || docker pull -q "${jq_image}" >/dev/null
@@ -56,7 +59,7 @@ jq() { # <filter> <file>: the filter's output, or why the file does not parse
 
 violations=$(jq '
   [.outbounds[]?.tag] as $tags
-  | ([.inbounds[]?.tag] - ["reality", "xhttp", "xhttp-reality", "kcp", "xdns", "probe"]) as $extra
+  | ([.inbounds[]?.tag] - ["reality", "xhttp", "xhttp-reality", "kcp", "hysteria2", "xdns", "probe"]) as $extra
   | check($tags == ["upstream", "block"] or $tags == ["upstream", "block", "upstream6"];
       "the outbounds are \($tags), not upstream and block (and upstream6)"),
     (.outbounds[2]? // empty |
@@ -88,11 +91,13 @@ violations=$(jq '
       check(.settings.clients != null; "inbound \(.tag) accepts no client list"),
       check(.settings.decryption != null and .settings.decryption != "none"; "inbound \(.tag) has no VLESS decryption"),
       check(.streamSettings.network != "xhttp" or .settings.flow == null; "inbound \(.tag) sets a flow on XHTTP")),
-    (.inbounds[]? | select(.protocol != "vless") |
+    (.inbounds[]? | select(.protocol == "hysteria") |
+      check(.settings.users != null; "inbound \(.tag) accepts no user list")),
+    (.inbounds[]? | select(.protocol != "vless" and .protocol != "hysteria") |
       check(.listen == "127.0.0.1"; "inbound \(.tag) (\(.protocol)) listens beyond loopback"))
   ' "${config}")
 violations+=$'\n'$(jq '
-  ["public-tls", "public-dns", "public-xhttp-reality", "public-kcp"] as $public
+  ["public-tls", "public-dns", "public-xhttp-reality", "public-kcp", "public-hysteria2"] as $public
   | ["egress", "egress6", "backups", "backups6"] as $hops
   | ([.inbounds[]?.tag] - $public - $hops) as $extra
   | [.routing.rules[]? | select(.outboundTag == "inside") | .inboundTag // ["(any)"] | .[]] as $inward
@@ -188,6 +193,8 @@ while IFS='|' read -r name privileged readonly user network caps ports; do
       violations+=$'\n'"the gate publishes ${xhttp_reality_port}/tcp with no XHTTP with REALITY configured" ;;
     gate/8447/udp=*:"${kcp_port}") forwards public-kcp ||
       violations+=$'\n'"the gate publishes ${kcp_port}/udp with no mKCP configured" ;;
+    gate/8448/udp=*:"${hysteria2_port}") forwards public-hysteria2 ||
+      violations+=$'\n'"the gate publishes ${hysteria2_port}/udp with no Hysteria2 configured" ;;
     *) violations+=$'\n'"${name} publishes ${binding%%=*} on ${binding#*=}, which nothing should" ;;
     esac
   done

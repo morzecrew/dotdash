@@ -21,7 +21,7 @@ if [ "${SUBSCRIPTION:-false}" = true ]; then
     case $id in '' | '#'*) continue ;; esac
     token=$(printf '%s:%s' "$key" "$id" | sha256sum | cut -c1-32)
     sh /task/client-config.sh --full "$id" >"$out/.full"
-    grep '^vless://' "$out/.full" | base64 -w 0 >"$out/$token.new"
+    grep -E '^(vless|hysteria2)://' "$out/.full" | base64 -w 0 >"$out/$token.new"
     # The config: the lines from its opening brace to its closing one, each
     # alone on its line, as client-config prints it.
     sed -n '/^{$/,/^}$/p' "$out/.full" >"$out/$token.json.new"

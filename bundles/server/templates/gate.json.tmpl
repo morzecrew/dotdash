@@ -5,7 +5,7 @@ anything beyond the other containers, so it cannot send traffic anywhere
 directly whatever its config says. The gate carries what has to cross:
 
   - in: the public TLS port, and under their profiles UDP/53 for the DNS
-    tunnel, xhttp_reality_port and kcp_port, to Xray, byte for byte
+    tunnel, xhttp_reality_port, kcp_port and hysteria2_port, to Xray, byte for byte
     (dokodemo-door);
   - out: Xray's SOCKS hop (1080), and under ipv6=separate a second one for
     IPv6 (1081), to the ways out the upstreams secret lists. Xray never holds
@@ -38,6 +38,7 @@ whose destination is fixed to Xray, and everything else is blocked.
 {{- $withXdns := has "xdns" .Profiles -}}
 {{- $xhttpReality := has "xhttp-reality" .Profiles -}}
 {{- $kcp := has "mkcp" .Profiles -}}
+{{- $hy2 := has "hysteria2" .Profiles -}}
 {{- $v6 := eq .Parameters.ipv6 "separate" -}}
 {{- $udp := eq (print .Parameters.upstream_udp) "true" -}}
 {{- $mode := .Parameters.upstream_mode -}}
@@ -66,6 +67,10 @@ fails on its empty value with the message. */ -}}
 {{- if $kcp }}
     {"tag": "public-kcp", "listen": "0.0.0.0", "port": 8447, "protocol": "dokodemo-door",
      "settings": {"address": "xray", "port": 8447, "network": "udp"}},
+{{- end }}
+{{- if $hy2 }}
+    {"tag": "public-hysteria2", "listen": "0.0.0.0", "port": 8448, "protocol": "dokodemo-door",
+     "settings": {"address": "xray", "port": 8448, "network": "udp"}},
 {{- end }}
 {{- if eq $mode "failover" }}
     {"tag": "backups", "listen": "127.0.0.1", "port": 1090, "protocol": "socks",
@@ -116,7 +121,7 @@ fails on its empty value with the message. */ -}}
 {{- end }}
     ],
     "rules": [
-      {"inboundTag": ["public-tls"{{ if $withXdns }}, "public-dns"{{ end }}{{ if $xhttpReality }}, "public-xhttp-reality"{{ end }}{{ if $kcp }}, "public-kcp"{{ end }}], "outboundTag": "inside"},
+      {"inboundTag": ["public-tls"{{ if $withXdns }}, "public-dns"{{ end }}{{ if $xhttpReality }}, "public-xhttp-reality"{{ end }}{{ if $kcp }}, "public-kcp"{{ end }}{{ if $hy2 }}, "public-hysteria2"{{ end }}], "outboundTag": "inside"},
       {"inboundTag": ["egress"], "balancerTag": "egress"},
 {{- if eq $mode "failover" }}
       {"inboundTag": ["backups"], "balancerTag": "backups"},

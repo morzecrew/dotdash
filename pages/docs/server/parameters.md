@@ -15,6 +15,8 @@
 | `xhttp_reality_port` | `8443` | port for XHTTP with REALITY; not `https_port` or `http_port` |
 | `kcp_port` | `8447` | UDP port for [mKCP](mkcp.md); not 53 with the DNS tunnel |
 | `kcp_header` | `dtls` | what mKCP's packets start with: `dtls`, `srtp`, `utp`, `wechat`, `wireguard` or `none` |
+| `hysteria2_port` | `443` | UDP port for [Hysteria2](hysteria2.md); not `kcp_port` |
+| `hysteria2_up` | `0` | Mbit/s Hysteria2's Brutal sends each device at, for one that asks; `0` keeps BBR |
 | `tcp_congestion` | `bbr` | TCP congestion control toward devices, in the gate's own namespace: `bbr` keeps its pace through a lossy last mile; `cubic` for a kernel without `tcp_bbr` |
 | `log_level` | `error` | Xray error log; `warning` and below name failed destinations |
 | `probe_url` | `https://www.gstatic.com/generate_204` | fetched through the upstreams, and through each line every 30 s |
@@ -35,5 +37,5 @@
 Set one with `sudo morzer config set <name>=<value>`, unset it with
 `sudo morzer config unset <name>`, edit `relays` or `pools` with
 `sudo morzer config edit <name>`. Profiles (`installation.profile`): `xdns`,
-`xhttp-reality`, `mkcp`, `openvpn` (for an [OpenVPN line](upstreams.md#openvpn)),
+`xhttp-reality`, `mkcp`, `hysteria2`, `openvpn` (for an [OpenVPN line](upstreams.md#openvpn)),
 combined with commas, such as `xdns,xhttp-reality`.
