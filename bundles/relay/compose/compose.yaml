@@ -42,8 +42,9 @@ services:
       - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
     secrets: [vless_clients, vless_seed, reality_key, reality_short_id, xhttp_path, kcp_seed, dotdash_id, dotdash_encryption, dotdash_short_id]
     # REALITY on 443 inside too (Xray warns on any other port), as uid 65532
-    # with no capabilities.
-    sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
+    # with no capabilities. It ends devices' TCP, so it sends their downloads:
+    # on BBR (tcp_congestion), in this container's namespace alone.
+    sysctls: {net.ipv4.ip_unprivileged_port_start: 0, net.ipv4.tcp_congestion_control: "${DOTDASH_RELAY_PARAM_TCP_CONGESTION:-bbr}"}
     # Devices always dial 443: https_port and listen differ from 443 and
     # every address only behind a web server of the operator's own on this
     # machine that passes the relay's name through from 443.

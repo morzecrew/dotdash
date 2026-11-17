@@ -209,6 +209,12 @@ parameters:
     default: pages
     description: "What the cover site serves past your own files in /srv/dotdash (readable by uid 65532): pages, the bundled page; or your app's URL, http://cover-app:8080 for a container on the network dotdash_edge or http://host.docker.internal:8080 for one published on the host, which gets every request but a subscription's and XHTTP's"
     services: [caddy]
+  tcp_congestion:
+    type: enum
+    values: [bbr, cubic]
+    default: bbr
+    description: "TCP congestion control toward devices, in the gate's own namespace: bbr keeps its pace through a lossy last mile (6-50 times cubic's speed in the lab under 1.5-2% loss); cubic for a kernel without tcp_bbr, where bbr fails the apply and morzer rolls it back"
+    services: [gate]
   log_level:
     type: enum
     values: [debug, info, warning, error, none]
