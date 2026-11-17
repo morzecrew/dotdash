@@ -36,6 +36,7 @@ By default the canary checks REALITY on 443. Profiles add a transport:
 | `--profile xhttp` | XHTTP, through the server's cover site |
 | `--profile xhttp-reality` | [XHTTP with REALITY](../server/xhttp-reality.md), on its own port |
 | `--profile mkcp` | [mKCP](../server/mkcp.md), on its own UDP port |
+| `--profile hysteria2` | [Hysteria2](../server/hysteria2.md), on its own UDP port, logging in as the canary's id |
 
 Each check fetches `probe_url` through dotdash, in up to three tries.
 
@@ -109,6 +110,8 @@ relay's address no longer gets through for devices.
 | `dotdash_kcp_port` | `8447` | the server's `kcp_port` |
 | `dotdash_kcp_header` | `dtls` | the server's `kcp_header` |
 | `dotdash_kcp_open` | `none` | the server's `kcp_open` |
+| `dotdash_hysteria2_port` | `443` | the server's `hysteria2_port` |
+| `dotdash_hysteria2_pin` | `none` | the SHA-256 of a certificate Hysteria2 trusts in place of the public CAs, as `openssl x509 -fingerprint -sha256` prints it, for a server whose certificate no public CA signed; `none` checks it as devices do |
 | `dotdash_public_key` | none, given at `init` | the REALITY public key, the `pbk` of a link |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what each check fetches through dotdash; any 2xx is healthy |
 | `download_url` | `https://speed.cloudflare.com/__down?bytes=1000000` | what `measure` downloads for its Mbit/s, `https://` only; `none` skips the downloads |

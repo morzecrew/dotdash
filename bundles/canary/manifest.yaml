@@ -27,6 +27,8 @@ runtimes:
       xhttp-reality: [compose/xhttp-reality.yaml]
       # mKCP instead, on its own UDP port: the server's mkcp profile.
       mkcp: [compose/mkcp.yaml]
+      # Hysteria2 instead, on its own UDP port: the server's hysteria2 profile.
+      hysteria2: [compose/hysteria2.yaml]
     options:
       project: dotdash-canary
 
@@ -42,6 +44,9 @@ configuration:
     mode: "0644"
   - template: templates/mkcp.json.tmpl
     target: /etc/dotdash-canary/mkcp.json
+    mode: "0644"
+  - template: templates/hysteria2.json.tmpl
+    target: /etc/dotdash-canary/hysteria2.json
     mode: "0644"
 
 secrets:
@@ -81,11 +86,11 @@ parameters:
   dotdash_server:
     type: string
     description: The dotdash server's domain, sent as the TLS server name
-    services: [reality, xhttp, xhttp-reality, mkcp]
+    services: [reality, xhttp, xhttp-reality, mkcp, hysteria2]
   dotdash_address:
     type: string
     description: Where to connect, normally the same domain; an IP or a CDN's name also works
-    services: [reality, xhttp, xhttp-reality, mkcp]
+    services: [reality, xhttp, xhttp-reality, mkcp, hysteria2]
   dotdash_port:
     type: port
     default: 443
@@ -113,6 +118,16 @@ parameters:
     default: none
     description: The dotdash server's kcp_open (the mkcp profile); quic adds the QUIC-Initial-shaped opener, so the canary measures the same flow a device sees
     services: [mkcp]
+  dotdash_hysteria2_port:
+    type: port
+    default: 443
+    description: The dotdash server's hysteria2_port (the hysteria2 profile)
+    services: [hysteria2]
+  dotdash_hysteria2_pin:
+    type: string
+    default: none
+    description: "SHA-256 of a certificate Hysteria2 trusts in place of the public CAs, hex as openssl prints it: the server's own, or a CA's in the chain it sends, for a server whose certificate no public CA signed; none checks it as devices do"
+    services: [hysteria2]
   dotdash_public_key:
     type: string
     description: The REALITY public key, the pbk of a dotdash REALITY link
@@ -121,7 +136,7 @@ parameters:
     type: string
     default: https://www.gstatic.com/generate_204
     description: What each check fetches through dotdash; any 2xx is healthy
-    services: [reality, xhttp, xhttp-reality, mkcp]
+    services: [reality, xhttp, xhttp-reality, mkcp, hysteria2]
   # No services: only the measure task reads it, when it runs.
   download_url:
     type: string
@@ -152,7 +167,7 @@ images:
 # server or relay this canary watches, from that machine's facts. None of
 # these reaches a command line or a hook.
 managed:
-  parameters: [dotdash_server, dotdash_address, dotdash_port, dotdash_xhttp_reality_port, dotdash_kcp_port, dotdash_kcp_header, dotdash_kcp_open, dotdash_public_key]
+  parameters: [dotdash_server, dotdash_address, dotdash_port, dotdash_xhttp_reality_port, dotdash_kcp_port, dotdash_kcp_header, dotdash_kcp_open, dotdash_hysteria2_port, dotdash_public_key]
   secrets: [dotdash_id, dotdash_encryption, dotdash_short_id, dotdash_xhttp_path, dotdash_kcp_seed]
 
 # What this machine tells the authority it follows when sync.recipient is set:

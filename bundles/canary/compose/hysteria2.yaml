@@ -1,0 +1,14 @@
+# The hysteria2 profile: Hysteria2 too, on the server's hysteria2_port, for a
+# server under its hysteria2 profile. Its login is dotdash_id, which the
+# reality service already has.
+services:
+  hysteria2:
+    # By the release directory: morzer runs Compose from the release root,
+    # where a relative file is not found.
+    extends: {file: "${DOTDASH_CANARY_RELEASE_DIR:?set by morzer}/compose/compose.yaml", service: reality}
+    volumes:
+      - type: bind
+        source: /etc/dotdash-canary/hysteria2.json
+        target: /etc/xray/config.json
+        read_only: true
+        bind: {create_host_path: false}

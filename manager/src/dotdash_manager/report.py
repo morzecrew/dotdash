@@ -51,7 +51,7 @@ def history(events: list, name: str, now: int) -> dict:
     return h
 
 
-PATHS = ("reality", "xhttp", "xhttp-reality", "mkcp")
+PATHS = ("reality", "xhttp", "xhttp-reality", "mkcp", "hysteria2")
 
 
 def _median(values: list) -> int:
