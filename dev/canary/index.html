@@ -2080,6 +2080,10 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w">
 <td><code>--profile mkcp</code></td>
 <td><a href="../server/mkcp/">mKCP</a>, on its own UDP port</td>
 </tr>
+<tr>
+<td><code>--profile hysteria2</code></td>
+<td><a href="../server/hysteria2/">Hysteria2</a>, on its own UDP port, logging in as the canary's id</td>
+</tr>
 </tbody>
 </table>
 <p>Each check fetches <code>probe_url</code> through dotdash, in up to three tries.</p>
@@ -2173,6 +2177,16 @@ relay's address no longer gets through for devices.</p>
 <td><code>dotdash_kcp_open</code></td>
 <td><code>none</code></td>
 <td>the server's <code>kcp_open</code></td>
+</tr>
+<tr>
+<td><code>dotdash_hysteria2_port</code></td>
+<td><code>443</code></td>
+<td>the server's <code>hysteria2_port</code></td>
+</tr>
+<tr>
+<td><code>dotdash_hysteria2_pin</code></td>
+<td><code>none</code></td>
+<td>the SHA-256 of a certificate Hysteria2 trusts in place of the public CAs, as <code>openssl x509 -fingerprint -sha256</code> prints it, for a server whose certificate no public CA signed; <code>none</code> checks it as devices do</td>
 </tr>
 <tr>
 <td><code>dotdash_public_key</code></td>

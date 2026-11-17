@@ -2059,7 +2059,8 @@ revokes it here too.</p>
 <li><strong>One address, two families.</strong> Some networks block a server's whole
   address for minutes after they see UDP to it from abroad. That would take
   its TCP links with it, so give Hysteria2 a server, or an address, of its own
-  where you can, and measure it on a canary before relying on it.</li>
+  where you can, and measure it on a <a href="../../canary/">canary</a> (<code>--profile
+  hysteria2</code>) before relying on it.</li>
 <li><strong><code>hysteria2_up</code>:</strong> <code>0</code> by default: Hysteria2 runs BBR, which backs off on
   loss as TCP does. Set it to the Mbit/s each device may get, and a device
   that asks for a rate gets Brutal: a steady send at that rate whatever is

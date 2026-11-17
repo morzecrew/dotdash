@@ -2897,6 +2897,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>The canary's <code>hysteria2</code> profile checks a server's Hysteria2 beside REALITY, on <code>dotdash_hysteria2_port</code> (443), logging in as the canary's own id, in <code>measure</code> and <code>facts</code> too. A server under <code>hysteria2</code> tells <code>canary-config</code> and <code>dotdash-manager</code> its port, and the manager sets it on the canaries watching that server.</p>
+</li>
+<li>
 <p>The server's <code>hysteria2</code> profile: Hysteria2 on UDP 443 (<code>hysteria2_port</code>), under the site's own certificate, each device's UUID its login. Devices get a <code>[hy2]</code> link and an outbound. It runs BBR, or Brutal at <code>hysteria2_up</code> Mbit/s for devices that ask.</p>
 </li>
 <li>
