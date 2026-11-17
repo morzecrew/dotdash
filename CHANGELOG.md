@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The server's gate and a relay send to devices on BBR, in their own containers only (`tcp_congestion`). On a lossy last mile it kept 6-50 times cubic's speed in the lab. Set `tcp_congestion=cubic` on a kernel without `tcp_bbr`, where the apply would otherwise fail and roll back.
+
 - A server that resolves names itself (`resolve=gateway`), and the Xray config `client-config` prints, answer a name looked up before from the cache at once, even after it expired, and ask again in the background, for a day at most. A site revisited no longer waits for a lookup through the upstream.
 
 - `dotdash-client` runs Xray instead of mihomo. It asks the subscription URL for the device's Xray config and uses whichever outbound answers fastest. Update the server first: an older one serves no config, and the client then refuses traffic rather than send it around dotdash.

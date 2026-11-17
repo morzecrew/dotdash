@@ -75,6 +75,12 @@ parameters:
     default: none
     description: "Without the own-site profile, a site next to this machine, in its own network, that speaks TLS 1.3 and HTTP/2: devices send its name, and anyone probing port 443 gets its real handshake. With it, unused: the relay's own domain is the site"
     services: [xray]
+  tcp_congestion:
+    type: enum
+    values: [bbr, cubic]
+    default: bbr
+    description: "TCP congestion control toward devices, in Xray's own namespace: bbr keeps its pace through a lossy last mile; cubic for a kernel without tcp_bbr, where bbr fails the apply and morzer rolls it back"
+    services: [xray]
   https_port:
     type: port
     default: 443
