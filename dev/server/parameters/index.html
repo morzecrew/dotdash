@@ -705,6 +705,8 @@
       
         
       
+        
+      
     
     
     
@@ -875,6 +877,33 @@
     
   
   mKCP
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hysteria2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Hysteria2
 
     
   </span>
@@ -2071,6 +2100,16 @@
 <td>what mKCP's packets start with: <code>dtls</code>, <code>srtp</code>, <code>utp</code>, <code>wechat</code>, <code>wireguard</code> or <code>none</code></td>
 </tr>
 <tr>
+<td><code>hysteria2_port</code></td>
+<td><code>443</code></td>
+<td>UDP port for <a href="../hysteria2/">Hysteria2</a>; not <code>kcp_port</code></td>
+</tr>
+<tr>
+<td><code>hysteria2_up</code></td>
+<td><code>0</code></td>
+<td>Mbit/s Hysteria2's Brutal sends each device at, for one that asks; <code>0</code> keeps BBR</td>
+</tr>
+<tr>
 <td><code>tcp_congestion</code></td>
 <td><code>bbr</code></td>
 <td>TCP congestion control toward devices, in the gate's own namespace: <code>bbr</code> keeps its pace through a lossy last mile; <code>cubic</code> for a kernel without <code>tcp_bbr</code></td>
@@ -2155,7 +2194,7 @@
 <p>Set one with <code>sudo morzer config set &lt;name&gt;=&lt;value&gt;</code>, unset it with
 <code>sudo morzer config unset &lt;name&gt;</code>, edit <code>relays</code> or <code>pools</code> with
 <code>sudo morzer config edit &lt;name&gt;</code>. Profiles (<code>installation.profile</code>): <code>xdns</code>,
-<code>xhttp-reality</code>, <code>mkcp</code>, <code>openvpn</code> (for an <a href="../upstreams/#openvpn">OpenVPN line</a>),
+<code>xhttp-reality</code>, <code>mkcp</code>, <code>hysteria2</code>, <code>openvpn</code> (for an <a href="../upstreams/#openvpn">OpenVPN line</a>),
 combined with commas, such as <code>xdns,xhttp-reality</code>.</p>
 
 
