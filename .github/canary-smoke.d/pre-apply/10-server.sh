@@ -27,10 +27,11 @@ sid=$(openssl rand -hex 8)
 path=$(random)
 seed=$(openssl rand -hex 16)
 
-mkdir -p /rig/server
+mkdir -p /rig/server /rig/server-tls
+# Beside the config, not in it: the image reads every file in /etc/xray as JSON.
 openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 2 -subj /CN=www.gstatic.com \
-  -addext subjectAltName=DNS:www.gstatic.com -keyout /rig/server/hy2.key -out /rig/server/hy2.crt 2>/dev/null
-openssl x509 -in /rig/server/hy2.crt -noout -fingerprint -sha256 | sed 's/^.*=//' >/rig/hy2-pin
+  -addext subjectAltName=DNS:www.gstatic.com -keyout /rig/server-tls/hy2.key -out /rig/server-tls/hy2.crt 2>/dev/null
+openssl x509 -in /rig/server-tls/hy2.crt -noout -fingerprint -sha256 | sed 's/^.*=//' >/rig/hy2-pin
 jq -n --arg id "${id}" --arg key "${private}" --arg sid "${sid}" --arg path "/${path}" --arg seed "${seed}" '
   {target: "www.gstatic.com:443", serverNames: ["www.gstatic.com"], privateKey: $key, shortIds: [$sid]} as $reality
   | {inbounds: [
@@ -48,14 +49,14 @@ jq -n --arg id "${id}" --arg key "${private}" --arg sid "${sid}" --arg path "/${
       {listen: "0.0.0.0", port: 8448, protocol: "hysteria",
        settings: {version: 2, users: [{auth: $id}]},
        streamSettings: {network: "hysteria", security: "tls",
-         tlsSettings: {alpn: ["h3"], certificates: [{certificateFile: "/etc/xray/hy2.crt", keyFile: "/etc/xray/hy2.key"}]},
+         tlsSettings: {alpn: ["h3"], certificates: [{certificateFile: "/tls/hy2.crt", keyFile: "/tls/hy2.key"}]},
          hysteriaSettings: {version: 2}}}],
     outbounds: [{protocol: "freedom",
       settings: {finalRules: [{action: "allow", ip: ["172.16.0.0/12", "10.0.0.0/8", "192.168.0.0/16"]}]}}]}' \
   >/rig/server/config.json
-chmod -R a+rX /rig/server
+chmod -R a+rX /rig/server /rig/server-tls
 sudo docker run -d --name canary-rig-server -p 443:443 -p 8443:8443 -p 8447:8447/udp -p 443:8448/udp --sysctl net.ipv4.ip_unprivileged_port_start=0 \
-  -v /rig/server:/etc/xray:ro "${xray}" >/dev/null
+  -v /rig/server:/etc/xray:ro -v /rig/server-tls:/tls:ro "${xray}" >/dev/null
 
 sudo morzer config set "dotdash_address=${host}"
 sudo morzer config set "dotdash_public_key=${public}"
