@@ -2156,6 +2156,11 @@
 <td>what the health check fetches through dotdash; any 2xx is healthy</td>
 </tr>
 <tr>
+<td><code>tcp_congestion</code></td>
+<td><code>bbr</code></td>
+<td>TCP congestion control toward devices, in Xray's own namespace: <code>bbr</code> keeps its pace through a lossy last mile; <code>cubic</code> for a kernel without <code>tcp_bbr</code></td>
+</tr>
+<tr>
 <td><code>ipv6</code></td>
 <td><code>allow</code></td>
 <td><code>block</code>: IPv6 destinations end at the relay and never reach a server; names go on</td>

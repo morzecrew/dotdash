@@ -2071,6 +2071,11 @@
 <td>what mKCP's packets start with: <code>dtls</code>, <code>srtp</code>, <code>utp</code>, <code>wechat</code>, <code>wireguard</code> or <code>none</code></td>
 </tr>
 <tr>
+<td><code>tcp_congestion</code></td>
+<td><code>bbr</code></td>
+<td>TCP congestion control toward devices, in the gate's own namespace: <code>bbr</code> keeps its pace through a lossy last mile; <code>cubic</code> for a kernel without <code>tcp_bbr</code></td>
+</tr>
+<tr>
 <td><code>log_level</code></td>
 <td><code>error</code></td>
 <td>Xray error log; <code>warning</code> and below name failed destinations</td>

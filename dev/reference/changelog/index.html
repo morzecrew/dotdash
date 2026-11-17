@@ -2904,6 +2904,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>The server's gate and a relay send to devices on BBR, in their own containers only (<code>tcp_congestion</code>). On a lossy last mile it kept 6-50 times cubic's speed in the lab. Set <code>tcp_congestion=cubic</code> on a kernel without <code>tcp_bbr</code>, where the apply would otherwise fail and roll back.</p>
+</li>
+<li>
 <p>A server that resolves names itself (<code>resolve=gateway</code>), and the Xray config <code>client-config</code> prints, answer a name looked up before from the cache at once, even after it expired, and ask again in the background, for a day at most. A site revisited no longer waits for a lookup through the upstream.</p>
 </li>
 <li>
