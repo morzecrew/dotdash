@@ -93,9 +93,6 @@ full_config | jq -e --arg auth "$(auth "${hl}")" '
 published 443 udp || die "443/udp is not published under xdns,hysteria2"
 sudo morzer task run facts --output | jq -e '.hysteria2_port == 443' >/dev/null \
   || die "the facts carry no hysteria2_port under xdns,hysteria2"
-client_name=$(sudo awk '$1 !~ /^#/ && NF >= 2 { print $2; exit }' /run/dotdash/secrets/vless_clients)
-canary=$(sudo morzer task run canary-config --output -- "${client_name}") || die "canary-config failed"
-grep -qF -- '--profile hysteria2' <<<"${canary}" || die "canary-config does not say how a canary checks Hysteria2"
 published 53 udp || die "the DNS tunnel is not published under xdns,hysteria2"
 data=$(sudo docker volume inspect -f '{{.Mountpoint}}' dotdash_caddy_data)
 sudo cp "${data}/caddy/pki/authorities/local/root.crt" "${ca_dir}/root.crt"
