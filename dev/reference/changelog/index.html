@@ -1919,6 +1919,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Fixed
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2087,7 +2098,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Fixed
@@ -2148,7 +2159,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Fixed
@@ -2265,7 +2276,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_2" class="md-nav__link">
+  <a href="#fixed_3" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Fixed
@@ -2410,6 +2421,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Fixed
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2578,7 +2600,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Fixed
@@ -2639,7 +2661,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Fixed
@@ -2756,7 +2778,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_2" class="md-nav__link">
+  <a href="#fixed_3" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
         Fixed
@@ -2957,6 +2979,10 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p><code>dotdash-acme-dns</code> needs morzer 0.17.1, which backs up a machine set up without a recovery key, so updates there no longer depend on the placeholder secret the bundle carried; the secret is gone.</p>
 </li>
 </ul>
+<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>dotdash-client</code> under <code>tun</code> no longer sends traffic around dotdash while Xray is down, after a crash or on the restart for a new subscription. A kill switch keeps routing rules that let only Xray's own connections and the LAN out then, and <code>doctor</code> checks them.</li>
+</ul>
 <h2 id="080-2026-11-15">[0.8.0] - 2026-11-15<a class="headerlink" href="#080-2026-11-15" title="Permanent link">&para;</a></h2>
 <h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
 <ul>
@@ -3142,7 +3168,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <ul>
 <li>The <code>xdns-xhttp-reality</code> profile goes in 0.6.0, not in this patch release as 0.5.0 announced: removing it would break a server still set to it. <code>xdns,xhttp-reality</code> deploys the same; switch before 0.6.0 with <code>sudo morzer config set installation.profile=xdns,xhttp-reality</code>.</li>
 </ul>
-<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>The command <code>relay-config</code> prints for the relay machine's last step, <code>relay-entry</code>, now includes <code>--output</code>; without it morzer ran the task and showed nothing, not the line the <code>relays</code> parameter needs.</li>
 </ul>
@@ -3190,7 +3216,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <ul>
 <li>The <code>xdns-xhttp-reality</code> profile: <code>xdns,xhttp-reality</code> deploys the same. It goes in the next release.</li>
 </ul>
-<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_2">Fixed<a class="headerlink" href="#fixed_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>bootstrap.sh</code> installs morzer 0.15.0, which the bundles require. It installed 0.13.0, so <code>init</code> on a freshly prepared host refused the release until <code>morzer self-update</code>.</li>
 </ul>
@@ -3273,7 +3299,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p><code>client-config</code> prints one complete Xray config per device, for one server too: it uses whichever of REALITY and XHTTP answers fastest on any listed server, and the DNS tunnel only when none answers, instead of printing the tunnel's outbound alone.</p>
 </li>
 </ul>
-<h3 id="fixed_2">Fixed<a class="headerlink" href="#fixed_2" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_3">Fixed<a class="headerlink" href="#fixed_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
 <p>The cover site's error answers, such as 404 and 405, no longer name the server, and carry the site's headers like its pages do. A prober could tell them apart.</p>

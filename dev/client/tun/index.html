@@ -2071,7 +2071,10 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w">
 </code></pre></div>
 </li>
 <li>
-<p>With dotdash out of reach, nothing gets out around it.</p>
+<p>With dotdash out of reach, nothing gets out around it. Nor while Xray
+  itself is down, after a crash or on the restart for a new subscription:
+  a kill switch keeps routing rules that let only Xray's own connections and
+  the LAN out then. <code>sudo morzer doctor</code> checks they are in place.</p>
 </li>
 <li>Networks the machine is directly on, such as its LAN, stay reachable
   directly.</li>
@@ -2080,7 +2083,13 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w">
 </ul>
 <p>Xray then runs as root with <code>NET_ADMIN</code>, <code>DAC_OVERRIDE</code> and
 <code>NET_BIND_SERVICE</code>, on the host's network, with <code>/dev/net/tun</code>: a TUN
-interface takes nothing less. Its root filesystem stays read-only.</p>
+interface takes nothing less. Its root filesystem stays read-only.
+The kill switch runs beside it as root with <code>NET_ADMIN</code> alone. Leaving the
+profile, or stopping dotdash-client, takes its rules out. If it was killed
+instead and the machine reaches nothing but its LAN, take them out by hand:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>ip<span class="w"> </span>rule<span class="w"> </span>del<span class="w"> </span>pref<span class="w"> </span><span class="m">9001</span><span class="p">;</span><span class="w"> </span>sudo<span class="w"> </span>ip<span class="w"> </span>rule<span class="w"> </span>del<span class="w"> </span>pref<span class="w"> </span><span class="m">9002</span>
+sudo<span class="w"> </span>ip<span class="w"> </span>-6<span class="w"> </span>rule<span class="w"> </span>del<span class="w"> </span>pref<span class="w"> </span><span class="m">9001</span><span class="p">;</span><span class="w"> </span>sudo<span class="w"> </span>ip<span class="w"> </span>-6<span class="w"> </span>rule<span class="w"> </span>del<span class="w"> </span>pref<span class="w"> </span><span class="m">9002</span>
+</code></pre></div>
 <h2 id="a-gateway-for-the-lan">A gateway for the LAN<a class="headerlink" href="#a-gateway-for-the-lan" title="Permanent link">&para;</a></h2>
 <p>Under <code>tun</code>, the machine can be its LAN's gateway: devices whose gateway is
 its address go through dotdash too, with nothing to set up on them.</p>
