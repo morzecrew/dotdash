@@ -137,6 +137,11 @@ parameters:
     default: https://www.gstatic.com/generate_204
     description: What each check fetches through dotdash; any 2xx is healthy
     services: [reality, xhttp, xhttp-reality, mkcp, hysteria2]
+  udp_target:
+    type: string
+    default: "1.1.1.1:53"
+    description: "A DNS server, host:port, that facts asks over UDP through each transport, to tell whether the server carries devices' UDP (upstream_udp): without it, WebRTC on a device behind a TUN has no public address"
+    services: [reality, xhttp, xhttp-reality, mkcp, hysteria2]
   # No services: only the measure task reads it, when it runs.
   download_url:
     type: string

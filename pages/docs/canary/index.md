@@ -82,6 +82,11 @@ this network's leg, the target's, and on to the site. `direct_ms` is
 manager's [report](../manager.md#where-the-time-goes) sets one against the
 other.
 
+`facts` also asks a DNS server (`udp_target`, `1.1.1.1:53`) over UDP through
+each transport and gives the result as `udp`: whether the server carries
+devices' UDP (`upstream_udp`), which decides what WebRTC shows behind a TUN
+([WebRTC](../server/leaks.md#webrtc)).
+
 `facts` also tries REALITY with its ClientHello split into small TLS records,
 sent apart, and gives the result as `reality_split`. REALITY failing while
 the split one gets through is a box blocking the server's name by SNI,
