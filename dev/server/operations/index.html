@@ -1196,6 +1196,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Metrics
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-the-checks-say" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2033,6 +2044,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Metrics
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-the-checks-say" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2266,6 +2288,59 @@ them.</p>
 <p><code>doctor</code> fails when the provider moves you:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">probe_url</span><span class="o">=</span>https://api.ipify.org<span class="w"> </span><span class="s1">'probe_expect=^203\.0\.113\.7\s*$'</span>
 </code></pre></div>
+<h2 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h2>
+<p>With morzer's own metrics in the node exporter's textfile directory
+(<a href="https://github.com/morzecrew/morzer/tree/main/pages/docs/operating"><code>metrics.textfile</code></a>),
+the <code>metrics</code> profile adds Xray's and the gate's's, in the same directory: each one's traffic per inbound and outbound, and the gate's verdicts on its upstreams. Nothing is
+counted per device. The exporters run as 65532, so the directory has to be
+writable by it:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>setfacl<span class="w"> </span>-m<span class="w"> </span>u:65532:rwx<span class="w"> </span>/var/lib/prometheus/node-exporter
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">metrics_textfile</span><span class="o">=</span>/var/lib/prometheus/node-exporter<span class="w">   </span><span class="c1"># its default</span>
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>xdns,metrics<span class="w">    </span><span class="c1"># beside the profiles you run</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Labels</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dotdash_xray_up</code></td>
+<td><code>role</code></td>
+<td>1 when the exporter read Xray's counters</td>
+</tr>
+<tr>
+<td><code>dotdash_inbound_bytes_total</code></td>
+<td><code>role</code>, <code>inbound</code>, <code>direction</code></td>
+<td>bytes through an inbound since Xray started</td>
+</tr>
+<tr>
+<td><code>dotdash_outbound_bytes_total</code></td>
+<td><code>role</code>, <code>outbound</code>, <code>direction</code></td>
+<td>bytes through an outbound since Xray started</td>
+</tr>
+<tr>
+<td><code>dotdash_observatory_alive</code></td>
+<td><code>role</code>, <code>outbound</code></td>
+<td>1 when the last check got through an upstream</td>
+</tr>
+<tr>
+<td><code>dotdash_observatory_delay_seconds</code></td>
+<td><code>role</code>, <code>outbound</code></td>
+<td>that check's time, while it gets through</td>
+</tr>
+<tr>
+<td><code>dotdash_xray_heap_bytes</code></td>
+<td><code>role</code></td>
+<td>Xray's Go heap, beside its <code>GOMEMLIMIT</code></td>
+</tr>
+</tbody>
+</table>
+<p>Every series also carries <code>product</code>. <code>rate(dotdash_inbound_bytes_total[5m])</code>
+per inbound shows which transport devices use, and one falling to zero while the others carry on is what a block on it looks like.</p>
 <h2 id="what-the-checks-say">What the checks say<a class="headerlink" href="#what-the-checks-say" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Alerts</strong> cover failed applies, updates and backups, and each morning's

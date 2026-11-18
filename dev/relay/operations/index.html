@@ -1538,6 +1538,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Metrics
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#updates" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2088,6 +2099,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Metrics
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#updates" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2269,6 +2291,59 @@ when the relay can't reach the server. Have them alert you:</p>
 <p>What the relay can't see is whether devices reach it: only a machine on the
 networks devices use can. A <a href="../../canary/#on-a-mobile-line">canary on a mobile line</a>
 checks the relay as it checks a server, with the commands <code>relay-entry</code> prints.</p>
+<h2 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h2>
+<p>With morzer's own metrics in the node exporter's textfile directory
+(<a href="https://github.com/morzecrew/morzer/tree/main/pages/docs/operating"><code>metrics.textfile</code></a>),
+the <code>metrics</code> profile adds the relay's, in the same directory: its traffic per inbound and outbound, and with several servers its verdicts on each. Nothing is
+counted per device. The exporters run as 65532, so the directory has to be
+writable by it:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>setfacl<span class="w"> </span>-m<span class="w"> </span>u:65532:rwx<span class="w"> </span>/var/lib/prometheus/node-exporter
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">metrics_textfile</span><span class="o">=</span>/var/lib/prometheus/node-exporter<span class="w">   </span><span class="c1"># its default</span>
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>metrics<span class="w">    </span><span class="c1"># beside own-site or mkcp if you run them</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Labels</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dotdash_xray_up</code></td>
+<td><code>role</code></td>
+<td>1 when the exporter read Xray's counters</td>
+</tr>
+<tr>
+<td><code>dotdash_inbound_bytes_total</code></td>
+<td><code>role</code>, <code>inbound</code>, <code>direction</code></td>
+<td>bytes through an inbound since Xray started</td>
+</tr>
+<tr>
+<td><code>dotdash_outbound_bytes_total</code></td>
+<td><code>role</code>, <code>outbound</code>, <code>direction</code></td>
+<td>bytes through an outbound since Xray started</td>
+</tr>
+<tr>
+<td><code>dotdash_observatory_alive</code></td>
+<td><code>role</code>, <code>outbound</code></td>
+<td>1 when the last check got through a server</td>
+</tr>
+<tr>
+<td><code>dotdash_observatory_delay_seconds</code></td>
+<td><code>role</code>, <code>outbound</code></td>
+<td>that check's time, while it gets through</td>
+</tr>
+<tr>
+<td><code>dotdash_xray_heap_bytes</code></td>
+<td><code>role</code></td>
+<td>Xray's Go heap, beside its <code>GOMEMLIMIT</code></td>
+</tr>
+</tbody>
+</table>
+<p>Every series also carries <code>product</code>. <code>rate(dotdash_inbound_bytes_total[5m])</code>
+per inbound shows which transport devices use.</p>
 <h2 id="updates">Updates<a class="headerlink" href="#updates" title="Permanent link">&para;</a></h2>
 <p>As for the server: <code>sudo morzer self-update</code> when a release needs a newer
 morzer, then <code>sudo morzer update --stage &amp;&amp; sudo morzer update --to &lt;version&gt;</code>.

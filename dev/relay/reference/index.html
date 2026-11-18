@@ -2180,6 +2180,11 @@
 <td>where to connect when <code>dotdash_servers</code> names one server, such as its IP; <code>none</code> reaches each server by its name</td>
 </tr>
 <tr>
+<td><code>metrics_textfile</code></td>
+<td><code>/var/lib/prometheus/node-exporter</code></td>
+<td>with the <code>metrics</code> profile, the node exporter's textfile directory, writable by 65532 (<a href="../operations/#metrics">Metrics</a>)</td>
+</tr>
+<tr>
 <td><code>dotdash_link</code></td>
 <td><code>reality</code></td>
 <td>how the relay reaches the servers: <code>reality</code>, a REALITY connection with Vision for each device's; <code>xhttp-reality</code>, XHTTP with REALITY on <code>dotdash_xhttp_reality_port</code>, connections reused across devices, about 100 ms sooner to a page's first byte for about twice the CPU here and on the server. Needs the servers' <a href="../../server/xhttp-reality/"><code>xhttp-reality</code></a> profile and the <code>dotdash_xhttp_path</code> secret, both of which <code>relay-config</code> prints</td>
