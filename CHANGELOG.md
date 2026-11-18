@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `dotdash-manager report` shows how long each path of each server and relay lasted before it was first blocked, and the median per path. A server or relay in the roster can carry your own `provider` and `address_since`, and the report adds up lifetimes per provider, kept for machines taken out of the roster.
+
 - A relay can reach the servers over XHTTP with REALITY (`dotdash_link=xhttp-reality`), connections reused across devices: about 100 ms sooner to a page's first byte, for about twice the CPU. `relay-config` prints the settings and the `dotdash_xhttp_path` secret when the server runs `xhttp-reality`.
 
 - The canary's `hysteria2` profile checks a server's Hysteria2 beside REALITY, on `dotdash_hysteria2_port` (443), logging in as the canary's own id, in `measure` and `facts` too. A server under `hysteria2` tells `canary-config` and `dotdash-manager` its port, and the manager sets it on the canaries watching that server.
