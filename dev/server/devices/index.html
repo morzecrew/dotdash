@@ -2202,7 +2202,8 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
   relays then reach devices with nothing to resend.</li>
 <li>The same URL, asked with <code>Accept: application/json</code>, serves the device's
   Xray config: the <a href="../../client/">client bundle</a> runs Xray on it on a
-  Linux machine for you.</li>
+  Linux machine for you. On its REALITY links, the device's UDP flows share
+  a few connections (XUDP Mux) rather than opening one each.</li>
 <li>A URL is as secret as the links. <code>sudo morzer secret rotate subscription_key</code>
   moves every URL; any other path gets the site's 404.</li>
 <li>A <a href="../../relay/install/#6-devices">relay</a> with a site of its own serves the

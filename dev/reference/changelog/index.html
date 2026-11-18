@@ -2976,6 +2976,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>The Xray config devices get (<code>client-config --full</code>, the subscription's JSON, <code>dotdash-client</code>) shares UDP flows over a few connections on REALITY links (XUDP Mux): one connection for 20 flows instead of 20, each later flow answering in one round trip instead of three.</p>
+</li>
+<li>
 <p>The DNS tunnel sends every 50 ms (<code>xdns_tti</code>), not every 200: about three times the speed. Devices' configs spread its queries over three resolvers (<code>xdns_resolvers</code>), so each sees little more than before.</p>
 </li>
 <li>
