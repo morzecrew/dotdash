@@ -74,7 +74,7 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     verdicts += more
     off, more = health.blocked(net, facts, st["health"], burnt)
     verdicts += more
-    split, more = health.splits(net, st["health"])
+    split, more = health.splits(net, st["health"], burnt)
     verdicts += more
     log = st.setdefault("events", [])
     log += health.events(before, st["health"], st.get("stands", {}), stands, int(time.time()))
