@@ -142,13 +142,17 @@ want='{"outbounds": {"$upstreams": "/run/secrets/upstreams"}}'
 # URL, goes into a message: the file holds credentials.
 upstreams=${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstreams
 if [ -r "${upstreams}" ]; then
-  tunnels=0 openvpn=0 v4=0 v6=0
-  while read -r url opts || [ -n "${url:-}" ]; do
-    case ${url} in '' | '#'*) continue ;; esac
+  tunnels=0 openvpn=0 http=0 v4=0 v6=0
+  # A line is its URL with name= and group= before it (then a |) or after it.
+  while read -r -a words || [ "${#words[@]}" -gt 0 ]; do
+    case ${words[0]:-} in '' | '#'*) continue ;; esac
+    url='' groups=upstream
+    for w in "${words[@]}"; do
+      case ${w} in *://* | openvpn) url=${w} ;; group=*) groups=${w#group=} ;; esac
+    done
     case ${url} in wireguard://* | openvpn | openvpn://*) tunnels=$((tunnels + 1)) ;; esac
     case ${url} in openvpn | openvpn://*) openvpn=$((openvpn + 1)) ;; esac
-    groups=upstream
-    for o in ${opts}; do case ${o} in group=*) groups=${o#group=} ;; esac; done
+    case ${url} in http://* | https://*) http=$((http + 1)) ;; esac
     case ",${groups}," in *,upstream,*) v4=$((v4 + 1)) ;; esac
     case ",${groups}," in *,ipv6,*) v6=$((v6 + 1)) ;; esac
   done <"${upstreams}"
@@ -157,6 +161,9 @@ if [ -r "${upstreams}" ]; then
   [ "${openvpn}" -le 8 ] || violations+=$'\n'"upstreams has ${openvpn} OpenVPN lines, and the tunnels' SOCKS hop carries 8"
   if [ "${DOTDASH_PARAM_RESOLVE:-gateway}" = upstream ] && [ "${tunnels}" -gt 0 ]; then
     violations+=$'\n'"resolve=upstream, but ${tunnels} upstreams line(s) are a WireGuard or OpenVPN tunnel, which resolves no names"
+  fi
+  if [ "${DOTDASH_PARAM_UPSTREAM_UDP:-false}" = true ] && [ "${http}" -gt 0 ]; then
+    violations+=$'\n'"upstream_udp=true, but ${http} upstreams line(s) are an HTTP proxy, which drops UDP"
   fi
   if [ "${DOTDASH_PARAM_IPV6:-allow}" = separate ] && [ "${v6}" = 0 ]; then
     violations+=$'\n'"ipv6=separate, but no upstreams line is in group=ipv6"

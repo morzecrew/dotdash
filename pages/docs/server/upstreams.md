@@ -193,6 +193,10 @@ lines. Every line must carry it then: a WireGuard or OpenVPN line, or a SOCKS5
 proxy with UDP ASSOCIATE; an HTTP proxy drops it. Off, UDP is dropped here and
 apps fall back to TCP.
 
+Every apply, update and `doctor` refuses `upstream_udp=true` with an HTTP or
+HTTPS proxy line. Whether a SOCKS5 proxy relays UDP shows only by trying it: a
+[canary](../canary/index.md) reports `udp` per transport in its `facts`.
+
 ## What doctor says
 
 When nothing gets out, `doctor` asks the first lines directly and names each
