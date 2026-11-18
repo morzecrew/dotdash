@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # The tun profile: a plain request on the machine, with no proxy settings,
 # goes through dotdash, and so does a LAN device's with this machine as its
-# gateway; with dotdash gone, nothing gets out directly instead; and back on
-# the base files, the machine's own routes are as before. First, the two
+# gateway; with dotdash gone, and with Xray itself gone, nothing gets out
+# directly instead; and back on the base files, the machine's own routes are
+# as before. First, the two
 # configs differ only where TUN needs them to.
 #
 # TUN binds Xray's own sockets to the main interface, so this stand-in sits on
@@ -137,8 +138,30 @@ for _ in 1 2 3; do
 done
 sudo docker start client-rig-tun-server >/dev/null
 
+# With Xray itself gone, a crash or the image's restart on a new subscription,
+# its TUN and routes go too, and the default route would carry everything: the
+# kill switch's rules leave nothing but Xray's own connections reachable.
+out=$(sudo morzer doctor 2>&1) || die "doctor fails under tun with the kill switch on: ${out}"
+client=$(service_container xray)
+sudo docker stop "${client}" >/dev/null
+ip -o link show Meta >/dev/null 2>&1 && die "with Xray stopped, its TUN interface is still there"
+for _ in 1 2 3; do
+  code=$(plain https://example.com/)
+  [ "${code}" != 200 ] || { routes; die "with Xray gone, a plain request got out directly"; }
+  sleep 2
+done
+sudo docker start "${client}" >/dev/null
+code=000
+for _ in $(seq 15); do
+  code=$(plain http://tun-target.test:8080/sub)
+  [ "${code}" = 200 ] && break
+  sleep 2
+done
+[ "${code}" = 200 ] || { routes; die "with Xray back, a plain request did not go through TUN and dotdash again (${code})"; }
+
 sudo morzer config unset installation.profile >/dev/null
 ip -o link show Meta >/dev/null 2>&1 && die "back on the base files, the TUN interface is still there"
+ip rule | grep -qE '^900[0-2]:' && { routes; die "back on the base files, the kill switch's rules are still there"; }
 printf 'http://%s:8088/sub' "${host}" | sudo morzer secret set subscription_url >/dev/null
 sudo morzer config unset probe_url >/dev/null
 sudo morzer config unset direct_rules >/dev/null
@@ -146,4 +169,4 @@ sudo rm -f "${home}/subscription_url.json"
 sudo docker restart "$(service_container xray)" >/dev/null
 sudo docker rm -f client-rig-tun-server client-rig-tun-sub >/dev/null
 [ "$(plain https://www.gstatic.com/generate_204)" = 204 ] || die "back on the base files, the rig's own requests don't get out"
-echo "40-tun.sh: under tun, plain requests, the machine's and a LAN's, go through dotdash and never around it; back to the base files cleanly"
+echo "40-tun.sh: under tun, plain requests, the machine's and a LAN's, go through dotdash and never around it, with Xray down too; back to the base files cleanly"

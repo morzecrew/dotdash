@@ -8,6 +8,12 @@
 # and no-new-privileges stays on. A stop gives Xray time to take its routes
 # down; after a kill they linger, harmless, pointing at an interface that is
 # gone.
+#
+# With Xray gone, a crash or a restart on a new subscription, its TUN and
+# routes go with it, and the machine's default route would carry everything
+# around dotdash: the killswitch service's routing rules, which outlive Xray,
+# leave nothing but Xray's own connections and the LAN reachable then
+# (killswitch/killswitch.sh).
 
 services:
   xray:
@@ -30,3 +36,24 @@ services:
         target: /etc/resolv.conf
         read_only: true
         bind: {create_host_path: false}
+
+  killswitch:
+    image: ${DOTDASH_CLIENT_IMAGE_KILLSWITCH:?set by morzer}
+    restart: unless-stopped
+    # Routing rules on the host's network: root with NET_ADMIN, nothing else.
+    user: "0:0"
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN]
+    security_opt: ["no-new-privileges:true"]
+    network_mode: host
+    pids_limit: 32
+    mem_limit: 32m
+    # Time to take the rules out on a stop.
+    stop_grace_period: 10s
+    logging:
+      driver: local
+      options: {max-size: 1m, max-file: "2"}
+    entrypoint: ["sh", "/killswitch/killswitch.sh"]
+    volumes:
+      - ${DOTDASH_CLIENT_RELEASE_DIR:?set by morzer}/killswitch:/killswitch:ro
