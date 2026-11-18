@@ -32,6 +32,9 @@ services:
     environment:
       XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:7891
       XRAY_HEALTHCHECK_URL: ${DOTDASH_CLIENT_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
+      # Go's soft memory limit at about 90% of mem_limit: Go collects garbage harder
+      # near it rather than let the kernel kill Xray at the cap (dotdash-lab #49).
+      GOMEMLIMIT: 230MiB
       XRAY_HEALTHCHECK_TIMEOUT: 7s
       XRAY_SUBSCRIPTION_INTERVAL: ${DOTDASH_CLIENT_PARAM_SUBSCRIPTION_INTERVAL:-3600}s
       # The probe port: through dotdash where it gets through, so it

@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The server can accept a second REALITY key beside `reality_key` (`reality_second_key`, with the `reality_key_second` and `reality_short_id_second` secrets), so the key can be rotated with no device cut off. The docs walk through the three steps.
 
+- The server's and the relay's `metrics` profile writes Xray's traffic per inbound and outbound, its upstreams' or servers' verdicts and its heap into the node exporter's textfile directory beside morzer's own metrics, never per device.
+
+- `dotdash-manager report` shows how long each path of each server and relay lasted before it was first blocked, and the median per path. A server or relay in the roster can carry your own `provider` and `address_since`, and the report adds up lifetimes per provider, kept for machines taken out of the roster.
+
+- A relay can reach the servers over XHTTP with REALITY (`dotdash_link=xhttp-reality`), connections reused across devices: about 100 ms sooner to a page's first byte, for about twice the CPU. `relay-config` prints the settings and the `dotdash_xhttp_path` secret when the server runs `xhttp-reality`.
+
 - The canary's `hysteria2` profile checks a server's Hysteria2 beside REALITY, on `dotdash_hysteria2_port` (443), logging in as the canary's own id, in `measure` and `facts` too. A server under `hysteria2` tells `canary-config` and `dotdash-manager` its port, and the manager sets it on the canaries watching that server.
 
 - The server's `hysteria2` profile: Hysteria2 on UDP 443 (`hysteria2_port`), under the site's own certificate, each device's UUID its login. Devices get a `[hy2]` link and an outbound. It runs BBR, or Brutal at `hysteria2_up` Mbit/s for devices that ask.
@@ -39,6 +45,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The DNS tunnel sends every 50 ms (`xdns_tti`), not every 200: about three times the speed. Devices' configs spread its queries over three resolvers (`xdns_resolvers`), so each sees little more than before.
+
+- Hysteria2 no longer answers a stray packet with a stateless reset, which the site's own HTTP/3 never sends and a prober could tell apart.
+
+- Devices' and relays' configs probe each link at a moment of its own (`burstObservatory`), not all together, which tied a device's links to each other for an observer. Picking the fastest works as before.
+
+- Every Xray container sets Go's soft memory limit (`GOMEMLIMIT`) at about 90% of its memory cap, so Go collects garbage harder near the cap instead of the kernel killing Xray.
+
 - The server's gate and a relay send to devices on BBR, in their own containers only (`tcp_congestion`). On a lossy last mile it kept 6-50 times cubic's speed in the lab. Set `tcp_congestion=cubic` on a kernel without `tcp_bbr`, where the apply would otherwise fail and roll back.
 
 - A server that resolves names itself (`resolve=gateway`), and the Xray config `client-config` prints, answer a name looked up before from the cache at once, even after it expired, and ask again in the background, for a day at most. A site revisited no longer waits for a lookup through the upstream.
@@ -50,6 +64,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The server's and relay's TLS and HTTP ports are published on every IPv4 address (`listen=0.0.0.0`), and no longer on IPv6 too. A domain with an AAAA record reaches dotdash over IPv4 only.
 
 - `dotdash-acme-dns` needs morzer 0.17.1, which backs up a machine set up without a recovery key, so updates there no longer depend on the placeholder secret the bundle carried; the secret is gone.
+
+### Fixed
+
+- `dotdash-client` under `tun` no longer sends traffic around dotdash while Xray is down, after a crash or on the restart for a new subscription. A kill switch keeps routing rules that let only Xray's own connections and the LAN out then, and `doctor` checks them.
+
 
 ## [0.8.0] - 2026-11-15
 

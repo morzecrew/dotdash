@@ -36,9 +36,13 @@ runtimes:
       # site's own certificate, each device's UUID its login, a probe
       # answered by the cover site over HTTP/3.
       hysteria2: [compose/hysteria2.yaml]
+      # Traffic per inbound and outbound, and the gate's verdicts on its
+      # upstreams, into the node exporter's textfile directory.
+      metrics: [compose/metrics.yaml]
     # installation.profile=xdns,xhttp-reality runs both; any of them with
-    # openvpn, such as xdns,openvpn, adds the OpenVPN tunnels.
-    combinable: [xdns, xhttp-reality, openvpn, mkcp, hysteria2]
+    # openvpn, such as xdns,openvpn, adds the OpenVPN tunnels; metrics goes
+    # with any.
+    combinable: [xdns, xhttp-reality, openvpn, mkcp, hysteria2, metrics]
     options:
       project: dotdash
 
@@ -153,11 +157,25 @@ parameters:
     default: 0
     description: "Mbit/s Hysteria2 sends each device at whatever is lost on the way (Brutal), for a device that asks for it with its own rate; 0 keeps BBR, which backs off as TCP does. Set it to this server's uplink share per device, never more"
     services: [xray]
+  metrics_textfile:
+    type: string
+    default: /var/lib/prometheus/node-exporter
+    description: "Under the metrics profile, the node exporter's textfile directory, the one morzer's metrics.textfile names, which the exporters write dotdash-dotdash-xray.prom and dotdash-dotdash-gate.prom into; it has to exist and be writable by 65532 (sudo setfacl -m u:65532:rwx <it>)"
   xdns_mtu:
     type: int
     default: 900
     description: mKCP packet size the DNS tunnel answers with; must fit the EDNS0 size resolvers on the path advertise (1232 is common, lower it if replies are lost)
     services: [xray]
+  xdns_tti:
+    type: int
+    default: 50
+    description: "Milliseconds between the DNS tunnel's mKCP sends, on the server and in devices' configs (10 to 1000): 50 carries about three times what 200 did, with four times the queries; raise it if resolvers start refusing them"
+    services: [xray, subscription]
+  xdns_resolvers:
+    type: string
+    default: "udp://1.1.1.1:53,udp://8.8.8.8:53,udp://9.9.9.9:53"
+    description: "The resolvers devices' DNS tunnel asks, comma-separated, its queries spread evenly over them: udp://, tcp:// or DoH https:// URLs. Where only the network's own resolver answers, put its address here"
+    services: [subscription]
   resolve:
     type: enum
     values: [gateway, upstream]

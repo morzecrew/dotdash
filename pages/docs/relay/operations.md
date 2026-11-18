@@ -98,6 +98,32 @@ What the relay can't see is whether devices reach it: only a machine on the
 networks devices use can. A [canary on a mobile line](../canary/index.md#on-a-mobile-line)
 checks the relay as it checks a server, with the commands `relay-entry` prints.
 
+## Metrics
+
+With morzer's own metrics in the node exporter's textfile directory
+([`metrics.textfile`](https://github.com/morzecrew/morzer/tree/main/pages/docs/operating)),
+the `metrics` profile adds the relay's, in the same directory: its traffic per inbound and outbound, and with several servers its verdicts on each. Nothing is
+counted per device. The exporters run as 65532, so the directory has to be
+writable by it:
+
+```sh
+sudo setfacl -m u:65532:rwx /var/lib/prometheus/node-exporter
+sudo morzer config set metrics_textfile=/var/lib/prometheus/node-exporter   # its default
+sudo morzer config set installation.profile=metrics    # beside own-site or mkcp if you run them
+```
+
+| Metric | Labels | Value |
+| --- | --- | --- |
+| `dotdash_xray_up` | `role` | 1 when the exporter read Xray's counters |
+| `dotdash_inbound_bytes_total` | `role`, `inbound`, `direction` | bytes through an inbound since Xray started |
+| `dotdash_outbound_bytes_total` | `role`, `outbound`, `direction` | bytes through an outbound since Xray started |
+| `dotdash_observatory_alive` | `role`, `outbound` | 1 when the last check got through a server |
+| `dotdash_observatory_delay_seconds` | `role`, `outbound` | that check's time, while it gets through |
+| `dotdash_xray_heap_bytes` | `role` | Xray's Go heap, beside its `GOMEMLIMIT` |
+
+Every series also carries `product`. `rate(dotdash_inbound_bytes_total[5m])`
+per inbound shows which transport devices use.
+
 ## Updates
 
 As for the server: `sudo morzer self-update` when a release needs a newer

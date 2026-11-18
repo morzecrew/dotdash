@@ -83,7 +83,7 @@ rig_config() { # <socks port>
         | (if .tag == "xdns"
            then .streamSettings.finalmask.udp[0].settings.resolvers = [{addrs: ["udp://127.0.0.1:53"]}]
            else . end))
-    | .observatory.probeUrl = "http://11.99.0.10:8000/" | .observatory.probeInterval = "5s"'
+    | .burstObservatory.pingConfig.destination = "http://11.99.0.10:8000/" | .burstObservatory.pingConfig.interval = "10s"'
 }
 config_check() { # <name> <socks port> <servers>: client-config's config with those servers
   local out config

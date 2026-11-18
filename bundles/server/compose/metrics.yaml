@@ -1,0 +1,42 @@
+# The metrics profile: Xray's and the gate's traffic per inbound and
+# outbound, and the gate's verdicts on its upstreams, every minute into the
+# node exporter's textfile directory (metrics_textfile), as
+# dotdash-dotdash-xray.prom and dotdash-dotdash-gate.prom. Each exporter
+# shares its Xray's network namespace, where Xray's metrics listen on
+# 127.0.0.1 alone, and runs as 65532 like the rest: the directory has to be
+# writable by it (sudo setfacl -m u:65532:rwx <it>). Never per device.
+x-exporter: &exporter
+  # The Caddy image for its shell and wget, as the server's tasks; jq is the
+  # jq image's, mounted whole at /jq.
+  image: ${DOTDASH_IMAGE_CADDY:?set by morzer}
+  entrypoint: ["sh", "/metrics/metrics.sh"]
+  restart: unless-stopped
+  user: "65532:65532"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  pids_limit: 16
+  mem_limit: 64m
+  tmpfs: ["/tmp:size=1m"]
+  logging:
+    driver: local
+    options: {max-size: 1m, max-file: "2"}
+  volumes:
+    - ${DOTDASH_RELEASE_DIR:?set by morzer}/metrics:/metrics:ro
+    - type: image
+      source: ${DOTDASH_IMAGE_JQ:?set by morzer}
+      target: /jq
+    - type: bind
+      source: ${DOTDASH_PARAM_METRICS_TEXTFILE:-/var/lib/prometheus/node-exporter}
+      target: /textfile
+      bind: {create_host_path: false}
+
+services:
+  metrics-xray:
+    <<: *exporter
+    network_mode: service:xray
+    command: ["dotdash", "xray", "http://127.0.0.1:11111/debug/vars"]
+  metrics-gate:
+    <<: *exporter
+    network_mode: service:gate
+    command: ["dotdash", "gate", "http://127.0.0.1:11111/debug/vars"]

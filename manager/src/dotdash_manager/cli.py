@@ -77,6 +77,7 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     log = st.setdefault("events", [])
     log += health.events(before, st["health"], st.get("stands", {}), stands, int(time.time()))
     del log[:-health.EVENTS]
+    labels(net, st)
     st["stands"] = stands
     if not dry_run:
         state.save(o.state, st)
@@ -110,14 +111,28 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     raise typer.Exit(1 if failed else 0)
 
 
+def labels(net: Network, st: dict) -> None:
+    """The roster's provider and address_since of each server and relay into the
+    state, kept after it leaves the roster as its events are, for report."""
+    kept = st.setdefault("labels", {})
+    for m in [*net.server, *net.relay]:
+        if m.provider or m.address_since:
+            kept[m.name] = {"provider": m.provider, "address_since": m.address_since and m.address_since.isoformat()}
+        else:
+            kept.pop(m.name, None)
+
+
 @app.command()
 def report(ctx: typer.Context) -> None:
     """How long each server and relay lasted before it burnt, how often and for
-    how long it was burnt, which paths went off, and each path's latency
-    against the canaries' own network; from what sync logged."""
+    how long it was burnt, which paths went off, how long each path lasted,
+    lifetimes per provider, and each path's latency against the canaries' own
+    network; from what sync logged."""
     o: Options = ctx.obj
     net, st = o.open()
-    for line in report_lines(net, st.get("events", []), int(time.time()), st.get("stands", {}), st.get("health", {})):
+    labels(net, st)
+    for line in report_lines(net, st.get("events", []), int(time.time()), st.get("stands", {}), st.get("health", {}),
+                             st.get("labels", {})):
         print(line)
 
 

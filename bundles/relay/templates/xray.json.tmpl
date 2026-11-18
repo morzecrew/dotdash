@@ -13,8 +13,21 @@ servers' outbounds (the first outbound stays the default); names go on. */ -}}
 {{- $block6 := eq .Parameters.ipv6 "block" -}}
 {{- $many := gt (len $servers) 1 -}}
 {{- $pbk := required "set dotdash_public_key" .Parameters.dotdash_public_key -}}
+{{- /* dotdash_link=xhttp-reality: XHTTP with REALITY to the servers'
+xhttp_reality_port, its connections reused across devices, in place of a
+REALITY connection with Vision for each. */ -}}
+{{- $xr := eq .Parameters.dotdash_link "xhttp-reality" -}}
 {
   "log": {"loglevel": "warning", "access": "none"},
+{{- if has "metrics" .Profiles }}
+  {{- /* The metrics profile: traffic per inbound and outbound, never per
+  device (no user counters), and the observatory's verdicts, on 127.0.0.1
+  alone, where the metrics profile's exporter, in this namespace, reads them
+  (metrics/metrics.sh). */}}
+  "stats": {},
+  "metrics": {"listen": "127.0.0.1:11111"},
+  "policy": {"system": {"statsInboundUplink": true, "statsInboundDownlink": true, "statsOutboundUplink": true, "statsOutboundDownlink": true}},
+{{- end }}
   "inbounds": [
     {
       "tag": "devices",
@@ -98,23 +111,27 @@ servers' outbounds (the first outbound stays the default); names go on. */ -}}
     {
       "tag": "dotdash-{{ $i }}", "protocol": "vless",
       "settings": {
-        "address": "{{ if and $address (eq (len $servers) 1) }}{{ $address }}{{ else }}{{ $s }}{{ end }}", "port": {{ $.Parameters.dotdash_port }},
+        "address": "{{ if and $address (eq (len $servers) 1) }}{{ $address }}{{ else }}{{ $s }}{{ end }}", "port": {{ if $xr }}{{ $.Parameters.dotdash_xhttp_reality_port }}{{ else }}{{ $.Parameters.dotdash_port }}{{ end }},
         "id": {"$file": "/run/secrets/dotdash_id"},
-        "encryption": {"$file": "/run/secrets/dotdash_encryption"},
-        "flow": "xtls-rprx-vision"
+        "encryption": {"$file": "/run/secrets/dotdash_encryption"}{{ if not $xr }},
+        "flow": "xtls-rprx-vision"{{ end }}
       },
-      "streamSettings": {"network": "raw", "security": "reality", "realitySettings": {
+      "streamSettings": {"network": "{{ if $xr }}xhttp{{ else }}raw{{ end }}", "security": "reality", "realitySettings": {
         "serverName": "{{ $s }}", "fingerprint": "chrome",
         "password": "{{ $pbk }}",
         "shortId": {"$file": "/run/secrets/dotdash_short_id"}
-      }}
+      }{{ if $xr }},
+      "xhttpSettings": {"path": {"$file": "/run/secrets/dotdash_xhttp_path"}, "mode": "auto"}{{ end }}}
     }
     {{- end }}
     {{- if $block6 }},
     {"tag": "block", "protocol": "blackhole"}
     {{- end }}
   ]{{ if $many }},
-  "observatory": {"subjectSelector": ["dotdash-"], "probeUrl": "{{ .Parameters.probe_url }}", "probeInterval": "30s", "enableConcurrency": true}
+  {{- /* Each server probed at a moment of its own, every 30 seconds, not all
+  together, which would tie them to each other for whoever watches this
+  relay: burstObservatory, which leastPing reads as it read observatory. */}}
+  "burstObservatory": {"subjectSelector": ["dotdash-"], "pingConfig": {"destination": "{{ .Parameters.probe_url }}", "interval": "30s", "sampling": 1}}
   {{- end }}{{ if or $many $block6 }},
   "routing": {
     {{- if $many }}
