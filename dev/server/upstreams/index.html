@@ -2439,6 +2439,9 @@ from.</p>
 lines. Every line must carry it then: a WireGuard or OpenVPN line, or a SOCKS5
 proxy with UDP ASSOCIATE; an HTTP proxy drops it. Off, UDP is dropped here and
 apps fall back to TCP.</p>
+<p>Every apply, update and <code>doctor</code> refuses <code>upstream_udp=true</code> with an HTTP or
+HTTPS proxy line. Whether a SOCKS5 proxy relays UDP shows only by trying it: a
+<a href="../../canary/">canary</a> reports <code>udp</code> per transport in its <code>facts</code>.</p>
 <h2 id="what-doctor-says">What doctor says<a class="headerlink" href="#what-doctor-says" title="Permanent link">&para;</a></h2>
 <p>When nothing gets out, <code>doctor</code> asks the first lines directly and names each
 by its <code>name=</code>: one that doesn't answer, one that refused the credentials in

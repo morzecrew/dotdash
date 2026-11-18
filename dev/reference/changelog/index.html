@@ -2918,7 +2918,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
-<li>An app on Apple's network stack, by its User-Agent, gets the subscription's links with Safari's TLS hello (<code>fp=safari</code>), as its platform sends; every other app keeps Chrome's.</li>
+<li>
+<p>An app on Apple's network stack, by its User-Agent, gets the subscription's links with Safari's TLS hello (<code>fp=safari</code>), as its platform sends; every other app keeps Chrome's.</p>
+</li>
 <li>
 <p>When REALITY fails, a canary's <code>facts</code> say what stops it from its own network (<code>blocked_by</code>: <code>ip</code>, <code>sni</code>, <code>tls</code> or <code>freeze</code>), and <code>dotdash-manager</code> names it in its verdicts. With <code>ipv6_url</code> set, <code>facts</code> also say per transport whether the server carries IPv6 (<code>ipv6</code>).</p>
 </li>
@@ -2985,6 +2987,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
+<li>
+<p>Every apply, update and <code>doctor</code> refuses <code>upstream_udp=true</code> while an upstreams line is an HTTP or HTTPS proxy, which drops UDP. The policy check also reads a line's <code>group=</code> and kind when <code>name=</code> and <code>group=</code> come before its URL.</p>
+</li>
 <li>
 <p>The Xray config devices get (<code>client-config --full</code>, the subscription's JSON, <code>dotdash-client</code>) shares UDP flows over a few connections on REALITY links (XUDP Mux): one connection for 20 flows instead of 20, each later flow answering in one round trip instead of three.</p>
 </li>
