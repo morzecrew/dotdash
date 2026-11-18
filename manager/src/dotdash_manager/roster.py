@@ -2,6 +2,7 @@
 
 import re
 import tomllib
+from datetime import date
 from pathlib import Path
 from typing import Annotated, ClassVar, Literal
 
@@ -46,12 +47,21 @@ class Machine(Strict):
         return self.id is not None and self.key is not None
 
 
-class Server(Machine):
+class Target(Machine):
+    """A server or relay, which canaries watch. provider and address_since are
+    the operator's own record, read by nothing but report: who hosts it, under
+    the operator's name for them, and since when its address is the one
+    devices reach, so lifetimes add up per provider and per address age."""
+    provider: Annotated[str, Field(min_length=1, max_length=64)] | None = None
+    address_since: date | None = None
+
+
+class Server(Target):
     kind: ClassVar[str] = "server"
     cdn_hosts: list[str] = []
 
 
-class Relay(Machine):
+class Relay(Target):
     kind: ClassVar[str] = "relay"
     # A spare: installed, given its document and watched by its canaries like
     # any relay, but kept out of what devices get until a burnt relay's place
