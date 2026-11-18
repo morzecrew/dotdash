@@ -28,6 +28,9 @@ services:
       # every device does.
       XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:10809
       XRAY_HEALTHCHECK_URL: ${DOTDASH_RELAY_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
+      # Go's soft memory limit at about 90% of mem_limit: Go collects garbage harder
+      # near it rather than let the kernel kill Xray at the cap (dotdash-lab #49).
+      GOMEMLIMIT: 230MiB
       XRAY_HEALTHCHECK_TIMEOUT: 7s
     volumes:
       # Long form, so a missing file fails the start rather than becoming a
@@ -40,7 +43,7 @@ services:
     tmpfs:
       # Where the image writes the config with secrets resolved; never disk.
       - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
-    secrets: [vless_clients, vless_seed, reality_key, reality_short_id, xhttp_path, kcp_seed, dotdash_id, dotdash_encryption, dotdash_short_id]
+    secrets: [vless_clients, vless_seed, reality_key, reality_short_id, xhttp_path, kcp_seed, dotdash_id, dotdash_encryption, dotdash_short_id, dotdash_xhttp_path]
     # REALITY on 443 inside too (Xray warns on any other port), as uid 65532
     # with no capabilities. It ends devices' TCP, so it sends their downloads:
     # on BBR (tcp_congestion), in this container's namespace alone.
@@ -85,3 +88,4 @@ secrets:
   dotdash_id: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/dotdash_id"}
   dotdash_encryption: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/dotdash_encryption"}
   dotdash_short_id: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/dotdash_short_id"}
+  dotdash_xhttp_path: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/dotdash_xhttp_path"}

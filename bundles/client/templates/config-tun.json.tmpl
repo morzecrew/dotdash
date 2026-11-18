@@ -73,7 +73,11 @@ back. */ -}}
     {"tag": "direct", "protocol": "freedom"},
     {"tag": "dns", "protocol": "dns"}
   ],
-  "observatory": {"subjectSelector": ["dotdash-"], "probeUrl": "{{ $probe }}", "probeInterval": "1m", "enableConcurrency": true},
+  {{- /* Each link is probed once a minute at a moment of its own, not all of
+  them together, which would tie this device's links to each other for
+  whoever watches several of them: burstObservatory, which leastPing reads
+  as it read observatory. */}}
+  "burstObservatory": {"subjectSelector": ["dotdash-"], "pingConfig": {"destination": "{{ $probe }}", "interval": "1m", "sampling": 1}},
   "routing": {
     "domainStrategy": "AsIs",
     "balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}}],

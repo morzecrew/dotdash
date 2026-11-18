@@ -159,6 +159,17 @@ parameters:
     type: string
     description: The dotdash server's REALITY public key, the pbk of its REALITY links
     services: [xray]
+  dotdash_link:
+    type: enum
+    values: [reality, xhttp-reality]
+    default: reality
+    description: "How this relay reaches the servers. reality: REALITY with Vision on dotdash_port, a connection for each device's. xhttp-reality: XHTTP with REALITY on dotdash_xhttp_reality_port, connections reused across devices, about 100 ms sooner to a page's first byte for about twice the CPU here and on the server; needs the servers' xhttp-reality profile and the dotdash_xhttp_path secret"
+    services: [xray]
+  dotdash_xhttp_reality_port:
+    type: port
+    default: 8443
+    description: The dotdash server's xhttp_reality_port, for dotdash_link=xhttp-reality
+    services: [xray]
   ipv6:
     type: enum
     values: [allow, block]
@@ -184,8 +195,8 @@ images:
 # This relay's own keys stay its own; its facts carry their public halves.
 # None of these reaches a command line or a hook.
 managed:
-  parameters: [dotdash_servers, dotdash_address, dotdash_port, dotdash_public_key, ipv6]
-  secrets: [vless_clients, dotdash_id, dotdash_encryption, dotdash_short_id]
+  parameters: [dotdash_servers, dotdash_address, dotdash_port, dotdash_public_key, dotdash_link, dotdash_xhttp_reality_port, ipv6]
+  secrets: [vless_clients, dotdash_id, dotdash_encryption, dotdash_short_id, dotdash_xhttp_path]
 
 # What this machine tells the authority it follows, after every change, when
 # sync.recipient is set: the facts task's JSON.

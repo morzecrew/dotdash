@@ -28,6 +28,9 @@ services:
       # The config's loopback-only http inbound: the probe takes the same
       # routing and upstream as client traffic.
       XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:10809
+      # Go's soft memory limit at about 90% of mem_limit: Go collects garbage harder
+      # near it rather than let the kernel kill Xray at the cap (dotdash-lab #49).
+      GOMEMLIMIT: 460MiB
       XRAY_HEALTHCHECK_URL: ${DOTDASH_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
       XRAY_HEALTHCHECK_EXPECT: ${DOTDASH_PARAM_PROBE_EXPECT:-.*}
     volumes:
@@ -63,6 +66,10 @@ services:
     image: ${DOTDASH_IMAGE_XRAY:?set by morzer}
     # XRAY_UPSTREAM_PIN and XRAY_UPSTREAM_ALIASES (templates/gate.env.tmpl).
     env_file: /etc/dotdash/gate.env
+    environment:
+      # Go's soft memory limit at about 90% of mem_limit: Go collects garbage harder
+      # near it rather than let the kernel kill Xray at the cap (dotdash-lab #49).
+      GOMEMLIMIT: 230MiB
     volumes:
       - type: bind
         source: /etc/dotdash/gate.json
