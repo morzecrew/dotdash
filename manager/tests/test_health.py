@@ -214,3 +214,54 @@ def test_a_burnt_spare_stands_in_for_nothing_and_none_left_is_said():
     net, health = loads(SPARES), {}
     facts = {"r1": R1, "r2": R2, "r3": {**R3, "cdn_only": True}, "r4": R4}
     assert spares(net, facts, health, set())[0] == {"r3", "r4"}
+
+
+def test_a_server_blocked_by_sni_gets_its_hello_split():
+    from pathlib import Path
+
+    from dotdash_manager import state as state_mod
+    from dotdash_manager.health import splits
+    from dotdash_manager.render import render
+
+    net = loads('''
+target = "t"
+key = "k"
+identity = "i"
+authority = "a"
+[[server]]
+name = "a"
+[[canary]]
+name = "c1"
+watches = "a"
+''')
+    st = state_mod.load(Path("/nonexistent"), net)
+    server = {"domain": "a.example.net", "https_port": 443, "encryption": "E",
+              "public_key": state_mod.public_key(st["keys"]["reality_key"])}
+    health: dict = {}
+    def reading(at, reality, split):
+        canary = {"server": "a.example.net", "address": "a.example.net", "checked_at": at,
+                  "paths": {"reality": reality, "xhttp": False}, "reality_split": split}
+        judge(net, {"a": server, "c1": canary}, health)
+
+    for at in range(1, BURN_AFTER):
+        reading(at, False, True)
+    assert splits(net, health)[0] == set()  # not yet BURN_AFTER readings
+    reading(BURN_AFTER, False, True)
+    on, say = splits(net, health)
+    assert on == {"a"} and say[0].startswith("split: server a:")
+    docs, _ = render(net, st, {"a": server}, split=on)
+    assert docs["a"]["parameters"]["hello_split"] == "true"
+    st["split"] = sorted(on)
+
+    reading(BURN_AFTER + 1, False, False)  # the split fails too: off
+    on, _ = splits(net, health)
+    assert on == set()
+    docs, _ = render(net, st, {"a": server}, split=on)
+    assert docs["a"]["parameters"]["hello_split"] == "false"
+    st["split"] = []
+    docs, _ = render(net, st, {"a": server}, split=set())
+    assert "hello_split" not in docs["a"]["parameters"]  # never said to a server that wasn't split
+
+    reading(BURN_AFTER + 2, True, None)  # REALITY back, a canary from before reality_split
+    assert splits(net, health)[0] == set() and "split" not in health["a"]
+

@@ -323,6 +323,28 @@ path gets through again takes it off.
 - **A server released before `off=` ignores the field** and gives devices
   every link through the relay, as before.
 
+## A name blocked by SNI
+
+A box can block a server's name by the SNI in each ClientHello, reassembling
+TCP but reading one TLS record at a time. Its canaries see REALITY fail while
+[REALITY with its hello split](canary/index.md#what-it-checks) into small TLS
+records gets through. After three readings like that in a row, `sync` sets the
+server's `hello_split`:
+
+```
+split: server a: REALITY gets through only with its hello split into TLS records, a block on its name by SNI; devices' Xray configs split it (hello_split), share links can't
+```
+
+- **Who it reaches.** Devices running Xray from their subscription's config,
+  such as `dotdash-client` or an app on `client-config --full`, split their
+  REALITY hello to that server from their next refresh. Share links can't
+  carry it, so apps on links keep failing there and use another path.
+- **Off again.** It goes off once REALITY gets through again, or once the
+  split fails too.
+- **Why not always on.** The split hello is a fingerprint of its own, which a
+  classifier picks up (dotdash-lab #33).
+- **Servers only.** A relay whose REALITY fails is handled as a blocked path.
+
 ## What it leaves alone
 
 The upstreams, ports, profiles, domains and anything else a machine alone

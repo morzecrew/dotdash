@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A canary also tries REALITY with its ClientHello split into TLS records (`reality_split` in its `facts`). When only that gets through, `dotdash-manager` sets the server's `hello_split`, so devices' Xray configs split their REALITY hello past a block on the server's name by SNI.
+
 - `dotdash-manager rotate start`, `swap` and `finish` rotate the servers' REALITY key with no device cut off. The canaries watching servers prove the next key before devices and relays move to it. A canary's `facts` now name the key it checks under.
 
 - The server can accept a second REALITY key beside `reality_key` (`reality_second_key`, with the `reality_key_second` and `reality_short_id_second` secrets), so the key can be rotated with no device cut off. The docs walk through the three steps.

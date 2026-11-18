@@ -111,3 +111,23 @@ if sudo morzer config list 2>/dev/null | grep -qw servers; then
     config_check fallback 11085 gone.dotdash.test
   fi
 fi
+
+# hello_split: the servers' REALITY links split their ClientHello into TLS
+# records, nothing else does, and a device on the split REALITY link alone
+# (its balancer and other links taken out) still gets through.
+if sudo grep -qF '  hello_split:' /opt/dotdash/current/manifest.yaml; then
+  sudo morzer config set hello_split=true >/dev/null || die "could not set hello_split"
+  config=$(full_config "$(sudo morzer task run client-config --output)")
+  sudo morzer config unset hello_split >/dev/null || die "could not unset hello_split"
+  split='[{type: "fragment", settings: {packets: "tlshello", length: "100-200", delay: "10-20"}}]'
+  jq -e "[.outbounds[] | select(.tag | test(\"^dotdash-[0-9]+-reality\$\"))] as \$r | (\$r | length) > 0
+    and all(\$r[]; .streamSettings.finalmask.tcp == ${split})
+    and all(.outbounds[] | select(.tag | test(\"^dotdash-[0-9]+-reality\$\") | not); .streamSettings.finalmask.tcp == null)" \
+    <<<"${config}" >/dev/null || die "hello_split did not split the REALITY links alone: $(jq -c '[.outbounds[] | {tag, f: .streamSettings.finalmask}]' <<<"${config}")"
+  mkdir -p "${dir}/split"
+  rig_config 11089 <<<"${config}" | jq '.outbounds = [.outbounds[] | select(.tag == "dotdash-1-reality")] | del(.routing, .burstObservatory)' \
+    >"${dir}/split/client.json"
+  chmod -R a+rX "${dir}/split"
+  check split 11089
+  sudo docker rm -f dotdash-rig-split >/dev/null
+fi
