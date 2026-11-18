@@ -208,6 +208,11 @@ parameters:
     default: "# One pool per line: <pool> <device name, relay host or CDN host>..."
     description: "Pools against a leaked device giving away every entry point, one \"<pool> <member>...\" line per pool, the members device names from vless_clients, relay hosts and CDN hosts; client-config and the subscriptions give a device in a pool its pools' relays and CDN hosts and those in no pool, and a device in none all of them"
     services: [subscription]
+  reality_second_key:
+    type: bool
+    default: false
+    description: "Accept a second REALITY key beside reality_key, from the reality_key_second and reality_short_id_second secrets, so devices holding either get in: how a key is rotated with no device cut off (the docs' Rotating the REALITY key). Links, configs and subscriptions carry reality_key's"
+    services: [xray]
   direct:
     type: bool
     default: true
@@ -295,8 +300,8 @@ operations:
 # or anything else this machine alone knows. None of these reaches a command
 # line or a hook.
 managed:
-  parameters: [servers, relays, cdn_hosts, pools, subscription, direct]
-  secrets: [vless_clients, reality_key, vless_seed, reality_short_id, xhttp_path, kcp_seed, subscription_key]
+  parameters: [servers, relays, cdn_hosts, pools, subscription, direct, reality_second_key]
+  secrets: [vless_clients, reality_key, vless_seed, reality_short_id, xhttp_path, kcp_seed, subscription_key, reality_key_second, reality_short_id_second]
 
 # What this machine tells the authority it follows, after every change, when
 # sync.recipient is set: the facts task's JSON.
