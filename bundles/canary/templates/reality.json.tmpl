@@ -7,7 +7,9 @@ split one as reality_split, and the manager hands devices the split. */ -}}
 {
   "log": {"loglevel": "warning", "access": "none"},
   "inbounds": [{"tag": "probe", "listen": "0.0.0.0", "port": 10809, "protocol": "http"},
-               {"tag": "probe-split", "listen": "0.0.0.0", "port": 10810, "protocol": "http"}],
+               {"tag": "probe-split", "listen": "0.0.0.0", "port": 10810, "protocol": "http"},
+               {"tag": "udp", "listen": "0.0.0.0", "port": 10811, "protocol": "dokodemo-door",
+                "settings": {"address": "{{ index (split ":" .Parameters.udp_target) 0 }}", "port": {{ index (split ":" .Parameters.udp_target) 1 }}, "network": "udp"}}],
   "outbounds": [{
     "tag": "dotdash", "protocol": "vless",
     "settings": {

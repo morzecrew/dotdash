@@ -71,6 +71,16 @@ frozen() { # <service>: prints the bytes and succeeds when freeze_url stops part
 	echo "$n"
 }
 now() { awk '{ printf "%d\n", $1 }' /proc/uptime; }
+udp_ok() { # <service>: a DNS question sent over UDP through it (its udp inbound, to udp_target) gets an answer
+	for try in 1 2; do
+		# example.com, type A, with recursion: 29 bytes, in octal for busybox's printf.
+		n=$(printf '\022\064\001\000\000\001\000\000\000\000\000\000\007example\003com\000\000\001\000\001' |
+			nc -u -w 5 "$1" 10811 2>/dev/null | wc -c)
+		[ "$(echo "$n" | tr -d ' ')" -le 12 ] || return 0
+		[ "$try" = 2 ] || sleep 1
+	done
+	return 1
+}
 frozen_up() { # <service>: succeeds when a 64 KB upload to freeze_up_url gets no answer for 8 seconds, twice
 	body=$(head -c 65536 /dev/zero | tr '\0' x)
 	for try in 1 2; do
@@ -97,7 +107,7 @@ none) internet=null ;;
 	;;
 esac
 
-paths='' stalled='' stalled_up='' latency=''
+paths='' stalled='' stalled_up='' latency='' udp=''
 for svc in reality xhttp xhttp-reality mkcp hysteria2; do
 	nc -z -w 2 "$svc" 10809 2>/dev/null || continue
 	if ! ms=$(up "$svc"); then
@@ -113,6 +123,9 @@ for svc in reality xhttp xhttp-reality mkcp hysteria2; do
 		latency="${latency:+$latency, }\"$svc\": $ms"
 	fi
 	paths="${paths:+$paths, }\"$svc\": $ok"
+	# Whether the server carries UDP through this transport (upstream_udp).
+	if udp_ok "$svc"; then u=true; else u=false; fi
+	udp="${udp:+$udp, }\"$svc\": $u"
 done
 [ -n "$paths" ] || { echo "no transport answers: is the canary running?" >&2; exit 1; }
 # REALITY with its ClientHello split into TLS records (templates/reality.json.tmpl):
@@ -122,6 +135,6 @@ if nc -z -w 2 reality 10810 2>/dev/null; then
 	if up reality 10810 >/dev/null; then reality_split=true; else reality_split=false; fi
 fi
 
-printf '{"server": %s, "address": %s, "public_key": %s, "checked_at": %s, "internet": %s, "paths": {%s}, "reality_split": %s, "stalled": {%s}, "stalled_up": [%s], "latency_ms": {%s}, "direct_ms": %s}\n' \
-	"$(str "$DOTDASH_SERVER")" "$(str "$DOTDASH_ADDRESS")" "$(str "${DOTDASH_PUBLIC_KEY:-}")" "$(date +%s)" "$internet" "$paths" "$reality_split" "$stalled" "$stalled_up" \
+printf '{"server": %s, "address": %s, "public_key": %s, "checked_at": %s, "internet": %s, "paths": {%s}, "reality_split": %s, "udp": {%s}, "stalled": {%s}, "stalled_up": [%s], "latency_ms": {%s}, "direct_ms": %s}\n' \
+	"$(str "$DOTDASH_SERVER")" "$(str "$DOTDASH_ADDRESS")" "$(str "${DOTDASH_PUBLIC_KEY:-}")" "$(date +%s)" "$internet" "$paths" "$reality_split" "$udp" "$stalled" "$stalled_up" \
 	"$latency" "$direct"

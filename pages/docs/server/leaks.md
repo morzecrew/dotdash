@@ -17,6 +17,38 @@
   [relay](../relay/reference.md) it ends there, and here no IPv6 destination
   leaves ([parameters](parameters.md)).
 
+## WebRTC
+
+A browser's WebRTC asks a STUN server, over UDP, which address it sees, and a
+page can read the answer (the server-reflexive candidate). What it gets
+depends on how the device reaches dotdash (dotdash-lab #52 measured each):
+
+| The device | The server carries UDP (`upstream_udp`) | WebRTC's address |
+| --- | --- | --- |
+| A browser set to a proxy port (dotdash-client's, or an app's) | either | the device's own: STUN leaves around the proxy |
+| The same, with the `WebRtcIPHandling` policy below | either | none, and no candidate at all |
+| Behind a TUN (dotdash-client's `tun`, an app in VPN mode) | yes | the exit's, as the rest of its traffic |
+| Behind a TUN | no (the default) | none: only a local candidate |
+
+- **On a proxy port**, set Chromium's `WebRtcIPHandling` policy to
+  `disable_non_proxied_udp`, or better, use the TUN. The policy stops the
+  leak but leaves a browser with no WebRTC address at all, which a page can
+  notice. Chromium's old `--force-webrtc-ip-handling-policy` switch is gone:
+  the policy goes in a managed policy file (on Linux,
+  `/etc/chromium/policies/managed/` or `/etc/opt/chrome/policies/managed/`):
+
+    ```json
+    {"WebRtcIPHandling": "disable_non_proxied_udp"}
+    ```
+
+- **Behind a TUN**, nothing leaks. With `upstream_udp=true` (every upstream
+  line then has to carry UDP), WebRTC's address is the exit's. Without it,
+  WebRTC has no public address, a smaller tell than a leaked one.
+- A [canary](../canary/index.md) reports per transport whether the server
+  carries UDP (`udp` in its `facts`).
+- **DNS** stays inside in both modes: browsers send names to a SOCKS proxy,
+  and dotdash-client's TUN answers port 53 itself.
+
 ## The browser's location
 
 dotdash keeps the network consistent: sites see the exit IP, and geolocation
