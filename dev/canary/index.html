@@ -2120,6 +2120,11 @@ this network's leg, the target's, and on to the site. <code>direct_ms</code> is
 <code>control_url</code>'s fetch without dotdash, this network's leg alone. The
 manager's <a href="../manager/#where-the-time-goes">report</a> sets one against the
 other.</p>
+<p><code>facts</code> also tries REALITY with its ClientHello split into small TLS records,
+sent apart, and gives the result as <code>reality_split</code>. REALITY failing while
+the split one gets through is a box blocking the server's name by SNI,
+reassembling TCP but not TLS records, and the manager then
+<a href="../manager/#a-name-blocked-by-sni">hands devices the split</a>.</p>
 <h2 id="several-servers-and-relays">Several servers, and relays<a class="headerlink" href="#several-servers-and-relays" title="Permanent link">&para;</a></h2>
 <p>A canary watches one server. With <a href="../server/several-servers/">several servers</a>,
 <code>canary-config</code> prints how to point a canary at each of the others. To watch a

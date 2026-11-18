@@ -2919,6 +2919,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>A canary also tries REALITY with its ClientHello split into TLS records (<code>reality_split</code> in its <code>facts</code>). When only that gets through, <code>dotdash-manager</code> sets the server's <code>hello_split</code>, so devices' Xray configs split their REALITY hello past a block on the server's name by SNI.</p>
+</li>
+<li>
 <p><code>dotdash-manager rotate start</code>, <code>swap</code> and <code>finish</code> rotate the servers' REALITY key with no device cut off. The canaries watching servers prove the next key before devices and relays move to it. A canary's <code>facts</code> now name the key it checks under.</p>
 </li>
 <li>
