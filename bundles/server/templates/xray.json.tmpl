@@ -88,7 +88,7 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
   {{- /* The metrics profile: traffic per inbound and outbound, never per
   device (no user counters), and the observatory's verdicts, on 127.0.0.1
   alone, where the metrics profile's exporter, in this namespace, reads them
-  (metrics/metrics.py). */}}
+  (metrics/metrics.sh). */}}
   "stats": {},
   "metrics": {"listen": "127.0.0.1:11111"},
   "policy": {"system": {"statsInboundUplink": true, "statsInboundDownlink": true, "statsOutboundUplink": true, "statsOutboundDownlink": true}},

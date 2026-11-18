@@ -250,8 +250,6 @@ parameters:
     services: [xray, gate]
 
 images:
-  # The metrics profile's exporters (metrics/metrics.py): Python alone.
-  metrics: ghcr.io/morzecrew/python-distroless:3.14.8@sha256:05257d1cd331009829fa29d296889ddf77e68a07a5e459b7a2ad60bdde860267
   # hooks/policy reads the rendered config with it, run with no network, so
   # the host needs no jq of its own.
   jq: ghcr.io/jqlang/jq:1.8.1@sha256:4f34c6d23f4b1372ac789752cc955dc67c2ae177eb1b5860b75cdc5091ce6f91
