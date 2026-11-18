@@ -8,9 +8,10 @@ from .roster import Network
 from .state import public_key
 
 
-def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset()) -> str:
+def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset(), split: bool = False) -> str:
     """The relay's line for a server's relays, as its relay-entry task prints
-    it, with the paths its canaries find blocked (health.blocked) as off=."""
+    it, with the paths its canaries find blocked (health.blocked) as off=, and
+    split when they got REALITY through only with its hello split (health.splits)."""
     line = f"{f['entry_host']} {f['site']} {f['public_key']} {f['short_id']} {f['encryption']}"
     if "own_site" in f:
         line += f" own-site {f['own_site']['xhttp_path']}"
@@ -23,6 +24,8 @@ def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset()) -> str:
         line += " cdn-only"
     if off:
         line += " off=" + ",".join(sorted(off))
+    if split:
+        line += " split"
     return line
 
 
@@ -37,7 +40,8 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     pools. A relay's blocked paths (health.blocked) go on its line as off=.
     The servers in split (health.splits) get hello_split, and those split at
     the last sync (state's split) and no longer, hello_split off; others none,
-    as a server released before it refuses it."""
+    as a server released before it refuses it. A relay in split goes on its
+    line with split."""
     keys, ids = state["keys"], state["ids"]
     pbk = public_key(keys["reality_key"])
     known = [s for s in net.server if s.name in facts]
@@ -49,7 +53,7 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     docs = {}
 
     off = off or {}
-    relays = "\n".join(relay_line(facts[r.name], off.get(r.name, frozenset()))
+    relays = "\n".join(relay_line(facts[r.name], off.get(r.name, frozenset()), r.name in split)
                        for r in net.relay if r.name in facts and r.name not in burnt)
     # A pool naming a relay left out would name nothing: the server warns.
     hosts = lambda name: [facts[name]["entry_host"], *facts[name].get("cdn_hosts", [])]

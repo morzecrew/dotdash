@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A canary's `facts` say per transport whether the server carries devices' UDP (`udp`), by asking a DNS server (`udp_target`) over UDP through each. The leaks page says what WebRTC shows in each mode, and how to stop a browser on a proxy port leaking the device's address.
 
-- A canary also tries REALITY with its ClientHello split into TLS records (`reality_split` in its `facts`). When only that gets through, `dotdash-manager` sets the server's `hello_split`, so devices' Xray configs split their REALITY hello past a block on the server's name by SNI.
+- A canary also tries REALITY with its ClientHello split into TLS records (`reality_split` in its `facts`). When only that gets through, `dotdash-manager` sets the server's `hello_split`, or puts `split` on a relay's line, so devices' Xray configs split their REALITY hello past a block on the name by SNI.
 
 - `dotdash-manager rotate start`, `swap` and `finish` rotate the servers' REALITY key with no device cut off. The canaries watching servers prove the next key before devices and relays move to it. A canary's `facts` now name the key it checks under.
 

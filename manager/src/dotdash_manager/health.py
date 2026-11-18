@@ -199,20 +199,26 @@ def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[d
     return off, say
 
 
-def splits(net: Network, health: dict) -> tuple[set[str], list[str]]:
-    """The servers devices should reach with their REALITY hello split into TLS
-    records (hello_split): REALITY got through for none of their canaries in
+def splits(net: Network, health: dict, burnt: set[str] | frozenset[str] = frozenset()) -> tuple[set[str], list[str]]:
+    """The servers and relays devices should reach with their REALITY hello
+    split into TLS records: REALITY got through for none of their canaries in
     BURN_AFTER readings, while the split hello did in the last one. That is a
-    box blocking the servers' name by SNI, reassembling TCP but not TLS
-    records (dotdash-lab #50). It holds while that stays so: REALITY back, or
-    the split failing too, turns it off. Servers only: their links stay in
-    devices' configs whatever the canaries find."""
-    on = {s.name for s in net.server
-          if health.get(s.name, {}).get("paths", {}).get("reality", 0) >= BURN_AFTER
-          and health.get(s.name, {}).get("split") == 0}
+    box blocking the name by SNI, reassembling TCP but not TLS records
+    (dotdash-lab #50). It holds while that stays so: REALITY back, or the split
+    failing too, turns it off. A server gets hello_split; a relay split on its
+    line, beside off=reality, which keeps the link out of share links (they
+    can't split) while devices' Xray configs keep it, split. A burnt relay
+    stays out."""
+    def on(name: str) -> bool:
+        h = health.get(name, {})
+        return h.get("paths", {}).get("reality", 0) >= BURN_AFTER and h.get("split") == 0
+    servers = {s.name for s in net.server if on(s.name)}
+    relays = {r.name for r in net.relay if on(r.name) and r.name not in burnt}
     say = [f"split: server {n}: REALITY gets through only with its hello split into TLS records, a block on its name by SNI; "
-           "devices' Xray configs split it (hello_split), share links can't" for n in sorted(on)]
-    return on, say
+           "devices' Xray configs split it (hello_split), share links can't" for n in sorted(servers)]
+    say += [f"split: relay {n}: REALITY gets through only with its hello split into TLS records, a block on its site's name "
+            "by SNI; devices' Xray configs split it through the relay, share links lose it (off=reality)" for n in sorted(relays)]
+    return servers | relays, say
 
 
 def events(before: dict, after: dict, stood: dict, stands: dict, now: int) -> list[list]:
