@@ -36,9 +36,13 @@ runtimes:
       # site's own certificate, each device's UUID its login, a probe
       # answered by the cover site over HTTP/3.
       hysteria2: [compose/hysteria2.yaml]
+      # Traffic per inbound and outbound, and the gate's verdicts on its
+      # upstreams, into the node exporter's textfile directory.
+      metrics: [compose/metrics.yaml]
     # installation.profile=xdns,xhttp-reality runs both; any of them with
-    # openvpn, such as xdns,openvpn, adds the OpenVPN tunnels.
-    combinable: [xdns, xhttp-reality, openvpn, mkcp, hysteria2]
+    # openvpn, such as xdns,openvpn, adds the OpenVPN tunnels; metrics goes
+    # with any.
+    combinable: [xdns, xhttp-reality, openvpn, mkcp, hysteria2, metrics]
     options:
       project: dotdash
 
@@ -153,6 +157,10 @@ parameters:
     default: 0
     description: "Mbit/s Hysteria2 sends each device at whatever is lost on the way (Brutal), for a device that asks for it with its own rate; 0 keeps BBR, which backs off as TCP does. Set it to this server's uplink share per device, never more"
     services: [xray]
+  metrics_textfile:
+    type: string
+    default: /var/lib/prometheus/node-exporter
+    description: "Under the metrics profile, the node exporter's textfile directory, the one morzer's metrics.textfile names, which the exporters write dotdash-dotdash-xray.prom and dotdash-dotdash-gate.prom into; it has to exist and be writable by 65532 (sudo setfacl -m u:65532:rwx <it>)"
   xdns_mtu:
     type: int
     default: 900

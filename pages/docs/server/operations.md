@@ -57,6 +57,32 @@ them.
 sudo morzer config set probe_url=https://api.ipify.org 'probe_expect=^203\.0\.113\.7\s*$'
 ```
 
+## Metrics
+
+With morzer's own metrics in the node exporter's textfile directory
+([`metrics.textfile`](https://github.com/morzecrew/morzer/tree/main/pages/docs/operating)),
+the `metrics` profile adds Xray's and the gate's's, in the same directory: each one's traffic per inbound and outbound, and the gate's verdicts on its upstreams. Nothing is
+counted per device. The exporters run as 65532, so the directory has to be
+writable by it:
+
+```sh
+sudo setfacl -m u:65532:rwx /var/lib/prometheus/node-exporter
+sudo morzer config set metrics_textfile=/var/lib/prometheus/node-exporter   # its default
+sudo morzer config set installation.profile=xdns,metrics    # beside the profiles you run
+```
+
+| Metric | Labels | Value |
+| --- | --- | --- |
+| `dotdash_xray_up` | `role` | 1 when the exporter read Xray's counters |
+| `dotdash_inbound_bytes_total` | `role`, `inbound`, `direction` | bytes through an inbound since Xray started |
+| `dotdash_outbound_bytes_total` | `role`, `outbound`, `direction` | bytes through an outbound since Xray started |
+| `dotdash_observatory_alive` | `role`, `outbound` | 1 when the last check got through an upstream |
+| `dotdash_observatory_delay_seconds` | `role`, `outbound` | that check's time, while it gets through |
+| `dotdash_xray_heap_bytes` | `role` | Xray's Go heap, beside its `GOMEMLIMIT` |
+
+Every series also carries `product`. `rate(dotdash_inbound_bytes_total[5m])`
+per inbound shows which transport devices use, and one falling to zero while the others carry on is what a block on it looks like.
+
 ## What the checks say
 
 - **Alerts** cover failed applies, updates and backups, and each morning's
