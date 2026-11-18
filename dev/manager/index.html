@@ -1850,6 +1850,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#rotating-the-reality-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Rotating the REALITY key
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#blocked-paths" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2109,6 +2120,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Where the time goes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rotating-the-reality-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Rotating the REALITY key
       </span>
     </span>
   </a>
@@ -2377,6 +2399,29 @@ servers on the same path, which is the hop to the server. That's close
 enough to compare relays, but canaries sit on different networks, so it is
 no exact measure. A machine whose canaries predate these timings is left out
 until they update.</p>
+<h2 id="rotating-the-reality-key">Rotating the REALITY key<a class="headerlink" href="#rotating-the-reality-key" title="Permanent link">&para;</a></h2>
+<p><code>rotate</code> changes the servers' REALITY key with no device cut off, over their
+second key (<a href="../server/secrets/#rotating-the-reality-key">Rotating the REALITY key</a>),
+in three steps, each published by the next <code>sync</code>:</p>
+<div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>rotate<span class="w"> </span>start<span class="w">     </span><span class="c1"># the next key second on the servers; their canaries move to it</span>
+dotdash-manager<span class="w"> </span>sync
+dotdash-manager<span class="w"> </span>rotate<span class="w"> </span>swap<span class="w">      </span><span class="c1"># once a canary got through on it: the key now, the old one second</span>
+dotdash-manager<span class="w"> </span>sync
+dotdash-manager<span class="w"> </span>rotate<span class="w"> </span>finish<span class="w">    </span><span class="c1"># a week later: the old key off</span>
+dotdash-manager<span class="w"> </span>sync
+</code></pre></div>
+<ul>
+<li><strong><code>start</code></strong> gives the servers a next key as their second. Only the canaries
+  watching servers move to it: devices and relays keep the current key.</li>
+<li><strong><code>swap</code></strong> refuses until one of those canaries has got REALITY through on
+  the next key since <code>start</code>. It then makes the next key the servers' key and
+  keeps the old one second. Subscriptions, client machines and relays move to
+  the new key, and devices still on the old one keep getting in.</li>
+<li><strong><code>finish</code></strong> refuses for a week after <code>swap</code>, the devices' time to fetch
+  their subscriptions or get new links. It then turns the old key off.</li>
+<li><code>rotate</code> alone says where it stands. <code>--force</code> skips the canary check or
+  the week, when you know better.</li>
+</ul>
 <h2 id="blocked-paths">Blocked paths<a class="headerlink" href="#blocked-paths" title="Permanent link">&para;</a></h2>
 <p>Short of burnt, a relay can lose one path while its others get through: its
 REALITY port cut while XHTTP through its own site still answers, mKCP
