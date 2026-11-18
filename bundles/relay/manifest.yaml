@@ -26,8 +26,11 @@ runtimes:
       # VLESS over mKCP on kcp_port, as the server's mkcp profile: UDP, its
       # packets encrypted under kcp_seed and dressed in kcp_header.
       mkcp: [compose/mkcp.yaml]
-    # installation.profile=own-site,mkcp runs both.
-    combinable: [own-site, mkcp]
+      # Traffic per inbound and outbound, and the verdicts on the servers,
+      # into the node exporter's textfile directory.
+      metrics: [compose/metrics.yaml]
+    # installation.profile=own-site,mkcp runs both; metrics goes with either.
+    combinable: [own-site, mkcp, metrics]
     options:
       project: dotdash-relay
 
@@ -139,6 +142,10 @@ parameters:
     type: bool
     default: false
     description: "Give devices only the links through this relay's cdn_hosts, so its own address reaches none of them and it can stay the CDNs' origin while relays devices reach directly get blocked; relay-entry carries it to the server's relays line as cdn-only"
+  metrics_textfile:
+    type: string
+    default: /var/lib/prometheus/node-exporter
+    description: "Under the metrics profile, the node exporter's textfile directory, the one morzer's metrics.textfile names, which the exporters write dotdash-dotdash-relay-xray.prom into; it has to exist and be writable by 65532 (sudo setfacl -m u:65532:rwx <it>)"
   dotdash_servers:
     type: string
     required: true
@@ -172,6 +179,8 @@ parameters:
     services: [xray]
 
 images:
+  # The metrics profile's exporters (metrics/metrics.py): Python alone.
+  metrics: ghcr.io/morzecrew/python-distroless:3.14.8@sha256:05257d1cd331009829fa29d296889ddf77e68a07a5e459b7a2ad60bdde860267
   # The relay-entry task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
   xray: ghcr.io/morzecrew/xray:26.11.9@sha256:e39b11531a5dc3f7214ddb58335055ed9e559b13557f094b177b625dbd35ee76

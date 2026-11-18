@@ -15,6 +15,15 @@ servers' outbounds (the first outbound stays the default); names go on. */ -}}
 {{- $pbk := required "set dotdash_public_key" .Parameters.dotdash_public_key -}}
 {
   "log": {"loglevel": "warning", "access": "none"},
+{{- if has "metrics" .Profiles }}
+  {{- /* The metrics profile: traffic per inbound and outbound, never per
+  device (no user counters), and the observatory's verdicts, on 127.0.0.1
+  alone, where the metrics profile's exporter, in this namespace, reads them
+  (metrics/metrics.py). */}}
+  "stats": {},
+  "metrics": {"listen": "127.0.0.1:11111"},
+  "policy": {"system": {"statsInboundUplink": true, "statsInboundDownlink": true, "statsOutboundUplink": true, "statsOutboundDownlink": true}},
+{{- end }}
   "inbounds": [
     {
       "tag": "devices",

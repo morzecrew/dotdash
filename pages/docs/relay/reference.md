@@ -16,6 +16,7 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `dotdash_port` | `443` | the servers' `https_port` |
 | `dotdash_public_key` | none, given at `init` | the servers' REALITY public key, the `pbk` of their links |
 | `dotdash_address` | `none` | where to connect when `dotdash_servers` names one server, such as its IP; `none` reaches each server by its name |
+| `metrics_textfile` | `/var/lib/prometheus/node-exporter` | with the `metrics` profile, the node exporter's textfile directory, writable by 65532 ([Metrics](operations.md#metrics)) |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what the health check fetches through dotdash; any 2xx is healthy |
 | `tcp_congestion` | `bbr` | TCP congestion control toward devices, in Xray's own namespace: `bbr` keeps its pace through a lossy last mile; `cubic` for a kernel without `tcp_bbr` |
 | `ipv6` | `allow` | `block`: IPv6 destinations end at the relay and never reach a server; names go on |

@@ -11,6 +11,7 @@
 | `entry_port` | `none` | the port devices, relays and the canary dial, when a web server of your own passes the domain through to `https_port`; `none` for `https_port` |
 | `xdns_domain` | `t` | tunnel zone (`xdns`); a name with no dot is under the domain |
 | `xdns_bind` | `0.0.0.0` | host address for UDP/53 |
+| `metrics_textfile` | `/var/lib/prometheus/node-exporter` | with the `metrics` profile, the node exporter's textfile directory, writable by 65532 ([Metrics](operations.md#metrics)) |
 | `xdns_mtu` | `900` | tunnel reply size; lower it if replies get lost |
 | `xhttp_reality_port` | `8443` | port for XHTTP with REALITY; not `https_port` or `http_port` |
 | `kcp_port` | `8447` | UDP port for [mKCP](mkcp.md); not 53 with the DNS tunnel |

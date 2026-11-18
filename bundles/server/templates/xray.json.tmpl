@@ -84,6 +84,15 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
 {{- if not (contains $xdns ".") }}{{ $xdns = printf "%s.%s" $xdns $domain }}{{ end -}}
 {
   "log": {"loglevel": "{{ .Parameters.log_level }}", "access": "none", "dnsLog": false},
+{{- if has "metrics" .Profiles }}
+  {{- /* The metrics profile: traffic per inbound and outbound, never per
+  device (no user counters), and the observatory's verdicts, on 127.0.0.1
+  alone, where the metrics profile's exporter, in this namespace, reads them
+  (metrics/metrics.py). */}}
+  "stats": {},
+  "metrics": {"listen": "127.0.0.1:11111"},
+  "policy": {"system": {"statsInboundUplink": true, "statsInboundDownlink": true, "statsOutboundUplink": true, "statsOutboundDownlink": true}},
+{{- end }}
 {{- if $gateway }}
   {{- /* A name looked up before and since expired is answered from the cache
   at once (TTL 1) while it is asked again in the background, so a site
