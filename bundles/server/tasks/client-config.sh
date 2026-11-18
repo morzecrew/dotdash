@@ -41,9 +41,9 @@ direct=${DIRECT:-true}
 # hello_split: the ClientHello of the servers' REALITY outbounds re-wrapped in
 # TLS records of 100-200 bytes, sent apart (dotdash-lab #50), for a box that
 # blocks the servers' name by SNI without joining TLS records.
+split_hello=', "finalmask": {"tcp": [{"type": "fragment", "settings": {"packets": "tlshello", "length": "100-200", "delay": "10-20"}}]}'
 hello=
-[ "${HELLO_SPLIT:-false}" != true ] ||
-  hello=', "finalmask": {"tcp": [{"type": "fragment", "settings": {"packets": "tlshello", "length": "100-200", "delay": "10-20"}}]}'
+[ "${HELLO_SPLIT:-false}" != true ] || hello=$split_hello
 if [ "$direct" = false ]; then servers='' count=0 XDNS_DOMAIN=; fi
 # Set by the xhttp-reality profiles' overlay only: XHTTP with REALITY, a third
 # link and outbound. Without it the output is what it always was.
@@ -88,7 +88,7 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # The dotdash-relay machines in front of this server (the relays parameter),
 # one "<host> <site> <public key> <short id> <encryption> [own-site [<xhttp
 # path>]] [kcp=<port>,<header>,<seed>[,<open>]] [cdn=<host>[,<host>]] [cdn-only]
-# [off=<path>[,<path>]]" per
+# [off=<path>[,<path>]] [split]" per
 # line; blank lines, "#" comments and shorter lines are not relays. own-site:
 # the site is the relay's own, which fetches subscriptions from here and, given
 # its path, routes XHTTP to the relay's Xray. kcp=: the relay serves mKCP on
@@ -97,14 +97,17 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # they need its XHTTP path. cdn-only: devices get the relay's CDN links alone,
 # so its own address reaches none of them. off=: the paths its canaries find
 # blocked (reality, xhttp, mkcp; dotdash-manager sets it), which devices then
-# don't get through it; its CDN links stay. Each becomes "<host> <site> <key>
-# <sid> <enc> <own-site|-> <path|-> <kcp|-> <cdn hosts, comma-separated|->
-# <cdn-only|-> <off paths, comma-separated|->".
+# don't get through it; its CDN links stay. split: its canaries got REALITY
+# through only with its hello split into TLS records (dotdash-manager sets it):
+# the Xray config devices get keeps a REALITY outbound through it, split, even
+# with off=reality, which share links can't carry. Each becomes "<host> <site>
+# <key> <sid> <enc> <own-site|-> <path|-> <kcp|-> <cdn hosts, comma-separated|->
+# <cdn-only|-> <off paths, comma-separated|-> <split|->".
 all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   case $line in '' | '#'*) continue ;; esac
-  c=- d=- only=- x=- rest=
+  c=- d=- only=- x=- sp=- rest=
   for f in $line; do
-    case $f in kcp=*) c=${f#kcp=} ;; cdn=*) d=${f#cdn=} ;; cdn-only) only=cdn-only ;; off=*) x=${f#off=} ;; *) rest="$rest $f" ;; esac
+    case $f in kcp=*) c=${f#kcp=} ;; cdn=*) d=${f#cdn=} ;; cdn-only) only=cdn-only ;; off=*) x=${f#off=} ;; split) sp='split' ;; *) rest="$rest $f" ;; esac
   done
   # shellcheck disable=SC2086 # one field per word
   set -- $rest
@@ -131,7 +134,7 @@ all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
     echo "relays: $1 is cdn-only but has no CDN link; left out" >&2
     continue
   fi
-  if [ -n "${5:-}" ]; then echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $c $d $only $x"; fi
+  if [ -n "${5:-}" ]; then echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $c $d $only $x $sp"; fi
 done)
 
 # The local CDNs in front of this server (the cdn_hosts parameter), each
@@ -151,13 +154,13 @@ sees() { [ -z "$mine" ] || has "$1" "$mine" || ! has "$1" "$pools"; }
 pick() { # <device name>: the relays, CDN hosts and subscription relays it gets
   mine=
   [ -z "$1" ] || mine=$(printf '%s\n' "$pools" | awk -v m="$1" '{ for (i = 2; i <= NF; i++) if ($i == m) { print; next } }')
-  relays=$(printf '%s\n' "$all_relays" | while read -r h s k i e o p c d only off; do
+  relays=$(printf '%s\n' "$all_relays" | while read -r h s k i e o p c d only off sp; do
     if [ -z "$h" ] || ! sees "$h"; then continue; fi
     if [ "$d" != - ]; then
       d=$(for x in $(printf '%s' "$d" | tr ',' ' '); do if sees "$x"; then printf '%s,' "$x"; fi; done)
       d=${d%,}
     fi
-    echo "$h $s $k $i $e $o $p $c ${d:--} $only $off"
+    echo "$h $s $k $i $e $o $p $c ${d:--} $only $off $sp"
   done)
   cdns=$(for h in $all_cdns; do if sees "$h"; then echo "$h"; fi; done)
   # The own-site relays' domains, where a device inside the restricted network
@@ -228,7 +231,7 @@ blocked() { case ,$1, in *,"$2",*) ;; *) return 1 ;; esac; }
 # A relay takes REALITY on 443 under its neighbour site's name, with keys of its
 # own, and carries the device on to this server as its own client.
 relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]", "[relay <host> xhttp]" and "[relay <host> cdn <cdn>]" before it through an own-site one, "[relay <host> kcp]" after it with mKCP
-  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off; do
+  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off _; do
     [ -n "$h" ] || continue
     [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp || cat <<EOF
 XHTTP over TLS through the relay $h, behind its own site (v2rayN, v2rayNG, Happ):
@@ -303,14 +306,17 @@ mux='"mux": {"enabled": true, "concurrency": -1, "xudpConcurrency": 8, "xudpProx
 
 relay_outbounds() { # <id>
   n=0
-  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off; do
+  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off sp; do
     [ -n "$h" ] || continue
     n=$((n + 1))
-    [ "$only" = cdn-only ] || blocked "$off" reality || cat <<EOF
+    # split: REALITY through it with its hello split, even with off=reality.
+    rhello=
+    [ "$sp" != split ] || rhello=$split_hello
+    [ "$only" = cdn-only ] || { blocked "$off" reality && [ "$sp" != split ]; } || cat <<EOF
     {"tag": "dotdash-relay-$n", "protocol": "vless",
      "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e", "flow": "xtls-rprx-vision"},
      "streamSettings": {"network": "raw", "security": "reality",
-       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "$k", "shortId": "$i"}},
+       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "$k", "shortId": "$i"}${rhello}},
      ${mux}},
 EOF
     [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp || cat <<EOF
