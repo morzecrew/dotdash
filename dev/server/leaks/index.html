@@ -1140,6 +1140,23 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  What leaks where
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="././" class="md-nav__link md-nav__link--active">
         
   
@@ -1155,6 +1172,37 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-browsers-location" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The browser's location
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1895,6 +1943,11 @@
                       
                     
                     
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
                   
                   <div class="md-sidebar__inner">
                     
@@ -1906,6 +1959,25 @@
   
     
   
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-browsers-location" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The browser's location
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -2045,6 +2117,35 @@
   <a href="../../relay/reference/">relay</a> it ends there, and here no IPv6 destination
   leaves (<a href="../parameters/">parameters</a>).</li>
 </ul>
+<h2 id="the-browsers-location">The browser's location<a class="headerlink" href="#the-browsers-location" title="Permanent link">&para;</a></h2>
+<p>dotdash keeps the network consistent: sites see the exit IP, and geolocation
+by IP follows it. The browser can still tell another story. JavaScript's
+timezone (<code>Date</code>, <code>Intl</code>) and the Geolocation API read the device's own
+settings, not the exit. To match them to the exit without changing the
+device's settings, use a browser extension that sets both:</p>
+<ul>
+<li><strong>Cloaq</strong>, for desktop Chromium. It sets them through Chrome's debugger API
+  (<code>Emulation.setTimezoneOverride</code> and <code>setGeolocationOverride</code>), in the
+  engine, so a page finds no JavaScript wrapper to detect:
+  <a href="https://chromewebstore.google.com/detail/cloaq-location-guard-loca/fcalilbnpkfikdppppppchmkdipibalb">Chrome Web Store</a>.</li>
+<li><strong>GeoSpoof</strong>, to match the exit's region in one click (VPN Sync), or on
+  mobile:<ul>
+<li><a href="https://chromewebstore.google.com/detail/geospoof-spoof-geolocatio/dgdbdodafgaeifgajaajohkjjgobcgje">Chrome Web Store</a>,
+  for desktop Chromium;</li>
+<li><a href="https://addons.mozilla.org/firefox/addon/geo-spoof/">Firefox Add-ons</a>,
+  for desktop Firefox and Firefox for Android 140 and later;</li>
+<li><a href="https://apps.apple.com/app/geospoof-location-changer/id6765719745">App Store</a>,
+  for Safari on iOS, iPadOS and macOS.</li>
+</ul>
+</li>
+</ul>
+<p>Neither needs the proxy's credentials: they read the exit IP, or take a
+region. Both are optional. Neither stops WebRTC from showing the device's
+own addresses, which is a browser setting of its own.</p>
+<p>Chrome on Android takes no extensions, so use Firefox for Android there.
+GeoSpoof's <a href="https://play.google.com/store/apps/details?id=com.bugsmirror.android.gpsspoofer">Google Play app</a>
+is a different thing: it fakes the device's GPS for every app, as its
+"Mock location app" in Developer options, rather than working in the browser.</p>
 
 
 
