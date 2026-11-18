@@ -2919,6 +2919,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p><code>dotdash-manager report</code> shows how long each path of each server and relay lasted before it was first blocked, and the median per path. A server or relay in the roster can carry your own <code>provider</code> and <code>address_since</code>, and the report adds up lifetimes per provider, kept for machines taken out of the roster.</p>
+</li>
+<li>
 <p>A relay can reach the servers over XHTTP with REALITY (<code>dotdash_link=xhttp-reality</code>), connections reused across devices: about 100 ms sooner to a page's first byte, for about twice the CPU. <code>relay-config</code> prints the settings and the <code>dotdash_xhttp_path</code> secret when the server runs <code>xhttp-reality</code>.</p>
 </li>
 <li>
