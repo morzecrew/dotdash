@@ -1,0 +1,10 @@
+#!/bin/sh
+# The kill switch check: under the tun profile (its TUN interface is up), the
+# killswitch service's rules are in place, so nothing goes around dotdash
+# while Xray restarts (killswitch/killswitch.sh).
+ip link show Meta >/dev/null 2>&1 || { echo "not under the tun profile (no TUN interface)"; exit 0; }
+for pref in 9001 9002; do
+  ip -4 rule show pref "$pref" | grep -q . \
+    || { echo "TUN is up, but the kill switch's rules are not (no rule $pref): is the killswitch service running? sudo docker ps -f name=killswitch" >&2; exit 1; }
+done
+echo "the kill switch is on: with Xray gone, nothing leaves around dotdash"
