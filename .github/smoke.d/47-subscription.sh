@@ -87,6 +87,17 @@ if sudo grep -q 'json' /opt/dotdash/current/tasks/subscription.sh; then
   echo "${0##*/}: <url>.json serves the device's Xray config, as JSON and no-store"
 fi
 
+# An app on Apple's network stack, by its User-Agent, gets the links with
+# Safari's hello; any other app, Chrome's, as above.
+if sudo grep -q '@apple' /opt/dotdash/current/caddy/Caddyfile; then
+  apple=$(fetch "${url}" -A 'Shadowrocket/2.2.60 CFNetwork/1568.100.1 Darwin/24.0.0' | base64 -d 2>/dev/null || true)
+  [ "${apple}" = "$(links_of | sed 's/&fp=chrome&/\&fp=safari\&/g')" ] ||
+    die "an Apple app's subscription is not its links with fp=safari"
+  grep -q '&fp=safari&' <<<"${apple}" || die "an Apple app's links carry no fp=safari"
+  ! grep -q 'fp=safari' <<<"${served}" || die "an app off Apple's stack got fp=safari"
+  echo "${0##*/}: an Apple app's subscription carries Safari's hello, any other Chrome's"
+fi
+
 if sudo grep -q 'Cache-Control no-store' /opt/dotdash/current/caddy/Caddyfile; then
   grep -qix 'cache-control: no-store' <<<"$(headers "${url}")" || die "a subscription is served without Cache-Control: no-store"
   echo "${0##*/}: a subscription is served no-store, so nothing between keeps a copy"

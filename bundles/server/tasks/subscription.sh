@@ -22,10 +22,15 @@ if [ "${SUBSCRIPTION:-false}" = true ]; then
     token=$(printf '%s:%s' "$key" "$id" | sha256sum | cut -c1-32)
     sh /task/client-config.sh --full "$id" >"$out/.full"
     grep -E '^(vless|hysteria2)://' "$out/.full" | base64 -w 0 >"$out/$token.new"
+    # The same links for an app on Apple's network stack (Caddyfile: by its
+    # User-Agent), whose own hello is Safari's: fp=safari, so the device's
+    # TLS hello matches the platform its TCP comes from.
+    grep -E '^(vless|hysteria2)://' "$out/.full" | sed 's/&fp=chrome&/\&fp=safari\&/g' | base64 -w 0 >"$out/$token.apple.new"
     # The config: the lines from its opening brace to its closing one, each
     # alone on its line, as client-config prints it.
     sed -n '/^{$/,/^}$/p' "$out/.full" >"$out/$token.json.new"
     mv "$out/$token.new" "$out/$token"
+    mv "$out/$token.apple.new" "$out/$token.apple"
     mv "$out/$token.json.new" "$out/$token.json"
     n=$((n + 1))
   done </run/secrets/vless_clients

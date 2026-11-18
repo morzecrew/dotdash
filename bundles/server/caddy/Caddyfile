@@ -117,6 +117,15 @@ http://127.0.0.1:8081 {
 			not header Accept application/json
 		}
 		header @links Content-Type "text/plain; charset=utf-8"
+		# An app on Apple's network stack, by its User-Agent, gets the links
+		# with Safari's hello (subscription.sh), as its platform's own: a
+		# Chrome hello from an iPhone fits neither its TCP nor its browser.
+		@apple {
+			path_regexp ^/[0-9a-f]{32}$
+			not header Accept application/json
+			header_regexp User-Agent (?i)(cfnetwork|darwin|iphone|ipad|ios|mac os|macintosh)
+		}
+		rewrite @apple {path}.apple
 		header Cache-Control no-store
 		file_server
 	}

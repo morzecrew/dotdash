@@ -57,6 +57,14 @@ sudo morzer task run client-config --output -- --full phone    # plus links and 
 - Add the URL as a subscription in the app (v2rayN, v2rayNG, Hiddify, Happ,
   Streisand) and refresh every few hours: revocations, key rotations and new
   relays then reach devices with nothing to resend.
+- An app on Apple's network stack (its User-Agent names CFNetwork, Darwin, iOS
+  or macOS, as Shadowrocket's, Streisand's and Happ's on iOS do) gets the links
+  with Safari's TLS hello (`fp=safari`), as its own platform sends; every other
+  app, Chrome's. A Chrome hello from an iPhone fits neither its network stack
+  nor its browser.
+- Hiddify reads XHTTP links with its own core, which takes `mode=auto` as
+  `packet-up` and ignores a `mode` in the link: long uploads through them can
+  hang there. In Hiddify, use the REALITY or Hysteria2 link.
 - The same URL, asked with `Accept: application/json`, serves the device's
   Xray config: the [client bundle](../client/index.md) runs Xray on it on a
   Linux machine for you. On its REALITY links, the device's UDP flows share
