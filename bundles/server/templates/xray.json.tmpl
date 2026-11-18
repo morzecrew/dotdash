@@ -66,6 +66,13 @@ resolve=upstream the upstream resolves names itself, so only literals stop. */ -
 is the operator's to say: a WireGuard or OpenVPN line, or SOCKS5 with UDP
 ASSOCIATE. */ -}}
 {{- $udp := eq (print .Parameters.upstream_udp) "true" -}}
+{{- /* reality_second_key: a second REALITY key beside reality_key, so a key can
+be rotated with no device cut off. The public inbounds pass on to their
+loopback twin under the second key what they can't authenticate, as they
+pass a stranger on to the site; the twin passes its own strangers on to the
+site, so a prober meets the site through both, and a device holding either
+key gets in. */ -}}
+{{- $second := eq (print .Parameters.reality_second_key) "true" -}}
 {{- $withXdns := has "xdns" .Profiles -}}
 {{- $xhttpReality := has "xhttp-reality" .Profiles -}}
 {{- $kcp := has "mkcp" .Profiles -}}
@@ -116,7 +123,7 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
         "network": "raw",
         "security": "reality",
         "realitySettings": {
-          "target": "caddy:443",
+          "target": "{{ if $second }}127.0.0.1:4430{{ else }}caddy:443{{ end }}",
           "serverNames": ["{{ $domain }}"],
           "privateKey": {"$file": "/run/secrets/reality_key"},
           "shortIds": [{"$file": "/run/secrets/reality_short_id"}]
@@ -124,6 +131,30 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
       },
       "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
     },
+{{- if $second }}
+    {
+      "tag": "reality-second",
+      "listen": "127.0.0.1",
+      "port": 4430,
+      "protocol": "vless",
+      "settings": {
+        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "flow": "xtls-rprx-vision",
+        "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
+      },
+      "streamSettings": {
+        "network": "raw",
+        "security": "reality",
+        "realitySettings": {
+          "target": "caddy:443",
+          "serverNames": ["{{ $domain }}"],
+          "privateKey": {"$file": "/run/secrets/reality_key_second"},
+          "shortIds": [{"$file": "/run/secrets/reality_short_id_second"}]
+        }
+      },
+      "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
+    },
+{{- end }}
     {
       "tag": "xhttp",
       "listen": "0.0.0.0",
@@ -153,7 +184,7 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
         "network": "xhttp",
         "security": "reality",
         "realitySettings": {
-          "target": "caddy:443",
+          "target": "{{ if $second }}127.0.0.1:4431{{ else }}caddy:443{{ end }}",
           "serverNames": ["{{ $domain }}"],
           "privateKey": {"$file": "/run/secrets/reality_key"},
           "shortIds": [{"$file": "/run/secrets/reality_short_id"}]
@@ -162,6 +193,30 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
       },
       "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
     },
+{{- if $second }}
+    {
+      "tag": "xhttp-reality-second",
+      "listen": "127.0.0.1",
+      "port": 4431,
+      "protocol": "vless",
+      "settings": {
+        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
+      },
+      "streamSettings": {
+        "network": "xhttp",
+        "security": "reality",
+        "realitySettings": {
+          "target": "caddy:443",
+          "serverNames": ["{{ $domain }}"],
+          "privateKey": {"$file": "/run/secrets/reality_key_second"},
+          "shortIds": [{"$file": "/run/secrets/reality_short_id_second"}]
+        },
+        "xhttpSettings": {"path": {"$file": "/run/secrets/xhttp_path"}, "mode": "auto"}
+      },
+      "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
+    },
+{{- end }}
 {{- end }}
 {{- if $kcp }}
     {

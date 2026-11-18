@@ -59,7 +59,8 @@ jq() { # <filter> <file>: the filter's output, or why the file does not parse
 
 violations=$(jq '
   [.outbounds[]?.tag] as $tags
-  | ([.inbounds[]?.tag] - ["reality", "xhttp", "xhttp-reality", "kcp", "hysteria2", "xdns", "probe"]) as $extra
+  | ([.inbounds[]?.tag] - ["reality", "xhttp", "xhttp-reality", "kcp", "hysteria2", "xdns", "probe",
+      "reality-second", "xhttp-reality-second"]) as $extra
   | check($tags == ["upstream", "block"] or $tags == ["upstream", "block", "upstream6"];
       "the outbounds are \($tags), not upstream and block (and upstream6)"),
     (.outbounds[2]? // empty |
@@ -94,7 +95,9 @@ violations=$(jq '
     (.inbounds[]? | select(.protocol == "hysteria") |
       check(.settings.users != null; "inbound \(.tag) accepts no user list")),
     (.inbounds[]? | select(.protocol != "vless" and .protocol != "hysteria") |
-      check(.listen == "127.0.0.1"; "inbound \(.tag) (\(.protocol)) listens beyond loopback"))
+      check(.listen == "127.0.0.1"; "inbound \(.tag) (\(.protocol)) listens beyond loopback")),
+    (.inbounds[]? | select(.tag | endswith("-second")) |
+      check(.listen == "127.0.0.1"; "inbound \(.tag), the second key'"'"'s, listens beyond loopback"))
   ' "${config}")
 violations+=$'\n'$(jq '
   ["public-tls", "public-dns", "public-xhttp-reality", "public-kcp", "public-hysteria2"] as $public

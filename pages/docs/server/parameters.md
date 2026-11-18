@@ -11,6 +11,7 @@
 | `entry_port` | `none` | the port devices, relays and the canary dial, when a web server of your own passes the domain through to `https_port`; `none` for `https_port` |
 | `xdns_domain` | `t` | tunnel zone (`xdns`); a name with no dot is under the domain |
 | `xdns_bind` | `0.0.0.0` | host address for UDP/53 |
+| `reality_second_key` | `false` | accept the second REALITY key (`reality_key_second`) beside `reality_key`, to [rotate it](secrets.md#rotating-the-reality-key) with no device cut off |
 | `metrics_textfile` | `/var/lib/prometheus/node-exporter` | with the `metrics` profile, the node exporter's textfile directory, writable by 65532 ([Metrics](operations.md#metrics)) |
 | `xdns_mtu` | `900` | tunnel reply size; lower it if replies get lost |
 | `xdns_tti` | `50` | milliseconds between the tunnel's sends, on the server and in devices' configs; raise it if resolvers start refusing the queries |
