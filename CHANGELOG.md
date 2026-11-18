@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `dotdash-manager rotate start`, `swap` and `finish` rotate the servers' REALITY key with no device cut off. The canaries watching servers prove the next key before devices and relays move to it. A canary's `facts` now name the key it checks under.
+
 - The server can accept a second REALITY key beside `reality_key` (`reality_second_key`, with the `reality_key_second` and `reality_short_id_second` secrets), so the key can be rotated with no device cut off. The docs walk through the three steps.
 
 - The server's and the relay's `metrics` profile writes Xray's traffic per inbound and outbound, its upstreams' or servers' verdicts and its heap into the node exporter's textfile directory beside morzer's own metrics, never per device.

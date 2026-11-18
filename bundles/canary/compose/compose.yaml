@@ -59,6 +59,9 @@ services:
       # The facts task's: what it watches, and its check without dotdash.
       DOTDASH_SERVER: ${DOTDASH_CANARY_PARAM_DOTDASH_SERVER:?set by morzer}
       DOTDASH_ADDRESS: ${DOTDASH_CANARY_PARAM_DOTDASH_ADDRESS:?set by morzer}
+      # The key the canary checks the server under, in its facts, so the
+      # manager knows a rotated key got through before devices move to it.
+      DOTDASH_PUBLIC_KEY: ${DOTDASH_CANARY_PARAM_DOTDASH_PUBLIC_KEY:-}
       CONTROL_URL: ${DOTDASH_CANARY_PARAM_CONTROL_URL:-none}
       FREEZE_URL: ${DOTDASH_CANARY_PARAM_FREEZE_URL:-https://speed.cloudflare.com/__down?bytes=65536}
       FREEZE_UP_URL: ${DOTDASH_CANARY_PARAM_FREEZE_UP_URL:-https://speed.cloudflare.com/__up}

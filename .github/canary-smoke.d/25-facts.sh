@@ -21,7 +21,7 @@ facts() {
 }
 
 got=$(facts)
-jq -e '.server == "www.gstatic.com" and (.address | length > 0) and (.checked_at | type == "number")
+jq -e '.server == "www.gstatic.com" and (.address | length > 0) and (.public_key | length > 0) and (.checked_at | type == "number")
   and .internet == null and .paths == {reality: true} and .stalled == {} and .stalled_up == []
   and (.latency_ms | keys) == ["reality"] and .latency_ms.reality > 0 and .direct_ms == null' <<<"${got}" >/dev/null ||
   die "facts with the server up: ${got}"
