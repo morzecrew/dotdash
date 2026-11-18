@@ -2481,7 +2481,10 @@ server's <code>hello_split</code>:</p>
   split fails too.</li>
 <li><strong>Why not always on.</strong> The split hello is a fingerprint of its own, which a
   classifier picks up (dotdash-lab #33).</li>
-<li><strong>Servers only.</strong> A relay whose REALITY fails is handled as a blocked path.</li>
+<li><strong>Relays too.</strong> A relay's canaries can find the same of its site's name.
+  Its line then gets <code>split</code> beside <code>off=reality</code>. Share links lose REALITY
+  through it, as for any blocked path, while devices' Xray configs keep it,
+  split. A burnt relay stays out.</li>
 </ul>
 <h2 id="what-it-leaves-alone">What it leaves alone<a class="headerlink" href="#what-it-leaves-alone" title="Permanent link">&para;</a></h2>
 <p>The upstreams, ports, profiles, domains and anything else a machine alone
