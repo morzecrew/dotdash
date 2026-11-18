@@ -12,7 +12,7 @@ from typing import Annotated
 
 import typer
 
-from . import Refused, health, roster, state
+from . import Refused, health, roster, rotate, state
 from .morzer import Morzer, write_roster
 from .render import render
 from .report import report as report_lines
@@ -119,6 +119,34 @@ def report(ctx: typer.Context) -> None:
     net, st = o.open()
     for line in report_lines(net, st.get("events", []), int(time.time()), st.get("stands", {}), st.get("health", {})):
         print(line)
+
+
+@app.command(name="rotate")
+def rotate_key(
+    ctx: typer.Context,
+    step: Annotated[str | None, typer.Argument(help="start, swap or finish; none says where it stands")] = None,
+    force: Annotated[bool, typer.Option("--force", help="swap with no canary through yet, or finish before the window ends")] = False,
+) -> None:
+    """Rotate the REALITY key with no device cut off: start puts a next key
+    second on the servers and moves their canaries to it; swap, once one got
+    through, makes it the key and keeps the old one second; finish, a week
+    later, turns the old one off. Each is published by the next sync."""
+    o: Options = ctx.obj
+    net, st = o.open()
+    now = int(time.time())
+    if step is None:
+        print(rotate.status(st, now))
+        return
+    if step == "start":
+        said = rotate.start(st, now)
+    elif step == "swap":
+        said = rotate.swap(st, net, Morzer(net, o.morzer_roster, o.morzer).gather(), now, force)
+    elif step == "finish":
+        said = rotate.finish(st, now, force)
+    else:
+        raise Refused(f"rotate {step}: start, swap or finish")
+    state.save(o.state, st)
+    print(f"{said}\nrun sync to publish it")
 
 
 @app.command()

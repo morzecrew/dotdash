@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `dotdash-manager rotate start`, `swap` and `finish` rotate the servers' REALITY key with no device cut off. The canaries watching servers prove the next key before devices and relays move to it. A canary's `facts` now name the key it checks under.
+
 - The canary's `hysteria2` profile checks a server's Hysteria2 beside REALITY, on `dotdash_hysteria2_port` (443), logging in as the canary's own id, in `measure` and `facts` too. A server under `hysteria2` tells `canary-config` and `dotdash-manager` its port, and the manager sets it on the canaries watching that server.
 
 - The server's `hysteria2` profile: Hysteria2 on UDP 443 (`hysteria2_port`), under the site's own certificate, each device's UUID its login. Devices get a `[hy2]` link and an outbound. It runs BBR, or Brutal at `hysteria2_up` Mbit/s for devices that ask.

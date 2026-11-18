@@ -247,6 +247,32 @@ enough to compare relays, but canaries sit on different networks, so it is
 no exact measure. A machine whose canaries predate these timings is left out
 until they update.
 
+## Rotating the REALITY key
+
+`rotate` changes the servers' REALITY key with no device cut off, over their
+second key ([Rotating the REALITY key](server/secrets.md#rotating-the-reality-key)),
+in three steps, each published by the next `sync`:
+
+```sh
+dotdash-manager rotate start     # the next key second on the servers; their canaries move to it
+dotdash-manager sync
+dotdash-manager rotate swap      # once a canary got through on it: the key now, the old one second
+dotdash-manager sync
+dotdash-manager rotate finish    # a week later: the old key off
+dotdash-manager sync
+```
+
+- **`start`** gives the servers a next key as their second. Only the canaries
+  watching servers move to it: devices and relays keep the current key.
+- **`swap`** refuses until one of those canaries has got REALITY through on
+  the next key since `start`. It then makes the next key the servers' key and
+  keeps the old one second. Subscriptions, client machines and relays move to
+  the new key, and devices still on the old one keep getting in.
+- **`finish`** refuses for a week after `swap`, the devices' time to fetch
+  their subscriptions or get new links. It then turns the old key off.
+- `rotate` alone says where it stands. `--force` skips the canary check or
+  the week, when you know better.
+
 ## Blocked paths
 
 Short of burnt, a relay can lose one path while its others get through: its

@@ -3,6 +3,7 @@ at hand. Pure: it reads nothing and writes nothing."""
 
 import hashlib
 
+from . import rotate
 from .roster import Network
 from .state import public_key
 
@@ -76,6 +77,13 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
         doc["parameters"].update({name: value for name, value in (("relays", relays), ("pools", pools)) if value})
         if unset:
             doc["unset"] = {"parameters": unset}
+        # A REALITY key rotation (rotate): the second key beside reality_key,
+        # and off again once it is done.
+        if (two := rotate.second(state)) is not None:
+            doc["parameters"]["reality_second_key"] = "true"
+            doc["secrets"].update({f"{k}_second": v for k, v in two.items()})
+        elif rotate.phase(state) == "done":
+            doc["parameters"]["reality_second_key"] = "false"
         docs[s.name] = doc
 
     lead = facts[ready[0].name] if ready else None
@@ -108,8 +116,11 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
             waiting.append(f"{c.name}: waits for {target.name}")
             continue
         if target.kind == "server":
-            params = {"dotdash_server": f["domain"], "dotdash_address": f["domain"], "dotdash_port": str(f["https_port"]), "dotdash_public_key": pbk}
-            sec = {"dotdash_encryption": f["encryption"], "dotdash_short_id": keys["reality_short_id"],
+            # Between rotate start and swap, the next key, which the canary proves first.
+            checks = rotate.canary_key(state) or keys
+            params = {"dotdash_server": f["domain"], "dotdash_address": f["domain"], "dotdash_port": str(f["https_port"]),
+                      "dotdash_public_key": public_key(checks["reality_key"])}
+            sec = {"dotdash_encryption": f["encryption"], "dotdash_short_id": checks["reality_short_id"],
                    "dotdash_xhttp_path": keys["xhttp_path"], "dotdash_kcp_seed": keys["kcp_seed"]}
             if "xhttp_reality_port" in f:
                 params["dotdash_xhttp_reality_port"] = str(f["xhttp_reality_port"])

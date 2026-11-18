@@ -116,6 +116,6 @@ for svc in reality xhttp xhttp-reality mkcp hysteria2; do
 done
 [ -n "$paths" ] || { echo "no transport answers: is the canary running?" >&2; exit 1; }
 
-printf '{"server": %s, "address": %s, "checked_at": %s, "internet": %s, "paths": {%s}, "stalled": {%s}, "stalled_up": [%s], "latency_ms": {%s}, "direct_ms": %s}\n' \
-	"$(str "$DOTDASH_SERVER")" "$(str "$DOTDASH_ADDRESS")" "$(date +%s)" "$internet" "$paths" "$stalled" "$stalled_up" \
+printf '{"server": %s, "address": %s, "public_key": %s, "checked_at": %s, "internet": %s, "paths": {%s}, "stalled": {%s}, "stalled_up": [%s], "latency_ms": {%s}, "direct_ms": %s}\n' \
+	"$(str "$DOTDASH_SERVER")" "$(str "$DOTDASH_ADDRESS")" "$(str "${DOTDASH_PUBLIC_KEY:-}")" "$(date +%s)" "$internet" "$paths" "$stalled" "$stalled_up" \
 	"$latency" "$direct"
