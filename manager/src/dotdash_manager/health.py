@@ -90,6 +90,13 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None) -> 
         ups = {p for f in seen for p, ok in f["paths"].items() if ok}
         record(h, seen)
         h["paths"] = {p: 0 if p in ups else h.get("paths", {}).get(p, 0) + 1 for f in seen for p in f["paths"]}
+        # REALITY with its hello split (a canary's reality_split): up this
+        # reading when any canary got through so, else readings in a row it hasn't.
+        said = [f["reality_split"] for f in seen if isinstance(f.get("reality_split"), bool)]
+        if said:
+            h["split"] = 0 if any(said) else h.get("split", 0) + 1
+        else:
+            h.pop("split", None)
         if ups:
             h["fails"] = 0
             h.pop("since", None)
@@ -175,6 +182,22 @@ def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[d
     say += [f"blocked: server {s.name}: {', '.join(sorted(gone))} in {BURN_AFTER} readings; reported only"
             for s in net.server if s.name not in burnt and (gone := out(s.name))]
     return off, say
+
+
+def splits(net: Network, health: dict) -> tuple[set[str], list[str]]:
+    """The servers devices should reach with their REALITY hello split into TLS
+    records (hello_split): REALITY got through for none of their canaries in
+    BURN_AFTER readings, while the split hello did in the last one. That is a
+    box blocking the servers' name by SNI, reassembling TCP but not TLS
+    records (dotdash-lab #50). It holds while that stays so: REALITY back, or
+    the split failing too, turns it off. Servers only: their links stay in
+    devices' configs whatever the canaries find."""
+    on = {s.name for s in net.server
+          if health.get(s.name, {}).get("paths", {}).get("reality", 0) >= BURN_AFTER
+          and health.get(s.name, {}).get("split") == 0}
+    say = [f"split: server {n}: REALITY gets through only with its hello split into TLS records, a block on its name by SNI; "
+           "devices' Xray configs split it (hello_split), share links can't" for n in sorted(on)]
+    return on, say
 
 
 def events(before: dict, after: dict, stood: dict, stands: dict, now: int) -> list[list]:

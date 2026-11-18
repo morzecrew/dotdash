@@ -44,10 +44,10 @@ str() {
 # %.0f, not %d: busybox awk's %d is 32 bits, which uptime in milliseconds
 # outgrows after 25 days.
 now_ms() { awk '{ printf "%.0f\n", $1 * 1000 }' /proc/uptime; }
-up() { # <service>: prints the milliseconds of the fetch that succeeded
+up() { # <service> [port]: prints the milliseconds of the fetch that succeeded
 	for try in 1 2 3; do
 		start=$(now_ms)
-		if XRAY_HEALTHCHECK_PROXY="http://$1:10809" XRAY_HEALTHCHECK_URL="$PROBE_URL" XRAY_HEALTHCHECK_TIMEOUT=7s \
+		if XRAY_HEALTHCHECK_PROXY="http://$1:${2:-10809}" XRAY_HEALTHCHECK_URL="$PROBE_URL" XRAY_HEALTHCHECK_TIMEOUT=7s \
 			/opt/xray/xray-entrypoint healthcheck >/dev/null 2>&1; then
 			echo $(($(now_ms) - start))
 			return 0
@@ -115,7 +115,13 @@ for svc in reality xhttp xhttp-reality mkcp hysteria2; do
 	paths="${paths:+$paths, }\"$svc\": $ok"
 done
 [ -n "$paths" ] || { echo "no transport answers: is the canary running?" >&2; exit 1; }
+# REALITY with its ClientHello split into TLS records (templates/reality.json.tmpl):
+# getting through when REALITY itself doesn't is a block on the server's name.
+reality_split=null
+if nc -z -w 2 reality 10810 2>/dev/null; then
+	if up reality 10810 >/dev/null; then reality_split=true; else reality_split=false; fi
+fi
 
-printf '{"server": %s, "address": %s, "public_key": %s, "checked_at": %s, "internet": %s, "paths": {%s}, "stalled": {%s}, "stalled_up": [%s], "latency_ms": {%s}, "direct_ms": %s}\n' \
-	"$(str "$DOTDASH_SERVER")" "$(str "$DOTDASH_ADDRESS")" "$(str "${DOTDASH_PUBLIC_KEY:-}")" "$(date +%s)" "$internet" "$paths" "$stalled" "$stalled_up" \
+printf '{"server": %s, "address": %s, "public_key": %s, "checked_at": %s, "internet": %s, "paths": {%s}, "reality_split": %s, "stalled": {%s}, "stalled_up": [%s], "latency_ms": {%s}, "direct_ms": %s}\n' \
+	"$(str "$DOTDASH_SERVER")" "$(str "$DOTDASH_ADDRESS")" "$(str "${DOTDASH_PUBLIC_KEY:-}")" "$(date +%s)" "$internet" "$paths" "$reality_split" "$stalled" "$stalled_up" \
 	"$latency" "$direct"

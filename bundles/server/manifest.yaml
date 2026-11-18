@@ -226,6 +226,11 @@ parameters:
     default: "# One pool per line: <pool> <device name, relay host or CDN host>..."
     description: "Pools against a leaked device giving away every entry point, one \"<pool> <member>...\" line per pool, the members device names from vless_clients, relay hosts and CDN hosts; client-config and the subscriptions give a device in a pool its pools' relays and CDN hosts and those in no pool, and a device in none all of them"
     services: [subscription]
+  hello_split:
+    type: bool
+    default: false
+    description: "Split the ClientHello of devices' REALITY links to these servers into small TLS records, sent apart (Xray's tlshello fragment), in the Xray config they get (client-config --full, the subscription's JSON, dotdash-client): what gets through a box blocking the servers' name by SNI that reassembles TCP but not TLS records. Share links can't carry it. dotdash-manager sets it when a canary gets through only so; the split hello is a fingerprint of its own, so it stays off otherwise"
+    services: [subscription]
   reality_second_key:
     type: bool
     default: false

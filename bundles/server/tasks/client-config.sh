@@ -38,6 +38,12 @@ count=$(printf '%s\n' "$servers" | grep -c .)
 # to the servers, no subscription URL on this domain, and no DNS tunnel: its
 # zone is delegated to a server, so a lookup of it names the address.
 direct=${DIRECT:-true}
+# hello_split: the ClientHello of the servers' REALITY outbounds re-wrapped in
+# TLS records of 100-200 bytes, sent apart (dotdash-lab #50), for a box that
+# blocks the servers' name by SNI without joining TLS records.
+hello=
+[ "${HELLO_SPLIT:-false}" != true ] ||
+  hello=', "finalmask": {"tcp": [{"type": "fragment", "settings": {"packets": "tlshello", "length": "100-200", "delay": "10-20"}}]}'
 if [ "$direct" = false ]; then servers='' count=0 XDNS_DOMAIN=; fi
 # Set by the xhttp-reality profiles' overlay only: XHTTP with REALITY, a third
 # link and outbound. Without it the output is what it always was.
@@ -338,7 +344,7 @@ outbounds() { # <id>: a REALITY and an XHTTP outbound per server, the third, mKC
     {"tag": "dotdash-$n-reality", "protocol": "vless",
      "settings": {"address": "$s", "port": ${HTTPS_PORT}, "id": "$1", "encryption": "${enc}", "flow": "xtls-rprx-vision"},
      "streamSettings": {"network": "raw", "security": "reality",
-       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "${pbk}", "shortId": "${sid}"}},
+       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "${pbk}", "shortId": "${sid}"}${hello}},
      ${mux}},
     {"tag": "dotdash-$n-xhttp", "protocol": "vless",
      "settings": {"address": "$s", "port": ${HTTPS_PORT}, "id": "$1", "encryption": "${enc}"},

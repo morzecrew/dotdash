@@ -22,7 +22,7 @@ facts() {
 
 got=$(facts)
 jq -e '.server == "www.gstatic.com" and (.address | length > 0) and (.public_key | length > 0) and (.checked_at | type == "number")
-  and .internet == null and .paths == {reality: true} and .stalled == {} and .stalled_up == []
+  and .internet == null and .paths == {reality: true} and .reality_split == true and .stalled == {} and .stalled_up == []
   and (.latency_ms | keys) == ["reality"] and .latency_ms.reality > 0 and .direct_ms == null' <<<"${got}" >/dev/null ||
   die "facts with the server up: ${got}"
 
@@ -73,7 +73,7 @@ echo "25-facts.sh: freeze_up_url never answered: REALITY reads down, stalled_up"
 sudo docker stop canary-rig-server >/dev/null
 got=$(facts) || true
 sudo docker start canary-rig-server >/dev/null
-jq -e '.internet == true and .paths == {reality: false}' <<<"${got}" >/dev/null ||
+jq -e '.internet == true and .paths == {reality: false} and .reality_split == false' <<<"${got}" >/dev/null ||
   die "facts with the server stopped: ${got}"
 sudo morzer config unset control_url >/dev/null || die "could not unset control_url"
 for _ in $(seq 12); do

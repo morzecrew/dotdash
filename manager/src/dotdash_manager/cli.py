@@ -74,6 +74,8 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     verdicts += more
     off, more = health.blocked(net, facts, st["health"], burnt)
     verdicts += more
+    split, more = health.splits(net, st["health"])
+    verdicts += more
     log = st.setdefault("events", [])
     log += health.events(before, st["health"], st.get("stands", {}), stands, int(time.time()))
     del log[:-health.EVENTS]
@@ -83,7 +85,11 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
         state.save(o.state, st)
     for v in verdicts:
         print(v)
-    docs, waiting = render(net, st, facts, burnt | held, off, stands)
+    docs, waiting = render(net, st, facts, burnt | held, off, stands, split)
+    # After render, which turns hello_split off where the last sync had it on.
+    st["split"] = sorted(split)
+    if not dry_run:
+        state.save(o.state, st)
     failed = 0
     for m in net.machines:
         doc = docs.get(m.name)

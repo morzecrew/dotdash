@@ -27,13 +27,17 @@ def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset()) -> str:
 
 
 def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[str] = frozenset(),
-           off: dict[str, set[str]] | None = None, stands: dict[str, str] | None = None) -> tuple[dict, list[str]]:
+           off: dict[str, set[str]] | None = None, stands: dict[str, str] | None = None,
+           split: set[str] | frozenset[str] = frozenset()) -> tuple[dict, list[str]]:
     """Every machine's document, by name, and what waits for facts not yet
     there. Burnt relays (health.judge) and spares held back (health.spares)
     are left out of the servers' relays and pools, so devices stop getting
     them; they and their canaries keep theirs. A spare standing in for a burnt
     relay (stands: spare, its burnt relay) takes that relay's place in the
-    pools. A relay's blocked paths (health.blocked) go on its line as off=."""
+    pools. A relay's blocked paths (health.blocked) go on its line as off=.
+    The servers in split (health.splits) get hello_split, and those split at
+    the last sync (state's split) and no longer, hello_split off; others none,
+    as a server released before it refuses it."""
     keys, ids = state["keys"], state["ids"]
     pbk = public_key(keys["reality_key"])
     known = [s for s in net.server if s.name in facts]
@@ -84,6 +88,10 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
             doc["secrets"].update({f"{k}_second": v for k, v in two.items()})
         elif rotate.phase(state) == "done":
             doc["parameters"]["reality_second_key"] = "false"
+        if s.name in split:
+            doc["parameters"]["hello_split"] = "true"
+        elif s.name in state.get("split", []):
+            doc["parameters"]["hello_split"] = "false"
         docs[s.name] = doc
 
     lead = facts[ready[0].name] if ready else None

@@ -1,6 +1,13 @@
+{{- /* Two ways through: the probe inbound (10809) as a device's link, and
+probe-split (10810) with the ClientHello re-wrapped in TLS records of
+100-200 bytes, sent apart (Xray's tlshello fragment). The plain way failing
+while the split one gets through is a box blocking the server's name by SNI,
+reassembling TCP but not TLS records (dotdash-lab #50): facts reports the
+split one as reality_split, and the manager hands devices the split. */ -}}
 {
   "log": {"loglevel": "warning", "access": "none"},
-  "inbounds": [{"tag": "probe", "listen": "0.0.0.0", "port": 10809, "protocol": "http"}],
+  "inbounds": [{"tag": "probe", "listen": "0.0.0.0", "port": 10809, "protocol": "http"},
+               {"tag": "probe-split", "listen": "0.0.0.0", "port": 10810, "protocol": "http"}],
   "outbounds": [{
     "tag": "dotdash", "protocol": "vless",
     "settings": {
@@ -14,5 +21,19 @@
       "password": "{{ required "set dotdash_public_key" .Parameters.dotdash_public_key }}",
       "shortId": {"$file": "/run/secrets/dotdash_short_id"}
     }}
-  }]
+  }, {
+    "tag": "dotdash-split", "protocol": "vless",
+    "settings": {
+      "address": "{{ .Parameters.dotdash_address }}", "port": {{ .Parameters.dotdash_port }},
+      "id": {"$file": "/run/secrets/dotdash_id"},
+      "encryption": {"$file": "/run/secrets/dotdash_encryption"},
+      "flow": "xtls-rprx-vision"
+    },
+    "streamSettings": {"network": "raw", "security": "reality", "realitySettings": {
+      "serverName": "{{ .Parameters.dotdash_server }}", "fingerprint": "chrome",
+      "password": "{{ .Parameters.dotdash_public_key }}",
+      "shortId": {"$file": "/run/secrets/dotdash_short_id"}
+    }, "finalmask": {"tcp": [{"type": "fragment", "settings": {"packets": "tlshello", "length": "100-200", "delay": "10-20"}}]}}
+  }],
+  "routing": {"rules": [{"type": "field", "inboundTag": ["probe-split"], "outboundTag": "dotdash-split"}]}
 }
