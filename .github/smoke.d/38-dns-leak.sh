@@ -38,7 +38,7 @@ jq --arg host "${host}" '
          then .streamSettings.tlsSettings.certificates = [{usage: "verify", certificateFile: "/ca/root.pem"}]
          else . end))
   | del(.routing.balancers[0].fallbackTag)
-  | .observatory.probeUrl = "http://11.99.0.10:8000/" | .observatory.probeInterval = "5s"' \
+  | .burstObservatory.pingConfig.destination = "http://11.99.0.10:8000/" | .burstObservatory.pingConfig.interval = "10s"' \
   <<<"${config}" >"${dir}/client.json"
 chmod -R a+rX "${dir}"
 

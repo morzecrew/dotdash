@@ -8,8 +8,10 @@
 # an answer that only the tunnel reaches, www.gstatic.com having nothing on
 # 9443 itself. The workflows' init-args gave init placeholders and
 # smoke.sh random secrets; this sets the real ones, and one device the relay
-# lets in, whose id the later hooks read from /rig/relay/device. It needs the
-# internet, which a GitHub-hosted runner has.
+# lets in, whose id the later hooks read from /rig/relay/device. It also
+# serves XHTTP with REALITY on 9444, for dotdash_link=xhttp-reality, under the
+# path in /rig/relay/xhttp_path. It needs the internet, which a GitHub-hosted
+# runner has.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -24,17 +26,24 @@ public=$(sed -n 's/^Password (PublicKey): //p' <<<"${keys}")
 [ -n "${private}" ] && [ -n "${public}" ] || die "xray x25519 printed no key pair: ${keys}"
 id=$(cat /proc/sys/kernel/random/uuid)
 sid=$(openssl rand -hex 8)
+path=$(openssl rand -hex 16)
 
 mkdir -p /rig/relay/server
-jq -n --arg id "${id}" --arg key "${private}" --arg sid "${sid}" '
+jq -n --arg id "${id}" --arg key "${private}" --arg sid "${sid}" --arg path "${path}" '
   {inbounds: [{listen: "0.0.0.0", port: 9443, protocol: "vless",
      settings: {clients: [{id: $id, flow: "xtls-rprx-vision"}], decryption: "none"},
      streamSettings: {network: "raw", security: "reality", realitySettings:
-       {target: "www.gstatic.com:443", serverNames: ["www.gstatic.com"], privateKey: $key, shortIds: [$sid]}}}],
+       {target: "www.gstatic.com:443", serverNames: ["www.gstatic.com"], privateKey: $key, shortIds: [$sid]}}},
+    {listen: "0.0.0.0", port: 9444, protocol: "vless",
+     settings: {clients: [{id: $id}], decryption: "none"},
+     streamSettings: {network: "xhttp", security: "reality", realitySettings:
+       {target: "www.gstatic.com:443", serverNames: ["www.gstatic.com"], privateKey: $key, shortIds: [$sid]},
+       xhttpSettings: {path: $path, mode: "auto"}}}],
    outbounds: [{protocol: "freedom"}, {tag: "server-https", protocol: "freedom", settings: {redirect: "www.gstatic.com:443"}}],
    routing: {rules: [{type: "field", port: "9443", outboundTag: "server-https"}]}}' >/rig/relay/server/config.json
 chmod -R a+rX /rig/relay/server
-sudo docker run -d --name relay-rig-server -p 9443:9443 \
+printf %s "${path}" >/rig/relay/xhttp_path
+sudo docker run -d --name relay-rig-server -p 9443:9443 -p 9444:9444 \
   -v /rig/relay/server:/etc/xray:ro "${xray}" >/dev/null
 
 sudo morzer config set "dotdash_address=${host}"

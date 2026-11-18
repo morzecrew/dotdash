@@ -19,7 +19,10 @@ sudo morzer config unset installation.profile     # back to the proxy port alone
     sudo morzer config set dns_server=192.168.1.1
     ```
 
-- With dotdash out of reach, nothing gets out around it.
+- With dotdash out of reach, nothing gets out around it. Nor while Xray
+  itself is down, after a crash or on the restart for a new subscription:
+  a kill switch keeps routing rules that let only Xray's own connections and
+  the LAN out then. `sudo morzer doctor` checks they are in place.
 - Networks the machine is directly on, such as its LAN, stay reachable
   directly.
 - The subscription and the dotdash server must be reachable over the
@@ -28,6 +31,14 @@ sudo morzer config unset installation.profile     # back to the proxy port alone
 Xray then runs as root with `NET_ADMIN`, `DAC_OVERRIDE` and
 `NET_BIND_SERVICE`, on the host's network, with `/dev/net/tun`: a TUN
 interface takes nothing less. Its root filesystem stays read-only.
+The kill switch runs beside it as root with `NET_ADMIN` alone. Leaving the
+profile, or stopping dotdash-client, takes its rules out. If it was killed
+instead and the machine reaches nothing but its LAN, take them out by hand:
+
+```sh
+sudo ip rule del pref 9001; sudo ip rule del pref 9002
+sudo ip -6 rule del pref 9001; sudo ip -6 rule del pref 9002
+```
 
 ## A gateway for the LAN
 
