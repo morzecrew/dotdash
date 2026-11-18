@@ -2919,6 +2919,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>A canary's <code>facts</code> say per transport whether the server carries devices' UDP (<code>udp</code>), by asking a DNS server (<code>udp_target</code>) over UDP through each. The leaks page says what WebRTC shows in each mode, and how to stop a browser on a proxy port leaking the device's address.</p>
+</li>
+<li>
 <p>A canary also tries REALITY with its ClientHello split into TLS records (<code>reality_split</code> in its <code>facts</code>). When only that gets through, <code>dotdash-manager</code> sets the server's <code>hello_split</code>, so devices' Xray configs split their REALITY hello past a block on the server's name by SNI.</p>
 </li>
 <li>

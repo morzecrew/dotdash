@@ -2120,6 +2120,10 @@ this network's leg, the target's, and on to the site. <code>direct_ms</code> is
 <code>control_url</code>'s fetch without dotdash, this network's leg alone. The
 manager's <a href="../manager/#where-the-time-goes">report</a> sets one against the
 other.</p>
+<p><code>facts</code> also asks a DNS server (<code>udp_target</code>, <code>1.1.1.1:53</code>) over UDP through
+each transport and gives the result as <code>udp</code>: whether the server carries
+devices' UDP (<code>upstream_udp</code>), which decides what WebRTC shows behind a TUN
+(<a href="../server/leaks/#webrtc">WebRTC</a>).</p>
 <p><code>facts</code> also tries REALITY with its ClientHello split into small TLS records,
 sent apart, and gives the result as <code>reality_split</code>. REALITY failing while
 the split one gets through is a box blocking the server's name by SNI,

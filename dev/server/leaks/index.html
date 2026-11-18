@@ -1190,6 +1190,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#webrtc" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        WebRTC
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#the-browsers-location" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1967,6 +1978,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#webrtc" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        WebRTC
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#the-browsers-location" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2116,6 +2138,62 @@
   <a href="../../client/reference/">client</a> it is refused on the machine, on a
   <a href="../../relay/reference/">relay</a> it ends there, and here no IPv6 destination
   leaves (<a href="../parameters/">parameters</a>).</li>
+</ul>
+<h2 id="webrtc">WebRTC<a class="headerlink" href="#webrtc" title="Permanent link">&para;</a></h2>
+<p>A browser's WebRTC asks a STUN server, over UDP, which address it sees, and a
+page can read the answer (the server-reflexive candidate). What it gets
+depends on how the device reaches dotdash (dotdash-lab #52 measured each):</p>
+<table>
+<thead>
+<tr>
+<th>The device</th>
+<th>The server carries UDP (<code>upstream_udp</code>)</th>
+<th>WebRTC's address</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A browser set to a proxy port (dotdash-client's, or an app's)</td>
+<td>either</td>
+<td>the device's own: STUN leaves around the proxy</td>
+</tr>
+<tr>
+<td>The same, with the <code>WebRtcIPHandling</code> policy below</td>
+<td>either</td>
+<td>none, and no candidate at all</td>
+</tr>
+<tr>
+<td>Behind a TUN (dotdash-client's <code>tun</code>, an app in VPN mode)</td>
+<td>yes</td>
+<td>the exit's, as the rest of its traffic</td>
+</tr>
+<tr>
+<td>Behind a TUN</td>
+<td>no (the default)</td>
+<td>none: only a local candidate</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>
+<p><strong>On a proxy port</strong>, set Chromium's <code>WebRtcIPHandling</code> policy to
+  <code>disable_non_proxied_udp</code>, or better, use the TUN. The policy stops the
+  leak but leaves a browser with no WebRTC address at all, which a page can
+  notice. Chromium's old <code>--force-webrtc-ip-handling-policy</code> switch is gone:
+  the policy goes in a managed policy file (on Linux,
+  <code>/etc/chromium/policies/managed/</code> or <code>/etc/opt/chrome/policies/managed/</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="nt">"WebRtcIPHandling"</span><span class="p">:</span><span class="w"> </span><span class="s2">"disable_non_proxied_udp"</span><span class="p">}</span>
+</code></pre></div>
+</li>
+<li>
+<p><strong>Behind a TUN</strong>, nothing leaks. With <code>upstream_udp=true</code> (every upstream
+  line then has to carry UDP), WebRTC's address is the exit's. Without it,
+  WebRTC has no public address, a smaller tell than a leaked one.</p>
+</li>
+<li>A <a href="../../canary/">canary</a> reports per transport whether the server
+  carries UDP (<code>udp</code> in its <code>facts</code>).</li>
+<li><strong>DNS</strong> stays inside in both modes: browsers send names to a SOCKS proxy,
+  and dotdash-client's TUN answers port 53 itself.</li>
 </ul>
 <h2 id="the-browsers-location">The browser's location<a class="headerlink" href="#the-browsers-location" title="Permanent link">&para;</a></h2>
 <p>dotdash keeps the network consistent: sites see the exit IP, and geolocation
