@@ -62,3 +62,15 @@ morzer config edit relays), then send devices their links again; subscriptions
 pick it up by themselves. A device added to or deleted from vless_clients here has to
 change in the relay's copy too: set it there again from this output.
 EOF
+# Set under the xhttp-reality profiles only, as for client-config.
+[ -n "${XHTTP_REALITY_PORT:-}" ] || exit 0
+cat <<EOF
+
+This server also serves XHTTP with REALITY: the relay can reach it that way,
+its connections reused across devices, sooner to a page's first byte for
+about twice the CPU on both machines:
+sudo morzer config set dotdash_link=xhttp-reality dotdash_xhttp_reality_port=${XHTTP_REALITY_PORT}
+sudo morzer secret set dotdash_xhttp_path <<'END'
+$(cat /run/secrets/xhttp_path)
+END
+EOF

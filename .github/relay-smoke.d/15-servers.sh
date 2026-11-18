@@ -16,7 +16,7 @@ for want in '"tag": "dotdash-2", "protocol": "vless"' '"address": "a.invalid", "
   '"serverName": "c.invalid", "fingerprint": "chrome"' \
   '"balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}}]' \
   '"rules": [{"type": "field", "network": "tcp,udp", "balancerTag": "dotdash"}' \
-  '"observatory": {"subjectSelector": ["dotdash-"]'; do
+  '"burstObservatory": {"subjectSelector": ["dotdash-"]'; do
   grep -qF -- "${want}" <<<"${plan}" || die "the plan for three servers renders no ${want}: $(tail -n 40 <<<"${plan}")"
 done
 

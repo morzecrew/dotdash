@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A relay can reach the servers over XHTTP with REALITY (`dotdash_link=xhttp-reality`), connections reused across devices: about 100 ms sooner to a page's first byte, for about twice the CPU. `relay-config` prints the settings and the `dotdash_xhttp_path` secret when the server runs `xhttp-reality`.
+
 - The canary's `hysteria2` profile checks a server's Hysteria2 beside REALITY, on `dotdash_hysteria2_port` (443), logging in as the canary's own id, in `measure` and `facts` too. A server under `hysteria2` tells `canary-config` and `dotdash-manager` its port, and the manager sets it on the canaries watching that server.
 
 - The server's `hysteria2` profile: Hysteria2 on UDP 443 (`hysteria2_port`), under the site's own certificate, each device's UUID its login. Devices get a `[hy2]` link and an outbound. It runs BBR, or Brutal at `hysteria2_up` Mbit/s for devices that ask.
@@ -36,6 +38,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A server or relay can share a machine with your own web server on 80 and 443, which passes dotdash's names through untouched. `listen`, `https_port` and `http_port` choose where dotdash publishes, such as spare ports on `127.0.0.1`; the server's `entry_port` keeps links on 443.
 
 ### Changed
+
+- The DNS tunnel sends every 50 ms (`xdns_tti`), not every 200: about three times the speed. Devices' configs spread its queries over three resolvers (`xdns_resolvers`), so each sees little more than before.
+
+- Hysteria2 no longer answers a stray packet with a stateless reset, which the site's own HTTP/3 never sends and a prober could tell apart.
+
+- Devices' and relays' configs probe each link at a moment of its own (`burstObservatory`), not all together, which tied a device's links to each other for an observer. Picking the fastest works as before.
+
+- Every Xray container sets Go's soft memory limit (`GOMEMLIMIT`) at about 90% of its memory cap, so Go collects garbage harder near the cap instead of the kernel killing Xray.
 
 - The server's gate and a relay send to devices on BBR, in their own containers only (`tcp_congestion`). On a lossy last mile it kept 6-50 times cubic's speed in the lab. Set `tcp_congestion=cubic` on a kernel without `tcp_bbr`, where the apply would otherwise fail and roll back.
 

@@ -10,8 +10,12 @@ services:
   client-config:
     environment:
       XDNS_DOMAIN: ${DOTDASH_PARAM_XDNS_DOMAIN:-t}
+      XDNS_TTI: ${DOTDASH_PARAM_XDNS_TTI:-50}
+      XDNS_RESOLVERS: ${DOTDASH_PARAM_XDNS_RESOLVERS:-udp://1.1.1.1:53}
   # So the Xray config a subscription serves (<token>.json) has the tunnel
   # as its last resort, as the one client-config prints.
   subscription:
     environment:
       XDNS_DOMAIN: ${DOTDASH_PARAM_XDNS_DOMAIN:-t}
+      XDNS_TTI: ${DOTDASH_PARAM_XDNS_TTI:-50}
+      XDNS_RESOLVERS: ${DOTDASH_PARAM_XDNS_RESOLVERS:-udp://1.1.1.1:53}
