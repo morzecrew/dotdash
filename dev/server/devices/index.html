@@ -2200,6 +2200,14 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
 <li>Add the URL as a subscription in the app (v2rayN, v2rayNG, Hiddify, Happ,
   Streisand) and refresh every few hours: revocations, key rotations and new
   relays then reach devices with nothing to resend.</li>
+<li>An app on Apple's network stack (its User-Agent names CFNetwork, Darwin, iOS
+  or macOS, as Shadowrocket's, Streisand's and Happ's on iOS do) gets the links
+  with Safari's TLS hello (<code>fp=safari</code>), as its own platform sends; every other
+  app, Chrome's. A Chrome hello from an iPhone fits neither its network stack
+  nor its browser.</li>
+<li>Hiddify reads XHTTP links with its own core, which takes <code>mode=auto</code> as
+  <code>packet-up</code> and ignores a <code>mode</code> in the link: long uploads through them can
+  hang there. In Hiddify, use the REALITY or Hysteria2 link.</li>
 <li>The same URL, asked with <code>Accept: application/json</code>, serves the device's
   Xray config: the <a href="../../client/">client bundle</a> runs Xray on it on a
   Linux machine for you. On its REALITY links, the device's UDP flows share
