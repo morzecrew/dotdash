@@ -2120,6 +2120,37 @@ this network's leg, the target's, and on to the site. <code>direct_ms</code> is
 <code>control_url</code>'s fetch without dotdash, this network's leg alone. The
 manager's <a href="../manager/#where-the-time-goes">report</a> sets one against the
 other.</p>
+<p>When REALITY fails, <code>facts</code> says what stops it, from the canary's own network,
+as <code>blocked_by</code>:</p>
+<table>
+<thead>
+<tr>
+<th><code>blocked_by</code></th>
+<th>What the canary found</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>freeze</code></td>
+<td>connections freeze partway (the freeze checks above)</td>
+</tr>
+<tr>
+<td><code>ip</code></td>
+<td>no TCP connection to the server's port at all: a block on its address</td>
+</tr>
+<tr>
+<td><code>sni</code></td>
+<td>a connection, and REALITY gets through with its hello split: a block on the name by SNI</td>
+</tr>
+<tr>
+<td><code>tls</code></td>
+<td>a connection, but REALITY fails even split: a block on the TLS, or on REALITY itself</td>
+</tr>
+</tbody>
+</table>
+<p>The manager names it in its verdicts. With <code>ipv6_url</code> set to an address
+reachable over IPv6 alone, <code>facts</code> also fetches it through each transport, as
+<code>ipv6</code>: whether the server carries devices' IPv6 that way.</p>
 <p><code>facts</code> also asks a DNS server (<code>udp_target</code>, <code>1.1.1.1:53</code>) over UDP through
 each transport and gives the result as <code>udp</code>: whether the server carries
 devices' UDP (<code>upstream_udp</code>), which decides what WebRTC shows behind a TUN

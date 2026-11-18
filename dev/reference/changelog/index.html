@@ -2919,6 +2919,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>When REALITY fails, a canary's <code>facts</code> say what stops it from its own network (<code>blocked_by</code>: <code>ip</code>, <code>sni</code>, <code>tls</code> or <code>freeze</code>), and <code>dotdash-manager</code> names it in its verdicts. With <code>ipv6_url</code> set, <code>facts</code> also say per transport whether the server carries IPv6 (<code>ipv6</code>).</p>
+</li>
+<li>
 <p>A canary's <code>facts</code> say per transport whether the server carries devices' UDP (<code>udp</code>), by asking a DNS server (<code>udp_target</code>) over UDP through each. The leaks page says what WebRTC shows in each mode, and how to stop a browser on a proxy port leaking the device's address.</p>
 </li>
 <li>
