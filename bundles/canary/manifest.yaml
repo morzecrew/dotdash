@@ -148,6 +148,10 @@ parameters:
     default: https://speed.cloudflare.com/__down?bytes=1000000
     description: "What measure downloads three times through each transport for its Mbit/s; none skips the downloads"
   # No services: only the facts task reads it, when it runs.
+  ipv6_url:
+    type: string
+    default: none
+    description: "An address reachable over IPv6 alone (an AAAA record only, http:// or https://), which facts fetches through each transport and gives as ipv6: whether the server carries devices' IPv6 that way; none for none"
   control_url:
     type: string
     default: none

@@ -312,3 +312,33 @@ watches = "r2"
     assert "hello_split" not in docs["a"]["parameters"]
     assert splits(net, health, burnt={"r1"})[0] == set()  # a burnt relay stays out
 
+
+def test_a_burnt_verdict_says_what_blocks_it():
+    net = loads('''
+target = "t"
+key = "k"
+identity = "i"
+authority = "a"
+[[server]]
+name = "a"
+[[relay]]
+name = "r1"
+[[relay]]
+name = "r2"
+[[canary]]
+name = "c1"
+watches = "r1"
+[[canary]]
+name = "c2"
+watches = "r2"
+''')
+    relay = {"entry_host": "203.0.113.5", "site": "www.example.net", "public_key": "P", "short_id": "S", "encryption": "E"}
+    other = {**relay, "entry_host": "203.0.113.6", "site": "www.example.org"}
+    health: dict = {}
+    for at in range(1, BURN_AFTER + 1):
+        c1 = {"server": "www.example.net", "address": "203.0.113.5", "checked_at": at,
+              "paths": {"reality": False}, "blocked_by": "ip"}
+        c2 = {"server": "www.example.org", "address": "203.0.113.6", "checked_at": at, "paths": {"reality": True}}
+        burnt, say = judge(net, {"r1": relay, "r2": other, "c1": c1, "c2": c2}, health)
+    assert burnt == {"r1"} and "its address is blocked" in say[0], say
+    assert "cause" not in health["r2"]

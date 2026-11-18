@@ -59,6 +59,11 @@ services:
       # The facts task's: what it watches, and its check without dotdash.
       DOTDASH_SERVER: ${DOTDASH_CANARY_PARAM_DOTDASH_SERVER:?set by morzer}
       DOTDASH_ADDRESS: ${DOTDASH_CANARY_PARAM_DOTDASH_ADDRESS:?set by morzer}
+      # Its REALITY port, for facts' blocked_by: whether the canary's own
+      # network still connects to it at all.
+      DOTDASH_PORT: ${DOTDASH_CANARY_PARAM_DOTDASH_PORT:-443}
+      # An IPv6-only address facts fetches through each transport; none for none.
+      IPV6_URL: ${DOTDASH_CANARY_PARAM_IPV6_URL:-none}
       # The key the canary checks the server under, in its facts, so the
       # manager knows a rotated key got through before devices move to it.
       DOTDASH_PUBLIC_KEY: ${DOTDASH_CANARY_PARAM_DOTDASH_PUBLIC_KEY:-}

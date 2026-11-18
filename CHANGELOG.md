@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- When REALITY fails, a canary's `facts` say what stops it from its own network (`blocked_by`: `ip`, `sni`, `tls` or `freeze`), and `dotdash-manager` names it in its verdicts. With `ipv6_url` set, `facts` also say per transport whether the server carries IPv6 (`ipv6`).
+
 - A canary's `facts` say per transport whether the server carries devices' UDP (`udp`), by asking a DNS server (`udp_target`) over UDP through each. The leaks page says what WebRTC shows in each mode, and how to stop a browser on a proxy port leaking the device's address.
 
 - A canary also tries REALITY with its ClientHello split into TLS records (`reality_split` in its `facts`). When only that gets through, `dotdash-manager` sets the server's `hello_split`, or puts `split` on a relay's line, so devices' Xray configs split their REALITY hello past a block on the name by SNI.
