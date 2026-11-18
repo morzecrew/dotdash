@@ -121,12 +121,13 @@ echo "19-hysteria2.sh: with the upstream stopped, Hysteria2 gets nothing"
 set_config hysteria2_up=50
 config=/etc/dotdash/application.yaml
 sudo jq -e '[.inbounds[] | select(.tag == "hysteria2")][0].streamSettings.finalmask.quicParams
-  == {congestion: "brutal", brutalUp: "50 mbps"}' "${config}" >/dev/null \
+  == {disableStatelessReset: true, congestion: "brutal", brutalUp: "50 mbps"}' "${config}" >/dev/null \
   || die "hysteria2_up=50 did not put the inbound on Brutal at 50 Mbit/s"
 client hy2-brutal 11098 "${hl}" "" 20
 gets_through 11098 || die "no answer through Hysteria2 on Brutal"
 sudo morzer config unset hysteria2_up >/dev/null || die "could not unset hysteria2_up"
-sudo jq -e '[.inbounds[] | select(.tag == "hysteria2")][0].streamSettings.finalmask.quicParams == {congestion: "bbr"}' \
+sudo jq -e '[.inbounds[] | select(.tag == "hysteria2")][0].streamSettings.finalmask.quicParams
+  == {disableStatelessReset: true, congestion: "bbr"}' \
   "${config}" >/dev/null || die "hysteria2_up unset did not put the inbound back on BBR"
 echo "19-hysteria2.sh: hysteria2_up turns Brutal on toward a device that asks, and 0 is BBR"
 

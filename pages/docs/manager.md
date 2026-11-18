@@ -60,6 +60,8 @@ cdn_hosts = ["cdn.example.net"]             # optional: this server's cdn_hosts
 
 [[relay]]
 name = "r1"
+provider = "hoster-a"                       # optional: your own name for who hosts it
+address_since = 2026-11-01                  # optional: since when it has this address
 
 [[canary]]
 name = "c1"
@@ -227,6 +229,30 @@ long the ones you replaced lasted is what tells whether a change (a
 transport, a network, a provider) makes the next ones last longer. The log
 keeps the newest 2000 events, and starts with the first `sync` of a manager
 that has it.
+
+Then how long each path lasted before it was first blocked, a burn
+included, and the median per path: which transport lasts.
+
+```
+paths: how long each lasted before it was first blocked (+: never yet)
+machine             reality          xhttp  xhttp-reality           mkcp      hysteria2
+r1                   10d 0h          4d 2h              -              -        16d 0h+
+r2                  16d 0h+        16d 0h+              -              -        16d 0h+
+old                   4d 0h              -              -              -              -
+median to first block: reality 7d 0h (2 blocked, 1 never); xhttp 4d 2h (1 blocked, 1 never); hysteria2 never blocked (2, 16d 0h longest)
+```
+
+With `provider`, and `address_since` if you know it, on servers and relays
+in the roster, the lifetimes also add up per provider, and with how old the
+addresses were when their canaries first watched them. Both are your own
+record: nothing is looked up, and `sync` keeps them for machines you take out
+of the roster.
+
+```
+by provider (the roster's provider), servers and relays: burnt and their median life, never burnt
+hoster-a         2 burnt, 7d 0h at the median; addresses 3d 0h old when first watched, at the median
+hoster-b         0 burnt; 1 never burnt (16d 0h so far)
+```
 
 ## Where the time goes
 

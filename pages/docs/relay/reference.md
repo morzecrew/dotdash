@@ -16,6 +16,8 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `dotdash_port` | `443` | the servers' `https_port` |
 | `dotdash_public_key` | none, given at `init` | the servers' REALITY public key, the `pbk` of their links |
 | `dotdash_address` | `none` | where to connect when `dotdash_servers` names one server, such as its IP; `none` reaches each server by its name |
+| `dotdash_link` | `reality` | how the relay reaches the servers: `reality`, a REALITY connection with Vision for each device's; `xhttp-reality`, XHTTP with REALITY on `dotdash_xhttp_reality_port`, connections reused across devices, about 100 ms sooner to a page's first byte for about twice the CPU here and on the server. Needs the servers' [`xhttp-reality`](../server/xhttp-reality.md) profile and the `dotdash_xhttp_path` secret, both of which `relay-config` prints |
+| `dotdash_xhttp_reality_port` | `8443` | the servers' `xhttp_reality_port`, for `dotdash_link=xhttp-reality` |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what the health check fetches through dotdash; any 2xx is healthy |
 | `tcp_congestion` | `bbr` | TCP congestion control toward devices, in Xray's own namespace: `bbr` keeps its pace through a lossy last mile; `cubic` for a kernel without `tcp_bbr` |
 | `ipv6` | `allow` | `block`: IPv6 destinations end at the relay and never reach a server; names go on |

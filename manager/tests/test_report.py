@@ -51,7 +51,7 @@ def test_a_relays_history_and_the_fleets_median():
     assert lines[1].startswith("s ") and "1970-01-01" in r1
     assert "2 burnt, lasting 7d 0h at the median" in "\n".join(lines)  # r1 10d, old 4d
     assert "1 never burnt, watched 40d 0h so far" in "\n".join(lines)
-    assert lines[-1].endswith("spares waiting: none")
+    assert next(line for line in lines if "spares waiting" in line).endswith("spares waiting: none")
 
 
 def test_latency_against_the_canaries_network_and_the_servers():
@@ -75,3 +75,37 @@ def test_latency_against_the_canaries_network_and_the_servers():
     assert lines[-2].split() == ["s", "network", "100", "reality", "210"]
     assert lines[-1] == "r1           network     -   reality 290 (+80 over the servers), xhttp 400"
     assert not any(line.startswith("r2 ") for line in lines[-3:])
+
+
+def test_each_paths_life_and_the_lifetimes_per_provider():
+    now = 40 * DAY
+    log = [[0, "r1", "watched"], [10 * DAY, "r1", "off:xhttp"], [20 * DAY, "r1", "burnt"],
+           [20 * DAY, "r1", "off:reality"], [20 * DAY, "r1", "off:xhttp"],
+           [0, "r2", "watched"], [6 * DAY, "r2", "off:reality"],
+           [0, "old", "watched"], [4 * DAY, "old", "burnt"], [4 * DAY, "old", "off:reality"], [5 * DAY, "old", "gone"]]
+    health = {"r1": {"paths": {"reality": 3, "xhttp": 3}}, "r2": {"paths": {"reality": 3, "xhttp": 0, "hysteria2": 0}}}
+    labels = {"r1": {"provider": "hoster-a", "address_since": "1969-12-22"}, "old": {"provider": "hoster-a"},
+              "r2": {"provider": "hoster-b", "address_since": None}}
+    lines = report(loads(ROSTER), log, now, {}, health, labels)
+    at = lines.index("paths: how long each lasted before it was first blocked (+: never yet)")
+    table = {line.split()[0]: line.split()[1:] for line in lines[at + 2:at + 5]}
+    # reality, xhttp, xhttp-reality, mkcp, hysteria2: r1's xhttp first went off on day 10, not at its burn.
+    assert table["r1"] == ["20d", "0h", "10d", "0h", "-", "-", "-"]
+    assert table["r2"] == ["6d", "0h", "40d", "0h+", "-", "-", "40d", "0h+"]
+    assert table["old"] == ["4d", "0h", "-", "-", "-", "-"]
+    assert lines[at + 5] == ("median to first block: reality 6d 0h (3 blocked); xhttp 10d 0h (1 blocked, 1 never); "
+                             "hysteria2 never blocked (1, 40d 0h longest)")
+    a = next(line for line in lines if line.startswith("hoster-a "))
+    assert "2 burnt, 12d 0h at the median" in a and "addresses 10d 0h old when first watched" in a  # r1 20d, old 4d
+    assert next(line for line in lines if line.startswith("hoster-b ")).endswith("0 burnt; 1 never burnt (40d 0h so far)")
+
+
+def test_the_roster_labels_servers_and_relays_alone():
+    import pytest
+    from dotdash_manager import Refused
+
+    net = loads(ROSTER.replace('name = "r1"', 'name = "r1"\nprovider = "hoster-a"\naddress_since = 2026-10-01'))
+    assert net.relay[0].provider == "hoster-a" and net.relay[0].address_since.isoformat() == "2026-10-01"
+    with pytest.raises(Refused, match="provider"):
+        loads(ROSTER + '[[canary]]\nname = "c"\nwatches = "s"\nprovider = "x"\n')
+
