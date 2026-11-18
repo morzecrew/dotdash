@@ -3,9 +3,12 @@ since when its canaries watch it, how long it lasted before it first burnt,
 how often it burnt and for how long, which of its paths went off, how often
 a spare stood in; and across the relays, how long one lasts. Machines gone
 from the roster stay in it: how long a replaced relay lasted is the point.
-Then where the time goes, from the canaries' latencies (health.record).
-Pure: it reads nothing and writes nothing."""
+Then how long each path lasted before its first block, the relays' lifetimes
+per provider (the roster's own labels, state's labels), and where the time
+goes, from the canaries' latencies (health.record). Pure: it reads nothing
+and writes nothing."""
 
+import calendar
 import statistics
 import time
 from collections import Counter
@@ -28,7 +31,7 @@ def history(events: list, name: str, now: int) -> dict:
     (from, to) with to None while burnt, when it left the roster, paths off,
     and how often it stood in as a spare."""
     mine = sorted((e for e in events if e[1] == name), key=lambda e: e[0])
-    h = {"watched": None, "burns": [], "gone": None, "off": Counter(), "stood": 0}
+    h = {"watched": None, "burns": [], "gone": None, "off": Counter(), "first_off": {}, "stood": 0}
     for at, _, what in mine:
         if what == "watched" and h["watched"] is None:
             h["watched"] = at
@@ -40,6 +43,7 @@ def history(events: list, name: str, now: int) -> dict:
             h["gone"] = at
         elif what.startswith("off:"):
             h["off"][what[4:]] += 1
+            h["first_off"].setdefault(what[4:], at)
         elif what.startswith("stands-in:"):
             h["stood"] += 1
     end = h["gone"] or now
@@ -57,6 +61,80 @@ PATHS = ("reality", "xhttp", "xhttp-reality", "mkcp", "hysteria2")
 def _median(values: list) -> int:
     values = sorted(values)
     return values[(len(values) - 1) // 2]
+
+
+def paths(names: list[str], events: list, now: int, health: dict) -> list[str]:
+    """How long each path of each server and relay lasted before it was first
+    blocked, a burn included ("+": never yet, a lower bound), and per path
+    across the relays, the median of those blocked: which transport lasts.
+    A machine's paths are those its canaries check (health) and those that
+    ever went off (the log), so a gone relay's count too."""
+    rows, blocked, never = [], {p: [] for p in PATHS}, {p: [] for p in PATHS}
+    relays = set()
+    for name in names:
+        h = history(events, name, now)
+        if h["watched"] is None:
+            continue
+        have = set(health.get(name, {}).get("paths", {})) | set(h["first_off"])
+        if not have:
+            continue
+        end = h["gone"] or now
+        cells = []
+        for p in PATHS:
+            if p not in have:
+                cells.append("-")
+            elif p in h["first_off"]:
+                cells.append(span(h["first_off"][p] - h["watched"]))
+                blocked[p].append(h["first_off"][p] - h["watched"])
+            else:
+                cells.append(span(end - h["watched"]) + "+")
+                never[p].append(end - h["watched"])
+        rows.append((name, cells))
+        relays.add(name)
+    if not rows:
+        return []
+    width = max(len(p) for p in PATHS) + 1
+    lines = ["", "paths: how long each lasted before it was first blocked (+: never yet)",
+             f"{'machine':12} " + " ".join(f"{p:>{width}}" for p in PATHS)]
+    lines += [f"{name:12} " + " ".join(f"{c:>{width}}" for c in cells) for name, cells in rows]
+    summary = []
+    for p in PATHS:
+        if blocked[p]:
+            summary.append(f"{p} {span(statistics.median(blocked[p]))} ({len(blocked[p])} blocked"
+                           + (f", {len(never[p])} never)" if never[p] else ")"))
+        elif never[p]:
+            summary.append(f"{p} never blocked ({len(never[p])}, {span(max(never[p]))} longest)")
+    lines.append("median to first block: " + "; ".join(summary))
+    return lines
+
+
+def providers(names: list[str], events: list, now: int, labels: dict) -> list[str]:
+    """The relays' lifetimes per provider, as the roster labels them (state's
+    labels, kept for machines gone from it): burnt and their median life, never
+    burnt and how long so far, and how old their addresses were when their
+    canaries first watched them (address_since). Nothing is looked up."""
+    per: dict[str, dict] = {}
+    for name in names:
+        label = labels.get(name) or {}
+        h = history(events, name, now)
+        if not label.get("provider") or h["lasted"] is None:
+            continue
+        g = per.setdefault(label["provider"], {"ended": [], "going": [], "age": []})
+        (g["going"] if h["lasting"] else g["ended"]).append(h["lasted"])
+        if label.get("address_since"):
+            since = calendar.timegm(time.strptime(label["address_since"], "%Y-%m-%d"))
+            g["age"].append(h["watched"] - since)
+    if not per:
+        return []
+    lines = ["", "by provider (the roster's provider), servers and relays: burnt and their median life, never burnt"]
+    for name, g in sorted(per.items()):
+        parts = [f"{len(g['ended'])} burnt" + (f", {span(statistics.median(g['ended']))} at the median" if g["ended"] else "")]
+        if g["going"]:
+            parts.append(f"{len(g['going'])} never burnt ({span(max(g['going']))} so far)")
+        if g["age"]:
+            parts.append(f"addresses {span(statistics.median(g['age']))} old when first watched, at the median")
+        lines.append(f"{name:16} " + "; ".join(parts))
+    return lines
 
 
 def latency(net: Network, health: dict) -> list[str]:
@@ -91,9 +169,10 @@ def latency(net: Network, health: dict) -> list[str]:
 
 
 def report(net: Network, events: list, now: int, stands: dict | None = None,
-           health: dict | None = None) -> list[str]:
+           health: dict | None = None, labels: dict | None = None) -> list[str]:
     """The report's lines; stands, the spares standing in now (state's stands);
-    health, the state's record per machine, for the latencies."""
+    health, the state's record per machine, for the paths and latencies;
+    labels, the roster's provider and address_since per machine (state's)."""
     stands = stands or {}
     kinds = {m.name: ("spare" if getattr(m, "spare", False) else m.kind) for m in [*net.server, *net.relay]}
     rank = {"server": 0, "relay": 1, "spare": 2}
@@ -126,4 +205,5 @@ def report(net: Network, events: list, now: int, stands: dict | None = None,
         watched = span(min(going)) if min(going) == max(going) else f"{span(min(going))} to {span(max(going))}"
         lines.append(f"        {len(going)} never burnt, watched {watched} so far")
     lines.append(f"        {month} burn(s) in the last 30 days; spares waiting: {', '.join(waiting) or 'none'}")
-    return lines + latency(net, health or {})
+    return (lines + paths(names, events, now, health or {}) + providers(names, events, now, labels or {})
+            + latency(net, health or {}))

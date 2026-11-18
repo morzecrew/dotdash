@@ -15,6 +15,20 @@ full=false
 want=${1:-}
 # A tunnel zone with no dot is a name under the domain, as in the template.
 case ${XDNS_DOMAIN:-} in '' | *.*) ;; *) XDNS_DOMAIN=${XDNS_DOMAIN}.${DOMAIN} ;; esac
+case ${XDNS_TTI:-50} in '' | *[!0-9]*) echo "xdns_tti is not a number of milliseconds: ${XDNS_TTI}" >&2; exit 1 ;; esac
+[ "${XDNS_TTI:-50}" -ge 10 ] && [ "${XDNS_TTI:-50}" -le 1000 ] || { echo "xdns_tti is outside 10 to 1000: ${XDNS_TTI}" >&2; exit 1; }
+# xdns_resolvers as a JSON list: udp://, tcp:// or https:// URLs, none with a
+# character JSON would need escaped.
+xdns_addrs=
+for r in $(printf '%s' "${XDNS_RESOLVERS:-udp://1.1.1.1:53}" | tr ',' ' '); do
+  case $r in
+  udp://* | tcp://* | https://*) ;;
+  *) echo "xdns_resolvers takes udp://, tcp:// or https:// URLs: ${r}" >&2; exit 1 ;;
+  esac
+  case $r in *[\"\\]*) echo "xdns_resolvers: an address with a quote or backslash: ${r}" >&2; exit 1 ;; esac
+  xdns_addrs="${xdns_addrs:+${xdns_addrs}, }\"${r}\""
+done
+[ -n "$xdns_addrs" ] || { echo "xdns_resolvers is empty" >&2; exit 1; }
 # The servers carrying these clients with the same secrets, in order (the
 # servers parameter); self is this one.
 servers=$(printf '%s\n' "${SERVERS:-self}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e "s/^self\$/${DOMAIN}/")
@@ -345,14 +359,14 @@ EOF
   done; relay_outbounds "$1"; cdn_outbounds "$1"; } | sed '$ s/,$//'
 }
 
-xdns_outbound() { # <id>: the DNS tunnel, for the config's last resort
+xdns_outbound() { # <id>: the DNS tunnel, for the config's last resort, its queries spread over xdns_resolvers
   cat <<EOF
     {"tag": "xdns", "protocol": "vless",
      "settings": {"address": "1.1.1.1", "port": 53, "id": "$1", "encryption": "${enc}"},
-     "streamSettings": {"network": "kcp", "kcpSettings": {"mtu": 130, "tti": 200},
+     "streamSettings": {"network": "kcp", "kcpSettings": {"mtu": 130, "tti": ${XDNS_TTI:-50}},
        "finalmask": {"udp": [{"type": "xdns", "settings": {
          "domains": [{"names": ["${XDNS_DOMAIN}"], "edns0": 1232}],
-         "resolvers": [{"addrs": ["udp://1.1.1.1:53"]}]}}]}}}
+         "resolvers": [{"addrs": [${xdns_addrs}]}]}}]}}}
 EOF
 }
 
@@ -429,7 +443,7 @@ link leaves DNS to the app's own settings:
 $(outbounds "$1")$([ -z "${XDNS_DOMAIN:-}" ] || printf ',\n%s' "$(xdns_outbound "$1")"),
     {"tag": "dns-out", "protocol": "dns"}
   ],
-  "observatory": {"subjectSelector": ["dotdash-"], "probeUrl": "https://www.gstatic.com/generate_204", "probeInterval": "30s", "enableConcurrency": true},
+  "burstObservatory": {"subjectSelector": ["dotdash-"], "pingConfig": {"destination": "https://www.gstatic.com/generate_204", "interval": "30s", "sampling": 1}},
   "routing": {
     "balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}${fallback}}],
     "rules": [
@@ -463,7 +477,8 @@ done </run/secrets/vless_clients
 $full && [ -n "${XDNS_DOMAIN:-}" ] || exit 0
 cat <<EOF
 The config's "xdns" outbound, the DNS tunnel, is slow, for networks where only
-DNS works. Replace its resolver with one the network allows; DoH
+DNS works. Its resolvers are the server's xdns_resolvers; where the network
+allows another, replace them, or set xdns_resolvers for every device. DoH
 ("https://...") or "tcp://" also work. Its "address" must be an IP: XDNS sends
 through the resolvers, not to it. UDP is dropped unless the upstream is SOCKS5
 with upstream_udp=true, so point the client's DNS at DoH or TCP and lookups

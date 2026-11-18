@@ -166,6 +166,16 @@ parameters:
     default: 900
     description: mKCP packet size the DNS tunnel answers with; must fit the EDNS0 size resolvers on the path advertise (1232 is common, lower it if replies are lost)
     services: [xray]
+  xdns_tti:
+    type: int
+    default: 50
+    description: "Milliseconds between the DNS tunnel's mKCP sends, on the server and in devices' configs (10 to 1000): 50 carries about three times what 200 did, with four times the queries; raise it if resolvers start refusing them"
+    services: [xray, subscription]
+  xdns_resolvers:
+    type: string
+    default: "udp://1.1.1.1:53,udp://8.8.8.8:53,udp://9.9.9.9:53"
+    description: "The resolvers devices' DNS tunnel asks, comma-separated, its queries spread evenly over them: udp://, tcp:// or DoH https:// URLs. Where only the network's own resolver answers, put its address here"
+    services: [subscription]
   resolve:
     type: enum
     values: [gateway, upstream]
