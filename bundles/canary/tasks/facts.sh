@@ -44,10 +44,10 @@ str() {
 # %.0f, not %d: busybox awk's %d is 32 bits, which uptime in milliseconds
 # outgrows after 25 days.
 now_ms() { awk '{ printf "%.0f\n", $1 * 1000 }' /proc/uptime; }
-up() { # <service> [port]: prints the milliseconds of the fetch that succeeded
+up() { # <service> [port] [url]: prints the milliseconds of the fetch that succeeded
 	for try in 1 2 3; do
 		start=$(now_ms)
-		if XRAY_HEALTHCHECK_PROXY="http://$1:${2:-10809}" XRAY_HEALTHCHECK_URL="$PROBE_URL" XRAY_HEALTHCHECK_TIMEOUT=7s \
+		if XRAY_HEALTHCHECK_PROXY="http://$1:${2:-10809}" XRAY_HEALTHCHECK_URL="${3:-$PROBE_URL}" XRAY_HEALTHCHECK_TIMEOUT=7s \
 			/opt/xray/xray-entrypoint healthcheck >/dev/null 2>&1; then
 			echo $(($(now_ms) - start))
 			return 0
@@ -107,7 +107,7 @@ none) internet=null ;;
 	;;
 esac
 
-paths='' stalled='' stalled_up='' latency='' udp=''
+paths='' stalled='' stalled_up='' latency='' udp='' ipv6=''
 for svc in reality xhttp xhttp-reality mkcp hysteria2; do
 	nc -z -w 2 "$svc" 10809 2>/dev/null || continue
 	if ! ms=$(up "$svc"); then
@@ -126,6 +126,11 @@ for svc in reality xhttp xhttp-reality mkcp hysteria2; do
 	# Whether the server carries UDP through this transport (upstream_udp).
 	if udp_ok "$svc"; then u=true; else u=false; fi
 	udp="${udp:+$udp, }\"$svc\": $u"
+	# Whether the server carries IPv6 through this transport (ipv6_url).
+	if [ "${IPV6_URL:-none}" != none ]; then
+		if up "$svc" 10809 "$IPV6_URL" >/dev/null; then v=true; else v=false; fi
+		ipv6="${ipv6:+$ipv6, }\"$svc\": $v"
+	fi
 done
 [ -n "$paths" ] || { echo "no transport answers: is the canary running?" >&2; exit 1; }
 # REALITY with its ClientHello split into TLS records (templates/reality.json.tmpl):
@@ -134,7 +139,23 @@ reality_split=null
 if nc -z -w 2 reality 10810 2>/dev/null; then
 	if up reality 10810 >/dev/null; then reality_split=true; else reality_split=false; fi
 fi
+# With REALITY failing, what stops it, from this network: its connections
+# frozen partway (freeze_url, freeze_up_url: freeze); no TCP connection to the
+# server's port at all, a block on its address (ip); a connection, with the
+# split hello getting through, a block on its name by SNI (sni); a connection,
+# with the split failing too, a block on the TLS or on REALITY itself (tls).
+# Null while REALITY gets through.
+blocked_by=null
+case $paths in *'"reality": false'*)
+	case "$stalled $stalled_up" in
+	*'"reality"'*) blocked_by='"freeze"' ;;
+	*)
+		if ! nc -z -w 5 "$DOTDASH_ADDRESS" "${DOTDASH_PORT:-443}" 2>/dev/null; then blocked_by='"ip"'
+		elif [ "$reality_split" = true ]; then blocked_by='"sni"'
+		else blocked_by='"tls"'; fi ;;
+	esac ;;
+esac
 
-printf '{"server": %s, "address": %s, "public_key": %s, "checked_at": %s, "internet": %s, "paths": {%s}, "reality_split": %s, "udp": {%s}, "stalled": {%s}, "stalled_up": [%s], "latency_ms": {%s}, "direct_ms": %s}\n' \
-	"$(str "$DOTDASH_SERVER")" "$(str "$DOTDASH_ADDRESS")" "$(str "${DOTDASH_PUBLIC_KEY:-}")" "$(date +%s)" "$internet" "$paths" "$reality_split" "$udp" "$stalled" "$stalled_up" \
+printf '{"server": %s, "address": %s, "public_key": %s, "checked_at": %s, "internet": %s, "paths": {%s}, "reality_split": %s, "blocked_by": %s, "udp": {%s}, "ipv6": {%s}, "stalled": {%s}, "stalled_up": [%s], "latency_ms": {%s}, "direct_ms": %s}\n' \
+	"$(str "$DOTDASH_SERVER")" "$(str "$DOTDASH_ADDRESS")" "$(str "${DOTDASH_PUBLIC_KEY:-}")" "$(date +%s)" "$internet" "$paths" "$reality_split" "$blocked_by" "$udp" "$ipv6" "$stalled" "$stalled_up" \
 	"$latency" "$direct"

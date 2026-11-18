@@ -23,6 +23,7 @@ facts() {
 got=$(facts)
 jq -e '.server == "www.gstatic.com" and (.address | length > 0) and (.public_key | length > 0) and (.checked_at | type == "number")
   and .internet == null and .paths == {reality: true} and .reality_split == true and .udp == {reality: true}
+  and .blocked_by == null and .ipv6 == {}
   and .stalled == {} and .stalled_up == []
   and (.latency_ms | keys) == ["reality"] and .latency_ms.reality > 0 and .direct_ms == null' <<<"${got}" >/dev/null ||
   die "facts with the server up: ${got}"
@@ -51,7 +52,7 @@ sudo morzer config set "freeze_url=https://${host}:9443/f" >/dev/null || die "co
 got=$(facts) || true
 sudo morzer config unset freeze_url >/dev/null || die "could not unset freeze_url"
 kill "${stall}" 2>/dev/null || true
-jq -e '.internet == true and .paths == {reality: false} and .stalled.reality > 0 and .stalled.reality < 65536
+jq -e '.internet == true and .paths == {reality: false} and .blocked_by == "freeze" and .stalled.reality > 0 and .stalled.reality < 65536
   and .latency_ms == {}' \
   <<<"${got}" >/dev/null || die "facts with freeze_url stopping after 20 KB: ${got}"
 echo "25-facts.sh: freeze_url stopped after 20 KB: REALITY reads down after $(jq .stalled.reality <<<"${got}") bytes"
@@ -67,14 +68,15 @@ sleep 1
 sudo morzer config set "freeze_up_url=https://${host}:9443/up" >/dev/null || die "could not set freeze_up_url"
 got=$(facts) || true
 sudo morzer config unset freeze_up_url >/dev/null || die "could not unset freeze_up_url"
-jq -e '.paths == {reality: false} and .stalled == {} and .stalled_up == ["reality"]' <<<"${got}" >/dev/null ||
+jq -e '.paths == {reality: false} and .blocked_by == "freeze" and .stalled == {} and .stalled_up == ["reality"]' <<<"${got}" >/dev/null ||
   die "facts with freeze_up_url never answering: ${got}"
 echo "25-facts.sh: freeze_up_url never answered: REALITY reads down, stalled_up"
 
 sudo docker stop canary-rig-server >/dev/null
 got=$(facts) || true
 sudo docker start canary-rig-server >/dev/null
-jq -e '.internet == true and .paths == {reality: false} and .reality_split == false and .udp == {reality: false}' <<<"${got}" >/dev/null ||
+jq -e '.internet == true and .paths == {reality: false} and .reality_split == false and .udp == {reality: false}
+  and .blocked_by == "ip"' <<<"${got}" >/dev/null ||
   die "facts with the server stopped: ${got}"
 sudo morzer config unset control_url >/dev/null || die "could not unset control_url"
 for _ in $(seq 12); do
