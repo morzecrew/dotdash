@@ -123,7 +123,7 @@ http://127.0.0.1:8081 {
 		@apple {
 			path_regexp ^/[0-9a-f]{32}$
 			not header Accept application/json
-			header_regexp User-Agent (?i)(cfnetwork|darwin|iphone|ipad|ios|mac os|macintosh)
+			header_regexp User-Agent (?i)(cfnetwork|darwin|iphone|ipad|ios|macintosh)
 		}
 		rewrite @apple {path}.apple
 		header Cache-Control no-store
