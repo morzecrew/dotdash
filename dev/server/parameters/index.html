@@ -2085,6 +2085,16 @@
 <td>tunnel reply size; lower it if replies get lost</td>
 </tr>
 <tr>
+<td><code>xdns_tti</code></td>
+<td><code>50</code></td>
+<td>milliseconds between the tunnel's sends, on the server and in devices' configs; raise it if resolvers start refusing the queries</td>
+</tr>
+<tr>
+<td><code>xdns_resolvers</code></td>
+<td>three public resolvers</td>
+<td>the resolvers devices' tunnel asks, comma-separated <code>udp://</code>, <code>tcp://</code> or DoH <code>https://</code> URLs, its queries spread evenly over them; where only the network's own resolver answers, put its address here</td>
+</tr>
+<tr>
 <td><code>xhttp_reality_port</code></td>
 <td><code>8443</code></td>
 <td>port for XHTTP with REALITY; not <code>https_port</code> or <code>http_port</code></td>

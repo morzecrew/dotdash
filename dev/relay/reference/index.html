@@ -2180,6 +2180,16 @@
 <td>where to connect when <code>dotdash_servers</code> names one server, such as its IP; <code>none</code> reaches each server by its name</td>
 </tr>
 <tr>
+<td><code>dotdash_link</code></td>
+<td><code>reality</code></td>
+<td>how the relay reaches the servers: <code>reality</code>, a REALITY connection with Vision for each device's; <code>xhttp-reality</code>, XHTTP with REALITY on <code>dotdash_xhttp_reality_port</code>, connections reused across devices, about 100 ms sooner to a page's first byte for about twice the CPU here and on the server. Needs the servers' <a href="../../server/xhttp-reality/"><code>xhttp-reality</code></a> profile and the <code>dotdash_xhttp_path</code> secret, both of which <code>relay-config</code> prints</td>
+</tr>
+<tr>
+<td><code>dotdash_xhttp_reality_port</code></td>
+<td><code>8443</code></td>
+<td>the servers' <code>xhttp_reality_port</code>, for <code>dotdash_link=xhttp-reality</code></td>
+</tr>
+<tr>
 <td><code>probe_url</code></td>
 <td><code>https://www.gstatic.com/generate_204</code></td>
 <td>what the health check fetches through dotdash; any 2xx is healthy</td>
