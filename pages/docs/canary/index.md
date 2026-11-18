@@ -82,6 +82,20 @@ this network's leg, the target's, and on to the site. `direct_ms` is
 manager's [report](../manager.md#where-the-time-goes) sets one against the
 other.
 
+When REALITY fails, `facts` says what stops it, from the canary's own network,
+as `blocked_by`:
+
+| `blocked_by` | What the canary found |
+| --- | --- |
+| `freeze` | connections freeze partway (the freeze checks above) |
+| `ip` | no TCP connection to the server's port at all: a block on its address |
+| `sni` | a connection, and REALITY gets through with its hello split: a block on the name by SNI |
+| `tls` | a connection, but REALITY fails even split: a block on the TLS, or on REALITY itself |
+
+The manager names it in its verdicts. With `ipv6_url` set to an address
+reachable over IPv6 alone, `facts` also fetches it through each transport, as
+`ipv6`: whether the server carries devices' IPv6 that way.
+
 `facts` also asks a DNS server (`udp_target`, `1.1.1.1:53`) over UDP through
 each transport and gives the result as `udp`: whether the server carries
 devices' UDP (`upstream_udp`), which decides what WebRTC shows behind a TUN

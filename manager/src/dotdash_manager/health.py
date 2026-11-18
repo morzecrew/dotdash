@@ -7,6 +7,11 @@ counts once."""
 from .roster import Network
 
 BURN_AFTER = 3
+# A canary's blocked_by, as the verdicts say it.
+CAUSES = {"ip": "its canaries' network reaches no TCP port of it: its address is blocked",
+          "sni": "its canaries' network blocks its name by SNI",
+          "tls": "its canaries' network lets TCP through but not its TLS or REALITY",
+          "freeze": "its canaries' network freezes its connections partway"}
 # The event log keeps this many, the newest.
 EVENTS = 2000
 # Each machine keeps this many of its readings' latencies per path, the newest.
@@ -92,6 +97,13 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None) -> 
         h["paths"] = {p: 0 if p in ups else h.get("paths", {}).get(p, 0) + 1 for f in seen for p in f["paths"]}
         # REALITY with its hello split (a canary's reality_split): up this
         # reading when any canary got through so, else readings in a row it hasn't.
+        # What the canaries' network finds stopping REALITY (a canary's
+        # blocked_by: ip, sni, tls or freeze), the commonest this reading.
+        causes = [f["blocked_by"] for f in seen if f.get("blocked_by") in ("ip", "sni", "tls", "freeze")]
+        if causes:
+            h["cause"] = max(set(causes), key=causes.count)
+        else:
+            h.pop("cause", None)
         said = [f["reality_split"] for f in seen if isinstance(f.get("reality_split"), bool)]
         if said:
             h["split"] = 0 if any(said) else h.get("split", 0) + 1
@@ -106,9 +118,12 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None) -> 
 
     burnt = {t.name for t in targets if health.get(t.name, {}).get("fails", 0) >= BURN_AFTER}
     def note(name: str, advice: str = "") -> str:
-        """The row's word on it, then the advice unless the row says it is down."""
+        """What blocks it, as its canaries' network finds, the row's word on
+        it, then the advice unless the row says it is down."""
         verdict, why = alive(rows.get(name))
-        return (f"; {why}" if why else "") + (f"; {advice}" if advice and verdict != "down" else "")
+        cause = CAUSES.get(health.get(name, {}).get("cause", ""), "")
+        return ((f"; {cause}" if cause else "") + (f"; {why}" if why else "")
+                + (f"; {advice}" if advice and verdict != "down" else ""))
 
     say = [f"burnt: server {s.name}: its canaries got through none of its paths in {health[s.name]['fails']} readings; "
            f"reported only, as relays reach the servers{note(s.name)}" for s in net.server if s.name in burnt]
@@ -184,20 +199,26 @@ def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[d
     return off, say
 
 
-def splits(net: Network, health: dict) -> tuple[set[str], list[str]]:
-    """The servers devices should reach with their REALITY hello split into TLS
-    records (hello_split): REALITY got through for none of their canaries in
+def splits(net: Network, health: dict, burnt: set[str] | frozenset[str] = frozenset()) -> tuple[set[str], list[str]]:
+    """The servers and relays devices should reach with their REALITY hello
+    split into TLS records: REALITY got through for none of their canaries in
     BURN_AFTER readings, while the split hello did in the last one. That is a
-    box blocking the servers' name by SNI, reassembling TCP but not TLS
-    records (dotdash-lab #50). It holds while that stays so: REALITY back, or
-    the split failing too, turns it off. Servers only: their links stay in
-    devices' configs whatever the canaries find."""
-    on = {s.name for s in net.server
-          if health.get(s.name, {}).get("paths", {}).get("reality", 0) >= BURN_AFTER
-          and health.get(s.name, {}).get("split") == 0}
+    box blocking the name by SNI, reassembling TCP but not TLS records
+    (dotdash-lab #50). It holds while that stays so: REALITY back, or the split
+    failing too, turns it off. A server gets hello_split; a relay split on its
+    line, beside off=reality, which keeps the link out of share links (they
+    can't split) while devices' Xray configs keep it, split. A burnt relay
+    stays out."""
+    def on(name: str) -> bool:
+        h = health.get(name, {})
+        return h.get("paths", {}).get("reality", 0) >= BURN_AFTER and h.get("split") == 0
+    servers = {s.name for s in net.server if on(s.name)}
+    relays = {r.name for r in net.relay if on(r.name) and r.name not in burnt}
     say = [f"split: server {n}: REALITY gets through only with its hello split into TLS records, a block on its name by SNI; "
-           "devices' Xray configs split it (hello_split), share links can't" for n in sorted(on)]
-    return on, say
+           "devices' Xray configs split it (hello_split), share links can't" for n in sorted(servers)]
+    say += [f"split: relay {n}: REALITY gets through only with its hello split into TLS records, a block on its site's name "
+            "by SNI; devices' Xray configs split it through the relay, share links lose it (off=reality)" for n in sorted(relays)]
+    return servers | relays, say
 
 
 def events(before: dict, after: dict, stood: dict, stands: dict, now: int) -> list[list]:

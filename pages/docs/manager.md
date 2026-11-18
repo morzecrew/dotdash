@@ -343,7 +343,10 @@ split: server a: REALITY gets through only with its hello split into TLS records
   split fails too.
 - **Why not always on.** The split hello is a fingerprint of its own, which a
   classifier picks up (dotdash-lab #33).
-- **Servers only.** A relay whose REALITY fails is handled as a blocked path.
+- **Relays too.** A relay's canaries can find the same of its site's name.
+  Its line then gets `split` beside `off=reality`. Share links lose REALITY
+  through it, as for any blocked path, while devices' Xray configs keep it,
+  split. A burnt relay stays out.
 
 ## What it leaves alone
 
