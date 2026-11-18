@@ -294,6 +294,13 @@ cdn_outbounds() { # <id>
   done
 }
 
+# On a Vision link, a device's UDP flows share a few connections (XUDP Mux)
+# rather than open one each: one connection for 20 flows instead of 20, the
+# first answer in one round trip rather than three (dotdash-lab #51). TCP stays
+# off Mux, as Vision needs (concurrency -1); QUIC to UDP 443 is turned away,
+# so a browser goes over TCP inside the tunnel, as Vision would have it.
+mux='"mux": {"enabled": true, "concurrency": -1, "xudpConcurrency": 8, "xudpProxyUDP443": "reject"}'
+
 relay_outbounds() { # <id>
   n=0
   printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off; do
@@ -303,7 +310,8 @@ relay_outbounds() { # <id>
     {"tag": "dotdash-relay-$n", "protocol": "vless",
      "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e", "flow": "xtls-rprx-vision"},
      "streamSettings": {"network": "raw", "security": "reality",
-       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "$k", "shortId": "$i"}}},
+       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "$k", "shortId": "$i"}},
+     ${mux}},
 EOF
     [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp || cat <<EOF
     {"tag": "dotdash-relay-$n-xhttp", "protocol": "vless",
@@ -336,7 +344,8 @@ outbounds() { # <id>: a REALITY and an XHTTP outbound per server, the third, mKC
     {"tag": "dotdash-$n-reality", "protocol": "vless",
      "settings": {"address": "$s", "port": ${HTTPS_PORT}, "id": "$1", "encryption": "${enc}", "flow": "xtls-rprx-vision"},
      "streamSettings": {"network": "raw", "security": "reality",
-       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "${pbk}", "shortId": "${sid}"}${hello}}},
+       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "${pbk}", "shortId": "${sid}"}${hello}},
+     ${mux}},
     {"tag": "dotdash-$n-xhttp", "protocol": "vless",
      "settings": {"address": "$s", "port": ${HTTPS_PORT}, "id": "$1", "encryption": "${enc}"},
      "streamSettings": {"network": "xhttp", "security": "tls",

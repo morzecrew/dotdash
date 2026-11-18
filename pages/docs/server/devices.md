@@ -59,7 +59,8 @@ sudo morzer task run client-config --output -- --full phone    # plus links and 
   relays then reach devices with nothing to resend.
 - The same URL, asked with `Accept: application/json`, serves the device's
   Xray config: the [client bundle](../client/index.md) runs Xray on it on a
-  Linux machine for you.
+  Linux machine for you. On its REALITY links, the device's UDP flows share
+  a few connections (XUDP Mux) rather than opening one each.
 - A URL is as secret as the links. `sudo morzer secret rotate subscription_key`
   moves every URL; any other path gets the site's 404.
 - A [relay](../relay/install.md#6-devices) with a site of its own serves the

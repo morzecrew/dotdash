@@ -49,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The Xray config devices get (`client-config --full`, the subscription's JSON, `dotdash-client`) shares UDP flows over a few connections on REALITY links (XUDP Mux): one connection for 20 flows instead of 20, each later flow answering in one round trip instead of three.
+
 - The DNS tunnel sends every 50 ms (`xdns_tti`), not every 200: about three times the speed. Devices' configs spread its queries over three resolvers (`xdns_resolvers`), so each sees little more than before.
 
 - Hysteria2 no longer answers a stray packet with a stateless reset, which the site's own HTTP/3 never sends and a prober could tell apart.
