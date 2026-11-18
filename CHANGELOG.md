@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - An app on Apple's network stack, by its User-Agent, gets the subscription's links with Safari's TLS hello (`fp=safari`), as its platform sends; every other app keeps Chrome's.
+
 - When REALITY fails, a canary's `facts` say what stops it from its own network (`blocked_by`: `ip`, `sni`, `tls` or `freeze`), and `dotdash-manager` names it in its verdicts. With `ipv6_url` set, `facts` also say per transport whether the server carries IPv6 (`ipv6`).
 
 - A canary's `facts` say per transport whether the server carries devices' UDP (`udp`), by asking a DNS server (`udp_target`) over UDP through each. The leaks page says what WebRTC shows in each mode, and how to stop a browser on a proxy port leaking the device's address.
@@ -53,6 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A server or relay can share a machine with your own web server on 80 and 443, which passes dotdash's names through untouched. `listen`, `https_port` and `http_port` choose where dotdash publishes, such as spare ports on `127.0.0.1`; the server's `entry_port` keeps links on 443.
 
 ### Changed
+
+- Every apply, update and `doctor` refuses `upstream_udp=true` while an upstreams line is an HTTP or HTTPS proxy, which drops UDP. The policy check also reads a line's `group=` and kind when `name=` and `group=` come before its URL.
 
 - The Xray config devices get (`client-config --full`, the subscription's JSON, `dotdash-client`) shares UDP flows over a few connections on REALITY links (XUDP Mux): one connection for 20 flows instead of 20, each later flow answering in one round trip instead of three.
 

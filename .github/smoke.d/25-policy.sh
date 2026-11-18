@@ -66,6 +66,16 @@ if sudo grep -q '^  upstream_mode:$' "${release}/manifest.yaml"; then
 fi
 echo "25-policy.sh: each injected violation is named"
 
+# The rig's upstreams line is an HTTP proxy, which drops UDP: upstream_udp=true
+# with it is a violation.
+if sudo grep -qF 'which drops UDP' "${release}/hooks/policy"; then
+  out=$(sudo env DOTDASH_RELEASE_DIR="${release}" DOTDASH_PARAM_HTTPS_PORT=443 DOTDASH_COMPOSE_PROJECT=dotdash \
+    DOTDASH_PARAM_UPSTREAM_UDP=true "${release}/hooks/policy" 2>&1) && die "policy passes upstream_udp=true with an HTTP proxy line"
+  grep -qF "are an HTTP proxy, which drops UDP" <<<"${out}" ||
+    die "policy failed on upstream_udp=true, but not on the HTTP proxy line: ${out}"
+  echo "25-policy.sh: upstream_udp=true with an HTTP proxy line is named"
+fi
+
 # The image Caddy runs, whichever repository the release pins it from.
 caddy=$(sudo docker inspect -f '{{.Config.Image}}' "$(service_container caddy)")
 sudo docker run -d --name dotdash-rig-intruder --label com.docker.compose.project=dotdash \
