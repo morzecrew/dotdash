@@ -36,9 +36,13 @@ runtimes:
       # site's own certificate, each device's UUID its login, a probe
       # answered by the cover site over HTTP/3.
       hysteria2: [compose/hysteria2.yaml]
+      # Traffic per inbound and outbound, and the gate's verdicts on its
+      # upstreams, into the node exporter's textfile directory.
+      metrics: [compose/metrics.yaml]
     # installation.profile=xdns,xhttp-reality runs both; any of them with
-    # openvpn, such as xdns,openvpn, adds the OpenVPN tunnels.
-    combinable: [xdns, xhttp-reality, openvpn, mkcp, hysteria2]
+    # openvpn, such as xdns,openvpn, adds the OpenVPN tunnels; metrics goes
+    # with any.
+    combinable: [xdns, xhttp-reality, openvpn, mkcp, hysteria2, metrics]
     options:
       project: dotdash
 
@@ -153,6 +157,10 @@ parameters:
     default: 0
     description: "Mbit/s Hysteria2 sends each device at whatever is lost on the way (Brutal), for a device that asks for it with its own rate; 0 keeps BBR, which backs off as TCP does. Set it to this server's uplink share per device, never more"
     services: [xray]
+  metrics_textfile:
+    type: string
+    default: /var/lib/prometheus/node-exporter
+    description: "Under the metrics profile, the node exporter's textfile directory, the one morzer's metrics.textfile names, which the exporters write dotdash-dotdash-xray.prom and dotdash-dotdash-gate.prom into; it has to exist and be writable by 65532 (sudo setfacl -m u:65532:rwx <it>)"
   xdns_mtu:
     type: int
     default: 900
@@ -218,6 +226,11 @@ parameters:
     default: "# One pool per line: <pool> <device name, relay host or CDN host>..."
     description: "Pools against a leaked device giving away every entry point, one \"<pool> <member>...\" line per pool, the members device names from vless_clients, relay hosts and CDN hosts; client-config and the subscriptions give a device in a pool its pools' relays and CDN hosts and those in no pool, and a device in none all of them"
     services: [subscription]
+  reality_second_key:
+    type: bool
+    default: false
+    description: "Accept a second REALITY key beside reality_key, from the reality_key_second and reality_short_id_second secrets, so devices holding either get in: how a key is rotated with no device cut off (the docs' Rotating the REALITY key). Links, configs and subscriptions carry reality_key's"
+    services: [xray]
   direct:
     type: bool
     default: true
@@ -305,8 +318,8 @@ operations:
 # or anything else this machine alone knows. None of these reaches a command
 # line or a hook.
 managed:
-  parameters: [servers, relays, cdn_hosts, pools, subscription, direct]
-  secrets: [vless_clients, reality_key, vless_seed, reality_short_id, xhttp_path, kcp_seed, subscription_key]
+  parameters: [servers, relays, cdn_hosts, pools, subscription, direct, reality_second_key]
+  secrets: [vless_clients, reality_key, vless_seed, reality_short_id, xhttp_path, kcp_seed, subscription_key, reality_key_second, reality_short_id_second]
 
 # What this machine tells the authority it follows, after every change, when
 # sync.recipient is set: the facts task's JSON.
