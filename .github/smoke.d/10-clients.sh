@@ -92,6 +92,11 @@ config_check() { # <name> <socks port> <servers>: client-config's config with th
   sudo morzer config unset servers >/dev/null
   config=$(full_config "${out}")
   [ -n "${config}" ] || die "$1: client-config printed no Xray config for servers=$3"
+  # XUDP Mux on every Vision link, and on nothing else.
+  jq -e '[.outbounds[] | select(.settings.flow == "xtls-rprx-vision")] as $v | ($v | length) > 0
+    and all($v[]; .mux == {enabled: true, concurrency: -1, xudpConcurrency: 8, xudpProxyUDP443: "reject"})
+    and all(.outbounds[] | select(.settings.flow != "xtls-rprx-vision"); .mux == null)' <<<"${config}" >/dev/null ||
+    die "$1: the Vision links do not carry XUDP Mux alone: $(jq -c '[.outbounds[] | {tag, mux}]' <<<"${config}")"
   mkdir -p "${dir}/$1"
   rig_config "$2" <<<"${config}" >"${dir}/$1/client.json"
   chmod -R a+rX "${dir}/$1"
