@@ -29,6 +29,10 @@ runtimes:
       # upstreams secret, and a SOCKS hop in its namespace (vpn-socks), which
       # the gate dials for them: Xray has no OpenVPN of its own.
       openvpn: [compose/openvpn.yaml]
+      # A container (warm) that keeps connections to the proxies of the
+      # upstreams lines tagged warm=<n> open and logged in, which the gate
+      # dials for those lines: a new connection skips the proxy's handshake.
+      warm: [compose/warm.yaml]
       # VLESS over mKCP on kcp_port: UDP, no TLS underneath, its packets
       # encrypted under kcp_seed and dressed in a kcp_header.
       mkcp: [compose/mkcp.yaml]
@@ -40,9 +44,9 @@ runtimes:
       # upstreams, into the node exporter's textfile directory.
       metrics: [compose/metrics.yaml]
     # installation.profile=xdns,xhttp-reality runs both; any of them with
-    # openvpn, such as xdns,openvpn, adds the OpenVPN tunnels; metrics goes
-    # with any.
-    combinable: [xdns, xhttp-reality, openvpn, mkcp, hysteria2, metrics]
+    # openvpn, such as xdns,openvpn, adds the OpenVPN tunnels; warm and metrics
+    # go with any.
+    combinable: [xdns, xhttp-reality, openvpn, mkcp, hysteria2, metrics, warm]
     options:
       project: dotdash
 
@@ -280,6 +284,9 @@ images:
   # The openvpn profile's OpenVPN client, whose kill switch drops the default
   # routes before anything runs (platform-images, images/openvpn).
   openvpn: ghcr.io/morzecrew/openvpn:2.6.20@sha256:0892a6b6dfd2ce4369eb69c0d2701c24ced35ef9a2f4eee6ef5fa4d6f3684943
+  # The warm profile's keeper of ready connections to the upstreams' proxies
+  # (platform-images, images/proxy-warm).
+  warm: ghcr.io/morzecrew/proxy-warm:0.1.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
 
 # Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);
 # its content is JSON, which is also YAML. Secrets are not in it: it holds

@@ -1,0 +1,40 @@
+# The warm profile, for the upstreams lines tagged warm=<n>: a proxy line's
+# handshake with its proxy (TCP, greeting, login, CONNECT: four round trips
+# for SOCKS5 with a login, two for HTTP) is made before a connection needs it.
+# warm holds n connections to each such line's proxy open and logged in, and
+# serves the k-th line as a SOCKS5 proxy on 1080+k, which the gate dials for
+# it (XRAY_UPSTREAM_ALIASES, templates/gate.env.tmpl). A connection's CONNECT
+# then goes out with its first bytes on a ready connection (platform-images,
+# images/proxy-warm).
+services:
+  warm:
+    image: ${DOTDASH_IMAGE_WARM:?set by morzer}
+    restart: unless-stopped
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
+    environment:
+      PROXY_WARM_UPSTREAMS: /run/secrets/upstreams
+      # Go's soft memory limit at about 90% of mem_limit, as for Xray.
+      GOMEMLIMIT: 115MiB
+    # It holds the proxies' logins, as the gate does: an edit of upstreams
+    # restarts it (secrets.schema.yaml).
+    secrets: [upstreams]
+    # egress alone, where the gate reaches it and it reaches the proxies: not
+    # on inside, beside Xray, which must leave through the gate's routing
+    # (hooks/policy).
+    networks: [egress]
+    mem_limit: 128m
+    logging:
+      driver: local
+      options: {max-size: 10m, max-file: "3"}
+    healthcheck:
+      # Each line's port answers. Whether a line carries traffic is the gate's
+      # to judge, which probes every line, and hooks/healthy's.
+      test: ["CMD", "/usr/local/bin/proxy-warm", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
