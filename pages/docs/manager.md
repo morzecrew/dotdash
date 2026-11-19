@@ -131,7 +131,10 @@ Before every fleet publish, about hourly, each canary that follows the manager
 reports whether each of its paths to the server or relay it watches gets
 through. When every canary watching a relay got through none of its paths
 three readings in a row, `sync` leaves that relay out of the servers' `relays`
-and `pools`, and of client machines' subscription URLs, and says so:
+and `pools`, and of client machines' subscription URLs, and says so. A
+reading counts only beside the newest of the other canaries watching the same
+relay within 90 minutes, so a canary gone quiet can't hold the relay up with an
+old success:
 
 ```
 burnt: relay r1: its canaries got through none of its paths in 3 readings; left out of the servers' relays and pools until a canary gets through again; its own fleet row (40m old) says it runs: blocked on the way, not down; replace it

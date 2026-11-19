@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `dotdash-manager sync` judges a relay only by canary readings within 90 minutes of the newest. A canary that went quiet used to hold a relay up with an old success while another canary found it blocked.
+
 ## [0.9.1] - 2026-11-20
 
 ### Fixed
