@@ -2066,6 +2066,12 @@ revokes it here too.</p>
   that asks for a rate gets Brutal: a steady send at that rate whatever is
   lost, which holds up on lossy mobile links. Never set it above what the
   server's uplink can give each device, or it floods the line.</li>
+<li><strong>A frozen connection.</strong> When a network stops passing a connection
+  without closing it, a device gives it up after 15 s of silence and opens
+  a new one. The Xray config devices get sends a keepalive every few
+  seconds, so a connection idle that long stays open; a client from the
+  <code>hysteria2://</code> link keeps its own keepalives, and without any closes an
+  idle connection after 15 s, with whatever it carried, then reconnects.</li>
 <li><strong>The certificate</strong> is Caddy's: Xray reads it from Caddy's data and reloads
   it hourly. Under this profile Caddy starts first, and on a fresh install
   Xray retries until Caddy has taken the certificate, which takes seconds

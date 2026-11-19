@@ -2202,7 +2202,7 @@
 <tr>
 <td><code>tcp_congestion</code></td>
 <td><code>bbr</code></td>
-<td>TCP congestion control toward devices, in Xray's own namespace: <code>bbr</code> keeps its pace through a lossy last mile; <code>cubic</code> for a kernel without <code>tcp_bbr</code></td>
+<td>TCP congestion control toward devices, in Xray's own namespace: <code>bbr</code> keeps its pace through a lossy last mile; <code>cubic</code> for a kernel without <code>tcp_bbr</code>. Xray also probes each connection's path MTU and holds at most 128 KiB unsent per connection, and gives its link to a server up after 15 s of unacknowledged data</td>
 </tr>
 <tr>
 <td><code>ipv6</code></td>

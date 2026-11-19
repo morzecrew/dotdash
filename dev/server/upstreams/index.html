@@ -2309,7 +2309,12 @@ get nothing, never the server's own address: <a href="../leaks/">what leaks wher
 <h2 id="order-and-modes">Order and modes<a class="headerlink" href="#order-and-modes" title="Permanent link">&para;</a></h2>
 <p>The gate probes every line through it, fetching <code>probe_url</code>, every 30
 seconds, so every line sees that URL's host name; with <code>resolve=gateway</code>,
-clients' destinations still reach them as addresses. <code>upstream_mode</code> decides how the lines that answer share the traffic:</p>
+clients' destinations still reach them as addresses. A line whose answer
+takes more than 1.5 seconds counts as down, as one that doesn't answer: a line
+throttled that hard would add a second or more to every connection. When no
+line answers, connections still take the first one rather than none, so a
+wrong verdict, or a single line that is only slow, never stops the traffic;
+a line that is really down fails them itself. <code>upstream_mode</code> decides how the lines that answer share the traffic:</p>
 <table>
 <thead>
 <tr>
