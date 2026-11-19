@@ -18,7 +18,9 @@
 #     is the release's own, and the list holds what its settings need, with
 #     no more OpenVPN lines than the tunnels' SOCKS hop carries;
 #   - Xray is on internal networks only, so it has no route out at all, and
-#     publishes nothing; the gate publishes only https_port and, where it
+#     publishes nothing; the hops beside the gate (vpn, warm), which reach
+#     the tunnels and proxies, are not on inside, where Xray would reach them
+#     past the gate's routing; the gate publishes only https_port and, where it
 #     forwards them, 53 for the DNS tunnel, xhttp_reality_port, kcp_port and
 #     hysteria2_port,
 #     and Caddy only http_port;
@@ -218,6 +220,15 @@ if [ -n "${xray}" ]; then
       violations+=$'\n'"xray is on ${net}, a network with a route out"
   done
 fi
+
+for service in vpn warm; do
+  hop=$(docker ps -q --filter "label=com.docker.compose.project=${project}" --filter "label=com.docker.compose.service=${service}")
+  [ -n "${hop}" ] || continue
+  for net in $(docker inspect -f '{{range $n, $_ := .NetworkSettings.Networks}}{{$n}} {{end}}' "${hop}"); do
+    [ "${net}" != "${project}_inside" ] ||
+      violations+=$'\n'"${service} is on ${net}, where Xray reaches it past the gate's routing"
+  done
+done
 
 violations=$(sed '/^$/d' <<<"${violations}")
 [ -z "${violations}" ] && exit 0

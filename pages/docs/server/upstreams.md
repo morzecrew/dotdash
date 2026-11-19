@@ -9,7 +9,7 @@ sudo morzer secret edit upstreams
 ```
 
 ```text
-# [name=<name>] [group=<group>] | <url>
+# [name=<name>] [group=<group>] [warm=<n>] | <url>
 name=isp-a | socks5://alice:secret@203.0.113.7:1080
 name=isp-b | https://bob:secret@proxy.example.net:443
 name=home  | wireguard://<private key>@198.51.100.4:51820?publickey=<base64>&address=10.34.0.3/32
@@ -34,6 +34,8 @@ socks5://carol:secret@203.0.113.8:1080
 - `name=` is optional, lowercase letters, digits and dashes. `doctor` and the
   gate's log name each line by it, and [`upstream_pin`](#order-and-modes)
   takes it.
+- `warm=<n>` keeps a proxy's connections ready ahead of use
+  ([below](#warm-connections)).
 - Blank lines and `#` lines are skipped.
 
 Proxies with residential exits suit this best. With every line down, devices
@@ -186,6 +188,53 @@ sudo morzer task run exit-check --output
     network would be blocked, and would send the traffic back where it came
     from.
 
+## Warm connections
+
+Every new connection pays a proxy's handshake before a site's first byte
+leaves: four round trips to a SOCKS5 proxy that takes a login (TCP, greeting,
+login, CONNECT), two to an HTTP proxy. With the proxy 35 ms from the server,
+that adds 140 ms, or 70 ms, to every connection of every page.
+
+Tagged `warm=<n>`, a proxy line goes through the `warm` profile's container,
+which keeps `n` connections to the proxy open and logged in. A new
+connection's CONNECT leaves with its first bytes on one of them, so the
+handshake costs it nothing. Measured from a server 34 ms from its proxy, the
+first byte of a fetch came after 203 ms without, and after 51 ms with a
+connection ready.
+
+```text
+name=isp-a warm=4 | socks5://alice:secret@203.0.113.7:1080
+```
+
+Turn the profile on, then tag the line. A tagged line leads nowhere until the
+container runs:
+
+```sh
+sudo morzer config set installation.profile=warm    # with others, all of them: xdns,warm
+sudo morzer secret edit upstreams                   # add warm=4 to the line's tags
+```
+
+- `n` is 1 to 16. Each new connection takes one ready connection, and another
+  opens in its place. A burst past `n` sends its greeting, login and CONNECT
+  in one go, one round trip instead of four. A provider that limits how many
+  connections you hold at once counts the ready ones too.
+- A ready connection is replaced after 90 seconds, or as soon as the proxy
+  closes it. If one turns out dead when used, the connection goes again on a
+  new one.
+- The proxy must take a connection's first bytes sent right after its CONNECT,
+  before it replies. Most do; through one that doesn't, every connection
+  fails. Remove the tag, and the line's connections go straight from the gate
+  again.
+- With [`upstream_udp=true`](#udp), a SOCKS5 line's UDP goes through the
+  container too, with UDP associations kept ready once a device first sends
+  UDP.
+- The container holds the tagged lines' logins, as the gate does, and an edit
+  of `upstreams` restarts it. It is on the gate's network alone, never beside
+  Xray, which every `apply` and `doctor` checks.
+- WireGuard and OpenVPN lines take no `warm=`: they have no handshake per
+  connection.
+- To drop it, remove the tags, then turn the profile off.
+
 ## UDP
 
 `upstream_udp=true` carries devices' UDP, such as calls and QUIC, through the
@@ -202,4 +251,4 @@ HTTPS proxy line. Whether a SOCKS5 proxy relays UDP shows only by trying it: a
 When nothing gets out, `doctor` asks the first lines directly and names each
 by its `name=`: one that doesn't answer, one that refused the credentials in
 its line, a WireGuard peer that didn't carry it, an OpenVPN tunnel that is
-down. A line that answers when asked directly points at the gate instead.
+down, a `warm=` line whose container isn't running. A line that answers when asked directly points at the gate instead.

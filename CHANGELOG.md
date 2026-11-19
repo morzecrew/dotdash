@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- An `upstreams` proxy line tagged `warm=<n>` keeps `n` connections to its proxy open and logged in (the `warm` profile), so a new connection skips the proxy's handshake. From a server 34 ms from its proxy, a fetch's first byte came after 51 ms instead of 203 ms.
+
 - An app on Apple's network stack, by its User-Agent, gets the subscription's links with Safari's TLS hello (`fp=safari`), as its platform sends; every other app keeps Chrome's.
 
 - When REALITY fails, a canary's `facts` say what stops it from its own network (`blocked_by`: `ip`, `sni`, `tls` or `freeze`), and `dotdash-manager` names it in its verdicts. With `ipv6_url` set, `facts` also say per transport whether the server carries IPv6 (`ipv6`).

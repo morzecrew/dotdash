@@ -131,31 +131,38 @@ why() {
   esac
   local probe=${DOTDASH_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
   [ "$group" = upstream ] || probe=${DOTDASH_PARAM_PROBE6_URL:-http://api6.ipify.org}
-  local n=0 asked=0 left=0 ovpn=0 k failed=() answered=() verdict line url opts name groups o
+  local n=0 asked=0 left=0 ovpn=0 k failed=() answered=() verdict line url opts name groups o warm hop=gate
   while read -r line || [ -n "${line:-}" ]; do
     n=$((n + 1))
     case $line in '' | '#'*) continue ;; esac
     # "[name=..] [group=..] | <url>", or the URL first with its tags after it.
     case $line in
-      '|'* | name=* | group=*) opts=${line%%|*}; read -r url _ <<<"${line#*|}" ;;
+      '|'* | name=* | group=* | warm=*) opts=${line%%|*}; read -r url _ <<<"${line#*|}" ;;
       *) read -r url opts <<<"$line" ;;
     esac
     # The k-th OpenVPN line in the file, whatever its groups, runs on tun<k>.
     k=$ovpn
     case $url in openvpn | openvpn://*) ovpn=$((ovpn + 1)) ;; esac
-    name="line $n" groups=upstream
+    name="line $n" groups=upstream warm=''
     for o in $opts; do
-      case $o in name=*) name=${o#name=} ;; group=*) groups=${o#group=} ;; esac
+      case $o in name=*) name=${o#name=} ;; group=*) groups=${o#group=} ;; warm=*) warm=1 ;; esac
     done
     case ",$groups," in *",$group,"*) ;; *) continue ;; esac
     if [ "$asked" -ge 2 ]; then left=$((left + 1)); continue; fi
     asked=$((asked + 1))
+    # A warm= line leaves through warm, the warm profile's container. Not
+    # from stdin, which is this loop's.
+    if [ -n "$warm" ] && ! docker compose -p "$project" ps --format '{{.Service}}' </dev/null | grep -qx warm; then
+      failed+=("$name (warm=): warm, the warm profile's container, is not running, so nothing carries the line")
+      continue
+    fi
+    [ -z "$warm" ] || hop="gate or warm"
     if verdict=$(ask_line "$name" "$url" "$probe" "$k"); then answered+=("$name"); else failed+=("$verdict"); fi
   done <"$upstreams"
   if [ "$asked" = 0 ]; then
     echo "no upstreams line is in group $group: $out"
   elif [ "${#answered[@]}" -gt 0 ]; then
-    echo "${answered[*]} answer(s) when asked directly, so the fault is in Xray or the gate: $out"
+    echo "${answered[*]} answer(s) when asked directly, so the fault is in Xray or the $hop: $out"
   else
     local msg=${failed[0]} i
     for ((i = 1; i < ${#failed[@]}; i++)); do msg+="; ${failed[i]}"; done

@@ -43,4 +43,5 @@ Set one with `sudo morzer config set <name>=<value>`, unset it with
 `sudo morzer config unset <name>`, edit `relays` or `pools` with
 `sudo morzer config edit <name>`. Profiles (`installation.profile`): `xdns`,
 `xhttp-reality`, `mkcp`, `hysteria2`, `openvpn` (for an [OpenVPN line](upstreams.md#openvpn)),
+`warm` (for [warm connections](upstreams.md#warm-connections)),
 combined with commas, such as `xdns,xhttp-reality`.
