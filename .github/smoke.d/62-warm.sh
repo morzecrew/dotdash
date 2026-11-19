@@ -23,14 +23,35 @@ conn=$(cat /rig/upstream.conn)
 one="http://${conn} name=rig"
 list() { printf '%s\n' "$@" | sudo morzer secret set upstreams >/dev/null; }
 restore() {
+  sudo docker rm -f dotdash-rig-warmclient >/dev/null 2>&1 || true
   [ -z "$(service_container warm 2>/dev/null)" ] || sudo docker start "$(service_container warm)" >/dev/null 2>&1 || true
   list "${one}" || true
   sudo morzer config set installation.profile=xdns >/dev/null 2>&1 || true
 }
 trap restore EXIT
 
-code() { # through 10-clients.sh's REALITY client: 301 through the upstream
-  curl -s -o /dev/null -w '%{http_code}' --max-time 15 --socks5-hostname 127.0.0.1:11080 http://1.1.1.1/ 2>/dev/null || true
+# A REALITY client of this hook's own, from the links as they are now:
+# 45-revocation.sh rotates reality_key, which locks 10-clients.sh's out.
+xray_client=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)
+link=$(sudo morzer task run client-config --output | grep -m1 '^vless://.*security=reality.*type=tcp') ||
+  die "client-config printed no REALITY link"
+param() { sed -n "s/.*[?&]$2=\([^&#]*\).*/\1/p" <<<"$1"; }
+rest=${link#vless://}
+mkdir -p /rig/clients/warmclient
+jq -n --arg id "${rest%%@*}" --arg enc "$(param "${link}" encryption)" --arg sni "$(param "${link}" sni)" \
+  --arg pbk "$(param "${link}" pbk)" --arg sid "$(param "${link}" sid)" '
+  {inbounds: [{listen: "127.0.0.1", port: 11099, protocol: "socks"}],
+   outbounds: [{protocol: "vless",
+     settings: {address: "127.0.0.1", port: 443, id: $id, encryption: $enc, flow: "xtls-rprx-vision"},
+     streamSettings: {network: "raw", security: "reality",
+       realitySettings: {serverName: $sni, fingerprint: "chrome", password: $pbk, shortId: $sid}}}]}' \
+  >/rig/clients/warmclient/client.json
+chmod -R a+rX /rig/clients/warmclient
+sudo docker rm -f dotdash-rig-warmclient >/dev/null 2>&1 || true
+sudo docker run -d --name dotdash-rig-warmclient --network host -v /rig/clients/warmclient:/etc/xray:ro "${xray_client}" >/dev/null
+
+code() { # through this hook's REALITY client: 301 through the upstream
+  curl -s -o /dev/null -w '%{http_code}' --max-time 15 --socks5-hostname 127.0.0.1:11099 http://1.1.1.1/ 2>/dev/null || true
 }
 becomes() { # <code>: whether fetches answer with it within 60 s
   local _
