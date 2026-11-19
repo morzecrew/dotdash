@@ -1028,6 +1028,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#warm-connections" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Warm connections
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#udp" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2066,6 +2077,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#warm-connections" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Warm connections
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#udp" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2228,7 +2250,7 @@ proxies, WireGuard exits and OpenVPN exits, one per line, in order. A
 change of provider, a backup or a second exit is one edit of that secret.</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>upstreams
 </code></pre></div>
-<div class="highlight"><pre><span></span><code># [name=&lt;name&gt;] [group=&lt;group&gt;] | &lt;url&gt;
+<div class="highlight"><pre><span></span><code># [name=&lt;name&gt;] [group=&lt;group&gt;] [warm=&lt;n&gt;] | &lt;url&gt;
 name=isp-a | socks5://alice:secret@203.0.113.7:1080
 name=isp-b | https://bob:secret@proxy.example.net:443
 name=home  | wireguard://&lt;private key&gt;@198.51.100.4:51820?publickey=&lt;base64&gt;&amp;address=10.34.0.3/32
@@ -2278,6 +2300,8 @@ socks5://carol:secret@203.0.113.8:1080
 <li><code>name=</code> is optional, lowercase letters, digits and dashes. <code>doctor</code> and the
   gate's log name each line by it, and <a href="#order-and-modes"><code>upstream_pin</code></a>
   takes it.</li>
+<li><code>warm=&lt;n&gt;</code> keeps a proxy's connections ready ahead of use
+  (<a href="#warm-connections">below</a>).</li>
 <li>Blank lines and <code>#</code> lines are skipped.</li>
 </ul>
 <p>Proxies with residential exits suit this best. With every line down, devices
@@ -2434,6 +2458,46 @@ and an exit outside that doesn't matter; an exit inside the restricted
 network would be blocked, and would send the traffic back where it came
 from.</p>
 </div>
+<h2 id="warm-connections">Warm connections<a class="headerlink" href="#warm-connections" title="Permanent link">&para;</a></h2>
+<p>Every new connection pays a proxy's handshake before a site's first byte
+leaves: four round trips to a SOCKS5 proxy that takes a login (TCP, greeting,
+login, CONNECT), two to an HTTP proxy. With the proxy 35 ms from the server,
+that adds 140 ms, or 70 ms, to every connection of every page.</p>
+<p>Tagged <code>warm=&lt;n&gt;</code>, a proxy line goes through the <code>warm</code> profile's container,
+which keeps <code>n</code> connections to the proxy open and logged in. A new
+connection's CONNECT leaves with its first bytes on one of them, so the
+handshake costs it nothing. Measured from a server 34 ms from its proxy, the
+first byte of a fetch came after 203 ms without, and after 51 ms with a
+connection ready.</p>
+<div class="highlight"><pre><span></span><code>name=isp-a warm=4 | socks5://alice:secret@203.0.113.7:1080
+</code></pre></div>
+<p>Turn the profile on, then tag the line. A tagged line leads nowhere until the
+container runs:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>warm<span class="w">    </span><span class="c1"># with others, all of them: xdns,warm</span>
+sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>upstreams<span class="w">                   </span><span class="c1"># add warm=4 to the line's tags</span>
+</code></pre></div>
+<ul>
+<li><code>n</code> is 1 to 16. Each new connection takes one ready connection, and another
+  opens in its place. A burst past <code>n</code> sends its greeting, login and CONNECT
+  in one go, one round trip instead of four. A provider that limits how many
+  connections you hold at once counts the ready ones too.</li>
+<li>A ready connection is replaced after 90 seconds, or as soon as the proxy
+  closes it. If one turns out dead when used, the connection goes again on a
+  new one.</li>
+<li>The proxy must take a connection's first bytes sent right after its CONNECT,
+  before it replies. Most do; through one that doesn't, every connection
+  fails. Remove the tag, and the line's connections go straight from the gate
+  again.</li>
+<li>With <a href="#udp"><code>upstream_udp=true</code></a>, a SOCKS5 line's UDP goes through the
+  container too, with UDP associations kept ready once a device first sends
+  UDP.</li>
+<li>The container holds the tagged lines' logins, as the gate does, and an edit
+  of <code>upstreams</code> restarts it. It is on the gate's network alone, never beside
+  Xray, which every <code>apply</code> and <code>doctor</code> checks.</li>
+<li>WireGuard and OpenVPN lines take no <code>warm=</code>: they have no handshake per
+  connection.</li>
+<li>To drop it, remove the tags, then turn the profile off.</li>
+</ul>
 <h2 id="udp">UDP<a class="headerlink" href="#udp" title="Permanent link">&para;</a></h2>
 <p><code>upstream_udp=true</code> carries devices' UDP, such as calls and QUIC, through the
 lines. Every line must carry it then: a WireGuard or OpenVPN line, or a SOCKS5
@@ -2446,7 +2510,7 @@ HTTPS proxy line. Whether a SOCKS5 proxy relays UDP shows only by trying it: a
 <p>When nothing gets out, <code>doctor</code> asks the first lines directly and names each
 by its <code>name=</code>: one that doesn't answer, one that refused the credentials in
 its line, a WireGuard peer that didn't carry it, an OpenVPN tunnel that is
-down. A line that answers when asked directly points at the gate instead.</p>
+down, a <code>warm=</code> line whose container isn't running. A line that answers when asked directly points at the gate instead.</p>
 
 
 

@@ -2919,6 +2919,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>An <code>upstreams</code> proxy line tagged <code>warm=&lt;n&gt;</code> keeps <code>n</code> connections to its proxy open and logged in (the <code>warm</code> profile), so a new connection skips the proxy's handshake. From a server 34 ms from its proxy, a fetch's first byte came after 51 ms instead of 203 ms.</p>
+</li>
+<li>
 <p>An app on Apple's network stack, by its User-Agent, gets the subscription's links with Safari's TLS hello (<code>fp=safari</code>), as its platform sends; every other app keeps Chrome's.</p>
 </li>
 <li>
