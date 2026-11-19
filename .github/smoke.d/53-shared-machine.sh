@@ -3,7 +3,8 @@
 # https_port and http_port moves both published ports to loopback, the cover
 # site answers there through REALITY, nothing is left on 443 or 80, and
 # entry_port=443 keeps every link and the facts on 443, the port a web server
-# in front would take. Then the defaults again, published on 443 and 80.
+# in front would take. Then the defaults again, published on 443 and 80 on
+# every address: IPv4, and IPv6 where Docker publishes it.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -13,9 +14,9 @@ if ! sudo grep -qF 'entry_port:' /opt/dotdash/current/manifest.yaml; then
   exit 0
 fi
 
-defaults() { sudo morzer config set listen=0.0.0.0 https_port=443 http_port=80 entry_port=none >/dev/null; }
+defaults() { sudo morzer config unset listen https_port http_port entry_port >/dev/null; }
 trap 'defaults || true' EXIT
-mapping() { sudo docker port "$(service_container "$1")" "$2" 2>/dev/null | sort | paste -sd' '; }
+mapping() { sudo docker port "$(service_container "$1")" "$2" 2>/dev/null | LC_ALL=C sort | paste -sd' '; }
 
 sudo morzer config set listen=127.0.0.1 https_port=9443 http_port=9080 entry_port=443 >/dev/null ||
   die "config set listen=127.0.0.1 https_port=9443 http_port=9080 entry_port=443 failed"
@@ -40,6 +41,6 @@ echo "${0##*/}: links and facts keep entry_port 443"
 
 defaults || die "setting the defaults back failed"
 trap - EXIT
-[ "$(mapping gate 443/tcp)" = 0.0.0.0:443 ] || die "back on the defaults, the gate publishes 443 on '$(mapping gate 443/tcp)'"
-[ "$(mapping caddy 80/tcp)" = 0.0.0.0:80 ] || die "back on the defaults, caddy publishes 80 on '$(mapping caddy 80/tcp)'"
-echo "${0##*/}: back on 443 and 80, every IPv4 address"
+[[ $(mapping gate 443/tcp) =~ ^0\.0\.0\.0:443(\ \[::\]:443)?$ ]] || die "back on the defaults, the gate publishes 443 on '$(mapping gate 443/tcp)'"
+[[ $(mapping caddy 80/tcp) =~ ^0\.0\.0\.0:80(\ \[::\]:80)?$ ]] || die "back on the defaults, caddy publishes 80 on '$(mapping caddy 80/tcp)'"
+echo "${0##*/}: back on 443 and 80, every address: $(mapping gate 443/tcp)"

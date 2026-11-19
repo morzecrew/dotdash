@@ -7,7 +7,7 @@
 | `upstream_udp` | `false` | carry UDP through the upstreams, every one of which must carry it (WireGuard, OpenVPN, SOCKS5 with UDP ASSOCIATE); otherwise dropped |
 | `https_port` | `443` | host port for REALITY and the site; devices dial it too, unless `entry_port` |
 | `http_port` | `80` | host port for the site's plain HTTP: the ACME HTTP-01 check and the redirect to HTTPS |
-| `listen` | `0.0.0.0` | host address for `https_port` and `http_port`; `127.0.0.1` [beside your own web server](shared-machine.md) |
+| `listen` | empty | host address for `https_port` and `http_port`: empty for every address, IPv4 and IPv6; `0.0.0.0` for IPv4 alone; `127.0.0.1` [beside your own web server](shared-machine.md) |
 | `entry_port` | `none` | the port devices, relays and the canary dial, when a web server of your own passes the domain through to `https_port`; `none` for `https_port` |
 | `xdns_domain` | `t` | tunnel zone (`xdns`); a name with no dot is under the domain |
 | `xdns_bind` | `0.0.0.0` | host address for UDP/53 |

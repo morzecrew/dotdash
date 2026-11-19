@@ -52,8 +52,9 @@ runtimes:
 
 compatibility:
   # The manager this bundle is verified and rehearsed with, and the first that
-  # health-checks a parameter change and undoes it when the check fails.
-  min_manager_version: "0.17.0"
+  # checks requirements.ports by address, protocol and profile, and lets
+  # listen default to empty.
+  min_manager_version: "0.18.0"
   # 0.7.0 alone declared false (0.4.0 before it): it renamed healthcheck_* to
   # probe_* and replaced the upstream settings with the upstreams secret, and
   # an update retires the old values, so 0.6.x would come back without them.
@@ -72,11 +73,16 @@ requirements:
     compose: ">=2.35.0"
   memory: 512MiB
   disk: 2GiB
-  # TCP only. UDP/53 for the DNS tunnel is not checked here: on a host whose
-  # systemd-resolved stub holds 127.0.0.53:53, set xdns_bind to the public IP.
-  # Nor are xhttp_reality_port and kcp_port: these fields see the parameters,
-  # not the profile, and a default install must not need them free.
-  ports: ["{{ .Parameters.http_port }}", "{{ .Parameters.https_port }}"]
+  # Each on the address and protocol Compose publishes it on, and a profile's
+  # only under that profile: an entry that renders empty requires nothing.
+  # An empty listen is every address, as Compose reads it.
+  ports:
+    - "{{ .Parameters.listen }}:{{ .Parameters.http_port }}"
+    - "{{ .Parameters.listen }}:{{ .Parameters.https_port }}"
+    - '{{ if has "xdns" .Profiles }}{{ .Parameters.xdns_bind }}:53/udp{{ end }}'
+    - '{{ if has "xhttp-reality" .Profiles }}{{ .Parameters.xhttp_reality_port }}{{ end }}'
+    - '{{ if has "mkcp" .Profiles }}{{ .Parameters.kcp_port }}/udp{{ end }}'
+    - '{{ if has "hysteria2" .Profiles }}{{ .Parameters.hysteria2_port }}/udp{{ end }}'
 
 parameters:
   https_port:
@@ -91,8 +97,8 @@ parameters:
     services: [caddy]
   listen:
     type: string
-    default: 0.0.0.0
-    description: "Host address https_port and http_port are published on: 0.0.0.0 for every IPv4 address; 127.0.0.1 behind a web server of your own on this machine that holds 443 and passes this domain's TLS connections through untouched, with spare https_port and http_port and entry_port=443"
+    default: ""
+    description: "Host address https_port and http_port are published on: empty for every address, IPv4 and IPv6; 0.0.0.0 for every IPv4 address alone; 127.0.0.1 behind a web server of your own on this machine that holds 443 and passes this domain's TLS connections through untouched, with spare https_port and http_port and entry_port=443"
     services: [gate, caddy]
   entry_port:
     type: string

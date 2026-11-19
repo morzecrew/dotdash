@@ -50,9 +50,9 @@ secrets:
 
 compatibility:
   # The manager this bundle is verified and rehearsed with, and the first that
-  # re-creates, on a parameter change, only the services the active profiles
-  # start, which cover's and cert_issuer's caddy needs.
-  min_manager_version: "0.17.0"
+  # checks requirements.ports by address, protocol and profile, and lets
+  # listen default to empty.
+  min_manager_version: "0.18.0"
   rollback_safe: true
   # No database, which an unattended update needs declared.
   database: none
@@ -64,10 +64,13 @@ requirements:
     compose: ">=2.35.0"
   memory: 256MiB
   disk: 512MiB
-  # 443 alone (https_port): on networks that let only listed addresses
-  # through, other ports are cut even to those. The own-site profile also
-  # publishes http_port, for its certificate, which these fields cannot see.
-  ports: ["{{ .Parameters.https_port }}"]
+  # Each on the address and protocol Compose publishes it on, and a profile's
+  # only under that profile: an entry that renders empty requires nothing.
+  # An empty listen is every address, as Compose reads it.
+  ports:
+    - "{{ .Parameters.listen }}:{{ .Parameters.https_port }}"
+    - '{{ if has "own-site" .Profiles }}{{ .Parameters.listen }}:{{ .Parameters.http_port }}{{ end }}'
+    - '{{ if has "mkcp" .Profiles }}{{ .Parameters.kcp_port }}/udp{{ end }}'
 
 # `morzer task run relay-config -- <client>` on the dotdash server prints the
 # init command and the secrets for this machine.
@@ -96,8 +99,8 @@ parameters:
     services: [caddy]
   listen:
     type: string
-    default: 0.0.0.0
-    description: "Host address https_port and http_port are published on: 0.0.0.0 for every IPv4 address; 127.0.0.1 behind a web server of your own on this machine that holds 443 and passes this relay's name through untouched"
+    default: ""
+    description: "Host address https_port and http_port are published on: empty for every address, IPv4 and IPv6; 0.0.0.0 for every IPv4 address alone; 127.0.0.1 behind a web server of your own on this machine that holds 443 and passes this relay's name through untouched"
     services: [xray, caddy]
   kcp_port:
     type: port
