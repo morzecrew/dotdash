@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `dotdash-manager sync` and `rotate swap` read the machines' facts eight at a time instead of one after another, so a fleet of many machines syncs in a fraction of the time.
+
 ## [0.9.1] - 2026-11-20
 
 ### Fixed
