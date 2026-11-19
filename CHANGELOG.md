@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-20
+
 ### Fixed
 
 - `dotdash-client` carries traffic again as soon as the server is back from an outage. When every link failed its last check, traffic now takes the subscription's first link instead of being refused for up to two minutes until the next check. With no links yet, it is still refused.
