@@ -128,8 +128,6 @@ sudo iptables -P FORWARD "${policy}"
 sudo ip netns del lan
 sudo ip link del lanbr 2>/dev/null || true
 
-# Unsetting gateway re-created Xray, which probes its link at once; stopping
-# the stand-in under that probe would count the link down until a later one.
 through 15 || { routes; die "off the gateway, a plain request did not go through TUN and dotdash"; }
 sudo docker stop client-rig-tun-server >/dev/null
 for _ in 1 2 3; do
@@ -139,8 +137,8 @@ for _ in 1 2 3; do
 done
 sudo docker start client-rig-tun-server >/dev/null
 # A probe while the stand-in was down counts the link down until the next,
-# once a minute at a moment of its own: wait out up to two of them.
-through 75 || { routes; die "with dotdash back, a plain request did not go through TUN and dotdash within 150 s"; }
+# but what the balancer can't place takes the first link meanwhile.
+through 15 || { routes; die "with dotdash back, a plain request did not go through TUN and dotdash within 30 s"; }
 
 # With Xray itself gone, a crash or the image's restart on a new subscription,
 # its TUN and routes go too, and the default route would carry everything: the

@@ -46,3 +46,8 @@ through dotdash. `no-resolve`, which older rules carry, changes nothing.
 With no links at all, as on a first start that can't fetch the subscription,
 everything but the direct rules is refused: nothing leaves around dotdash by
 accident.
+
+When every link failed its last check, as just after the server was down,
+traffic takes the subscription's first link rather than waiting up to two
+minutes for the next check, so the client carries traffic again as soon as
+the server is back.
