@@ -53,11 +53,13 @@ services:
         target: /etc/xray/10-client.json
         read_only: true
         bind: {create_host_path: false}
-      # "tail": Xray puts this file's outbounds after the local ones, whose
-      # first, block, takes what nothing routes.
+      # No "tail" in the name: Xray puts this file's outbounds before the
+      # local ones, so the first link takes what the balancer can't place, as
+      # when every link failed its last probe. With no links yet, the local
+      # first, block, does.
       - type: bind
         source: /etc/dotdash-client/subscription.json
-        target: /etc/xray/20-subscription-tail.json
+        target: /etc/xray/20-subscription.json
         read_only: true
         bind: {create_host_path: false}
       - home:/var/lib/xray

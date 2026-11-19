@@ -36,9 +36,11 @@ looked up for a name (routing's domainStrategy AsIs), as no-resolve did. */ -}}
        "accounts": [{"user": "{{ required "set proxy_user" .Parameters.proxy_user }}", "pass": {"$file": "/run/secrets/proxy_password"}}]{{ end }}}},
     {"tag": "probe", "listen": "127.0.0.1", "port": 7891, "protocol": "socks", "settings": {"udp": true}}
   ],
-  {{- /* The first outbound takes what no rule routes, and what the balancer
-  can't place, as while the subscription has given no links yet: so nothing
-  leaves around dotdash. */}}
+  {{- /* The subscription's outbounds go before these (compose.yaml), so what
+  the balancer can't place, as when every link failed its last probe, takes
+  the first link, and dotdash back from an outage carries traffic before the
+  next probe. While the subscription has given no links yet, block takes it:
+  so nothing leaves around dotdash. */}}
   "outbounds": [
     {"tag": "block", "protocol": "blackhole"},
     {"tag": "direct", "protocol": "freedom"}
