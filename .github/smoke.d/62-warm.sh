@@ -22,9 +22,13 @@ fi
 conn=$(cat /rig/upstream.conn)
 one="http://${conn} name=rig"
 list() { printf '%s\n' "$@" | sudo morzer secret set upstreams >/dev/null; }
+# warm's container, stopped or not: service_container finds running ones only.
+warm_container() {
+  sudo docker ps -aq --filter label=com.docker.compose.project=dotdash --filter label=com.docker.compose.service=warm | sed -n 1p
+}
 restore() {
   sudo docker rm -f dotdash-rig-warmclient >/dev/null 2>&1 || true
-  [ -z "$(service_container warm 2>/dev/null)" ] || sudo docker start "$(service_container warm)" >/dev/null 2>&1 || true
+  [ -z "$(warm_container)" ] || sudo docker start "$(warm_container)" >/dev/null 2>&1 || true
   list "${one}" || true
   sudo morzer config set installation.profile=xdns >/dev/null 2>&1 || true
 }
@@ -76,13 +80,14 @@ grep -qF ":1080 <- line 1 (rig) http ${hostport}, 2 kept ready" <<<"$(logs warm)
 ! grep -qF "${conn%@*}" <<<"$(logs warm)" || die "warm's log holds the rig's login"
 echo "${0##*/}: a line tagged warm=2 is dialled at warm, which holds its login and never logs it, and traffic flows"
 
-sudo docker stop "$(service_container warm)" >/dev/null
+warm=$(service_container warm)
+sudo docker stop "${warm}" >/dev/null
 for _ in $(seq 10); do [ "$(code)" != 301 ] && break; sleep 2; done
 [ "$(code)" != 301 ] || die "traffic still flows with warm stopped: the line does not go through it"
 out=$({ sudo morzer doctor 2>&1 || true; } | tr -s ' \n' ' ')
 grep -qF "rig (warm=): warm, the warm profile's container, is not running" <<<"${out}" ||
   die "with warm stopped, doctor does not name the line and warm: ${out}"
-sudo docker start "$(service_container warm)" >/dev/null
+sudo docker start "${warm}" >/dev/null
 becomes 301 || die "traffic does not flow again once warm is back (last: $(code))"
 echo "${0##*/}: the line goes through warm: with it stopped, nothing gets out and doctor says why; with it back, traffic flows"
 
