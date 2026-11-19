@@ -63,5 +63,9 @@ its certificate over DNS and needs nothing from the web server's port 80.
   back to the relay.
 - The mKCP, DNS tunnel and XHTTP with REALITY ports are the machine's own
   and don't pass through the web server.
-- `listen` is one IPv4 address, `0.0.0.0` (every one) by default:
-  dotdash publishes these ports on no IPv6 address.
+- `listen` is one address, or empty, the default, for every address, IPv4
+  and IPv6. `0.0.0.0` publishes on every IPv4 address and no IPv6 one.
+- Before an apply starts dotdash, morzer checks every port it is about to
+  publish on that port's own address and protocol, a profile's ports too
+  (UDP for the DNS tunnel, mKCP and Hysteria2), and refuses to start with
+  one taken, naming what holds it.

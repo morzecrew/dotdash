@@ -45,7 +45,7 @@ services:
     tmpfs:
       - /config:uid=65532,gid=65532,mode=0700,size=8m
     ports:
-      - "${DOTDASH_RELAY_PARAM_LISTEN:-0.0.0.0}:${DOTDASH_RELAY_PARAM_HTTP_PORT:-80}:80/tcp"
+      - "${DOTDASH_RELAY_PARAM_LISTEN-}:${DOTDASH_RELAY_PARAM_HTTP_PORT:-80}:80/tcp"
     logging:
       driver: local
       options: {max-size: 10m, max-file: "3"}
