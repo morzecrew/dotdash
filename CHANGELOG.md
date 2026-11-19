@@ -61,6 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Every TCP link in a device's Xray config, and the relay's link to its server, gives up a connection after 15 s of unacknowledged data and redials. When a censor freezes a connection, XHTTP answers again after 17 s instead of a minute.
 
+- A Hysteria2 connection a network froze is given up after 15 s of silence instead of 30, and the device reconnects: it answers again after 16 s instead of 31. The Xray config devices get sends keepalives, so a healthy connection idle that long stays open.
+
 - The gate times out an upstreams line's probe after 1.5 s (Xray's burst observatory) rather than 5. A line throttled hard but still answering, which added a second to every connection, now counts as down and the next one carries the traffic.
 
 - When no upstreams line answers its probe, the gate sends connections through the first line instead of failing them, so a wrong verdict, or a single line that is only slow, no longer stops the traffic. Nothing leaves directly.

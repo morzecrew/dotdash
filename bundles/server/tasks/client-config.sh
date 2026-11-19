@@ -382,7 +382,8 @@ EOF
      "settings": {"version": 2, "address": "$s", "port": ${hy2_port}},
      "streamSettings": {"network": "hysteria", "security": "tls",
        "tlsSettings": {"serverName": "$s", "alpn": ["h3"]},
-       "hysteriaSettings": {"version": 2, "auth": "$1"}}},
+       "hysteriaSettings": {"version": 2, "auth": "$1"},
+       "finalmask": {"quicParams": {"keepAlivePeriod": 10}}}},
 EOF
   done; relay_outbounds "$1"; cdn_outbounds "$1"; } | sed '$ s/,$//'
 }
