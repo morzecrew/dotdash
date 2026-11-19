@@ -286,7 +286,7 @@ images:
   openvpn: ghcr.io/morzecrew/openvpn:2.6.20@sha256:0892a6b6dfd2ce4369eb69c0d2701c24ced35ef9a2f4eee6ef5fa4d6f3684943
   # The warm profile's keeper of ready connections to the upstreams' proxies
   # (platform-images, images/proxy-warm).
-  warm: ghcr.io/morzecrew/proxy-warm:0.1.0@sha256:60452846f30d4befee791b73280141da0638519d737c8a6cc9bee751a081f367
+  warm: ghcr.io/morzecrew/proxy-warm:0.1.1@sha256:aa0121aa3baa668242f26c0eaf8337894c8724ae6432d8735cda86e797e952ad
 
 # Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);
 # its content is JSON, which is also YAML. Secrets are not in it: it holds
