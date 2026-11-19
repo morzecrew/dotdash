@@ -277,7 +277,7 @@ images:
   # hooks/policy reads the rendered config with it, run with no network, so
   # the host needs no jq of its own.
   jq: ghcr.io/jqlang/jq:1.8.1@sha256:4f34c6d23f4b1372ac789752cc955dc67c2ae177eb1b5860b75cdc5091ce6f91
-  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:e39b11531a5dc3f7214ddb58335055ed9e559b13557f094b177b625dbd35ee76
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:3720556a5b67b38b3bfad4bc731ddce5399fb5796135000713d9e3ccadb11616
   # Upstream's Caddy with the acme-dns DNS module, for cert_issuer=acme-dns;
   # otherwise as upstream's image, whose shell the tasks also use.
   caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:93c19f705c2218d5fca7f7dcb694cae1ed3889588678aabb7af34c8892e2f2bb
@@ -286,7 +286,7 @@ images:
   openvpn: ghcr.io/morzecrew/openvpn:2.6.20@sha256:0892a6b6dfd2ce4369eb69c0d2701c24ced35ef9a2f4eee6ef5fa4d6f3684943
   # The warm profile's keeper of ready connections to the upstreams' proxies
   # (platform-images, images/proxy-warm).
-  warm: ghcr.io/morzecrew/proxy-warm:0.1.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  warm: ghcr.io/morzecrew/proxy-warm:0.1.0@sha256:60452846f30d4befee791b73280141da0638519d737c8a6cc9bee751a081f367
 
 # Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);
 # its content is JSON, which is also YAML. Secrets are not in it: it holds
