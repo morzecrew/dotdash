@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-19
+
 ### Added
 
 - An `upstreams` proxy line tagged `warm=<n>` keeps `n` connections to its proxy open and logged in (the `warm` profile), so a new connection skips the proxy's handshake. From a server 34 ms from its proxy, a fetch's first byte came after 51 ms instead of 203 ms.
