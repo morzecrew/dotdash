@@ -49,6 +49,10 @@ sudo docker run -d --name client-rig-tun-sub --network host -v "${dir}/caddy:/et
 plain() { # <URL>: its status from the rig with no proxy, or 000
   curl -s -o /dev/null -w '%{http_code}' --noproxy '*' --max-time 10 "$1" || true
 }
+through() { # <tries>: poll, 2 s apart, for a plain request reaching tun-target.test through TUN and dotdash
+  for _ in $(seq "$1"); do [ "$(plain http://tun-target.test:8080/sub)" = 200 ] && return 0; sleep 2; done
+  return 1
+}
 routes() { # what decides where a plain request goes, for a failure's message
   { echo "--- ip rule"; ip rule; echo "--- ip route"; ip route; echo "--- ip -6 route"; ip -6 route
     echo "--- resolv.conf"; cat /etc/resolv.conf; echo "--- tun-target.test"; getent hosts tun-target.test || true; } >&2
@@ -70,13 +74,7 @@ sudo morzer config set probe_url=http://tun-target.test:8080/sub >/dev/null
 sudo morzer config set installation.profile=tun >/dev/null
 ip -o link show Meta >/dev/null 2>&1 || die "under the tun profile there is no TUN interface"
 
-code=000
-for _ in $(seq 15); do
-  code=$(plain http://tun-target.test:8080/sub)
-  [ "${code}" = 200 ] && break
-  sleep 2
-done
-[ "${code}" = 200 ] || { routes; die "a plain request did not go through TUN and dotdash (${code})"; }
+through 15 || { routes; die "a plain request did not go through TUN and dotdash ($(plain http://tun-target.test:8080/sub))"; }
 
 # A gateway. A LAN device, a network namespace behind a veth with this machine
 # as its gateway (as in the router spike, #50), first resolves with a public
@@ -130,6 +128,9 @@ sudo iptables -P FORWARD "${policy}"
 sudo ip netns del lan
 sudo ip link del lanbr 2>/dev/null || true
 
+# Unsetting gateway re-created Xray, which probes its link at once; stopping
+# the stand-in under that probe would count the link down until a later one.
+through 15 || { routes; die "off the gateway, a plain request did not go through TUN and dotdash"; }
 sudo docker stop client-rig-tun-server >/dev/null
 for _ in 1 2 3; do
   code=$(plain https://example.com/)
@@ -137,6 +138,9 @@ for _ in 1 2 3; do
   sleep 2
 done
 sudo docker start client-rig-tun-server >/dev/null
+# A probe while the stand-in was down counts the link down until the next,
+# once a minute at a moment of its own: wait out up to two of them.
+through 75 || { routes; die "with dotdash back, a plain request did not go through TUN and dotdash within 150 s"; }
 
 # With Xray itself gone, a crash or the image's restart on a new subscription,
 # its TUN and routes go too, and the default route would carry everything: the
@@ -151,13 +155,7 @@ for _ in 1 2 3; do
   sleep 2
 done
 sudo docker start "${client}" >/dev/null
-code=000
-for _ in $(seq 15); do
-  code=$(plain http://tun-target.test:8080/sub)
-  [ "${code}" = 200 ] && break
-  sleep 2
-done
-[ "${code}" = 200 ] || { routes; die "with Xray back, a plain request did not go through TUN and dotdash again (${code})"; }
+through 15 || { routes; die "with Xray back, a plain request did not go through TUN and dotdash again ($(plain http://tun-target.test:8080/sub))"; }
 
 sudo morzer config unset installation.profile >/dev/null
 ip -o link show Meta >/dev/null 2>&1 && die "back on the base files, the TUN interface is still there"
