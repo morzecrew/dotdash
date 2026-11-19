@@ -47,8 +47,10 @@ for _ in $(seq 30); do
 done
 [ "$(fetch https://www.gstatic.com/generate_204)" = 204 ] || die "the links did not come back with the subscription"
 
-sudo docker stop client-rig-server >/dev/null
+# The direct rule shows Xray up; set while the stand-in server answers, as
+# morzer waits for the health check to pass.
 printf 'DOMAIN,example.com\n' | sudo morzer config set --set-file direct_rules=- >/dev/null
+sudo docker stop client-rig-server >/dev/null
 sudo docker restart "$(service_container xray)" >/dev/null
 for _ in $(seq 30); do
   [ "$(fetch https://example.com/)" = 200 ] && break
