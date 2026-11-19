@@ -121,7 +121,11 @@ REALITY connection with Vision for each. */ -}}
         "password": "{{ $pbk }}",
         "shortId": {"$file": "/run/secrets/dotdash_short_id"}
       }{{ if $xr }},
-      "xhttpSettings": {"path": {"$file": "/run/secrets/dotdash_xhttp_path"}, "mode": "auto"}{{ end }}}
+      "xhttpSettings": {"path": {"$file": "/run/secrets/dotdash_xhttp_path"}, "mode": "auto"}{{ end }},
+      {{- /* Given up once what it sent has gone unacknowledged for 15 s, and
+      redialled: a frozen link to the server otherwise holds every device
+      behind it for a minute (dotdash-lab #57). */}}
+      "sockopt": {"tcpUserTimeout": 15000}}
     }
     {{- end }}
     {{- if $block6 }},

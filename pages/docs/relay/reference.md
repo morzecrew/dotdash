@@ -20,7 +20,7 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `dotdash_link` | `reality` | how the relay reaches the servers: `reality`, a REALITY connection with Vision for each device's; `xhttp-reality`, XHTTP with REALITY on `dotdash_xhttp_reality_port`, connections reused across devices, about 100 ms sooner to a page's first byte for about twice the CPU here and on the server. Needs the servers' [`xhttp-reality`](../server/xhttp-reality.md) profile and the `dotdash_xhttp_path` secret, both of which `relay-config` prints |
 | `dotdash_xhttp_reality_port` | `8443` | the servers' `xhttp_reality_port`, for `dotdash_link=xhttp-reality` |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what the health check fetches through dotdash; any 2xx is healthy |
-| `tcp_congestion` | `bbr` | TCP congestion control toward devices, in Xray's own namespace: `bbr` keeps its pace through a lossy last mile; `cubic` for a kernel without `tcp_bbr` |
+| `tcp_congestion` | `bbr` | TCP congestion control toward devices, in Xray's own namespace: `bbr` keeps its pace through a lossy last mile; `cubic` for a kernel without `tcp_bbr`. Xray also probes each connection's path MTU and holds at most 128 KiB unsent per connection, and gives its link to a server up after 15 s of unacknowledged data |
 | `ipv6` | `allow` | `block`: IPv6 destinations end at the relay and never reach a server; names go on |
 | `https_port` | `443` | host port for REALITY; devices always dial 443, so another is for [your own web server](../server/shared-machine.md) passing the relay's name through |
 | `http_port` | `80` | with `own-site`, host port for the site's plain HTTP, the ACME HTTP-01 check |

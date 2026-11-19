@@ -57,6 +57,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The server's gate, the relay and the `warm` container probe each connection's path MTU and hold at most 128 KiB unsent per connection. A path that silently drops large packets no longer stalls every TCP link (Vision's first byte 332 ms instead of never), and a click waits less behind a download on XHTTP.
+
+- Every TCP link in a device's Xray config, and the relay's link to its server, gives up a connection after 15 s of unacknowledged data and redials. When a censor freezes a connection, XHTTP answers again after 17 s instead of a minute.
+
+- A Hysteria2 connection a network froze is given up after 15 s of silence instead of 30, and the device reconnects: it answers again after 16 s instead of 31. The Xray config devices get sends keepalives, so a healthy connection idle that long stays open.
+
+- The gate times out an upstreams line's probe after 1.5 s (Xray's burst observatory) rather than 5. A line throttled hard but still answering, which added a second to every connection, now counts as down and the next one carries the traffic.
+
+- When no upstreams line answers its probe, the gate sends connections through the first line instead of failing them, so a wrong verdict, or a single line that is only slow, no longer stops the traffic. Nothing leaves directly.
+
 - Every apply, update and `doctor` refuses `upstream_udp=true` while an upstreams line is an HTTP or HTTPS proxy, which drops UDP. The policy check also reads a line's `group=` and kind when `name=` and `group=` come before its URL.
 
 - The Xray config devices get (`client-config --full`, the subscription's JSON, `dotdash-client`) shares UDP flows over a few connections on REALITY links (XUDP Mux): one connection for 20 flows instead of 20, each later flow answering in one round trip instead of three.

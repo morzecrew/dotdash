@@ -89,8 +89,20 @@ services:
     # It ends devices' TCP on the published ports, so it sends their
     # downloads: on BBR (tcp_congestion), which keeps its pace through the
     # losses of a mobile or busy last mile where cubic halves at each one.
+    # Path-MTU probing on every connection: across a link that drops large
+    # packets and sends no word back, every TCP tunnel stalls with it off (a
+    # new namespace's default, whatever the host has), and Vision waits 4 s
+    # a connection with probing only once a black hole is found; probing
+    # from a small segment up costs nothing measurable on a sound path. And
+    # at most 128 KiB unsent in a socket, so a download's backlog doesn't sit
+    # in front of the rest of an XHTTP connection: a click behind a download
+    # 124 ms rather than 149 on LTE (dotdash-lab #55).
     # This container's own namespace alone; the host keeps its own.
-    sysctls: {net.ipv4.ip_unprivileged_port_start: 0, net.ipv4.tcp_congestion_control: "${DOTDASH_PARAM_TCP_CONGESTION:-bbr}"}
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 0
+      net.ipv4.tcp_congestion_control: "${DOTDASH_PARAM_TCP_CONGESTION:-bbr}"
+      net.ipv4.tcp_mtu_probing: 2
+      net.ipv4.tcp_notsent_lowat: 131072
     # At listen: 127.0.0.1 behind a web server of the operator's own that
     # passes this domain's connections through from 443.
     ports:

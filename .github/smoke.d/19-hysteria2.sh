@@ -88,8 +88,9 @@ hl=$(hy2_link) || die "client-config printed no Hysteria2 link"
 full_config | jq -e --arg auth "$(auth "${hl}")" '
   [.outbounds[] | select(.tag | endswith("-hy2"))] as $h
   | ($h | length) == 1 and $h[0].protocol == "hysteria" and $h[0].settings.port == 443
-    and $h[0].streamSettings.hysteriaSettings.auth == $auth' >/dev/null \
-  || die "client-config's Xray config has no Hysteria2 outbound matching the link"
+    and $h[0].streamSettings.hysteriaSettings.auth == $auth
+    and $h[0].streamSettings.finalmask.quicParams == {keepAlivePeriod: 10}' >/dev/null \
+  || die "client-config's Xray config has no Hysteria2 outbound matching the link, with keepalives"
 published 443 udp || die "443/udp is not published under xdns,hysteria2"
 sudo morzer task run facts --output | jq -e '.hysteria2_port == 443' >/dev/null \
   || die "the facts carry no hysteria2_port under xdns,hysteria2"
@@ -121,13 +122,13 @@ echo "19-hysteria2.sh: with the upstream stopped, Hysteria2 gets nothing"
 set_config hysteria2_up=50
 config=/etc/dotdash/application.yaml
 sudo jq -e '[.inbounds[] | select(.tag == "hysteria2")][0].streamSettings.finalmask.quicParams
-  == {disableStatelessReset: true, congestion: "brutal", brutalUp: "50 mbps"}' "${config}" >/dev/null \
+  == {disableStatelessReset: true, maxIdleTimeout: 15, congestion: "brutal", brutalUp: "50 mbps"}' "${config}" >/dev/null \
   || die "hysteria2_up=50 did not put the inbound on Brutal at 50 Mbit/s"
 client hy2-brutal 11098 "${hl}" "" 20
 gets_through 11098 || die "no answer through Hysteria2 on Brutal"
 sudo morzer config unset hysteria2_up >/dev/null || die "could not unset hysteria2_up"
 sudo jq -e '[.inbounds[] | select(.tag == "hysteria2")][0].streamSettings.finalmask.quicParams
-  == {disableStatelessReset: true, congestion: "bbr"}' \
+  == {disableStatelessReset: true, maxIdleTimeout: 15, congestion: "bbr"}' \
   "${config}" >/dev/null || die "hysteria2_up unset did not put the inbound back on BBR"
 echo "19-hysteria2.sh: hysteria2_up turns Brutal on toward a device that asks, and 0 is BBR"
 

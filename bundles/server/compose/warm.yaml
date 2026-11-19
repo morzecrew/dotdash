@@ -22,6 +22,9 @@ services:
     # It holds the proxies' logins, as the gate does: an edit of upstreams
     # restarts it (secrets.schema.yaml).
     secrets: [upstreams]
+    # Path-MTU probing on every connection to the proxies, and at most
+    # 128 KiB unsent in a socket, as the gate has them.
+    sysctls: {net.ipv4.tcp_mtu_probing: 2, net.ipv4.tcp_notsent_lowat: 131072}
     # egress alone, where the gate reaches it and it reaches the proxies: not
     # on inside, beside Xray, which must leave through the gate's routing
     # (hooks/policy).

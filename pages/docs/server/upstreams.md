@@ -45,7 +45,12 @@ get nothing, never the server's own address: [what leaks where](leaks.md).
 
 The gate probes every line through it, fetching `probe_url`, every 30
 seconds, so every line sees that URL's host name; with `resolve=gateway`,
-clients' destinations still reach them as addresses. `upstream_mode` decides how the lines that answer share the traffic:
+clients' destinations still reach them as addresses. A line whose answer
+takes more than 1.5 seconds counts as down, as one that doesn't answer: a line
+throttled that hard would add a second or more to every connection. When no
+line answers, connections still take the first one rather than none, so a
+wrong verdict, or a single line that is only slow, never stops the traffic;
+a line that is really down fails them itself. `upstream_mode` decides how the lines that answer share the traffic:
 
 | `upstream_mode` | |
 | --- | --- |

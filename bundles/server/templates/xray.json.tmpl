@@ -261,8 +261,13 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
         {{- /* No stateless resets: Caddy's QUIC sends none, so a prober's stray
         packet to UDP 443 got an answer from Hysteria2 that the site's own
         HTTP/3 never gives (dotdash-lab #46). A device whose connection the
-        server forgot times out instead. */}}
-        "finalmask": {"quicParams": {"disableStatelessReset": true, {{ if eq (printf "%v" .Parameters.hysteria2_up) "0" }}"congestion": "bbr"{{ else }}"congestion": "brutal", "brutalUp": "{{ .Parameters.hysteria2_up }} mbps"{{ end }}}}
+        server forgot times out instead.
+        A connection silent for 15 s is given up: a device takes the lower of
+        its own idle timeout and this one, and Xray's devices pin their own at
+        Chrome's 30 s while they mimic its QUIC, so only this one shortens a
+        frozen connection's 31 s to 16 (dotdash-lab #59). Devices' keepalives
+        hold a healthy idle one open. */}}
+        "finalmask": {"quicParams": {"disableStatelessReset": true, "maxIdleTimeout": 15, {{ if eq (printf "%v" .Parameters.hysteria2_up) "0" }}"congestion": "bbr"{{ else }}"congestion": "brutal", "brutalUp": "{{ .Parameters.hysteria2_up }} mbps"{{ end }}}}
       },
       "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
     },

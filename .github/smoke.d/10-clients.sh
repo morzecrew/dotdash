@@ -97,6 +97,10 @@ config_check() { # <name> <socks port> <servers>: client-config's config with th
     and all($v[]; .mux == {enabled: true, concurrency: -1, xudpConcurrency: 8, xudpProxyUDP443: "reject"})
     and all(.outbounds[] | select(.settings.flow != "xtls-rprx-vision"); .mux == null)' <<<"${config}" >/dev/null ||
     die "$1: the Vision links do not carry XUDP Mux alone: $(jq -c '[.outbounds[] | {tag, mux}]' <<<"${config}")"
+  # A frozen TCP link given up after 15 s unacknowledged; UDP links have no such thing.
+  jq -e 'all(.outbounds[] | select(.streamSettings.network | IN("raw", "xhttp")); .streamSettings.sockopt.tcpUserTimeout == 15000)
+    and all(.outbounds[] | select(.streamSettings.network | IN("kcp", "hysteria")); .streamSettings.sockopt == null)' <<<"${config}" >/dev/null ||
+    die "$1: the TCP links do not carry tcpUserTimeout alone: $(jq -c '[.outbounds[] | {tag, s: .streamSettings.sockopt}]' <<<"${config}")"
   mkdir -p "${dir}/$1"
   rig_config "$2" <<<"${config}" >"${dir}/$1/client.json"
   chmod -R a+rX "${dir}/$1"
