@@ -3036,7 +3036,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p><code>dotdash-client</code>'s rule parameters keep their form. A line whose type isn't DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, DOMAIN-REGEX, GEOSITE, IP-CIDR, IP-CIDR6, GEOIP or DST-PORT stops the change, naming the line. IP rules never look a name up, so <code>no-resolve</code> changes nothing.</p>
 </li>
 <li>
-<p>The server's and relay's TLS and HTTP ports are published on every IPv4 address (<code>listen=0.0.0.0</code>), and no longer on IPv6 too. A domain with an AAAA record reaches dotdash over IPv4 only.</p>
+<p>The server and the relay need morzer 0.18.0. Before an apply starts them, it checks each port they publish on that port's own address and protocol, the UDP ports of the DNS tunnel, mKCP and Hysteria2 included, and refuses to start with one taken, naming it, rather than failing after the old containers stopped.</p>
 </li>
 <li>
 <p><code>dotdash-acme-dns</code> needs morzer 0.17.1, which backs up a machine set up without a recovery key, so updates there no longer depend on the placeholder secret the bundle carried; the secret is gone.</p>
