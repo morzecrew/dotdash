@@ -61,7 +61,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Every TCP link in a device's Xray config, and the relay's link to its server, gives up a connection after 15 s of unacknowledged data and redials. When a censor freezes a connection, XHTTP answers again after 17 s instead of a minute.
 
-- The gate times out an upstreams line's probe after 2 s (Xray's burst observatory) rather than 5. A line throttled hard but still answering, which added a second to every connection, now counts as down and the next one carries the traffic.
+- The gate times out an upstreams line's probe after 1.5 s (Xray's burst observatory) rather than 5. A line throttled hard but still answering, which added a second to every connection, now counts as down and the next one carries the traffic.
+
+- When no upstreams line answers its probe, the gate sends connections through the first line instead of failing them, so a wrong verdict, or a single line that is only slow, no longer stops the traffic. Nothing leaves directly.
 
 - Every apply, update and `doctor` refuses `upstream_udp=true` while an upstreams line is an HTTP or HTTPS proxy, which drops UDP. The policy check also reads a line's `group=` and kind when `name=` and `group=` come before its URL.
 

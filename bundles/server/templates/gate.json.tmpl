@@ -19,23 +19,26 @@ group, upstream and under ipv6=separate ipv6, the first line is tagged
 front (gate.env), so the balancers below select them by prefix without
 knowing how many there are. Xray's burst observatory probes every one at
 probe_url every 30 s, each at a moment of its own, and a probe that takes
-more than 2 s counts as failed. Its plain observatory gives a probe 5 s,
+more than 1.5 s counts as failed. Its plain observatory gives a probe 5 s,
 about six round trips through a proxy, so a line 300 ms slower each way
 than it should be still counted as answering while it added a second to
-every connection (dotdash-lab #58); a healthy line's probe takes well under
-one.
+every connection (dotdash-lab #58). At 1.5 s such a line counts as down and
+a healthy one's probe, well under a second, still passes (dotdash-lab #60).
 
 upstream_mode, per group:
   - failover: the first line while it answers. When it doesn't, the balancer
     falls back to a SOCKS hop into this gate (1090, 1091 for ipv6), whose own
     balancer takes the fastest of the rest; with no rest, or none answering,
-    block. Two levels, not one per line: Xray's balancers have one fallback
+    the first line. Two levels, not one per line: Xray's balancers have one fallback
     each, and leastLoad's cost weights overflow past ten or so;
   - fastest: whichever answers fastest (leastPing), the first line before any
     probe has answered;
   - balance: any line that answers, picked at random per connection; a line
     not yet probed counts as answering.
-When nothing answers, a connection fails: nothing here leaves directly.
+When no line answers, a connection takes the first line anyway: a probe's
+verdict can be wrong, a 1.5 s timeout fails a slow line that still carries, and
+a line that is really down fails the connection itself. Nothing here leaves
+directly.
 
 Nothing else is routed: the freedom outbound carries only the public inbounds,
 whose destination is fixed to Xray, and everything else is blocked.
@@ -111,16 +114,16 @@ fails on its empty value with the message. */ -}}
 {{- end }}
 {{- end }}
   ],
-  "burstObservatory": {"subjectSelector": ["upstream-"{{ if $v6 }}, "ipv6-"{{ end }}], "pingConfig": {"destination": "{{ .Parameters.probe_url }}", "interval": "30s", "sampling": 1, "timeout": "2s"}},
+  "burstObservatory": {"subjectSelector": ["upstream-"{{ if $v6 }}, "ipv6-"{{ end }}], "pingConfig": {"destination": "{{ .Parameters.probe_url }}", "interval": "30s", "sampling": 1, "timeout": "1.5s"}},
   "routing": {
     "domainStrategy": "AsIs",
     "balancers": [
 {{- if eq $mode "failover" }}
       {"tag": "egress", "selector": ["upstream-0"], "strategy": {"type": "random"}, "fallbackTag": "to-backups"},
-      {"tag": "backups", "selector": ["upstream-b"], "strategy": {"type": "leastPing"}, "fallbackTag": "block"}
+      {"tag": "backups", "selector": ["upstream-b"], "strategy": {"type": "leastPing"}, "fallbackTag": "upstream-0"}
 {{- if $v6 }},
       {"tag": "egress6", "selector": ["ipv6-0"], "strategy": {"type": "random"}, "fallbackTag": "to-backups6"},
-      {"tag": "backups6", "selector": ["ipv6-b"], "strategy": {"type": "leastPing"}, "fallbackTag": "block"}
+      {"tag": "backups6", "selector": ["ipv6-b"], "strategy": {"type": "leastPing"}, "fallbackTag": "ipv6-0"}
 {{- end }}
 {{- else if eq $mode "fastest" }}
       {"tag": "egress", "selector": ["upstream-"], "strategy": {"type": "leastPing"}, "fallbackTag": "upstream-0"}
@@ -128,9 +131,9 @@ fails on its empty value with the message. */ -}}
       {"tag": "egress6", "selector": ["ipv6-"], "strategy": {"type": "leastPing"}, "fallbackTag": "ipv6-0"}
 {{- end }}
 {{- else }}
-      {"tag": "egress", "selector": ["upstream-"], "strategy": {"type": "random"}, "fallbackTag": "block"}
+      {"tag": "egress", "selector": ["upstream-"], "strategy": {"type": "random"}, "fallbackTag": "upstream-0"}
 {{- if $v6 }},
-      {"tag": "egress6", "selector": ["ipv6-"], "strategy": {"type": "random"}, "fallbackTag": "block"}
+      {"tag": "egress6", "selector": ["ipv6-"], "strategy": {"type": "random"}, "fallbackTag": "ipv6-0"}
 {{- end }}
 {{- end }}
     ],

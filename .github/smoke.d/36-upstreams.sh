@@ -10,6 +10,8 @@
 # - with it stopped, they move to the second within the probes' interval, and
 #   doctor passes; with it back, they return to it;
 # - balance: connections leave through both;
+# - in balance and failover, with no line answering, the first still carries
+#   (no balancer falls back to block);
 # - upstream_pin=backup: the second line goes first;
 # - with the second line gone from the list, the gate has one way out again.
 #
@@ -79,11 +81,15 @@ for _ in $(seq 20); do
 done
 both || die "balance: 20 connections did not leave through both lines (saw:${seen})"
 echo "${0##*/}: balance: connections leave through both lines"
+first_last() { sudo jq -e '[.routing.balancers[].fallbackTag] | index("block") == null' /etc/dotdash/gate.json >/dev/null; }
+first_last || die "balance: with no line answering, a balancer blocks instead of taking the first line"
 
 sudo morzer config set upstream_mode=failover upstream_pin=backup >/dev/null || die "could not pin the second line"
 becomes 200 || die "upstream_pin=backup: connections do not leave through the pinned line (last: $(code))"
 for _ in 1 2 3; do [ "$(code)" = 200 ] || die "upstream_pin=backup: a connection left through the other line"; done
 echo "${0##*/}: upstream_pin moves the named line first"
+first_last || die "failover: with no line answering, a balancer blocks instead of taking the first line"
+echo "${0##*/}: with no line answering, balance and failover take the first line"
 
 sudo morzer config unset upstream_pin >/dev/null || die "could not unset upstream_pin"
 list "${one}"
