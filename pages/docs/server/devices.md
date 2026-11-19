@@ -68,7 +68,10 @@ sudo morzer task run client-config --output -- --full phone    # plus links and 
 - The same URL, asked with `Accept: application/json`, serves the device's
   Xray config: the [client bundle](../client/index.md) runs Xray on it on a
   Linux machine for you. On its REALITY links, the device's UDP flows share
-  a few connections (XUDP Mux) rather than opening one each.
+  a few connections (XUDP Mux) rather than opening one each. On every TCP
+  link, a connection whose sent data goes unacknowledged for 15 seconds is
+  given up and redialled: a connection the network has frozen, which XHTTP
+  would otherwise keep sending requests down for a minute.
 - A URL is as secret as the links. `sudo morzer secret rotate subscription_key`
   moves every URL; any other path gets the site's 404.
 - A [relay](../relay/install.md#6-devices) with a site of its own serves the

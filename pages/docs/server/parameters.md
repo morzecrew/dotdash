@@ -22,9 +22,9 @@
 | `kcp_header` | `dtls` | what mKCP's packets start with: `dtls`, `srtp`, `utp`, `wechat`, `wireguard` or `none` |
 | `hysteria2_port` | `443` | UDP port for [Hysteria2](hysteria2.md); not `kcp_port` |
 | `hysteria2_up` | `0` | Mbit/s Hysteria2's Brutal sends each device at, for one that asks; `0` keeps BBR |
-| `tcp_congestion` | `bbr` | TCP congestion control toward devices, in the gate's own namespace: `bbr` keeps its pace through a lossy last mile; `cubic` for a kernel without `tcp_bbr` |
+| `tcp_congestion` | `bbr` | TCP congestion control toward devices, in the gate's own namespace: `bbr` keeps its pace through a lossy last mile; `cubic` for a kernel without `tcp_bbr`. The gate also probes each connection's path MTU, so a link that drops large packets slows a download rather than stalling it, and holds at most 128 KiB unsent per connection |
 | `log_level` | `error` | Xray error log; `warning` and below name failed destinations |
-| `probe_url` | `https://www.gstatic.com/generate_204` | fetched through the upstreams, and through each line every 30 s |
+| `probe_url` | `https://www.gstatic.com/generate_204` | fetched through the upstreams, and through each line every 30 s; an answer slower than 2 s counts as none |
 | `probe_expect` | `.*` | regex the response must match, such as the exit IP |
 | `probe6_url` | `http://api6.ipify.org` | IPv6-only URL fetched through the IPv6 lines, with `ipv6=separate` |
 | `resolve` | `gateway` | `gateway`: this server resolves over `dns_resolver`; `upstream`: the upstream proxies see hostnames (no WireGuard or OpenVPN line then) |

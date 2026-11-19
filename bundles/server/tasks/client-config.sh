@@ -277,6 +277,13 @@ EOF
   done
 }
 
+# Every TCP link gives a connection up once what it sent has gone
+# unacknowledged for 15 s (tcpUserTimeout), and redials. A censor that freezes
+# a connection sends nothing back, and XHTTP sends every request down the
+# connection it holds: a minute with no answer at all, 17 s with this, and a
+# lossy link never trips it (dotdash-lab #57).
+uto=', "sockopt": {"tcpUserTimeout": 15000}'
+
 cdn_outbound() { # <tag> <id> <cdn> <encryption> <path>: XHTTP through a CDN, uploading by GET with the data in headers
   cat <<EOF
     {"tag": "$1", "protocol": "vless",
@@ -285,7 +292,7 @@ cdn_outbound() { # <tag> <id> <cdn> <encryption> <path>: XHTTP through a CDN, up
        "tlsSettings": {"serverName": "$3", "alpn": ["h2"], "fingerprint": "chrome"},
        "xhttpSettings": {"path": "/$5", "host": "$3", "mode": "packet-up",
          "uplinkHTTPMethod": "GET", "uplinkDataPlacement": "header", "uplinkChunkSize": 16384,
-         "scMaxEachPostBytes": 32768, "scMinPostsIntervalMs": 10}}},
+         "scMaxEachPostBytes": 32768, "scMinPostsIntervalMs": 10}${uto}}},
 EOF
 }
 
@@ -316,7 +323,7 @@ relay_outbounds() { # <id>
     {"tag": "dotdash-relay-$n", "protocol": "vless",
      "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e", "flow": "xtls-rprx-vision"},
      "streamSettings": {"network": "raw", "security": "reality",
-       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "$k", "shortId": "$i"}${rhello}},
+       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "$k", "shortId": "$i"}${rhello}${uto}},
      ${mux}},
 EOF
     [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp || cat <<EOF
@@ -324,7 +331,7 @@ EOF
      "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e"},
      "streamSettings": {"network": "xhttp", "security": "tls",
        "tlsSettings": {"serverName": "$s", "alpn": ["h2"], "fingerprint": "chrome"},
-       "xhttpSettings": {"path": "/$p", "host": "$s", "mode": "auto"}}},
+       "xhttpSettings": {"path": "/$p", "host": "$s", "mode": "auto"}${uto}}},
 EOF
     m=0
     [ "$d" = - ] || for x in $(printf '%s' "$d" | tr ',' ' '); do
@@ -350,20 +357,20 @@ outbounds() { # <id>: a REALITY and an XHTTP outbound per server, the third, mKC
     {"tag": "dotdash-$n-reality", "protocol": "vless",
      "settings": {"address": "$s", "port": ${HTTPS_PORT}, "id": "$1", "encryption": "${enc}", "flow": "xtls-rprx-vision"},
      "streamSettings": {"network": "raw", "security": "reality",
-       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "${pbk}", "shortId": "${sid}"}${hello}},
+       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "${pbk}", "shortId": "${sid}"}${hello}${uto}},
      ${mux}},
     {"tag": "dotdash-$n-xhttp", "protocol": "vless",
      "settings": {"address": "$s", "port": ${HTTPS_PORT}, "id": "$1", "encryption": "${enc}"},
      "streamSettings": {"network": "xhttp", "security": "tls",
        "tlsSettings": {"serverName": "$s", "alpn": ["h2"], "fingerprint": "chrome"},
-       "xhttpSettings": {"path": "/${path}", "host": "$s", "mode": "auto"}}},
+       "xhttpSettings": {"path": "/${path}", "host": "$s", "mode": "auto"}${uto}}},
 EOF
     [ -z "$xr_port" ] || cat <<EOF
     {"tag": "dotdash-$n-xhttp-reality", "protocol": "vless",
      "settings": {"address": "$s", "port": ${xr_port}, "id": "$1", "encryption": "${enc}"},
      "streamSettings": {"network": "xhttp", "security": "reality",
        "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "${pbk}", "shortId": "${sid}"},
-       "xhttpSettings": {"path": "/${path}", "mode": "auto"}}},
+       "xhttpSettings": {"path": "/${path}", "mode": "auto"}${uto}}},
 EOF
     [ -z "$kcp_port" ] || cat <<EOF
     {"tag": "dotdash-$n-kcp", "protocol": "vless",

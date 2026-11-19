@@ -28,3 +28,11 @@ gets_through 11080 || die "the first client does not get through with the gate o
 sudo morzer config unset tcp_congestion >/dev/null || die "could not unset tcp_congestion"
 [ "$(cc)" = bbr ] || die "back on the default, the gate is on '$(cc)'"
 echo "11-congestion.sh: the gate sends on BBR in its own namespace, and on cubic when told"
+
+# Path-MTU probing on every connection, and a cap on unsent bytes, beside it.
+sysctl() { sudo docker inspect -f "{{index .HostConfig.Sysctls \"$1\"}}" "$(service_container gate)"; }
+if sudo grep -qF 'tcp_mtu_probing' /opt/dotdash/current/compose/compose.yaml; then
+  [ "$(sysctl net.ipv4.tcp_mtu_probing)" = 2 ] || die "the gate's tcp_mtu_probing is '$(sysctl net.ipv4.tcp_mtu_probing)', not 2"
+  [ "$(sysctl net.ipv4.tcp_notsent_lowat)" = 131072 ] || die "the gate's tcp_notsent_lowat is '$(sysctl net.ipv4.tcp_notsent_lowat)', not 131072"
+  echo "11-congestion.sh: the gate probes the path's MTU on every connection and holds at most 128 KiB unsent"
+fi
