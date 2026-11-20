@@ -2180,6 +2180,16 @@
 <td>a subscription URL per device</td>
 </tr>
 <tr>
+<td><code>exit_ipv4_url</code></td>
+<td><code>http://api4.ipify.org</code></td>
+<td>with <code>subscription</code>, what the subscription's name asks, through the upstreams every ten minutes, for the exit's IPv4 address: plain HTTP answering with the caller's address alone</td>
+</tr>
+<tr>
+<td><code>exit_info_url</code></td>
+<td><code>http://ipinfo.io</code></td>
+<td>with <code>subscription</code>, where the name asks <code>&lt;url&gt;/&lt;address&gt;/country</code> for the exit's country, whose flag goes before the address</td>
+</tr>
+<tr>
 <td><code>cert_issuer</code></td>
 <td><code>acme</code></td>
 <td><code>acme</code> (Let's Encrypt), <code>acme-dns</code> (Let's Encrypt over a DNS-01 check handed to acme-dns, for a <a href="../certificates/">wildcard</a> that keeps the name out of certificate logs) or <code>internal</code> (offline machines)</td>

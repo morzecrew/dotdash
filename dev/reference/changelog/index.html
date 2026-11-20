@@ -3078,6 +3078,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>A relay with a site of its own serves Hysteria2 too, under that site's certificate (<code>installation.profile=own-site,hysteria2</code>, UDP <code>hysteria2_port</code>, 443). Its <code>relay-entry</code> line ends with <code>hy2=&lt;port&gt;</code>, and devices get a <code>[relay &lt;host&gt; hy2]</code> link and outbound through it.</p>
 </li>
 <li>
+<p>A device's subscription names itself after the server's exit, its country's flag and IPv4 address (<code>Profile-Title</code>), so the apps that show a name (Happ, Hiddify) show where traffic leaves instead of the server's domain. The server asks every ten minutes, through the upstreams (<code>exit_ipv4_url</code>, <code>exit_info_url</code>).</p>
+</li>
+<li>
 <p><code>dotdash-manager</code> gives a canary watching a relay with Hysteria2 the relay's port (<code>dotdash_hysteria2_port</code>), so the canary's <code>hysteria2</code> profile checks it, and a relay whose Hysteria2 its canaries can't get through loses that link (<code>off=hysteria2</code>).</p>
 </li>
 </ul>
