@@ -11,7 +11,7 @@ provider's firewall, then:
 sudo morzer config set installation.profile=hysteria2   # with the DNS tunnel: xdns,hysteria2
 ```
 
-Each device gets a `phone [hy2]` link and an outbound in the Xray config. Its
+Each device gets a `phone | hy2` link and an outbound in the Xray config. Its
 login is the device's own UUID, so revoking a device in `vless_clients`
 revokes it here too.
 
@@ -46,5 +46,5 @@ release without it.
 A [relay](../relay/index.md) with a site of its own serves Hysteria2 too
 (`installation.profile=own-site,hysteria2` on the relay, see its
 [reference](../relay/reference.md#profiles)): devices then get a
-`[relay <host> hy2]` link through it, whether or not this server runs the
+`phone | hy2 | relay` link through it, whether or not this server runs the
 profile.

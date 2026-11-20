@@ -38,7 +38,7 @@ certificate. The site also serves devices their subscriptions, fetched from
 the servers through the relay's tunnel, and XHTTP on the secret path
 `xhttp_path`, which `init` generates. With `cdn_hosts` set, `relay-entry`
 ends the relay's line with `cdn=<name>,...`, and the server gives each device
-a `[relay <host> cdn <name>]` link through each
+a `<device> | xhttp | relay, cdn` link through each
 ([CDN in front of a relay](../server/cdn.md#in-front-of-a-relay)). See
 [Set up a relay](install.md#1-pick-the-site).
 
@@ -48,14 +48,14 @@ site's certificate, each device's UUID its login, and carries it on to the
 servers like REALITY. It needs `own-site`, whose certificate it serves:
 without it the profile is refused. `relay-entry` then ends the relay's line
 with `hy2=<port>`, from which the server gives each device a
-`[relay <host> hy2]` link. Open the UDP port in the provider's firewall, and
+`<device> | hy2 | relay` link. Open the UDP port in the provider's firewall, and
 replace the relay's line on the server after turning it on.
 
 `installation.profile=mkcp` (with a site of its own: `own-site,mkcp`): the
 relay serves [mKCP](../server/mkcp.md) on UDP `kcp_port` too, under its own
 `kcp_seed`, and carries it on to the servers like REALITY. `relay-entry` then
 ends the relay's line with `kcp=<port>,<header>,<seed>`, from which the server
-gives each device a `[relay <host> kcp]` link. Open the UDP port in the
+gives each device a `<device> | kcp | relay` link. Open the UDP port in the
 provider's firewall, and replace the relay's line on the server after turning
 it on.
 
