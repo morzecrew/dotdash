@@ -50,7 +50,7 @@ services:
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
     # Internal networks only: no published port, no route out. The gate
     # forwards the public port in and carries the way out.
-    networks: [backend, inside]
+    networks: [backend, inside, title]
     mem_limit: 512m
     healthcheck:
       test: ["CMD", "/usr/local/bin/xray-entrypoint", "healthcheck"]
@@ -235,13 +235,15 @@ services:
       start_period: 30s
 
   # The subscriptions' title (tasks/exit-title.sh): this server's exit with its
-  # country's flag, for the apps that show one in place of the domain. In
-  # Xray's network namespace, as exit-check, so it asks through the upstream
-  # as client traffic leaves; it holds no secret.
+  # country's flag, for the apps that show one in place of the domain. It asks
+  # through Xray's title inbound, on a network of their own, so through the
+  # upstream as client traffic leaves; it holds no secret. Not in Xray's
+  # namespace: a re-created Xray would leave it in the old one, and the next
+  # restart of Xray would fail on it.
   exit-title:
     <<: *hardened
     image: ${DOTDASH_IMAGE_CADDY:?set by morzer}
-    network_mode: service:xray
+    networks: [title]
     init: true
     command: ["sh", "/task/exit-title.sh"]
     environment:
@@ -300,6 +302,9 @@ networks:
     internal: true
   # The gate's way out, and where the public port is published.
   egress: {}
+  # Xray and the exit-title service to each other only; no route out.
+  title:
+    internal: true
 
 volumes:
   caddy_data: {}

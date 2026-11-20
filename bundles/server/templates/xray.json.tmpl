@@ -77,6 +77,12 @@ key gets in. */ -}}
 {{- $xhttpReality := has "xhttp-reality" .Profiles -}}
 {{- $kcp := has "mkcp" .Profiles -}}
 {{- $hy2 := has "hysteria2" .Profiles -}}
+{{- /* The two hosts exit-title asks (exit_ipv4_url, exit_info_url): plain
+http:// URLs, each host and port forwarded to by a title- inbound below. */ -}}
+{{- if ne (index (split "://" .Parameters.exit_ipv4_url) 0) "http" }}{{ required "exit_ipv4_url is a plain http:// URL" "" }}{{ end -}}
+{{- if ne (index (split "://" .Parameters.exit_info_url) 0) "http" }}{{ required "exit_info_url is a plain http:// URL" "" }}{{ end -}}
+{{- $ipHP := index (split "/" (replace .Parameters.exit_ipv4_url "http://" "")) 0 -}}
+{{- $infoHP := index (split "/" (replace .Parameters.exit_info_url "http://" "")) 0 -}}
 {{- /* The site's certificate as Caddy keeps it (caddy/Caddyfile): Let's
 Encrypt's directory for acme and acme-dns, Caddy's own CA's for internal, and
 with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
@@ -295,6 +301,26 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
       "listen": "127.0.0.1",
       "port": 10809,
       "protocol": "http"
+    },
+    {{- /* The exit-title service's way to the two hosts it asks, through the
+    upstream as client traffic leaves, on the title network it shares with
+    this container alone (compose.yaml): by name, so a re-created Xray takes
+    nothing from it, where one in this namespace was left in the old one. Each
+    forwards to one fixed host and nowhere else, so what else reaches the port
+    (Caddy, the gate) can ask those two hosts and nothing more. */}}
+    {
+      "tag": "title-ip",
+      "listen": "0.0.0.0",
+      "port": 10812,
+      "protocol": "dokodemo-door",
+      "settings": {"address": "{{ index (split ":" $ipHP) 0 }}", "port": {{ if contains $ipHP ":" }}{{ index (split ":" $ipHP) 1 }}{{ else }}80{{ end }}, "network": "tcp"}
+    },
+    {
+      "tag": "title-info",
+      "listen": "0.0.0.0",
+      "port": 10813,
+      "protocol": "dokodemo-door",
+      "settings": {"address": "{{ index (split ":" $infoHP) 0 }}", "port": {{ if contains $infoHP ":" }}{{ index (split ":" $infoHP) 1 }}{{ else }}80{{ end }}, "network": "tcp"}
     }
   ],
   "outbounds": [

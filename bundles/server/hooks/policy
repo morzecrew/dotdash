@@ -62,7 +62,7 @@ jq() { # <filter> <file>: the filter's output, or why the file does not parse
 violations=$(jq '
   [.outbounds[]?.tag] as $tags
   | ([.inbounds[]?.tag] - ["reality", "xhttp", "xhttp-reality", "kcp", "hysteria2", "xdns", "probe",
-      "reality-second", "xhttp-reality-second"]) as $extra
+      "reality-second", "xhttp-reality-second", "title-ip", "title-info"]) as $extra
   | check($tags == ["upstream", "block"] or $tags == ["upstream", "block", "upstream6"];
       "the outbounds are \($tags), not upstream and block (and upstream6)"),
     (.outbounds[2]? // empty |
@@ -96,7 +96,12 @@ violations=$(jq '
       check(.streamSettings.network != "xhttp" or .settings.flow == null; "inbound \(.tag) sets a flow on XHTTP")),
     (.inbounds[]? | select(.protocol == "hysteria") |
       check(.settings.users != null; "inbound \(.tag) accepts no user list")),
-    (.inbounds[]? | select(.protocol != "vless" and .protocol != "hysteria") |
+    # For exit-title: each a forward to one fixed host, never a proxy.
+    (.inbounds[]? | select(.tag | IN("title-ip", "title-info")) |
+      check(.protocol == "dokodemo-door" and (.settings.address | type) == "string" and .settings.address != ""
+        and (.settings.followRedirect // false) == false and .settings.network == "tcp";
+        "inbound \(.tag) is not a forward to one fixed host")),
+    (.inbounds[]? | select(.protocol != "vless" and .protocol != "hysteria" and (.tag | IN("title-ip", "title-info") | not)) |
       check(.listen == "127.0.0.1"; "inbound \(.tag) (\(.protocol)) listens beyond loopback")),
     (.inbounds[]? | select(.tag | endswith("-second")) |
       check(.listen == "127.0.0.1"; "inbound \(.tag), the second key'"'"'s, listens beyond loopback"))
