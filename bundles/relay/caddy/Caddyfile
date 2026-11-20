@@ -117,6 +117,10 @@ http://127.0.0.1:8081 {
 			header_up -X-Forwarded-For
 			header_up -X-Forwarded-Host
 			header_up -X-Forwarded-Proto
+			# Caddy adds Via to what it passes on, and the server serves a
+			# subscription only to a request without one, as it tells a CDN's
+			# from a device's: without this, it gave the relay its site.
+			header_up -Via
 			transport http {
 				network_proxy url http://xray:10810
 			}
