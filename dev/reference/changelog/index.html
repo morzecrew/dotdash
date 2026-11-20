@@ -3030,7 +3030,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>dotdash-manager sync</code> judges a relay only by canary readings within 90 minutes of the newest. A canary that went quiet used to hold a relay up with an old success while another canary found it blocked.</li>
+<li>
+<p><code>dotdash-manager</code> runs one at a time on its state, and a second run waits. Two overlapping runs, such as a timer's <code>sync</code> during a <code>rotate</code>, could lose each other's changes. The state is synced to disk before it replaces the old one, and <code>sync --dry-run</code> no longer writes it.</p>
+</li>
+<li>
+<p><code>dotdash-manager sync</code> judges a relay only by canary readings within 90 minutes of the newest. A canary that went quiet used to hold a relay up with an old success while another canary found it blocked.</p>
+</li>
 </ul>
 <h2 id="091-2026-11-20">[0.9.1] - 2026-11-20<a class="headerlink" href="#091-2026-11-20" title="Permanent link">&para;</a></h2>
 <h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>

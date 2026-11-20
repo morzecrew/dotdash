@@ -2304,7 +2304,9 @@ cycle.</p>
 <p>The manager keeps what it made in <code>dotdash-state.json</code> beside the roster: the
 shared keys, every device's id and the client machines' proxy passwords. It is
 written with mode 0600 and holds every credential in the network: back it up
-like <code>authority.key</code>.</p>
+like <code>authority.key</code>. One run at a time changes it: a run holds
+<code>dotdash-state.lock</code> beside it, and another started meanwhile, such as a timer's
+<code>sync</code> during a <code>rotate</code>, waits for it. <code>sync --dry-run</code> leaves it as it was.</p>
 <h2 id="burnt-relays">Burnt relays<a class="headerlink" href="#burnt-relays" title="Permanent link">&para;</a></h2>
 <p>Before every fleet publish, about hourly, each canary that follows the manager
 reports whether each of its paths to the server or relay it watches gets
