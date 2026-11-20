@@ -123,7 +123,9 @@ cycle.
 The manager keeps what it made in `dotdash-state.json` beside the roster: the
 shared keys, every device's id and the client machines' proxy passwords. It is
 written with mode 0600 and holds every credential in the network: back it up
-like `authority.key`.
+like `authority.key`. One run at a time changes it: a run holds
+`dotdash-state.lock` beside it, and another started meanwhile, such as a timer's
+`sync` during a `rotate`, waits for it. `sync --dry-run` leaves it as it was.
 
 ## Burnt relays
 
@@ -131,7 +133,10 @@ Before every fleet publish, about hourly, each canary that follows the manager
 reports whether each of its paths to the server or relay it watches gets
 through. When every canary watching a relay got through none of its paths
 three readings in a row, `sync` leaves that relay out of the servers' `relays`
-and `pools`, and of client machines' subscription URLs, and says so:
+and `pools`, and of client machines' subscription URLs, and says so. A
+reading counts only beside the newest of the other canaries watching the same
+relay within 90 minutes, so a canary gone quiet can't hold the relay up with an
+old success:
 
 ```
 burnt: relay r1: its canaries got through none of its paths in 3 readings; left out of the servers' relays and pools until a canary gets through again; its own fleet row (40m old) says it runs: blocked on the way, not down; replace it
