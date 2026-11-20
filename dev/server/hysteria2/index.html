@@ -2080,6 +2080,11 @@ revokes it here too.</p>
 <p>Off: set the previous profile (<code>xdns</code>) or
 <code>sudo morzer config unset installation.profile</code>, before any rollback to a
 release without it.</p>
+<p>A <a href="../../relay/">relay</a> with a site of its own serves Hysteria2 too
+(<code>installation.profile=own-site,hysteria2</code> on the relay, see its
+<a href="../../relay/reference/#profiles">reference</a>): devices then get a
+<code>[relay &lt;host&gt; hy2]</code> link through it, whether or not this server runs the
+profile.</p>
 
 
 

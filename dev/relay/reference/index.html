@@ -2234,6 +2234,11 @@
 <td><code>dtls</code></td>
 <td>with <code>mkcp</code>, what its packets start with, as the server's <a href="../../server/mkcp/"><code>kcp_header</code></a></td>
 </tr>
+<tr>
+<td><code>hysteria2_port</code></td>
+<td><code>443</code></td>
+<td>with <code>hysteria2</code>, the UDP port devices reach the relay's Hysteria2 on</td>
+</tr>
 </tbody>
 </table>
 <h2 id="profiles">Profiles<a class="headerlink" href="#profiles" title="Permanent link">&para;</a></h2>
@@ -2247,6 +2252,14 @@ ends the relay's line with <code>cdn=&lt;name&gt;,...</code>, and the server giv
 a <code>[relay &lt;host&gt; cdn &lt;name&gt;]</code> link through each
 (<a href="../../server/cdn/#in-front-of-a-relay">CDN in front of a relay</a>). See
 <a href="../install/#1-pick-the-site">Set up a relay</a>.</p>
+<p><code>installation.profile=own-site,hysteria2</code>: the relay serves
+<a href="../../server/hysteria2/">Hysteria2</a> on UDP <code>hysteria2_port</code> too, under its own
+site's certificate, each device's UUID its login, and carries it on to the
+servers like REALITY. It needs <code>own-site</code>, whose certificate it serves:
+without it the profile is refused. <code>relay-entry</code> then ends the relay's line
+with <code>hy2=&lt;port&gt;</code>, from which the server gives each device a
+<code>[relay &lt;host&gt; hy2]</code> link. Open the UDP port in the provider's firewall, and
+replace the relay's line on the server after turning it on.</p>
 <p><code>installation.profile=mkcp</code> (with a site of its own: <code>own-site,mkcp</code>): the
 relay serves <a href="../../server/mkcp/">mKCP</a> on UDP <code>kcp_port</code> too, under its own
 <code>kcp_seed</code>, and carries it on to the servers like REALITY. <code>relay-entry</code> then
