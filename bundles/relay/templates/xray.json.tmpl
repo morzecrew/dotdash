@@ -3,9 +3,21 @@ Caddy, under the relay's own domain, whose DNS is this machine; otherwise the
 borrowed site, whose DNS is someone else's. */ -}}
 {{- $own := has "own-site" .Profiles -}}
 {{- $kcp := has "mkcp" .Profiles -}}
+{{- $hy2 := has "hysteria2" .Profiles -}}
+{{- if and $hy2 (not $own) }}{{ required "the hysteria2 profile serves the relay's own site's certificate: installation.profile=own-site,hysteria2" "" }}{{ end -}}
+{{- if and $hy2 $kcp (eq .Parameters.hysteria2_port .Parameters.kcp_port) }}{{ required "hysteria2_port must differ from kcp_port" "" }}{{ end -}}
 {{- $site := .Parameters.site -}}
 {{- if $own }}{{ $site = required "the own-site profile needs a domain: sudo morzer config set installation.domains=relay.example.net" .Installation.Domain }}
 {{- else if eq $site "none" }}{{ $site = required "set site, a site next to the relay, or use the own-site profile with a domain of the relay's own" "" }}{{ end -}}
+{{- /* The own site's certificate as its Caddy keeps it (caddy/Caddyfile), for
+Hysteria2: Let's Encrypt's directory for acme and acme-dns, Caddy's own CA's
+for internal, and with acme-dns the wildcard over the domain's parent
+(caddy.env.tmpl). */ -}}
+{{- $labels := split "." $site -}}
+{{- $issuer := "acme-v02.api.letsencrypt.org-directory" -}}
+{{- if eq .Parameters.cert_issuer "internal" }}{{ $issuer = "local" }}{{ end -}}
+{{- $cert := $site -}}
+{{- if and (eq .Parameters.cert_issuer "acme-dns") (gt (len $labels) 2) }}{{ $cert = printf "wildcard_.%s" (join (slice $labels 1) ".") }}{{ end -}}
 {{- $servers := split "," (required "set dotdash_servers" .Parameters.dotdash_servers) -}}
 {{- $address := .Parameters.dotdash_address }}{{ if eq $address "none" }}{{ $address = "" }}{{ end -}}
 {{- /* ipv6=block: an IPv6 destination ends here, in a blackhole after the
@@ -75,6 +87,30 @@ REALITY connection with Vision for each. */ -}}
           {"type": "noise", "settings": {"noise": [{"type": "hex", "packet": "c300000001088394c8f03e5157080000449e00000002", "delay": "0-0"}]}}
           {{- end }}
         ]}
+      }
+    }
+    {{- end }}
+    {{- if $hy2 }},
+    {{- /* Hysteria2 on UDP, published as hysteria2_port: the same devices, each
+    UUID its login, under the own site's certificate, on to dotdash like
+    REALITY. As the server's: a connection that brings no login gets the site
+    over HTTP/3, no stateless resets, a silent connection given up after 15 s
+    (devices' keepalives hold a healthy one), and BBR. */}}
+    {
+      "tag": "devices-hy2",
+      "listen": "0.0.0.0",
+      "port": 8448,
+      "protocol": "hysteria",
+      "settings": {"version": 2, "users": {"$hysteriaUsers": "/run/secrets/vless_clients"}},
+      "streamSettings": {
+        "network": "hysteria",
+        "security": "tls",
+        "tlsSettings": {"alpn": ["h3"], "certificates": [{
+          "certificateFile": "/caddy-data/caddy/certificates/{{ $issuer }}/{{ $cert }}/{{ $cert }}.crt",
+          "keyFile": "/caddy-data/caddy/certificates/{{ $issuer }}/{{ $cert }}/{{ $cert }}.key"}]},
+        "hysteriaSettings": {"version": 2, "udpIdleTimeout": 60,
+          "masquerade": {"type": "proxy", "url": "https://caddy:443", "rewriteHost": true, "insecure": true}},
+        "finalmask": {"quicParams": {"disableStatelessReset": true, "maxIdleTimeout": 15, "congestion": "bbr"}}
       }
     }
     {{- end }}

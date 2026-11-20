@@ -27,6 +27,7 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `listen` | empty | host address for `https_port` and `http_port`: empty for every address, IPv4 and IPv6; `0.0.0.0` for IPv4 alone; `127.0.0.1` beside your own web server |
 | `kcp_port` | `8447` | with `mkcp`, the UDP port devices reach the relay's mKCP on |
 | `kcp_header` | `dtls` | with `mkcp`, what its packets start with, as the server's [`kcp_header`](../server/mkcp.md) |
+| `hysteria2_port` | `443` | with `hysteria2`, the UDP port devices reach the relay's Hysteria2 on |
 
 ## Profiles
 
@@ -40,6 +41,15 @@ ends the relay's line with `cdn=<name>,...`, and the server gives each device
 a `[relay <host> cdn <name>]` link through each
 ([CDN in front of a relay](../server/cdn.md#in-front-of-a-relay)). See
 [Set up a relay](install.md#1-pick-the-site).
+
+`installation.profile=own-site,hysteria2`: the relay serves
+[Hysteria2](../server/hysteria2.md) on UDP `hysteria2_port` too, under its own
+site's certificate, each device's UUID its login, and carries it on to the
+servers like REALITY. It needs `own-site`, whose certificate it serves:
+without it the profile is refused. `relay-entry` then ends the relay's line
+with `hy2=<port>`, from which the server gives each device a
+`[relay <host> hy2]` link. Open the UDP port in the provider's firewall, and
+replace the relay's line on the server after turning it on.
 
 `installation.profile=mkcp` (with a site of its own: `own-site,mkcp`): the
 relay serves [mKCP](../server/mkcp.md) on UDP `kcp_port` too, under its own

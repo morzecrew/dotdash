@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from dotdash_manager import state
-from dotdash_manager.render import render
+from dotdash_manager.render import relay_line, render
 from dotdash_manager.roster import loads
 
 ROSTER = """
@@ -108,3 +108,11 @@ def test_a_canary_on_a_server_gets_its_hysteria2_port(st, facts):
     assert "dotdash_hysteria2_port" not in docs["c1"]["parameters"]
     docs, _ = render(net, st, {**facts, "a": {**facts["a"], "hysteria2_port": 8443}})
     assert docs["c1"]["parameters"]["dotdash_hysteria2_port"] == "8443"
+
+
+def test_a_relay_line_carries_its_hysteria2_port_after_mkcp():
+    f = {"entry_host": "203.0.113.5", "site": "r.example.net", "public_key": "P", "short_id": "S", "encryption": "E",
+         "own_site": {"xhttp_path": "x"}, "kcp": {"port": 8447, "header": "dtls", "seed": "K"},
+         "hysteria2": {"port": 443}, "cdn_hosts": ["c.example.net"]}
+    assert relay_line(f, {"hysteria2"}) == ("203.0.113.5 r.example.net P S E own-site x kcp=8447,dtls,K hy2=443"
+                                      " cdn=c.example.net off=hysteria2")

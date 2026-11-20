@@ -177,7 +177,7 @@ def spares(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[se
 
 
 def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[dict[str, set[str]], list[str]]:
-    """The paths (reality, xhttp, mkcp) each relay's canaries got through none
+    """The paths (reality, xhttp, mkcp, hysteria2) each relay's canaries got through none
     of in BURN_AFTER readings in a row while another path got through: devices
     stop getting those through it, and keep the rest. A path blocked on every
     relay that has it is likelier the canaries' network refusing that transport
