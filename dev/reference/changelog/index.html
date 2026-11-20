@@ -3099,6 +3099,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>Under the <code>metrics</code> profile, a change of a secret after <code>morzer restart xray</code> restarts Xray again instead of failing: the exporters reach Xray's and the gate's metrics on an internal network of their own rather than sharing their network namespaces, which a recreate left them stranded in. The same holds on the relay.</p>
+</li>
+<li>
 <p>A device's subscription through an own-site relay serves its links again. The relay's Caddy passed the request on with a <code>Via</code> header, which the server takes for a CDN's, so the server answered with its site, and apps reported a config they could not parse.</p>
 </li>
 <li>
