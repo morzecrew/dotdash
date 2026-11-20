@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `bootstrap.sh` installs morzer 0.18.0, which dotdash 0.9.0 needs, instead of 0.17.0. On Ubuntu 22.04 and Debian 11, which ship no minisign, it installs minisign's own release, checked against a pinned sum, where it used to stop at "Unable to locate package minisign".
+
 ## [0.9.1] - 2026-11-20
 
 ### Fixed
