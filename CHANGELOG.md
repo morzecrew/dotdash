@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A device's subscription through an own-site relay serves its links again. The relay's Caddy passed the request on with a `Via` header, which the server takes for a CDN's, so the server answered with its site, and apps reported a config they could not parse.
+
 - The relay's `cover-site` health check checks its own site under the `own-site` profile: that Caddy is healthy and the app `cover` names answers. It used to report the profile off and pass, so `config set cover=` was never undone when the site could not reach the app.
 
 - `dotdash-manager` runs one at a time on its state, and a second run waits. Two overlapping runs, such as a timer's `sync` during a `rotate`, could lose each other's changes. The state is synced to disk before it replaces the old one, and `sync --dry-run` no longer writes it.
