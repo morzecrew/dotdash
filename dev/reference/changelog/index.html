@@ -3052,7 +3052,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>dotdash-manager sync</code> and <code>rotate swap</code> read the machines' facts eight at a time instead of one after another, so a fleet of many machines syncs in a fraction of the time.</li>
+<li>
+<p>The server's gate probes each upstreams line every 10 s instead of 30. When a line goes silent, new connections move to another after about 8 s on average and 12 at most, instead of 18 and 31.</p>
+</li>
+<li>
+<p><code>dotdash-manager sync</code> and <code>rotate swap</code> read the machines' facts eight at a time instead of one after another, so a fleet of many machines syncs in a fraction of the time.</p>
+</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
