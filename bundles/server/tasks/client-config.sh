@@ -200,36 +200,52 @@ cdn_extra='%7B%22scMaxEachPostBytes%22%3A32768%2C%22scMinPostsIntervalMs%22%3A10
 # mode auto: measured on wire-sized captures with a round trip, packet-up was
 # flagged no less often (neither was, by nDPI or the lab's classifier) and
 # loaded pages up to an eighth slower.
-links() { # <id> <label> <server>: each named "<label> [<transport>]"
+# Each link is named "<device> | <transport>", then " | <path>" for any but
+# a server's own: "relay", "cdn", "relay, cdn", and "server <n>" with several
+# servers. Each is numbered only where there are several: "relay <n>" with
+# several relays lines, "cdn <n>" with several cdn_hosts or, after a relay,
+# several cdn= hosts on it. The numbers are a relay's place among the
+# relays lines, a CDN's in cdn_hosts or among its relay's cdn= hosts, and a
+# server's in servers: the same on every device, whichever of them its pools
+# give it, and no host name shows in the app.
+sep='%20%7C%20'
+# Each prints " <n>", percent-encoded, or nothing when its list holds one.
+relay_no() { printf '%s\n' "$all_relays" | awk -v h="$1" '$1 == h && !n { n = NR } END { if (NR > 1) printf "%%20%d", n }'; }
+relay_cdn_no() { # <relay host> <cdn host>
+  printf '%s\n' "$all_relays" | awk -v h="$1" -v c="$2" '$1 == h { n = split($9, a, ","); if (n > 1) for (i = 1; i <= n; i++) if (a[i] == c) printf "%%20%d", i; exit }'
+}
+cdn_no() { printf '%s\n' "$all_cdns" | awk -v h="$1" '$0 == h && !n { n = NR } END { if (NR > 1) printf "%%20%d", n }'; }
+
+links() { # <id> <device> <server> [path]: each named "<device> | <transport>[ | <path>]"
   cat <<EOF
 XHTTP over TLS via $3 (for a CDN in front: replace the address with the CDN's name):
-vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&security=tls&sni=$3&host=$3&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=auto#$2%20%5Bxhttp%5D
+vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&security=tls&sni=$3&host=$3&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=auto#$2${sep}xhttp${4:-}
 
 EOF
   [ -z "$xr_port" ] || cat <<EOF
 XHTTP with REALITY via $3, on port ${xr_port} (v2rayN, v2rayNG, mihomo):
-vless://$1@$3:${xr_port}?encryption=${enc}&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=xhttp&path=%2F${path}&mode=auto#$2%20%5Bxhttp%2Breality%5D
+vless://$1@$3:${xr_port}?encryption=${enc}&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=xhttp&path=%2F${path}&mode=auto#$2${sep}xhttp%2Breality${4:-}
 
 EOF
   cat <<EOF
 REALITY via $3 (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
-vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&flow=xtls-rprx-vision&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=tcp#$2%20%5Breality%5D
+vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&flow=xtls-rprx-vision&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=tcp#$2${sep}reality${4:-}
 
 EOF
   if [ -n "$kcp_port" ] && [ "$kcp_open" = quic ]; then cat <<EOF
 mKCP via $3, on UDP port ${kcp_port}, QUIC-shaped opening (v2rayN, v2rayNG):
-vless://$1@$3:${kcp_port}?encryption=${enc}&type=kcp&fm=$(fm_enc "$kcp_seed" "$kcp_header" quic)#$2%20%5Bkcp%5D
+vless://$1@$3:${kcp_port}?encryption=${enc}&type=kcp&fm=$(fm_enc "$kcp_seed" "$kcp_header" quic)#$2${sep}kcp${4:-}
 
 EOF
   elif [ -n "$kcp_port" ]; then cat <<EOF
 mKCP via $3, on UDP port ${kcp_port} (v2rayN, v2rayNG):
-vless://$1@$3:${kcp_port}?encryption=${enc}&type=kcp&headerType=${kcp_header}&seed=${kcp_seed}#$2%20%5Bkcp%5D
+vless://$1@$3:${kcp_port}?encryption=${enc}&type=kcp&headerType=${kcp_header}&seed=${kcp_seed}#$2${sep}kcp${4:-}
 
 EOF
   fi
   [ -z "$hy2_port" ] || cat <<EOF
 Hysteria2 via $3, on UDP port ${hy2_port} (Happ, v2rayN, v2rayNG, Hiddify, Streisand, mihomo, sing-box):
-hysteria2://$1@$3:${hy2_port}/?sni=$3#$2%20%5Bhy2%5D
+hysteria2://$1@$3:${hy2_port}/?sni=$3#$2${sep}hy2${4:-}
 
 EOF
 }
@@ -239,29 +255,30 @@ blocked() { case ,$1, in *,"$2",*) ;; *) return 1 ;; esac; }
 
 # A relay takes REALITY on 443 under its neighbour site's name, with keys of its
 # own, and carries the device on to this server as its own client.
-relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]", "[relay <host> xhttp]" and "[relay <host> cdn <cdn>]" before it through an own-site one, "[relay <host> hy2]" and "[relay <host> kcp]" after it with Hysteria2 and mKCP
+relay_links() { # <id> <device>: per relay, "<device> | reality | relay[ <n>]", with "xhttp" and each CDN's "xhttp | relay[ <n>], cdn[ <m>]" before it through an own-site one, "hy2" and "kcp" after it with Hysteria2 and mKCP
   printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off _ hy; do
     [ -n "$h" ] || continue
+    rn="${sep}relay$(relay_no "$h")"
     [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp || cat <<EOF
 XHTTP over TLS through the relay $h, behind its own site (v2rayN, v2rayNG, Happ):
-vless://$1@$h:443?encryption=$e&security=tls&sni=$s&host=$s&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=auto#$2%20%5Brelay%20$h%20xhttp%5D
+vless://$1@$h:443?encryption=$e&security=tls&sni=$s&host=$s&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=auto#$2${sep}xhttp${rn}
 
 EOF
     [ "$d" = - ] || for x in $(printf '%s' "$d" | tr ',' ' '); do cat <<EOF
 XHTTP through the CDN $x, in front of the relay $h (v2rayN, v2rayNG, Happ):
-vless://$1@$x:443?encryption=$e&security=tls&sni=$x&host=$x&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=packet-up&extra=${cdn_extra}#$2%20%5Brelay%20$h%20cdn%20$x%5D
+vless://$1@$x:443?encryption=$e&security=tls&sni=$x&host=$x&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=packet-up&extra=${cdn_extra}#$2${sep}xhttp${rn}%2C%20cdn$(relay_cdn_no "$h" "$x")
 
 EOF
     done
     [ "$only" != cdn-only ] || continue
     blocked "$off" reality || cat <<EOF
 REALITY through the relay $h (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
-vless://$1@$h:443?encryption=$e&flow=xtls-rprx-vision&security=reality&sni=$s&fp=chrome&pbk=$k&sid=$i&support-x25519mlkem768=true&type=tcp#$2%20%5Brelay%20$h%5D
+vless://$1@$h:443?encryption=$e&flow=xtls-rprx-vision&security=reality&sni=$s&fp=chrome&pbk=$k&sid=$i&support-x25519mlkem768=true&type=tcp#$2${sep}reality${rn}
 
 EOF
     [ "$hy" = - ] || cat <<EOF
 Hysteria2 through the relay $h, on UDP port $hy (Happ, v2rayN, v2rayNG, Hiddify, Streisand, mihomo, sing-box):
-hysteria2://$1@$h:$hy/?sni=$s#$2%20%5Brelay%20$h%20hy2%5D
+hysteria2://$1@$h:$hy/?sni=$s#$2${sep}hy2${rn}
 
 EOF
     [ "$c" != - ] || continue
@@ -269,23 +286,23 @@ EOF
     kopen=none; case $r2 in *,*) kopen=${r2#*,} ;; esac
     if [ "$kopen" = quic ]; then cat <<EOF
 mKCP through the relay $h, on UDP port ${kport}, QUIC-shaped opening (v2rayN, v2rayNG):
-vless://$1@$h:${kport}?encryption=$e&type=kcp&fm=$(fm_enc "$kseed" "$kheader" quic)#$2%20%5Brelay%20$h%20kcp%5D
+vless://$1@$h:${kport}?encryption=$e&type=kcp&fm=$(fm_enc "$kseed" "$kheader" quic)#$2${sep}kcp${rn}
 
 EOF
     else cat <<EOF
 mKCP through the relay $h, on UDP port ${kport} (v2rayN, v2rayNG):
-vless://$1@$h:${kport}?encryption=$e&type=kcp&headerType=${kheader}&seed=${kseed}#$2%20%5Brelay%20$h%20kcp%5D
+vless://$1@$h:${kport}?encryption=$e&type=kcp&headerType=${kheader}&seed=${kseed}#$2${sep}kcp${rn}
 
 EOF
     fi
   done
 }
 
-cdn_links() { # <id> <label>: one per CDN, named "<label> [cdn <host>]"
+cdn_links() { # <id> <device>: one per CDN, named "<device> | xhttp | cdn[ <n>]"
   for h in $cdns; do
     cat <<EOF
 XHTTP through the CDN $h (v2rayN, v2rayNG, Happ):
-vless://$1@$h:443?encryption=${enc}&security=tls&sni=$h&host=$h&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=packet-up&extra=${cdn_extra}#$2%20%5Bcdn%20$h%5D
+vless://$1@$h:443?encryption=${enc}&security=tls&sni=$h&host=$h&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=packet-up&extra=${cdn_extra}#$2${sep}xhttp${sep}cdn$(cdn_no "$h")
 
 EOF
   done
@@ -458,9 +475,11 @@ EOF
     echo "$2: no links: direct=false keeps the servers out, and the device gets no relay or CDN host" >&2
     return 0
   fi
+  n=0
   for s in $servers; do
-    if [ "$count" -gt 1 ]; then label="$2-$s"; else label=$2; fi
-    links "$1" "$label" "$s"
+    n=$((n + 1))
+    if [ "$count" -gt 1 ]; then at="${sep}server%20$n"; else at=; fi
+    links "$1" "$2" "$s" "$at"
   done
   relay_links "$1" "$2"
   cdn_links "$1" "$2"

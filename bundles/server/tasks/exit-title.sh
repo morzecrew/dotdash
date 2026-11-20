@@ -8,8 +8,9 @@
 # Asked through Xray's title-ip and title-info inbounds, each a forward to
 # its URL's host, as client traffic leaves, at start and every ten minutes, so an exit that changed (a line failed over) shows at a
 # device's next refresh. Nothing is written until a check answers, and one
-# that fails keeps the last title. With the subscription parameter off, it
-# asks nothing.
+# that fails keeps the last title and is asked again in 15 s: Xray, restarted
+# with this, may not listen yet. With the subscription parameter off, it asks
+# nothing.
 set -u
 [ "${SUBSCRIPTION:-false}" = true ] || exec sleep 2147483647
 ipv4_url=${EXIT_IPV4_URL:-http://api4.ipify.org}
@@ -33,8 +34,10 @@ flag() { # <country code>: its flag, the two regional indicator letters, in UTF-
 }
 
 while :; do
+	wait=15
 	ip=$(get "$ipv4_url" 10812 | tr -d ' \r\n')
 	if printf '%s' "$ip" | grep -Eqx '[0-9]{1,3}(\.[0-9]{1,3}){3}'; then
+		wait=600
 		title=$ip
 		cc=$(get "$info_url" 10813 "/$ip/country" | tr -d ' \r\n')
 		case $cc in [A-Za-z][A-Za-z]) title="$(flag "$cc") $ip" ;; esac
@@ -43,5 +46,5 @@ while :; do
 			echo "exit-title: ${title}"
 		fi
 	fi
-	sleep 600
+	sleep "$wait"
 done

@@ -29,8 +29,8 @@ trap restore EXIT
 
 # Captured, then read: a reader that stops early would kill the task's output.
 config() { sudo morzer task run client-config --output -- --full "$1"; }
-hosts() { # <client-config output>: the relays and CDN hosts its links go through
-  sed -nE 's/^vless:\/\/.*#.*%5B(relay|cdn)%20([^%]+).*/\2/p' <<<"$1" | sort -u | tr '\n' ' '
+hosts() { # <client-config output>: the relays and CDN hosts its links go through, by the addresses of those named "relay <n>" or "cdn <n>"
+  sed -nE 's/^vless:\/\/[^@]+@([^:]+):.*%20%7C%20(relay|cdn)%20[0-9]+$/\1/p' <<<"$1" | sort -u | tr '\n' ' '
 }
 tags() { # <client-config output>: its config's relay and CDN outbounds
   awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"$1" |
@@ -80,7 +80,7 @@ if sudo grep -q 'dotdash-relay-\$n-cdn-' /opt/dotdash/current/tasks/client-confi
     sudo morzer config set --set-file relays=- >/dev/null || die "could not set relays"
   printf '%s\n' "a pooled cdn-r1.test" "b cdn-r2.test" |
     sudo morzer config set --set-file pools=- >/dev/null || die "could not set pools"
-  rcdns() { sed -nE 's/^vless:\/\/.*%5Brelay%20relay-c\.test%20cdn%20([^%]+)%5D$/\1/p' <<<"$1" | sort -u | tr '\n' ' '; }
+  rcdns() { sed -nE 's/^vless:\/\/[^@]+@([^:]+):.*%20%7C%20relay%2C%20cdn%20[0-9]+$/\1/p' <<<"$1" | sort -u | tr '\n' ' '; }
   [ "$(rcdns "$(config pooled)")" = "cdn-r1.test cdn-r3.test " ] ||
     die "the device in pool a gets other CDNs of the relay than pool a's and the one in no pool: $(rcdns "$(config pooled)")"
   [ "$(rcdns "$(config unpooled)")" = "cdn-r1.test cdn-r2.test cdn-r3.test " ] ||
