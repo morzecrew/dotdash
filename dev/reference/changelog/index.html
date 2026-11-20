@@ -1894,7 +1894,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="[Unreleased]">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0100-2026-11-20" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        [0.10.0] - 2026-11-20
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.10.0] - 2026-11-20">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2474,7 +2485,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="[Unreleased]">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0100-2026-11-20" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        [0.10.0] - 2026-11-20
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.10.0] - 2026-11-20">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -3072,10 +3094,11 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="0100-2026-11-20">[0.10.0] - 2026-11-20<a class="headerlink" href="#0100-2026-11-20" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p>A relay with a site of its own serves Hysteria2 too, under that site's certificate (<code>installation.profile=own-site,hysteria2</code>, UDP <code>hysteria2_port</code>, 443). Its <code>relay-entry</code> line ends with <code>hy2=&lt;port&gt;</code>, and devices get a <code>[relay &lt;host&gt; hy2]</code> link and outbound through it.</p>
+<p>A relay with a site of its own serves Hysteria2 too, under that site's certificate (<code>installation.profile=own-site,hysteria2</code>, UDP <code>hysteria2_port</code>, 443). Its <code>relay-entry</code> line ends with <code>hy2=&lt;port&gt;</code>, and devices get a <code>&lt;device&gt; | hy2 | relay</code> link and outbound through it.</p>
 </li>
 <li>
 <p>A device's subscription names itself after the server's exit, its country's flag and IPv4 address (<code>Profile-Title</code>), so the apps that show a name (Happ, Hiddify) show where traffic leaves instead of the server's domain. The server asks every ten minutes, through the upstreams (<code>exit_ipv4_url</code>, <code>exit_info_url</code>).</p>
