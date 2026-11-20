@@ -155,6 +155,11 @@ parameters:
     type: bool
     default: false
     description: "Give devices only the links through this relay's cdn_hosts, so its own address reaches none of them and it can stay the CDNs' origin while relays devices reach directly get blocked; relay-entry carries it to the server's relays line as cdn-only"
+  # No services: relay-entry and facts, tasks, are all that read it.
+  name:
+    type: string
+    default: none
+    description: "A label for this relay, up to 24 letters, digits, dots, dashes or underscores, that devices' links through it carry in place of relay <n>; relay-entry carries it to the server's relays line as name=. Every device's app shows it, so pick one that says nothing about where the relay is hosted. none for none"
   metrics_textfile:
     type: string
     default: /var/lib/prometheus/node-exporter

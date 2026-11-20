@@ -24,6 +24,8 @@ def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset(), split: boo
         line += " cdn=" + ",".join(f["cdn_hosts"])
     if f.get("cdn_only"):
         line += " cdn-only"
+    if f.get("name"):
+        line += f" name={f['name']}"
     if off:
         line += " off=" + ",".join(sorted(off))
     if split:

@@ -11,7 +11,7 @@ provider's firewall, then:
 sudo morzer config set installation.profile=mkcp   # with the DNS tunnel: xdns,mkcp
 ```
 
-Each device gets a `phone | kcp` link and an outbound in the Xray config.
+Each device gets a `server · kcp` link and an outbound in the Xray config.
 
 - **Clients:** v2rayN and v2rayNG. mihomo has no mKCP: it treats the link as
   TCP, which never answers, and its health check skips it. sing-box apps

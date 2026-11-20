@@ -3,7 +3,7 @@
 # several machines. morzer publishes them to it after every change when
 # sync.recipient is set (manifest `published`). Besides public halves they
 # carry the short id, and under own-site the XHTTP path and under mkcp the
-# seed (and under hysteria2 its port): credentials, but the ones every device's link through this relay
+# seed (and under hysteria2 its port, and its name when set): credentials, but the ones every device's link through this relay
 # carries, so the authority hands them on to devices.
 set -eu
 # shellcheck source=entry.sh
@@ -25,4 +25,5 @@ printf '{"entry_host": %s, "site": %s, "public_key": %s, "short_id": %s, "encryp
 [ -z "$hy2_port" ] || printf ', "hysteria2": {"port": %s}' "$hy2_port"
 [ -z "$cdn" ] || printf ', "cdn_hosts": [%s]' "$(printf '%s' "$cdn" | sed 's/[^,]*/"&"/g; s/,/, /g')"
 [ -z "$only" ] || printf ', "cdn_only": true'
+[ -z "$name" ] || printf ', "name": %s' "$(str "$name")"
 printf '}\n'
