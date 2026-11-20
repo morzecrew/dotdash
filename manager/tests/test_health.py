@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from dotdash_manager import state
-from dotdash_manager.health import BURN_AFTER, alive, blocked, judge, spares
+from dotdash_manager.health import BURN_AFTER, FRESH, alive, blocked, judge, spares
 from dotdash_manager.render import relay_line, render
 from dotdash_manager.roster import loads
 
@@ -63,6 +63,25 @@ def test_a_reading_counts_once_and_an_offline_canary_or_stale_target_not_at_all(
     moved = {"r1": R1, "r2": R2, "c1": canary(R2, 99, False), "c2": canary(R2, 99, True)}
     judge(net, moved, health)
     assert health["r1"]["fails"] == 1
+
+
+def test_a_quiet_canarys_old_success_does_not_hold_a_relay_up():
+    net = loads(ROSTER.replace('name = "c2"\nwatches = "r2"', 'name = "c2"\nwatches = "r1"')
+                + '[[canary]]\nname = "c3"\nwatches = "r2"\n')
+    health, old = {}, 1000
+    for n in range(1, BURN_AFTER + 1):
+        # c1 fails every hour; c2 got through once, three hours back, and went quiet.
+        now = old + 3 * 3600 + n * 3600
+        facts = {"r1": R1, "r2": R2, "c1": canary(R1, now, False), "c2": canary(R1, old, True),
+                 "c3": canary(R2, now, True)}
+        burnt, _ = judge(net, facts, health)
+    assert burnt == {"r1"} and health["r1"]["fails"] == BURN_AFTER
+    # Two canaries an hour apart, as their schedules fall, both count.
+    health = {}
+    facts = {"r1": R1, "r2": R2, "c1": canary(R1, old + FRESH, False), "c2": canary(R1, old + FRESH - 3600, True),
+             "c3": canary(R2, old, True)}
+    judge(net, facts, health)
+    assert health["r1"]["fails"] == 0
 
 
 def test_every_relay_failing_at_once_drops_none():
