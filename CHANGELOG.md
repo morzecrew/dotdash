@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `dotdash-manager sync` and `rotate swap` read the machines' facts eight at a time instead of one after another, so a fleet of many machines syncs in a fraction of the time.
+
 ### Fixed
+
+- `dotdash-manager` runs one at a time on its state, and a second run waits. Two overlapping runs, such as a timer's `sync` during a `rotate`, could lose each other's changes. The state is synced to disk before it replaces the old one, and `sync --dry-run` no longer writes it.
+
+- `dotdash-manager sync` judges a relay only by canary readings within 90 minutes of the newest. A canary that went quiet used to hold a relay up with an old success while another canary found it blocked.
 
 - `bootstrap.sh` installs morzer 0.18.0, which dotdash 0.9.0 needs, instead of 0.17.0. On Ubuntu 22.04 and Debian 11, which ship no minisign, it installs minisign's own release, checked against a pinned sum, where it used to stop at "Unable to locate package minisign".
 

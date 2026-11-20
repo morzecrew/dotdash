@@ -4,9 +4,14 @@ roster of who joined, and `state facts` and `state publish` against the target."
 import json
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from .roster import KINDS, PRODUCTS, Machine, Network
+
+# morzer state facts runs at most this many at once: each waits on the target
+# (a bucket, a host over SSH), not on this machine.
+READERS = 8
 
 
 def write_roster(path: Path, net: Network) -> None:
@@ -51,12 +56,12 @@ class Morzer:
             return None
 
     def gather(self) -> dict:
-        """The facts of every server, relay and canary that joined, by name."""
-        facts = {}
-        for m in [*self.net.server, *self.net.relay, *self.net.canary]:
-            if m.joined and (f := self.facts(m)) is not None:
-                facts[m.name] = f
-        return facts
+        """The facts of every server, relay and canary that joined, by name,
+        read READERS at a time."""
+        joined = [m for m in [*self.net.server, *self.net.relay, *self.net.canary] if m.joined]
+        with ThreadPoolExecutor(READERS) as pool:
+            read = list(pool.map(self.facts, joined))
+        return {m.name: f for m, f in zip(joined, read, strict=True) if f is not None}
 
     def rows(self) -> dict:
         """Each joined machine's own fleet row, by name, where its signature

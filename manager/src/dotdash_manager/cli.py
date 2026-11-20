@@ -33,6 +33,7 @@ app = typer.Typer(
 class Options:
     roster: Path
     morzer: str
+    locked: bool = False
 
     @property
     def state(self) -> Path:
@@ -42,12 +43,18 @@ class Options:
     def morzer_roster(self) -> Path:
         return self.roster.with_name("roster.yaml")
 
-    def open(self) -> tuple[Network, dict]:
-        """The roster and the state, the state kept before anything goes out: a
-        key published and then lost is a network to redo."""
+    def open(self, dry_run: bool = False) -> tuple[Network, dict]:
+        """The roster and the state, under the state's lock for the rest of the
+        run, the state kept before anything goes out: a key published and then
+        lost is a network to redo. A dry run publishes nothing, and keeps
+        nothing."""
         net = roster.load(self.roster)
+        if not self.locked:
+            state.lock(self.state)
+            self.locked = True
         st = state.load(self.state, net)
-        state.save(self.state, st)
+        if not dry_run:
+            state.save(self.state, st)
         write_roster(self.morzer_roster, net)
         return net, st
 
@@ -65,7 +72,7 @@ def options(
 def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", help="everything but the writes")] = False) -> None:
     """Read facts, render every document, publish those that changed."""
     o: Options = ctx.obj
-    net, st = o.open()
+    net, st = o.open(dry_run)
     mz = Morzer(net, o.morzer_roster, o.morzer)
     facts = mz.gather()
     before = copy.deepcopy(st.setdefault("health", {}))
