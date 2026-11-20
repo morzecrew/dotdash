@@ -126,6 +126,17 @@ http://127.0.0.1:8081 {
 			header_regexp User-Agent (?i)(cfnetwork|darwin|iphone|ipad|ios|macintosh)
 		}
 		rewrite @apple {path}.apple
+		# The subscription's name in the apps that show one (Happ, Hiddify):
+		# this server's exit, its country's flag and IPv4, in place of this
+		# domain, once exit-title has written it.
+		@titled {
+			path_regexp ^/[0-9a-f]{32}$
+			file {
+				root /srv/exit
+				try_files /title
+			}
+		}
+		header @titled Profile-Title "base64:{file./srv/exit/title}"
 		header Cache-Control no-store
 		file_server
 	}

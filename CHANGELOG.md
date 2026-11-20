@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A device's subscription names itself after the server's exit, its country's flag and IPv4 address (`Profile-Title`), so the apps that show a name (Happ, Hiddify) show where traffic leaves instead of the server's domain. The server asks every ten minutes, through the upstreams (`exit_ipv4_url`, `exit_info_url`).
+
 ### Changed
 
 - The server's gate probes each upstreams line every 10 s instead of 30. When a line goes silent, new connections move to another after about 8 s on average and 12 at most, instead of 18 and 31.

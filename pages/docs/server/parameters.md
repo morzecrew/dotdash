@@ -31,6 +31,8 @@
 | `ipv6` | `allow` | `allow`: IPv6 leaves like the rest; `separate`: through the [`group=ipv6` lines](upstreams.md#ipv6) alone; `block`: no IPv6 destination leaves, names resolve to IPv4 only, so dual-stack sites still work (with `resolve=upstream`, the upstream resolves names itself) |
 | `dns_resolver` | `https://1.1.1.1/dns-query` | DoH server for `resolve=gateway` and device DNS; `https://` only |
 | `subscription` | `false` | a subscription URL per device |
+| `exit_ipv4_url` | `http://api4.ipify.org` | with `subscription`, what the subscription's name asks, through the upstreams every ten minutes, for the exit's IPv4 address: plain HTTP answering with the caller's address alone |
+| `exit_info_url` | `http://ipinfo.io` | with `subscription`, where the name asks `<url>/<address>/country` for the exit's country, whose flag goes before the address |
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt), `acme-dns` (Let's Encrypt over a DNS-01 check handed to acme-dns, for a [wildcard](certificates.md) that keeps the name out of certificate logs) or `internal` (offline machines) |
 | `cover` | `pages` | what the [cover site](cover-site.md) serves past your own files in `/srv/dotdash`: `pages`, the bundled page, or your app's URL, such as `http://cover-app:8080` on the network `dotdash_edge` or `http://host.docker.internal:8080` for one published on the host |
 | `servers` | `self` | servers sharing these keys, comma-separated |
