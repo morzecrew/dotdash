@@ -16,6 +16,11 @@ CAUSES = {"ip": "its canaries' network reaches no TCP port of it: its address is
 EVENTS = 2000
 # Each machine keeps this many of its readings' latencies per path, the newest.
 LATENCIES = 24
+# A canary's reading counts beside the newest of the others watching the same
+# machine only this many seconds older: canaries publish hourly, each at a
+# moment of its own, so one that missed a publish, or went quiet, falls out
+# rather than holding an old success against a fresh failure.
+FRESH = 90 * 60
 
 
 def _watched(f: dict, kind: str) -> tuple[str, str]:
@@ -87,6 +92,7 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None) -> 
         if not seen:
             continue
         at = max(f["checked_at"] for f in seen)
+        seen = [f for f in seen if at - f["checked_at"] <= FRESH]
         h = health.setdefault(t.name, {"fails": 0, "at": 0})
         if at <= h["at"]:
             continue
