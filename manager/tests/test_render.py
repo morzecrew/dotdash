@@ -116,3 +116,11 @@ def test_a_relay_line_carries_its_hysteria2_port_after_mkcp():
          "hysteria2": {"port": 443}, "cdn_hosts": ["c.example.net"]}
     assert relay_line(f, {"hysteria2"}) == ("203.0.113.5 r.example.net P S E own-site x kcp=8447,dtls,K hy2=443"
                                       " cdn=c.example.net off=hysteria2")
+
+
+def test_a_canary_on_a_relay_gets_its_hysteria2_port(net, st, facts):
+    docs, _ = render(net, st, facts)
+    assert "dotdash_hysteria2_port" not in docs["c1"]["parameters"]
+    docs, _ = render(net, st, {**facts, "r1": {**RELAY, "own_site": {"xhttp_path": "x"}, "hysteria2": {"port": 443}}})
+    assert docs["c1"]["parameters"]["dotdash_hysteria2_port"] == "443"
+    assert docs["c1"]["parameters"]["dotdash_server"] == "www.example.net"

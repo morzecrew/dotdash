@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A relay with a site of its own serves Hysteria2 too, under that site's certificate (`installation.profile=own-site,hysteria2`, UDP `hysteria2_port`, 443). Its `relay-entry` line ends with `hy2=<port>`, and devices get a `[relay <host> hy2]` link and outbound through it.
 
+- `dotdash-manager` gives a canary watching a relay with Hysteria2 the relay's port (`dotdash_hysteria2_port`), so the canary's `hysteria2` profile checks it, and a relay whose Hysteria2 its canaries can't get through loses that link (`off=hysteria2`).
+
 ### Changed
 
 - The server's gate probes each upstreams line every 10 s instead of 30. When a line goes silent, new connections move to another after about 8 s on average and 12 at most, instead of 18 and 31.
