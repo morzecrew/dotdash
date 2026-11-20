@@ -54,6 +54,9 @@ caught '(.inbounds[] | select(.tag == "probe")).listen = "0.0.0.0"' "listens bey
 caught '(.inbounds[] | select(.tag == "reality")).settings.decryption = "none"' "no VLESS decryption"
 caught '(.inbounds[] | select(.tag == "xhttp")).settings.flow = "xtls-rprx-vision"' "sets a flow on XHTTP"
 caught '.inbounds += [{tag: "debug", listen: "127.0.0.1", port: 9999, protocol: "http"}]' "unexpected inbounds"
+if sudo grep -q '"title-ip"' "${config}"; then
+  caught '(.inbounds[] | select(.tag == "title-ip")).settings.followRedirect = true' "is not a forward to one fixed host"
+fi
 caught '.outbounds[0].settings.address = "proxy.example"' "not a SOCKS hop to the gate"
 caught '(.inbounds[] | select(.tag == "public-tls")).settings.address = "1.1.1.1"' "forwards public-tls to 1.1.1.1" gate
 caught '.routing.rules = [{network: "tcp,udp", outboundTag: "inside"}] + .routing.rules' "out directly" gate

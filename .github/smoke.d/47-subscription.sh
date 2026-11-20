@@ -6,7 +6,8 @@
 # own 404; a device whose line is deleted loses its URL, and a device added
 # gets one, each as soon as the secret is set; rotating subscription_key moves
 # every URL; and with it off, none answers. A request a CDN marks as passed on
-# gets the site's 404.
+# gets the site's 404. Each answer names the subscription after the exit, its
+# country's flag and IPv4 (Profile-Title), asked of the rig's stand-ins.
 # After 45-revocation.sh, so the links served are those of its rotated keys.
 # No URL or link is printed: a failure names the step, not the credentials.
 # shellcheck source=/dev/null
@@ -49,6 +50,7 @@ restore() {
   sudo morzer config unset relays >/dev/null 2>&1 || true
   [ -z "${before:-}" ] || printf '%s\n' "${before}" | sudo morzer secret set vless_clients >/dev/null 2>&1 || true
   sudo morzer config unset subscription >/dev/null 2>&1 || true
+  sudo morzer config unset exit_ipv4_url exit_info_url >/dev/null 2>&1 || true
 }
 trap restore EXIT
 
@@ -66,6 +68,21 @@ served=$(fetch "${url}" | base64 -d 2>/dev/null || true)
 [ -n "${served}" ] || die "the subscription URL serves nothing"
 [ "${served}" = "$(links_of)" ] || die "the subscription does not serve the links client-config prints"
 echo "${0##*/}: client-config prints a device's URL alone, and it serves exactly its links"
+
+if sudo grep -qF '  exit_ipv4_url:' /opt/dotdash/current/manifest.yaml; then
+  sudo morzer config set exit_ipv4_url=http://11.99.0.10:8000/ip4 exit_info_url=http://11.99.0.10:8000/info >/dev/null ||
+    die "could not point the title at the rig's stand-ins"
+  # The stand-in's exit, 203.0.113.7 in ZZ, whose flag is Z's regional indicator twice.
+  want="$(printf '\360\237\207\277\360\237\207\277') 203.0.113.7"
+  title=
+  for _ in $(seq 30); do
+    title=$(headers "${url}" | sed -n 's/^profile-title: base64://Ip' | base64 -d 2>/dev/null || true)
+    [ "${title}" = "${want}" ] && break
+    sleep 2
+  done
+  [ "${title}" = "${want}" ] || die "the subscription is not named after its exit: $(headers "${url}" | grep -i '^profile-title' || echo none)"
+  echo "${0##*/}: the subscription is named after the exit, its country's flag and IPv4"
+fi
 
 if sudo grep -q 'json' /opt/dotdash/current/tasks/subscription.sh; then
   config=$(sudo morzer task run client-config --output -- --full | sed -n '/^{$/,/^}$/p')

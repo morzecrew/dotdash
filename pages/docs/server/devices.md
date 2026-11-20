@@ -63,6 +63,13 @@ sudo morzer task run client-config --output -- --full phone    # plus links and 
   with Safari's TLS hello (`fp=safari`), as its own platform sends; every other
   app, Chrome's. A Chrome hello from an iPhone fits neither its network stack
   nor its browser.
+- The apps that show a subscription's name (Happ, Hiddify) show the
+  server's exit, its country's flag and IPv4 address, as the sites the device
+  visits see it, in place of the server's domain. The server asks for it
+  through the upstreams every ten minutes (`exit_ipv4_url`, `exit_info_url`),
+  so after a line fails over, the next refresh shows the new exit. With
+  `upstream_mode=balance` the exit changes between connections, and the name
+  shows one of them.
 - Hiddify reads XHTTP links with its own core, which takes `mode=auto` as
   `packet-up` and ignores a `mode` in the link: long uploads through them can
   hang there. In Hiddify, use the REALITY or Hysteria2 link.
