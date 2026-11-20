@@ -18,6 +18,8 @@ def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset(), split: boo
     if "kcp" in f:
         k = f["kcp"]
         line += f" kcp={k['port']},{k['header']},{k['seed']}" + (",quic" if k.get("open") == "quic" else "")
+    if "hysteria2" in f:
+        line += f" hy2={f['hysteria2']['port']}"
     if f.get("cdn_hosts"):
         line += " cdn=" + ",".join(f["cdn_hosts"])
     if f.get("cdn_only"):

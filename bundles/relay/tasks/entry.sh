@@ -25,6 +25,9 @@ path=
 # finalmask noise mask.
 kcp_seed=
 [ -z "${KCP_PORT:-}" ] || kcp_seed=$(cat /run/secrets/kcp_seed)
+# hysteria2: this relay serves Hysteria2 too, under its own site's
+# certificate, so client-config gives each device a Hysteria2 link through it.
+hy2_port=${HYSTERIA2_PORT:-}
 # cdn_hosts: local CDNs in front of this relay's own site, each fetching
 # from https://SITE with Host set to it, so client-config gives each device an
 # XHTTP link through each, shaped as for the server's cdn_hosts.
