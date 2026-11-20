@@ -201,17 +201,20 @@ cdn_extra='%7B%22scMaxEachPostBytes%22%3A32768%2C%22scMinPostsIntervalMs%22%3A10
 # flagged no less often (neither was, by nDPI or the lab's classifier) and
 # loaded pages up to an eighth slower.
 # Each link is named "<device> | <transport>", then " | <path>" for any but
-# a server's own: "relay <n>", "cdn <n>", "relay <n>+cdn <m>", and "server
-# <n>" with several servers. The numbers are a relay's place among the relays
-# lines, a CDN's in cdn_hosts or among its relay's cdn= hosts, and a server's
-# in servers: the same on every device, whichever of them its pools give it,
-# and no host name shows in the app.
+# a server's own: "relay", "cdn", "relay, cdn", and "server <n>" with several
+# servers. Each is numbered only where there are several: "relay <n>" with
+# several relays lines, "cdn <n>" with several cdn_hosts or, after a relay,
+# several cdn= hosts on it. The numbers are a relay's place among the
+# relays lines, a CDN's in cdn_hosts or among its relay's cdn= hosts, and a
+# server's in servers: the same on every device, whichever of them its pools
+# give it, and no host name shows in the app.
 sep='%20%7C%20'
-relay_no() { printf '%s\n' "$all_relays" | awk -v h="$1" '$1 == h { print NR; exit }'; }
+# Each prints " <n>", percent-encoded, or nothing when its list holds one.
+relay_no() { printf '%s\n' "$all_relays" | awk -v h="$1" '$1 == h && !n { n = NR } END { if (NR > 1) printf "%%20%d", n }'; }
 relay_cdn_no() { # <relay host> <cdn host>
-  printf '%s\n' "$all_relays" | awk -v h="$1" -v c="$2" '$1 == h { n = split($9, a, ","); for (i = 1; i <= n; i++) if (a[i] == c) { print i; exit } }'
+  printf '%s\n' "$all_relays" | awk -v h="$1" -v c="$2" '$1 == h { n = split($9, a, ","); if (n > 1) for (i = 1; i <= n; i++) if (a[i] == c) printf "%%20%d", i; exit }'
 }
-cdn_no() { printf '%s\n' "$all_cdns" | awk -v h="$1" '$0 == h { print NR; exit }'; }
+cdn_no() { printf '%s\n' "$all_cdns" | awk -v h="$1" '$0 == h && !n { n = NR } END { if (NR > 1) printf "%%20%d", n }'; }
 
 links() { # <id> <device> <server> [path]: each named "<device> | <transport>[ | <path>]"
   cat <<EOF
@@ -252,10 +255,10 @@ blocked() { case ,$1, in *,"$2",*) ;; *) return 1 ;; esac; }
 
 # A relay takes REALITY on 443 under its neighbour site's name, with keys of its
 # own, and carries the device on to this server as its own client.
-relay_links() { # <id> <device>: per relay, "<device> | reality | relay <n>", with "xhttp" and each CDN's "xhttp | relay <n>+cdn <m>" before it through an own-site one, "hy2" and "kcp" after it with Hysteria2 and mKCP
+relay_links() { # <id> <device>: per relay, "<device> | reality | relay[ <n>]", with "xhttp" and each CDN's "xhttp | relay[ <n>], cdn[ <m>]" before it through an own-site one, "hy2" and "kcp" after it with Hysteria2 and mKCP
   printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off _ hy; do
     [ -n "$h" ] || continue
-    rn="${sep}relay%20$(relay_no "$h")"
+    rn="${sep}relay$(relay_no "$h")"
     [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp || cat <<EOF
 XHTTP over TLS through the relay $h, behind its own site (v2rayN, v2rayNG, Happ):
 vless://$1@$h:443?encryption=$e&security=tls&sni=$s&host=$s&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=auto#$2${sep}xhttp${rn}
@@ -263,7 +266,7 @@ vless://$1@$h:443?encryption=$e&security=tls&sni=$s&host=$s&alpn=h2&fp=chrome&ty
 EOF
     [ "$d" = - ] || for x in $(printf '%s' "$d" | tr ',' ' '); do cat <<EOF
 XHTTP through the CDN $x, in front of the relay $h (v2rayN, v2rayNG, Happ):
-vless://$1@$x:443?encryption=$e&security=tls&sni=$x&host=$x&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=packet-up&extra=${cdn_extra}#$2${sep}xhttp${rn}%2Bcdn%20$(relay_cdn_no "$h" "$x")
+vless://$1@$x:443?encryption=$e&security=tls&sni=$x&host=$x&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=packet-up&extra=${cdn_extra}#$2${sep}xhttp${rn}%2C%20cdn$(relay_cdn_no "$h" "$x")
 
 EOF
     done
@@ -295,11 +298,11 @@ EOF
   done
 }
 
-cdn_links() { # <id> <device>: one per CDN, named "<device> | xhttp | cdn <n>"
+cdn_links() { # <id> <device>: one per CDN, named "<device> | xhttp | cdn[ <n>]"
   for h in $cdns; do
     cat <<EOF
 XHTTP through the CDN $h (v2rayN, v2rayNG, Happ):
-vless://$1@$h:443?encryption=${enc}&security=tls&sni=$h&host=$h&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=packet-up&extra=${cdn_extra}#$2${sep}xhttp${sep}cdn%20$(cdn_no "$h")
+vless://$1@$h:443?encryption=${enc}&security=tls&sni=$h&host=$h&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=packet-up&extra=${cdn_extra}#$2${sep}xhttp${sep}cdn$(cdn_no "$h")
 
 EOF
   done

@@ -46,5 +46,5 @@ release without it.
 A [relay](../relay/index.md) with a site of its own serves Hysteria2 too
 (`installation.profile=own-site,hysteria2` on the relay, see its
 [reference](../relay/reference.md#profiles)): devices then get a
-`phone | hy2 | relay <n>` link through it, whether or not this server runs the
+`phone | hy2 | relay` link through it, whether or not this server runs the
 profile.

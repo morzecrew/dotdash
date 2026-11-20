@@ -122,9 +122,9 @@ sudo morzer config edit relays
 
 ## 6. Devices
 
-`client-config` now prints a `phone | reality | relay 1` link for every device,
+`client-config` now prints a `phone | reality | relay` link for every device,
 and the Xray config falls back to the relays when the server itself is out of
-reach. Under `own-site`, a `phone | xhttp | relay 1` link joins it: XHTTP
+reach. Under `own-site`, a `phone | xhttp | relay` link joins it: XHTTP
 over TLS behind the relay's site, for networks that block REALITY over raw
 TCP, the transport blocked most often since early 2026. Subscriptions pick the link up by themselves; otherwise resend the
 links. Do it now, while devices can still reach the server.

@@ -80,7 +80,7 @@ if sudo grep -q 'dotdash-relay-\$n-cdn-' /opt/dotdash/current/tasks/client-confi
     sudo morzer config set --set-file relays=- >/dev/null || die "could not set relays"
   printf '%s\n' "a pooled cdn-r1.test" "b cdn-r2.test" |
     sudo morzer config set --set-file pools=- >/dev/null || die "could not set pools"
-  rcdns() { sed -nE 's/^vless:\/\/[^@]+@([^:]+):.*%20%7C%20relay%201%2Bcdn%20[0-9]+$/\1/p' <<<"$1" | sort -u | tr '\n' ' '; }
+  rcdns() { sed -nE 's/^vless:\/\/[^@]+@([^:]+):.*%20%7C%20relay%2C%20cdn%20[0-9]+$/\1/p' <<<"$1" | sort -u | tr '\n' ' '; }
   [ "$(rcdns "$(config pooled)")" = "cdn-r1.test cdn-r3.test " ] ||
     die "the device in pool a gets other CDNs of the relay than pool a's and the one in no pool: $(rcdns "$(config pooled)")"
   [ "$(rcdns "$(config unpooled)")" = "cdn-r1.test cdn-r2.test cdn-r3.test " ] ||

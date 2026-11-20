@@ -29,7 +29,7 @@ trap restore EXIT
 
 sudo morzer config set cdn_hosts=dotdash.test >/dev/null || die "could not set cdn_hosts"
 out=$(sudo morzer task run client-config --output -- --full)
-grep -qE '^vless://[^@]+@dotdash\.test:443\?.*&type=xhttp&.*&mode=packet-up&extra=%7B.*uplinkDataPlacement%22%3A%22header%22.*uplinkHTTPMethod%22%3A%22GET%22.*#.*%20%7C%20xhttp%20%7C%20cdn%201$' <<<"${out}" ||
+grep -qE '^vless://[^@]+@dotdash\.test:443\?.*&type=xhttp&.*&mode=packet-up&extra=%7B.*uplinkDataPlacement%22%3A%22header%22.*uplinkHTTPMethod%22%3A%22GET%22.*#.*%20%7C%20xhttp%20%7C%20cdn$' <<<"${out}" ||
   die "client-config printed no CDN link of packet-up, GET and header uploads"
 echo "${0##*/}: a link through the CDN, uploading by GET with the data in headers"
 
@@ -77,7 +77,7 @@ if sudo grep -q fallback_sni /opt/dotdash/current/caddy/Caddyfile; then
 fi
 
 sudo morzer config set cdn_hosts=none >/dev/null || die "could not unset cdn_hosts"
-! sudo morzer task run client-config --output -- --full | grep -q '%20%7C%20cdn%20' ||
+! sudo morzer task run client-config --output -- --full | grep -q '%20%7C%20cdn' ||
   die "a CDN link is still printed with cdn_hosts=none"
 sudo docker rm -f dotdash-rig-cdn >/dev/null
 echo "${0##*/}: with cdn_hosts=none, no CDN link"

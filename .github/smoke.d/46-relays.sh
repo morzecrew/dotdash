@@ -21,8 +21,9 @@ fi
 out() { sudo morzer task run client-config --output -- --full; }
 param() { sed -n "s/.*[?&]$2=\([^&#]*\).*/\1/p" <<<"$1"; }
 id() { local rest=${1#vless://}; echo "${rest%%@*}"; }
-# Links are named "<device> | <transport>[ | relay <n>[+cdn <m>]]", percent-encoded.
-relay_links() { grep '^vless://.*%20%7C%20relay%20[0-9]' <<<"$1" || true; }
+# Links are named "<device> | <transport>[ | relay[ <n>][, cdn[ <m>]]]", percent-encoded,
+# numbered only where there are several.
+relay_links() { grep -E '^vless://.*%20%7C%20relay(%20[0-9]+)?(%2C%20cdn(%20[0-9]+)?)?$' <<<"$1" || true; }
 outbound_tags() { awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"$1" |
   jq -r '.outbounds[].tag' | grep '^dotdash-relay-' || true; }
 
@@ -62,7 +63,7 @@ if sudo grep -q 'dotdash-relay-\$n-xhttp' /opt/dotdash/current/tasks/client-conf
   printf '%s\n' "198.51.100.8 relay-c.test pbkC 0123456789abcdef mlkem.c own-site 00112233445566778899aabbccddeeff" |
     sudo morzer config set --set-file relays=- >/dev/null
   text=$(out)
-  xlinks=$(grep '^vless://.*%20%7C%20xhttp%20%7C%20relay%201$' <<<"${text}" || true)
+  xlinks=$(grep '^vless://.*%20%7C%20xhttp%20%7C%20relay$' <<<"${text}" || true)
   [ "$(grep -c . <<<"${xlinks}")" = "${devices}" ] || die "expected an XHTTP link through the own-site relay for each device"
   l=$(head -1 <<<"${xlinks}")
   got="$(param "$l" security) $(param "$l" type) $(param "$l" sni) $(param "$l" host) $(param "$l" path) $(param "$l" encryption)"
@@ -84,15 +85,15 @@ if sudo grep -q 'dotdash-relay-\$n-cdn-' /opt/dotdash/current/tasks/client-confi
     "198.51.100.11 relay-f.test pbkF 0011223344556677 mlkem.f own-site 00112233445566778899aabbccddeeff cdn=bad_name!" |
     sudo morzer config set --set-file relays=- >/dev/null
   text=$(out)
-  clinks=$(grep '^vless://.*%20%7C%20xhttp%20%7C%20relay%201%2Bcdn%20[0-9]$' <<<"${text}" || true)
+  clinks=$(grep '^vless://.*%20%7C%20xhttp%20%7C%20relay%201%2C%20cdn%20[0-9]$' <<<"${text}" || true)
   [ "$(grep -c . <<<"${clinks}")" = $((2 * devices)) ] || die "expected a link per CDN in front of the relay for each device"
-  l=$(grep -m1 'relay%201%2Bcdn%202$' <<<"${clinks}") || die "no link through the relay's second CDN"
+  l=$(grep -m1 'relay%201%2C%20cdn%202$' <<<"${clinks}") || die "no link through the relay's second CDN"
   got="$(param "$l" security) $(param "$l" type) $(param "$l" sni) $(param "$l" host) $(param "$l" path) $(param "$l" encryption) $(param "$l" mode)"
   [ "${got}" = "tls xhttp cdn-b.test cdn-b.test %2F00112233445566778899aabbccddeeff mlkem.c packet-up" ] && [[ $l == *@cdn-b.test:443\?* ]] ||
     die "the link through the relay's CDN is not packet-up to the CDN with the relay's path and encryption: ${got}"
   [[ $(param "$l" extra) == *uplinkDataPlacement%22%3A%22header%22*uplinkHTTPMethod%22%3A%22GET%22* ]] ||
     die "the link through the relay's CDN does not upload by GET with the data in headers"
-  ! grep -qE '%20relay%20[23]%2Bcdn%20' <<<"${text}" ||
+  ! grep -qE '%20relay%20[23]%2C%20cdn' <<<"${text}" ||
     die "a relay without its XHTTP path, or with a malformed cdn= field, got CDN links"
   awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"${text}" | jq -e '
     [.outbounds[] | select(.tag | startswith("dotdash-relay-1-cdn-"))] as $c
@@ -113,7 +114,7 @@ if sudo grep -q 'dotdash-relay-\$n-kcp' /opt/dotdash/current/tasks/client-config
   printf '%s\n' "198.51.100.9 site-d.test pbkD 0011223344556677 mlkem.d kcp=9447,dtls,00112233445566778899aabbccddeeff" |
     sudo morzer config set --set-file relays=- >/dev/null
   text=$(out)
-  klinks=$(grep '^vless://.*%20%7C%20kcp%20%7C%20relay%201$' <<<"${text}" || true)
+  klinks=$(grep '^vless://.*%20%7C%20kcp%20%7C%20relay$' <<<"${text}" || true)
   [ "$(grep -c . <<<"${klinks}")" = "${devices}" ] || die "expected an mKCP link through the relay for each device"
   l=$(head -1 <<<"${klinks}")
   got="$(param "$l" type) $(param "$l" headerType) $(param "$l" seed) $(param "$l" encryption)"
@@ -135,7 +136,7 @@ if sudo grep -q 'dotdash-relay-\$n-kcp' /opt/dotdash/current/tasks/client-config
     printf '%s\n' "198.51.100.9 site-d.test pbkD 0011223344556677 mlkem.d kcp=9447,dtls,00112233445566778899aabbccddeeff,quic" |
       sudo morzer config set --set-file relays=- >/dev/null
     text=$(out)
-    l=$(grep -m1 '^vless://.*%20%7C%20kcp%20%7C%20relay%201$' <<<"${text}") || die "no opener relay mKCP link"
+    l=$(grep -m1 '^vless://.*%20%7C%20kcp%20%7C%20relay$' <<<"${text}") || die "no opener relay mKCP link"
     { [ -z "$(param "$l" headerType)" ] && [ -z "$(param "$l" seed)" ] && [ -n "$(param "$l" fm)" ]; } \
       || die "the opener relay mKCP link does not carry the mask in fm="
     printf '%s' "$(param "$l" fm)" \
@@ -158,7 +159,7 @@ if sudo grep -q 'cdn-only) only=cdn-only' /opt/dotdash/current/tasks/client-conf
     sudo morzer config set --set-file relays=- >/dev/null
   text=$(out)
   links=$(relay_links "${text}")
-  [ "$(grep -c . <<<"${links}")" = "${devices}" ] && ! grep -qv '%20%7C%20xhttp%20%7C%20relay%201%2Bcdn%201$' <<<"${links}" ||
+  [ "$(grep -c . <<<"${links}")" = "${devices}" ] && ! grep -qv '%20%7C%20xhttp%20%7C%20relay%201%2C%20cdn$' <<<"${links}" ||
     die "a cdn-only relay gave devices links besides its CDN's, or one with no CDN got links"
   [ "$(outbound_tags "${text}" | tr '\n' ' ')" = "dotdash-relay-1-cdn-1 " ] ||
     die "a cdn-only relay's outbounds are not its CDN's alone: $(outbound_tags "${text}" | tr '\n' ' ')"
@@ -173,7 +174,7 @@ if sudo grep -q 'dotdash-relay-\$n-hy2' /opt/dotdash/current/tasks/client-config
   own="198.51.100.13 relay-h.test pbkH 0123456789abcdef mlkem.h own-site 00112233445566778899aabbccddeeff"
   printf '%s hy2=8443\n' "${own}" | sudo morzer config set --set-file relays=- >/dev/null
   text=$(out)
-  hlinks=$(grep '^hysteria2://.*%20%7C%20hy2%20%7C%20relay%201$' <<<"${text}" || true)
+  hlinks=$(grep '^hysteria2://.*%20%7C%20hy2%20%7C%20relay$' <<<"${text}" || true)
   [ "$(grep -c . <<<"${hlinks}")" = "${devices}" ] || die "expected a Hysteria2 link through the relay for each device"
   l=$(head -1 <<<"${hlinks}")
   [[ $l == hysteria2://*@198.51.100.13:8443/\?sni=relay-h.test#* ]] ||
@@ -188,13 +189,13 @@ if sudo grep -q 'dotdash-relay-\$n-hy2' /opt/dotdash/current/tasks/client-config
     die "the config lacks a Hysteria2 outbound through the relay, to its port, as the device"
   printf '%s hy2=8443 off=hysteria2\n' "${own}" | sudo morzer config set --set-file relays=- >/dev/null
   text=$(out)
-  ! grep -q '%20%7C%20hy2%20%7C%20relay%201$' <<<"${text}" || die "off=hysteria2 left a Hysteria2 link through the relay"
+  ! grep -q '%20%7C%20hy2%20%7C%20relay$' <<<"${text}" || die "off=hysteria2 left a Hysteria2 link through the relay"
   tags=$(outbound_tags "${text}")
   ! grep -qx dotdash-relay-1-hy2 <<<"${tags}" || die "off=hysteria2 left a Hysteria2 outbound through the relay"
   printf '%s\n' "198.51.100.13 relay-h.test pbkH 0123456789abcdef mlkem.h hy2=8443" |
     sudo morzer config set --set-file relays=- >/dev/null
   text=$(out)
-  ! grep -q '%20%7C%20hy2%20%7C%20relay%20' <<<"${text}" || die "a relay with no site of its own got a Hysteria2 link"
+  ! grep -q '%20%7C%20hy2%20%7C%20relay' <<<"${text}" || die "a relay with no site of its own got a Hysteria2 link"
   echo "46-relays.sh: a relay with Hysteria2 adds a link and outbound through it; off=hysteria2 and no own site leave none"
 fi
 
@@ -204,9 +205,9 @@ if sudo grep -q 'off=\*)' /opt/dotdash/current/tasks/client-config.sh; then
   printf '%s\n' "198.51.100.8 relay-c.test pbkC 0123456789abcdef mlkem.c own-site 00112233445566778899aabbccddeeff kcp=9447,dtls,00112233445566778899aabbccddeeff off=reality,mkcp" |
     sudo morzer config set --set-file relays=- >/dev/null
   text=$(out)
-  ! grep -q '%20%7C%20reality%20%7C%20relay%201$' <<<"${text}" || die "off=reality left a REALITY link through the relay"
-  ! grep -q '%20%7C%20kcp%20%7C%20relay%201$' <<<"${text}" || die "off=mkcp left an mKCP link through the relay"
-  [ "$(grep -c '%20%7C%20xhttp%20%7C%20relay%201$' <<<"${text}")" = "${devices}" ] ||
+  ! grep -q '%20%7C%20reality%20%7C%20relay$' <<<"${text}" || die "off=reality left a REALITY link through the relay"
+  ! grep -q '%20%7C%20kcp%20%7C%20relay$' <<<"${text}" || die "off=mkcp left an mKCP link through the relay"
+  [ "$(grep -c '%20%7C%20xhttp%20%7C%20relay$' <<<"${text}")" = "${devices}" ] ||
     die "off=reality,mkcp took the XHTTP links through the relay too"
   [ "$(outbound_tags "${text}" | sort -u | tr '\n' ' ')" = "dotdash-relay-1-xhttp " ] ||
     die "under off=reality,mkcp the relay's outbounds are not its XHTTP one alone: $(outbound_tags "${text}" | tr '\n' ' ')"
@@ -220,7 +221,7 @@ if sudo grep -q "split) sp='split'" /opt/dotdash/current/tasks/client-config.sh;
   printf '%s\n' "198.51.100.8 relay-c.test pbkC 0123456789abcdef mlkem.c own-site 00112233445566778899aabbccddeeff off=reality split" |
     sudo morzer config set --set-file relays=- >/dev/null
   text=$(out)
-  ! grep -q '%20%7C%20reality%20%7C%20relay%201$' <<<"${text}" || die "off=reality split left a REALITY link through the relay"
+  ! grep -q '%20%7C%20reality%20%7C%20relay$' <<<"${text}" || die "off=reality split left a REALITY link through the relay"
   config=$(awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"${text}")
   jq -e '[.outbounds[] | select(.tag == "dotdash-relay-1")] | length > 0
     and all(.[]; .streamSettings.finalmask.tcp[0].settings.packets == "tlshello")' <<<"${config}" >/dev/null ||
