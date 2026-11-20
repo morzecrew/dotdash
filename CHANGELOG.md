@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-21
+
 ### Added
 
 - A relay's `name` parameter: a label that devices' links through it carry in place of `relay <n>`, such as `edge-1 · reality`. `relay-entry` ends the relay's line with `name=`, and a name an earlier relay took goes by the number.
