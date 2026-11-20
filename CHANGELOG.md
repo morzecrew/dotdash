@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `dotdash-manager sync` and `rotate swap` read the machines' facts eight at a time instead of one after another, so a fleet of many machines syncs in a fraction of the time.
+
 ### Fixed
 
 - `dotdash-manager` runs one at a time on its state, and a second run waits. Two overlapping runs, such as a timer's `sync` during a `rotate`, could lose each other's changes. The state is synced to disk before it replaces the old one, and `sync --dry-run` no longer writes it.
