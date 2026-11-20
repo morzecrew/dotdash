@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-11-21
+
 ### Changed
 
 - A relay with a site of its own serves devices' subscriptions under its own domain alone. A CDN in front that strips the headers saying it passed a request on is refused too, once it sends another name as `Host`, such as its own; `cdn-check` tells.
