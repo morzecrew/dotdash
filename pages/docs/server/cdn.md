@@ -71,8 +71,14 @@ and the like), which a device asking directly never sends. A CDN that adds
 none of them would still get one. If yours lets you add headers to its
 requests to the origin, add one of them, so every request it passes on says
 so: `CDN-Loop` is the one made for this, with any value, such as
-`CDN-Loop: edge`. Keep the value plain: the CDN's account shows it. Then
-check:
+`CDN-Loop: edge`. Keep the value plain: the CDN's account shows it.
+
+Some CDNs strip such headers, even ones you add. A relay serves subscriptions
+under its own domain alone, the name devices ask by, so in front of a relay
+have the CDN send any other name as `Host`: its own name, or its default. A
+CDN that checks the origin's certificate against that name then fails; turn
+the check off, or, with a [wildcard](certificates.md) on the relay, send
+another name under it. Then check:
 
 ```sh
 sudo morzer task run cdn-check --output

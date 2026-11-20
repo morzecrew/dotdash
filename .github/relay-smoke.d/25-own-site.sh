@@ -97,6 +97,13 @@ if sudo grep -q SUBSCRIPTION_UPSTREAMS /opt/dotdash-relay/current/caddy/Caddyfil
     ! grep -qF 'Error 404 (Not Found)!!1' <<<"${marked}" ||
       die "a subscription request a CDN marks as passed on still went on to the servers"
   fi
+  # A CDN that strips its headers is told apart by its Host: under any name
+  # but the relay's domain, a subscription path goes nowhere.
+  if sudo grep -qF 'host {$DOMAIN}' /opt/dotdash-relay/current/caddy/Caddyfile; then
+    marked=$(curl -sk --max-time 40 --resolve "cdn-b.test:443:127.0.0.1" "https://cdn-b.test/${token}" || true)
+    ! grep -qF 'Error 404 (Not Found)!!1' <<<"${marked}" ||
+      die "a subscription request under another name than the relay's domain still went on to the servers"
+  fi
   if sudo grep -q 'json' /opt/dotdash-relay/current/caddy/Caddyfile; then
     body=$(curl -sk --max-time 40 --resolve "${domain}:443:127.0.0.1" "https://${domain}/${token}.json" || true)
     grep -qF 'Error 404 (Not Found)!!1' <<<"${body}" ||
