@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The server's `relay-config` prints the relay's `dotdash_xhttp_path` before the `dotdash_link=xhttp-reality` that needs it. In the old order the relay switched to XHTTP with no path, failed its health check and stayed cut off until morzer gave up.
+
 ## [0.10.0] - 2026-11-20
 
 ### Added

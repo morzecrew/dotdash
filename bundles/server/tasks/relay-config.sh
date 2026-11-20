@@ -68,9 +68,10 @@ cat <<EOF
 
 This server also serves XHTTP with REALITY: the relay can reach it that way,
 its connections reused across devices, sooner to a page's first byte for
-about twice the CPU on both machines:
-sudo morzer config set dotdash_link=xhttp-reality dotdash_xhttp_reality_port=${XHTTP_REALITY_PORT}
+about twice the CPU on both machines. The path goes first: the link it
+replaces reads none, and a link without it fails the relay's health check:
 sudo morzer secret set dotdash_xhttp_path <<'END'
 $(cat /run/secrets/xhttp_path)
 END
+sudo morzer config set dotdash_link=xhttp-reality dotdash_xhttp_reality_port=${XHTTP_REALITY_PORT}
 EOF
