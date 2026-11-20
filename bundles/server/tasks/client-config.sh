@@ -87,27 +87,29 @@ sid=$(cat /run/secrets/reality_short_id)
 pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # The dotdash-relay machines in front of this server (the relays parameter),
 # one "<host> <site> <public key> <short id> <encryption> [own-site [<xhttp
-# path>]] [kcp=<port>,<header>,<seed>[,<open>]] [cdn=<host>[,<host>]] [cdn-only]
-# [off=<path>[,<path>]] [split]" per
+# path>]] [kcp=<port>,<header>,<seed>[,<open>]] [hy2=<port>] [cdn=<host>[,<host>]]
+# [cdn-only] [off=<path>[,<path>]] [split]" per
 # line; blank lines, "#" comments and shorter lines are not relays. own-site:
 # the site is the relay's own, which fetches subscriptions from here and, given
 # its path, routes XHTTP to the relay's Xray. kcp=: the relay serves mKCP on
-# that UDP port too, with the opener <open> (quic) if it names one. cdn=:
+# that UDP port too, with the opener <open> (quic) if it names one. hy2=: an
+# own-site relay serves Hysteria2 on that UDP port, under its site's
+# certificate. cdn=:
 # local CDNs front the relay's own site, as cdn_hosts fronts this server's;
 # they need its XHTTP path. cdn-only: devices get the relay's CDN links alone,
 # so its own address reaches none of them. off=: the paths its canaries find
-# blocked (reality, xhttp, mkcp; dotdash-manager sets it), which devices then
+# blocked (reality, xhttp, mkcp, hysteria2; dotdash-manager sets it), which devices then
 # don't get through it; its CDN links stay. split: its canaries got REALITY
 # through only with its hello split into TLS records (dotdash-manager sets it):
 # the Xray config devices get keeps a REALITY outbound through it, split, even
 # with off=reality, which share links can't carry. Each becomes "<host> <site>
 # <key> <sid> <enc> <own-site|-> <path|-> <kcp|-> <cdn hosts, comma-separated|->
-# <cdn-only|-> <off paths, comma-separated|-> <split|->".
+# <cdn-only|-> <off paths, comma-separated|-> <split|-> <hy2 port|->".
 all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   case $line in '' | '#'*) continue ;; esac
-  c=- d=- only=- x=- sp=- rest=
+  c=- d=- only=- x=- sp=- hy=- rest=
   for f in $line; do
-    case $f in kcp=*) c=${f#kcp=} ;; cdn=*) d=${f#cdn=} ;; cdn-only) only=cdn-only ;; off=*) x=${f#off=} ;; split) sp='split' ;; *) rest="$rest $f" ;; esac
+    case $f in kcp=*) c=${f#kcp=} ;; hy2=*) hy=${f#hy2=} ;; cdn=*) d=${f#cdn=} ;; cdn-only) only=cdn-only ;; off=*) x=${f#off=} ;; split) sp='split' ;; *) rest="$rest $f" ;; esac
   done
   # shellcheck disable=SC2086 # one field per word
   set -- $rest
@@ -117,6 +119,11 @@ all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   esac
   o=${6:-} p=${7:-}
   if [ "$o" != own-site ]; then o='' p=''; fi
+  case $hy in
+    -) ;;
+    *[!0-9]* | '') echo "relays: the hy2= field of $1 is not a port; no Hysteria2 link through it" >&2; hy=- ;;
+    *) [ -n "$o" ] || { echo "relays: $1 names hy2= but no site of its own, whose certificate Hysteria2 needs; no Hysteria2 link through it" >&2; hy=-; } ;;
+  esac
   case $d in
     -) ;;
     '' | ,* | *, | *,,* | *[!A-Za-z0-9.,-]*)
@@ -126,15 +133,17 @@ all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
       echo "relays: $1 names CDNs but no XHTTP path of its own site; no CDN link through it" >&2
       d=-; } ;;
   esac
-  case ,$x, in ,-, | ,,) x=- ;; *,mkcp,*) c=- ;; esac
+  case ,$x, in ,-, | ,,) x=- ;; esac
+  case ,$x, in *,mkcp,*) c=- ;; esac
+  case ,$x, in *,hysteria2,*) hy=- ;; esac
   for y in $(printf '%s' "$x" | tr ',' ' '); do
-    case $y in - | reality | xhttp | mkcp) ;; *) echo "relays: the off= field of $1 names $y, not reality, xhttp or mkcp; ignored" >&2 ;; esac
+    case $y in - | reality | xhttp | mkcp | hysteria2) ;; *) echo "relays: the off= field of $1 names $y, not reality, xhttp, mkcp or hysteria2; ignored" >&2 ;; esac
   done
   if [ "$only" = cdn-only ] && [ "$d" = - ]; then
     echo "relays: $1 is cdn-only but has no CDN link; left out" >&2
     continue
   fi
-  if [ -n "${5:-}" ]; then echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $c $d $only $x $sp"; fi
+  if [ -n "${5:-}" ]; then echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $c $d $only $x $sp $hy"; fi
 done)
 
 # The local CDNs in front of this server (the cdn_hosts parameter), each
@@ -154,13 +163,13 @@ sees() { [ -z "$mine" ] || has "$1" "$mine" || ! has "$1" "$pools"; }
 pick() { # <device name>: the relays, CDN hosts and subscription relays it gets
   mine=
   [ -z "$1" ] || mine=$(printf '%s\n' "$pools" | awk -v m="$1" '{ for (i = 2; i <= NF; i++) if ($i == m) { print; next } }')
-  relays=$(printf '%s\n' "$all_relays" | while read -r h s k i e o p c d only off sp; do
+  relays=$(printf '%s\n' "$all_relays" | while read -r h s k i e o p c d only off sp hy; do
     if [ -z "$h" ] || ! sees "$h"; then continue; fi
     if [ "$d" != - ]; then
       d=$(for x in $(printf '%s' "$d" | tr ',' ' '); do if sees "$x"; then printf '%s,' "$x"; fi; done)
       d=${d%,}
     fi
-    echo "$h $s $k $i $e $o $p $c ${d:--} $only $off $sp"
+    echo "$h $s $k $i $e $o $p $c ${d:--} $only $off $sp $hy"
   done)
   cdns=$(for h in $all_cdns; do if sees "$h"; then echo "$h"; fi; done)
   # The own-site relays' domains, where a device inside the restricted network
@@ -230,8 +239,8 @@ blocked() { case ,$1, in *,"$2",*) ;; *) return 1 ;; esac; }
 
 # A relay takes REALITY on 443 under its neighbour site's name, with keys of its
 # own, and carries the device on to this server as its own client.
-relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]", "[relay <host> xhttp]" and "[relay <host> cdn <cdn>]" before it through an own-site one, "[relay <host> kcp]" after it with mKCP
-  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off _; do
+relay_links() { # <id> <label>: one per relay, named "<label> [relay <host>]", "[relay <host> xhttp]" and "[relay <host> cdn <cdn>]" before it through an own-site one, "[relay <host> hy2]" and "[relay <host> kcp]" after it with Hysteria2 and mKCP
+  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off _ hy; do
     [ -n "$h" ] || continue
     [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp || cat <<EOF
 XHTTP over TLS through the relay $h, behind its own site (v2rayN, v2rayNG, Happ):
@@ -248,6 +257,11 @@ EOF
     blocked "$off" reality || cat <<EOF
 REALITY through the relay $h (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
 vless://$1@$h:443?encryption=$e&flow=xtls-rprx-vision&security=reality&sni=$s&fp=chrome&pbk=$k&sid=$i&support-x25519mlkem768=true&type=tcp#$2%20%5Brelay%20$h%5D
+
+EOF
+    [ "$hy" = - ] || cat <<EOF
+Hysteria2 through the relay $h, on UDP port $hy (Happ, v2rayN, v2rayNG, Hiddify, Streisand, mihomo, sing-box):
+hysteria2://$1@$h:$hy/?sni=$s#$2%20%5Brelay%20$h%20hy2%5D
 
 EOF
     [ "$c" != - ] || continue
@@ -313,7 +327,7 @@ mux='"mux": {"enabled": true, "concurrency": -1, "xudpConcurrency": 8, "xudpProx
 
 relay_outbounds() { # <id>
   n=0
-  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off sp; do
+  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off sp hy; do
     [ -n "$h" ] || continue
     n=$((n + 1))
     # split: REALITY through it with its hello split, even with off=reality.
@@ -338,6 +352,16 @@ EOF
       m=$((m + 1))
       cdn_outbound "dotdash-relay-$n-cdn-$m" "$1" "$x" "$e" "$p"
     done
+    # Hysteria2 under the relay's own site's name, keepalives as the
+    # server's outbound has them.
+    [ "$hy" = - ] || [ "$only" = cdn-only ] || cat <<EOF
+    {"tag": "dotdash-relay-$n-hy2", "protocol": "hysteria",
+     "settings": {"version": 2, "address": "$h", "port": $hy},
+     "streamSettings": {"network": "hysteria", "security": "tls",
+       "tlsSettings": {"serverName": "$s", "alpn": ["h3"]},
+       "hysteriaSettings": {"version": 2, "auth": "$1"},
+       "finalmask": {"quicParams": {"keepAlivePeriod": 10}}}},
+EOF
     [ "$c" != - ] && [ "$only" != cdn-only ] || continue
     kport=${c%%,*}; r=${c#*,}; kheader=${r%%,*}; r2=${r#*,}; kseed=${r2%%,*}
     kopen=none; case $r2 in *,*) kopen=${r2#*,} ;; esac

@@ -9,7 +9,7 @@ set -eu
 
 own=${path:+ own-site $path}
 # Last on the line, where a server from before them reads no field: kcp= with
-# a fourth field naming the opener under kcp_open=quic, then cdn=.
+# a fourth field naming the opener under kcp_open=quic, hy2=, then cdn=.
 kcp=
 if [ -n "$kcp_seed" ]; then
   kcp=" kcp=${KCP_PORT},${KCP_HEADER:-dtls},${kcp_seed}"
@@ -19,7 +19,7 @@ fi
 cat <<EOF
 On the dotdash server, add this line to the relays parameter (sudo morzer
 config edit relays):
-${host} ${SITE} ${pbk} ${sid} ${enc}${own}${kcp}${cdn:+ cdn=$cdn}${only}
+${host} ${SITE} ${pbk} ${sid} ${enc}${own}${kcp}${hy2_port:+ hy2=$hy2_port}${cdn:+ cdn=$cdn}${only}
 
 A dotdash-canary checks this relay as it checks the server, without the xhttp
 profiles, with the dotdash_id of any device on the relay:
@@ -30,4 +30,8 @@ END
 sudo morzer secret set dotdash_short_id <<'END'
 ${sid}
 END
+EOF
+[ -z "$hy2_port" ] || cat <<EOF
+and Hysteria2 beside REALITY, through the relay's own site's certificate:
+sudo morzer config set installation.profile=hysteria2 dotdash_hysteria2_port=${hy2_port}
 EOF
