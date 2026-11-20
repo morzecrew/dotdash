@@ -31,3 +31,7 @@ sudo morzer secret set dotdash_short_id <<'END'
 ${sid}
 END
 EOF
+[ -z "$hy2_port" ] || cat <<EOF
+and Hysteria2 beside REALITY, through the relay's own site's certificate:
+sudo morzer config set installation.profile=hysteria2 dotdash_hysteria2_port=${hy2_port}
+EOF

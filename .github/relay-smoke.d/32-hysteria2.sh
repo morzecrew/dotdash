@@ -5,8 +5,8 @@
 # (cert_issuer=internal), as 25-own-site.sh has them:
 #
 # - hysteria2 without own-site is refused: it has no certificate to serve;
-# - under own-site,hysteria2, relay-entry ends the line with hy2=443 and the
-#   facts carry the port;
+# - under own-site,hysteria2, relay-entry ends the line with hy2=443, says how
+#   a canary checks it, and the facts carry the port;
 # - a listed device logging in with its id, trusting the site's CA, gets out
 #   through the relay and the stand-in server; one with another login does not;
 # - dropping the profile shuts the port, and the line loses the field.
@@ -58,6 +58,9 @@ set_config cert_issuer=internal
 set_config installation.profile=own-site,hysteria2
 
 [[ $(entry) == *" hy2=443"* ]] || die "relay-entry printed no hy2=443 under own-site,hysteria2"
+out=$(sudo morzer task run relay-entry --output -- 127.0.0.1)
+grep -qxF 'sudo morzer config set installation.profile=hysteria2 dotdash_hysteria2_port=443' <<<"${out}" ||
+  die "relay-entry does not say how a canary checks the relay's Hysteria2"
 facts=$(sudo morzer task run facts --output 2>/dev/null)
 jq -e '.hysteria2 == {port: 443}' <<<"${facts}" >/dev/null || die "the facts do not carry the Hysteria2 port"
 echo "${0##*/}: hysteria2 needs own-site; under both, relay-entry and the facts carry hy2=443"
