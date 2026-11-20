@@ -113,7 +113,10 @@ A canary watches one server. With [several servers](../server/several-servers.md
 `canary-config` prints how to point a canary at each of the others. To watch a
 relay instead, run the commands its `relay-entry` prints on the canary,
 without the xhttp profiles: the canary then connects through the relay, as a
-phone on that network would.
+phone on that network would. A relay with Hysteria2 of its own prints the
+`hysteria2` profile and its port too, and the canary checks it under the
+relay's own site's certificate. A canary that follows the
+[manager](../manager.md) gets that port from it.
 
 ## On a mobile line
 
@@ -135,7 +138,7 @@ relay's address no longer gets through for devices.
 | `dotdash_kcp_port` | `8447` | the server's `kcp_port` |
 | `dotdash_kcp_header` | `dtls` | the server's `kcp_header` |
 | `dotdash_kcp_open` | `none` | the server's `kcp_open` |
-| `dotdash_hysteria2_port` | `443` | the server's `hysteria2_port` |
+| `dotdash_hysteria2_port` | `443` | the server's `hysteria2_port`, or a relay's |
 | `dotdash_hysteria2_pin` | `none` | the SHA-256 of a certificate Hysteria2 trusts in place of the public CAs, as `openssl x509 -fingerprint -sha256` prints it, for a server whose certificate no public CA signed; `none` checks it as devices do |
 | `dotdash_public_key` | none, given at `init` | the REALITY public key, the `pbk` of a link |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what each check fetches through dotdash; any 2xx is healthy |

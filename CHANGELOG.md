@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A relay with a site of its own serves Hysteria2 too, under that site's certificate (`installation.profile=own-site,hysteria2`, UDP `hysteria2_port`, 443). Its `relay-entry` line ends with `hy2=<port>`, and devices get a `[relay <host> hy2]` link and outbound through it.
 
+- A device's subscription names itself after the server's exit, its country's flag and IPv4 address (`Profile-Title`), so the apps that show a name (Happ, Hiddify) show where traffic leaves instead of the server's domain. The server asks every ten minutes, through the upstreams (`exit_ipv4_url`, `exit_info_url`).
+
+- `dotdash-manager` gives a canary watching a relay with Hysteria2 the relay's port (`dotdash_hysteria2_port`), so the canary's `hysteria2` profile checks it, and a relay whose Hysteria2 its canaries can't get through loses that link (`off=hysteria2`).
+
 ### Changed
 
 - Links are named `<device> | <transport>`, with ` | relay <n>`, ` | cdn <n>` or ` | relay <n>+cdn <m>` through a relay or a CDN, and ` | server <n>` with several servers, in place of the host names they used to carry: an app shows no relay, CDN or server name. The numbers follow `relays`, `cdn_hosts` and `servers`.

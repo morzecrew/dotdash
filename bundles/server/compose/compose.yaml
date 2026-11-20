@@ -50,7 +50,7 @@ services:
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
     # Internal networks only: no published port, no route out. The gate
     # forwards the public port in and carries the way out.
-    networks: [backend, inside]
+    networks: [backend, inside, title]
     mem_limit: 512m
     healthcheck:
       test: ["CMD", "/usr/local/bin/xray-entrypoint", "healthcheck"]
@@ -154,6 +154,8 @@ services:
       - caddy_data:/data
       # Each device's subscription file, which the subscription service writes.
       - subscription:/srv/sub:ro
+      # The subscriptions' title, the exit-title service's.
+      - exit:/srv/exit:ro
     tmpfs:
       - /config:uid=65532,gid=65532,mode=0700,size=8m
     secrets: [xhttp_path, acme_dns]
@@ -232,6 +234,26 @@ services:
       retries: 3
       start_period: 30s
 
+  # The subscriptions' title (tasks/exit-title.sh): this server's exit with its
+  # country's flag, for the apps that show one in place of the domain. It asks
+  # through Xray's title inbound, on a network of their own, so through the
+  # upstream as client traffic leaves; it holds no secret. Not in Xray's
+  # namespace: a re-created Xray would leave it in the old one, and the next
+  # restart of Xray would fail on it.
+  exit-title:
+    <<: *hardened
+    image: ${DOTDASH_IMAGE_CADDY:?set by morzer}
+    networks: [title]
+    init: true
+    command: ["sh", "/task/exit-title.sh"]
+    environment:
+      SUBSCRIPTION: ${DOTDASH_PARAM_SUBSCRIPTION:-false}
+      EXIT_IPV4_URL: ${DOTDASH_PARAM_EXIT_IPV4_URL:-http://api4.ipify.org}
+      EXIT_INFO_URL: ${DOTDASH_PARAM_EXIT_INFO_URL:-http://ipinfo.io}
+    volumes:
+      - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
+      - exit:/exit
+
   # One-shot behind a profile, started only by `morzer task run exit-check`.
   # It shares Xray's network namespace, so it reaches the probe inbound on
   # 127.0.0.1:10809 and asks through the upstream as client traffic leaves.
@@ -280,12 +302,17 @@ networks:
     internal: true
   # The gate's way out, and where the public port is published.
   egress: {}
+  # Xray and the exit-title service to each other only; no route out.
+  title:
+    internal: true
 
 volumes:
   caddy_data: {}
   # In memory: written at every start, and kept by nothing that outlives it.
   subscription:
     driver_opts: {type: tmpfs, device: tmpfs, o: "size=4m,uid=65532,gid=65532,mode=0700"}
+  exit:
+    driver_opts: {type: tmpfs, device: tmpfs, o: "size=64k,uid=65532,gid=65532,mode=0700"}
 
 secrets:
   vless_clients:

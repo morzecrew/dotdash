@@ -255,7 +255,17 @@ parameters:
     type: bool
     default: false
     description: "Serve each device a subscription URL on the cover site, which client-config prints: its links, which the app refreshes, so a revocation or a key rotation reaches it without resending links. A URL is as secret as the links"
-    services: [subscription]
+    services: [subscription, exit-title]
+  exit_ipv4_url:
+    type: string
+    default: http://api4.ipify.org
+    description: "With subscription, what the subscriptions' title asks for this server's IPv4 exit, through the upstreams every ten minutes: a plain-HTTP URL that answers with the caller's address alone. The apps that show a subscription's name (Happ, Hiddify) then show the exit, after its country's flag, in place of the domain"
+    services: [xray, exit-title]
+  exit_info_url:
+    type: string
+    default: http://ipinfo.io
+    description: "With subscription, where the subscriptions' title asks <url>/<address>/country for the exit's country, whose flag goes before the address; the address alone when it gives none. Plain HTTP"
+    services: [xray, exit-title]
   cover:
     type: string
     default: pages
