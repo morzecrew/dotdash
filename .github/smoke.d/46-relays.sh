@@ -163,6 +163,39 @@ if sudo grep -q 'cdn-only) only=cdn-only' /opt/dotdash/current/tasks/client-conf
   echo "46-relays.sh: a cdn-only relay gives its CDN link and outbound alone, and one with no CDN nothing"
 fi
 
+# A relay with Hysteria2 (own-site, whose relay-entry adds hy2=<port>): a
+# Hysteria2 link through it, to that port under its site's name, and an
+# outbound logging in as the device; off=hysteria2 takes both, and a relay with no
+# site of its own, so no certificate, gets neither.
+if sudo grep -q 'dotdash-relay-\$n-hy2' /opt/dotdash/current/tasks/client-config.sh; then
+  own="198.51.100.13 relay-h.test pbkH 0123456789abcdef mlkem.h own-site 00112233445566778899aabbccddeeff"
+  printf '%s hy2=8443\n' "${own}" | sudo morzer config set --set-file relays=- >/dev/null
+  text=$(out)
+  hlinks=$(grep '^hysteria2://.*%5Brelay%20198\.51\.100\.13%20hy2%5D$' <<<"${text}" || true)
+  [ "$(grep -c . <<<"${hlinks}")" = "${devices}" ] || die "expected a Hysteria2 link through the relay for each device"
+  l=$(head -1 <<<"${hlinks}")
+  [[ $l == hysteria2://*@198.51.100.13:8443/\?sni=relay-h.test#* ]] ||
+    die "the Hysteria2 link through the relay is not to its port under its site's name"
+  hid=${l#hysteria2://} && hid=${hid%%@*}
+  awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"${text}" | jq -e --arg id "${hid}" '
+    [.outbounds[] | select(.tag == "dotdash-relay-1-hy2")] as $h
+    | ($h | length) == 1 and $h[0].settings == {version: 2, address: "198.51.100.13", port: 8443}
+      and $h[0].streamSettings.tlsSettings == {serverName: "relay-h.test", alpn: ["h3"]}
+      and $h[0].streamSettings.hysteriaSettings == {version: 2, auth: $id}
+      and $h[0].streamSettings.finalmask == {quicParams: {keepAlivePeriod: 10}}' >/dev/null ||
+    die "the config lacks a Hysteria2 outbound through the relay, to its port, as the device"
+  printf '%s hy2=8443 off=hysteria2\n' "${own}" | sudo morzer config set --set-file relays=- >/dev/null
+  text=$(out)
+  ! grep -q '%5Brelay%20198\.51\.100\.13%20hy2%5D$' <<<"${text}" || die "off=hysteria2 left a Hysteria2 link through the relay"
+  tags=$(outbound_tags "${text}")
+  ! grep -qx dotdash-relay-1-hy2 <<<"${tags}" || die "off=hysteria2 left a Hysteria2 outbound through the relay"
+  printf '%s\n' "198.51.100.13 relay-h.test pbkH 0123456789abcdef mlkem.h hy2=8443" |
+    sudo morzer config set --set-file relays=- >/dev/null
+  text=$(out)
+  ! grep -q '%20hy2%5D$' <<<"${text}" || die "a relay with no site of its own got a Hysteria2 link"
+  echo "46-relays.sh: a relay with Hysteria2 adds a link and outbound through it; off=hysteria2 and no own site leave none"
+fi
+
 # A relay whose canaries find some paths blocked (dotdash-manager's off=):
 # devices get none of those through it, and its other links as before.
 if sudo grep -q 'off=\*)' /opt/dotdash/current/tasks/client-config.sh; then

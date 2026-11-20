@@ -26,11 +26,15 @@ runtimes:
       # VLESS over mKCP on kcp_port, as the server's mkcp profile: UDP, its
       # packets encrypted under kcp_seed and dressed in kcp_header.
       mkcp: [compose/mkcp.yaml]
+      # Hysteria2 on hysteria2_port (UDP), as the server's hysteria2 profile,
+      # under the own site's certificate: it goes with own-site.
+      hysteria2: [compose/hysteria2.yaml]
       # Traffic per inbound and outbound, and the verdicts on the servers,
       # into the node exporter's textfile directory.
       metrics: [compose/metrics.yaml]
-    # installation.profile=own-site,mkcp runs both; metrics goes with either.
-    combinable: [own-site, mkcp, metrics]
+    # installation.profile=own-site,mkcp runs both, own-site,hysteria2 adds
+    # Hysteria2; metrics goes with any.
+    combinable: [own-site, mkcp, hysteria2, metrics]
     options:
       project: dotdash-relay
 
@@ -71,6 +75,7 @@ requirements:
     - "{{ .Parameters.listen }}:{{ .Parameters.https_port }}"
     - '{{ if has "own-site" .Profiles }}{{ .Parameters.listen }}:{{ .Parameters.http_port }}{{ end }}'
     - '{{ if has "mkcp" .Profiles }}{{ .Parameters.kcp_port }}/udp{{ end }}'
+    - '{{ if has "hysteria2" .Profiles }}{{ .Parameters.hysteria2_port }}/udp{{ end }}'
 
 # `morzer task run relay-config -- <client>` on the dotdash server prints the
 # init command and the secrets for this machine.
@@ -118,6 +123,11 @@ parameters:
     values: [none, quic]
     default: none
     description: "An opener in front of mKCP (the mkcp profile), as the server's kcp_open: quic sends a QUIC-Initial-shaped packet before the flow; relay-entry carries it to the server's relays line, so devices' links through this relay match"
+    services: [xray]
+  hysteria2_port:
+    type: port
+    default: 443
+    description: "Host UDP port devices reach this relay's Hysteria2 on (the hysteria2 profile, with own-site); relay-entry carries it to the server's relays line"
     services: [xray]
   cover:
     type: string
@@ -224,7 +234,7 @@ tasks:
     args: true
     timeout: 1m
   facts:
-    description: "Print relay-entry's line as JSON for the authority this relay follows: entry_host, site, public key, and the short id, XHTTP path and mKCP seed links carry (output is credentials)"
+    description: "Print relay-entry's line as JSON for the authority this relay follows: entry_host, site, public key, the short id, XHTTP path and mKCP seed links carry (output is credentials), and the Hysteria2 port"
     service: relay-entry
     command: ["sh", "/task/facts.sh"]
     timeout: 1m

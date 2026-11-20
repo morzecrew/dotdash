@@ -42,3 +42,9 @@ revokes it here too.
 Off: set the previous profile (`xdns`) or
 `sudo morzer config unset installation.profile`, before any rollback to a
 release without it.
+
+A [relay](../relay/index.md) with a site of its own serves Hysteria2 too
+(`installation.profile=own-site,hysteria2` on the relay, see its
+[reference](../relay/reference.md#profiles)): devices then get a
+`[relay <host> hy2]` link through it, whether or not this server runs the
+profile.

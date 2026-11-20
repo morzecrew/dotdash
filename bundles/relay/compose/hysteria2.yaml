@@ -1,0 +1,23 @@
+# The hysteria2 profile: Hysteria2 (Xray's own) on a host UDP port of its own
+# (hysteria2_port), carried on to dotdash like REALITY. The inbound is in the
+# Xray template under the same profile.
+#
+# It goes with own-site: its TLS is the relay's own site's certificate, which
+# Caddy takes and keeps. Xray reads it from Caddy's data, read-only, and
+# rereads it hourly, so Caddy starts first and Xray after it, restarting until
+# the certificate is there on a fresh install.
+services:
+  xray:
+    ports:
+      - "${DOTDASH_RELAY_PARAM_HYSTERIA2_PORT:-443}:8448/udp"
+    volumes:
+      - caddy_data:/caddy-data:ro
+    depends_on:
+      caddy:
+        condition: service_started
+
+  # Set under this profile only: with it, relay-entry ends the line with the
+  # relay's Hysteria2 port.
+  relay-entry:
+    environment:
+      HYSTERIA2_PORT: ${DOTDASH_RELAY_PARAM_HYSTERIA2_PORT:-443}

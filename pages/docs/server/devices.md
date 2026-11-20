@@ -24,7 +24,8 @@ Per device it prints:
   each [relay](../relay/index.md), with `phone [relay <host> xhttp]` before it
   through a relay with a site of its own, `phone [relay <host> cdn <name>]`
   after that through each [CDN in front of it](cdn.md#in-front-of-a-relay),
-  and `phone [relay <host> kcp]` after it through a relay with mKCP. XHTTP comes first everywhere: an
+  `phone [relay <host> hy2]` after it through a relay with Hysteria2, and
+  `phone [relay <host> kcp]` through a relay with mKCP. XHTTP comes first everywhere: an
   app tends to try the first link, and REALITY over raw TCP is the transport
   blocked most often;
 - an Xray config for v2rayN or v2rayNG (as a custom config) that uses

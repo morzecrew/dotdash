@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A relay with a site of its own serves Hysteria2 too, under that site's certificate (`installation.profile=own-site,hysteria2`, UDP `hysteria2_port`, 443). Its `relay-entry` line ends with `hy2=<port>`, and devices get a `[relay <host> hy2]` link and outbound through it.
+
 ### Changed
 
 - The server's gate probes each upstreams line every 10 s instead of 30. When a line goes silent, new connections move to another after about 8 s on average and 12 at most, instead of 18 and 31.
