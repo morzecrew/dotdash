@@ -2264,7 +2264,7 @@ CDN fetches from <code>https://example.com</code>.</p>
 </code></pre></div>
 </li>
 <li>
-<p><strong>Devices</strong>: <code>client-config</code> prints a <code>phone [cdn cdn.example.net]</code> link,
+<p><strong>Devices</strong>: <code>client-config</code> prints a <code>phone | xhttp | cdn</code> link,
    the Xray config gains an outbound through it, and subscriptions pick it up.
    Give devices the link before restrictions start, as with a
    <a href="../../relay/">relay</a>.</p>
@@ -2335,7 +2335,7 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
 <li>
 <p><strong>Here</strong>, replace the relay's line in <code>relays</code>
    (<code>sudo morzer config edit relays</code>). Devices get a
-   <code>phone [relay &lt;host&gt; cdn cdn.example.net]</code> link and an outbound, shaped as
+   <code>phone | xhttp | relay, cdn</code> link and an outbound, shaped as
    above, and <a href="../devices/#pools">pools</a> take the relay's CDN names as members.</p>
 </li>
 </ol>

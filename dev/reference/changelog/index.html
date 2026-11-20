@@ -3087,6 +3087,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>Links are named <code>&lt;device&gt; | &lt;transport&gt;</code>, with <code>| relay</code>, <code>| cdn</code> or <code>| relay, cdn</code> through a relay or a CDN, numbered where there are several (<code>relay 1, cdn 2</code>), and <code>| server &lt;n&gt;</code> with several servers, in place of the host names they used to carry: an app shows no relay, CDN or server name.</p>
+</li>
+<li>
 <p>The server's gate probes each upstreams line every 10 s instead of 30. When a line goes silent, new connections move to another after about 8 s on average and 12 at most, instead of 18 and 31.</p>
 </li>
 <li>

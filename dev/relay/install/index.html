@@ -2255,9 +2255,9 @@ their subscriptions and XHTTP (step 6).</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>edit<span class="w"> </span>relays
 </code></pre></div>
 <h2 id="6-devices">6. Devices<a class="headerlink" href="#6-devices" title="Permanent link">&para;</a></h2>
-<p><code>client-config</code> now prints a <code>[relay 198.51.100.7]</code> link for every device,
+<p><code>client-config</code> now prints a <code>phone | reality | relay</code> link for every device,
 and the Xray config falls back to the relays when the server itself is out of
-reach. Under <code>own-site</code>, a <code>[relay 198.51.100.7 xhttp]</code> link joins it: XHTTP
+reach. Under <code>own-site</code>, a <code>phone | xhttp | relay</code> link joins it: XHTTP
 over TLS behind the relay's site, for networks that block REALITY over raw
 TCP, the transport blocked most often since early 2026. Subscriptions pick the link up by themselves; otherwise resend the
 links. Do it now, while devices can still reach the server.</p>

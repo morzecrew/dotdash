@@ -2249,7 +2249,7 @@ certificate. The site also serves devices their subscriptions, fetched from
 the servers through the relay's tunnel, and XHTTP on the secret path
 <code>xhttp_path</code>, which <code>init</code> generates. With <code>cdn_hosts</code> set, <code>relay-entry</code>
 ends the relay's line with <code>cdn=&lt;name&gt;,...</code>, and the server gives each device
-a <code>[relay &lt;host&gt; cdn &lt;name&gt;]</code> link through each
+a <code>&lt;device&gt; | xhttp | relay, cdn</code> link through each
 (<a href="../../server/cdn/#in-front-of-a-relay">CDN in front of a relay</a>). See
 <a href="../install/#1-pick-the-site">Set up a relay</a>.</p>
 <p><code>installation.profile=own-site,hysteria2</code>: the relay serves
@@ -2258,13 +2258,13 @@ site's certificate, each device's UUID its login, and carries it on to the
 servers like REALITY. It needs <code>own-site</code>, whose certificate it serves:
 without it the profile is refused. <code>relay-entry</code> then ends the relay's line
 with <code>hy2=&lt;port&gt;</code>, from which the server gives each device a
-<code>[relay &lt;host&gt; hy2]</code> link. Open the UDP port in the provider's firewall, and
+<code>&lt;device&gt; | hy2 | relay</code> link. Open the UDP port in the provider's firewall, and
 replace the relay's line on the server after turning it on.</p>
 <p><code>installation.profile=mkcp</code> (with a site of its own: <code>own-site,mkcp</code>): the
 relay serves <a href="../../server/mkcp/">mKCP</a> on UDP <code>kcp_port</code> too, under its own
 <code>kcp_seed</code>, and carries it on to the servers like REALITY. <code>relay-entry</code> then
 ends the relay's line with <code>kcp=&lt;port&gt;,&lt;header&gt;,&lt;seed&gt;</code>, from which the server
-gives each device a <code>[relay &lt;host&gt; kcp]</code> link. Open the UDP port in the
+gives each device a <code>&lt;device&gt; | kcp | relay</code> link. Open the UDP port in the
 provider's firewall, and replace the relay's line on the server after turning
 it on.</p>
 <h2 id="secrets">Secrets<a class="headerlink" href="#secrets" title="Permanent link">&para;</a></h2>

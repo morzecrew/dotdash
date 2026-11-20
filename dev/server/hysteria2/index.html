@@ -2049,7 +2049,7 @@ brings no login gets the cover site over HTTP/3. Open the UDP port in the
 provider's firewall, then:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>hysteria2<span class="w">   </span><span class="c1"># with the DNS tunnel: xdns,hysteria2</span>
 </code></pre></div>
-<p>Each device gets a <code>phone [hy2]</code> link and an outbound in the Xray config. Its
+<p>Each device gets a <code>phone | hy2</code> link and an outbound in the Xray config. Its
 login is the device's own UUID, so revoking a device in <code>vless_clients</code>
 revokes it here too.</p>
 <ul>
@@ -2083,7 +2083,7 @@ release without it.</p>
 <p>A <a href="../../relay/">relay</a> with a site of its own serves Hysteria2 too
 (<code>installation.profile=own-site,hysteria2</code> on the relay, see its
 <a href="../../relay/reference/#profiles">reference</a>): devices then get a
-<code>[relay &lt;host&gt; hy2]</code> link through it, whether or not this server runs the
+<code>phone | hy2 | relay</code> link through it, whether or not this server runs the
 profile.</p>
 
 
