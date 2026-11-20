@@ -47,10 +47,11 @@ run() { # <name> <port> <group>: mihomo whose one group is <group> over the link
   sudo docker rm -f "mihomo-${name}" >/dev/null
 }
 
-run reality 12081 '{"type": "select", "filter": "\\[reality\\]"}'
-run xhttp 12082 '{"type": "select", "filter": "\\[xhttp\\]"}'
-if grep -qF '%5Bxhttp%2Breality%5D' <<<"${links}"; then
-  run xhttp-reality 12083 '{"type": "select", "filter": "\\[xhttp\\+reality\\]"}'
+# By name, "<device> | <transport>", " | server <n>" with several servers.
+run reality 12081 '{"type": "select", "filter": "\\| reality($| \\| server)"}'
+run xhttp 12082 '{"type": "select", "filter": "\\| xhttp($| \\| server)"}'
+if grep -qF '%20%7C%20xhttp%2Breality' <<<"${links}"; then
+  run xhttp-reality 12083 '{"type": "select", "filter": "\\| xhttp\\+reality($| \\| server)"}'
 fi
 run url-test 12084 "{\"type\": \"url-test\", \"url\": \"${target}\", \"interval\": 30}"
 echo "55-mihomo.sh: mihomo gets through over each transport and behind url-test"

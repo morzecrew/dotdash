@@ -19,7 +19,8 @@ to the server.
   with a certificate for its name, or the borrowed site's real handshake.
 - The relay has keys of its own, and its own copy of the devices allowed in.
   A device uses the same id as on the server, with a separate link per relay,
-  `phone [relay <host>]`.
+  `phone | reality | relay 1`, numbered by the relay's place in the server's
+  `relays`.
 - The relay goes on to the server as one client of its own, a line in the
   server's `vless_clients`. With [several servers](../server/several-servers.md),
   it uses whichever answers fastest, so a ban on one address doesn't cut it off.

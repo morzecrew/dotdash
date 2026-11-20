@@ -28,7 +28,7 @@ CDN fetches from `https://example.com`.
     sudo morzer config set cdn_hosts=cdn.example.net
     ```
 
-3. **Devices**: `client-config` prints a `phone [cdn cdn.example.net]` link,
+3. **Devices**: `client-config` prints a `phone | xhttp | cdn 1` link,
    the Xray config gains an outbound through it, and subscriptions pick it up.
    Give devices the link before restrictions start, as with a
    [relay](../relay/index.md).
@@ -104,7 +104,7 @@ cheap to replace, rather than this server and its upstream.
 
 3. **Here**, replace the relay's line in `relays`
    (`sudo morzer config edit relays`). Devices get a
-   `phone [relay <host> cdn cdn.example.net]` link and an outbound, shaped as
+   `phone | xhttp | relay <n>+cdn <m>` link and an outbound, shaped as
    above, and [pools](devices.md#pools) take the relay's CDN names as members.
 
 #### The CDN's origin only

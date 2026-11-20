@@ -17,17 +17,21 @@ sudo morzer task run client-config --output -- phone    # one
 
 Per device it prints:
 
-- an XHTTP link and a REALITY link, `phone [xhttp]` and `phone [reality]`,
-  for each server; `phone [xhttp+reality]` with
-  [XHTTP with REALITY](xhttp-reality.md) on; `phone [kcp]` with
-  [mKCP](mkcp.md) on; and `phone [relay <host>]` for
-  each [relay](../relay/index.md), with `phone [relay <host> xhttp]` before it
-  through a relay with a site of its own, `phone [relay <host> cdn <name>]`
-  after that through each [CDN in front of it](cdn.md#in-front-of-a-relay),
-  `phone [relay <host> hy2]` after it through a relay with Hysteria2, and
-  `phone [relay <host> kcp]` through a relay with mKCP. XHTTP comes first everywhere: an
-  app tends to try the first link, and REALITY over raw TCP is the transport
-  blocked most often;
+- an XHTTP link and a REALITY link, `phone | xhttp` and `phone | reality`,
+  for each server; `phone | xhttp+reality` with
+  [XHTTP with REALITY](xhttp-reality.md) on; `phone | kcp` with
+  [mKCP](mkcp.md) on; `phone | hy2` with [Hysteria2](hysteria2.md) on; and
+  `phone | reality | relay 1` for each [relay](../relay/index.md), with
+  `phone | xhttp | relay 1` before it through a relay with a site of its own,
+  `phone | xhttp | relay 1+cdn 1` after that through each
+  [CDN in front of it](cdn.md#in-front-of-a-relay), `phone | hy2 | relay 1`
+  after it through a relay with Hysteria2, and `phone | kcp | relay 1`
+  through a relay with mKCP. XHTTP comes first everywhere: an app tends to
+  try the first link, and REALITY over raw TCP is the transport blocked most
+  often. The numbers are a relay's place among the `relays` lines and a CDN's
+  in `cdn_hosts` (or in its relay's `cdn=`), the same on every device, so an
+  app shows no host name; with several servers, links name theirs
+  `server 2`, `server 3` and on, in the order of `servers`;
 - an Xray config for v2rayN or v2rayNG (as a custom config) that uses
   whichever link answers fastest, drops a dead one within about 30 s, and
   falls back to the [DNS tunnel](dns-tunnel.md) when it is on.

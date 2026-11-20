@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Links are named `<device> | <transport>`, with ` | relay <n>`, ` | cdn <n>` or ` | relay <n>+cdn <m>` through a relay or a CDN, and ` | server <n>` with several servers, in place of the host names they used to carry: an app shows no relay, CDN or server name. The numbers follow `relays`, `cdn_hosts` and `servers`.
+
 - The server's gate probes each upstreams line every 10 s instead of 30. When a line goes silent, new connections move to another after about 8 s on average and 12 at most, instead of 18 and 31.
 
 - `dotdash-manager sync` and `rotate swap` read the machines' facts eight at a time instead of one after another, so a fleet of many machines syncs in a fraction of the time.
