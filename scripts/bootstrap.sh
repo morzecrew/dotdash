@@ -13,13 +13,20 @@
 # firewalld anyway, and an SSH port guessed wrong would lock you out.
 set -euo pipefail
 
-# Renovate bumps MORZER_VERSION (renovate.json); SOPS_VERSION and its sums by hand.
-MORZER_VERSION=0.17.0
+# Renovate bumps MORZER_VERSION (renovate.json); SOPS_VERSION, MINISIGN_VERSION
+# and their sums by hand.
+MORZER_VERSION=0.18.0
 SOPS_VERSION=3.13.3
 declare -A SOPS_SHA256=(
 	[amd64]=e5bec3346a873ae91d871550f3e698c1aad962aff462a080e40f25fde17fef6b
 	[arm64]=53b0abacd38ef1b12a66d6c100956691b9cefce018d91f81e73ddf7438b94d77
 )
+# Where the distribution has none (Debian 11, Ubuntu 22.04): minisign's own
+# static build, one archive for both architectures, its signature checked
+# against minisign's key when this sum was taken.
+MINISIGN_VERSION=0.12
+MINISIGN_SHA256=9a599b48ba6eb7b1e80f12f36b94ceca7c00b7a5173c95c3efc88d9822957e73
+declare -A MINISIGN_ARCH=([amd64]=x86_64 [arm64]=aarch64)
 
 say() { printf 'bootstrap: %s\n' "$*"; }
 die() {
@@ -33,11 +40,25 @@ die() {
 case ${ID} in debian | ubuntu) ;; *) die "Debian or Ubuntu only, not ${ID}" ;; esac
 arch=$(dpkg --print-architecture)
 [ -n "${SOPS_SHA256[${arch}]:-}" ] || die "amd64 or arm64 only, not ${arch}"
+tmp=$(mktemp -d)
+trap 'rm -rf "${tmp}"' EXIT
 
 export DEBIAN_FRONTEND=noninteractive
 say "packages"
 apt-get update -qq
-apt-get install -y -qq ca-certificates curl zstd age minisign qrencode unattended-upgrades >/dev/null
+apt-get install -y -qq ca-certificates curl zstd age qrencode unattended-upgrades >/dev/null
+if command -v minisign >/dev/null; then
+	:
+elif apt-cache show minisign >/dev/null 2>&1; then
+	apt-get install -y -qq minisign >/dev/null
+else
+	say "minisign ${MINISIGN_VERSION}, as ${PRETTY_NAME} has none"
+	curl -fsSL -o "${tmp}/minisign.tar.gz" \
+		"https://github.com/jedisct1/minisign/releases/download/${MINISIGN_VERSION}/minisign-${MINISIGN_VERSION}-linux.tar.gz"
+	echo "${MINISIGN_SHA256}  ${tmp}/minisign.tar.gz" | sha256sum -c --quiet
+	tar --warning=no-unknown-keyword -xzf "${tmp}/minisign.tar.gz" -C "${tmp}" "minisign-linux/${MINISIGN_ARCH[${arch}]}/minisign"
+	install -m 0755 "${tmp}/minisign-linux/${MINISIGN_ARCH[${arch}]}/minisign" /usr/local/bin/minisign
+fi
 
 # The distribution's docker.io is older than the Docker 28 and Compose 2.35
 # dotdash requires.
@@ -55,11 +76,9 @@ systemctl enable --now docker >/dev/null
 
 if ! sops --version 2>/dev/null | grep -q "^sops ${SOPS_VERSION}"; then
 	say "sops ${SOPS_VERSION}"
-	tmp=$(mktemp)
-	trap 'rm -f "${tmp}"' EXIT
-	curl -fsSL -o "${tmp}" "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.${arch}"
-	echo "${SOPS_SHA256[${arch}]}  ${tmp}" | sha256sum -c --quiet
-	install -m 0755 "${tmp}" /usr/local/bin/sops
+	curl -fsSL -o "${tmp}/sops" "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.${arch}"
+	echo "${SOPS_SHA256[${arch}]}  ${tmp}/sops" | sha256sum -c --quiet
+	install -m 0755 "${tmp}/sops" /usr/local/bin/sops
 fi
 
 # Never older: `morzer self-update` may have moved past this, and an older
