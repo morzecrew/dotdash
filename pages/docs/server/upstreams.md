@@ -43,11 +43,13 @@ get nothing, never the server's own address: [what leaks where](leaks.md).
 
 ## Order and modes
 
-The gate probes every line through it, fetching `probe_url`, every 30
+The gate probes every line through it, fetching `probe_url`, every 10
 seconds, so every line sees that URL's host name; with `resolve=gateway`,
 clients' destinations still reach them as addresses. A line whose answer
 takes more than 1.5 seconds counts as down, as one that doesn't answer: a line
-throttled that hard would add a second or more to every connection. When no
+throttled that hard would add a second or more to every connection. One
+failed probe is enough, so a line that goes silent takes new connections for
+about 8 seconds on average, 12 at most, before they move to another. When no
 line answers, connections still take the first one rather than none, so a
 wrong verdict, or a single line that is only slow, never stops the traffic;
 a line that is really down fails them itself. `upstream_mode` decides how the lines that answer share the traffic:

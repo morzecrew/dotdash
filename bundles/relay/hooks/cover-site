@@ -3,13 +3,18 @@
 # healthy, and the app behind it, if cover names one, answers. Without
 # the profile the relay borrows a site and has none of its own to check, so it
 # passes.
+#
+# morzer gives a hook no profile (<PRODUCT>_PROFILE is the Compose files'
+# alone), so the files the relay's Compose project runs on say whether
+# own-site is on: compose/own-site.yaml among them.
 set -euo pipefail
 
-case ",${DOTDASH_RELAY_PROFILE:-}," in
-*,own-site,*) ;;
+project=${DOTDASH_RELAY_COMPOSE_PROJECT:-dotdash-relay}
+files=$(docker compose ls --all --format json | grep -o "\"Name\":\"${project}\"[^}]*" || true)
+case $files in
+*/own-site.yaml*) ;;
 *) echo "no site of its own: the relay borrows one (the own-site profile is off)"; exit 0 ;;
 esac
-project=${DOTDASH_RELAY_COMPOSE_PROJECT:-dotdash-relay}
 health=$(docker compose -p "$project" ps --format '{{.Service}}={{.Health}}' | sed -n 's/^caddy=//p')
 [ "$health" = healthy ] || { echo "caddy, the relay's own site, is not healthy: ${health:-not running}" >&2; exit 1; }
 # The app behind the site (cover) answers, asked from Caddy as Caddy

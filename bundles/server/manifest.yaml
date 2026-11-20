@@ -109,7 +109,7 @@ parameters:
     type: enum
     values: [failover, fastest, balance]
     default: failover
-    description: "How the lines of the upstreams secret share the traffic. failover: the first line while it answers, then the fastest of the rest, so the exit stays put; fastest: whichever answers fastest; balance: connections spread over every line that answers, each possibly from another IP. Each line is probed at probe_url every 30 s"
+    description: "How the lines of the upstreams secret share the traffic. failover: the first line while it answers, then the fastest of the rest, so the exit stays put; fastest: whichever answers fastest; balance: connections spread over every line that answers, each possibly from another IP. Each line is probed at probe_url every 10 s"
     services: [gate]
   upstream_pin:
     type: string
@@ -276,7 +276,7 @@ parameters:
   probe_url:
     type: string
     default: https://www.gstatic.com/generate_204
-    description: URL the egress health check fetches through Xray and the upstreams, and the gate probes each upstreams line with every 30 s; any 2xx is healthy
+    description: URL the egress health check fetches through Xray and the upstreams, and the gate probes each upstreams line with every 10 s; any 2xx is healthy
     services: [xray, gate]
 
 images:
