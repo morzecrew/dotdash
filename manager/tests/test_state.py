@@ -1,8 +1,12 @@
 import base64
+import fcntl
 import json
+import os
 import stat
 
+import pytest
 from dotdash_manager import state
+from dotdash_manager.cli import Options
 from dotdash_manager.roster import loads
 
 
@@ -22,3 +26,32 @@ def test_load_keeps_what_it_made_and_save_is_private(tmp_path):
     state.save(path, first)
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert state.load(path, net) == json.loads(path.read_text()) == first
+
+
+def test_save_leaves_nothing_beside_the_state(tmp_path):
+    path = tmp_path / "dotdash-state.json"
+    state.save(path, {"a": 1})
+    state.save(path, {"a": 2})
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["dotdash-state.json"]
+    assert json.loads(path.read_text()) == {"a": 2}
+
+
+def test_one_run_at_a_time(tmp_path):
+    path = tmp_path / "dotdash-state.json"
+    held = state.lock(path)
+    other = os.open(tmp_path / "dotdash-state.lock", os.O_RDWR)
+    with pytest.raises(BlockingIOError):
+        fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    os.close(held)
+    fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    os.close(other)
+
+
+def test_a_dry_run_keeps_no_state(tmp_path):
+    roster = tmp_path / "network.toml"
+    roster.write_text('target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\ndevices = ["phone"]\n')
+    o = Options(roster, "morzer")
+    st = o.open(dry_run=True)[1]
+    assert "phone" in st["ids"] and not o.state.exists()
+    o.open()
+    assert json.loads(o.state.read_text())["keys"] == o.open()[1]["keys"]
