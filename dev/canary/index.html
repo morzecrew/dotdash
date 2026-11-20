@@ -2165,7 +2165,10 @@ reassembling TCP but not TLS records, and the manager then
 <code>canary-config</code> prints how to point a canary at each of the others. To watch a
 relay instead, run the commands its <code>relay-entry</code> prints on the canary,
 without the xhttp profiles: the canary then connects through the relay, as a
-phone on that network would.</p>
+phone on that network would. A relay with Hysteria2 of its own prints the
+<code>hysteria2</code> profile and its port too, and the canary checks it under the
+relay's own site's certificate. A canary that follows the
+<a href="../manager/">manager</a> gets that port from it.</p>
 <h2 id="on-a-mobile-line">On a mobile line<a class="headerlink" href="#on-a-mobile-line" title="Permanent link">&para;</a></h2>
 <p>Mobile networks can be restricted where wired lines are not, so a canary on
 a wired line can't see what phones see. Run one on a small machine with a USB
@@ -2221,7 +2224,7 @@ relay's address no longer gets through for devices.</p>
 <tr>
 <td><code>dotdash_hysteria2_port</code></td>
 <td><code>443</code></td>
-<td>the server's <code>hysteria2_port</code></td>
+<td>the server's <code>hysteria2_port</code>, or a relay's</td>
 </tr>
 <tr>
 <td><code>dotdash_hysteria2_pin</code></td>

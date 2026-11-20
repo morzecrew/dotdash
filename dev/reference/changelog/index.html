@@ -3074,7 +3074,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
-<li>A relay with a site of its own serves Hysteria2 too, under that site's certificate (<code>installation.profile=own-site,hysteria2</code>, UDP <code>hysteria2_port</code>, 443). Its <code>relay-entry</code> line ends with <code>hy2=&lt;port&gt;</code>, and devices get a <code>[relay &lt;host&gt; hy2]</code> link and outbound through it.</li>
+<li>
+<p>A relay with a site of its own serves Hysteria2 too, under that site's certificate (<code>installation.profile=own-site,hysteria2</code>, UDP <code>hysteria2_port</code>, 443). Its <code>relay-entry</code> line ends with <code>hy2=&lt;port&gt;</code>, and devices get a <code>[relay &lt;host&gt; hy2]</code> link and outbound through it.</p>
+</li>
+<li>
+<p><code>dotdash-manager</code> gives a canary watching a relay with Hysteria2 the relay's port (<code>dotdash_hysteria2_port</code>), so the canary's <code>hysteria2</code> profile checks it, and a relay whose Hysteria2 its canaries can't get through loses that link (<code>off=hysteria2</code>).</p>
+</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
