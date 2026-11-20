@@ -1,12 +1,10 @@
 #!/bin/sh
 # metrics.sh <product> <role> <url>: the metrics profile's exporter. Every
-# minute, the Xray's metrics endpoint (/debug/vars, on 127.0.0.1 in the
-# namespace this shares) turned into Prometheus text by metrics.jq, written
-# to the node exporter's textfile directory (/textfile) as
-# dotdash-<product>-<role>.prom, to a temporary name renamed into place, as
-# morzer writes its own. With no answer, dotdash_xray_up is 0; after three
-# minutes of none this exits, so its restart joins a recreated Xray's
-# namespace. jq is the jq image's, mounted at /jq.
+# minute, the Xray's metrics endpoint (/debug/vars, on the metrics network)
+# turned into Prometheus text by metrics.jq, written to the node exporter's
+# textfile directory (/textfile) as dotdash-<product>-<role>.prom, to a
+# temporary name renamed into place, as morzer writes its own. With no
+# answer, dotdash_xray_up is 0. jq is the jq image's, mounted at /jq.
 #
 # metrics.sh --demo checks the conversion against a sample, with the jq on PATH.
 set -u
@@ -42,16 +40,10 @@ fi
 
 product=${1:?product} role=${2:?role} url=${3:?url}
 out=/textfile/dotdash-$product-$role.prom
-missed=0
 while :; do
-  if wget -q -T 10 -O /tmp/vars "$url" 2>/dev/null && convert "$product" "$role" </tmp/vars >"$out.tmp"; then
-    missed=0
-  else
+  wget -q -T 10 -O /tmp/vars "$url" 2>/dev/null && convert "$product" "$role" </tmp/vars >"$out.tmp" ||
     printf '# HELP dotdash_xray_up 1 when the metrics endpoint answered\n# TYPE dotdash_xray_up gauge\ndotdash_xray_up{product="%s",role="%s"} 0\n' \
       "$product" "$role" >"$out.tmp"
-    missed=$((missed + 1))
-  fi
   chmod 0644 "$out.tmp" && mv "$out.tmp" "$out"
-  [ "$missed" -lt 3 ] || { echo "metrics.sh: no answer from $url in 3 tries" >&2; exit 1; }
   sleep 60
 done

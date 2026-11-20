@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Under the `metrics` profile, a change of a secret after `morzer restart xray` restarts Xray again instead of failing: the exporters reach Xray's and the gate's metrics on an internal network of their own rather than sharing their network namespaces, which a recreate left them stranded in. The same holds on the relay.
+
 - A device's subscription through an own-site relay serves its links again. The relay's Caddy passed the request on with a `Via` header, which the server takes for a CDN's, so the server answered with its site, and apps reported a config they could not parse.
 
 - The relay's `cover-site` health check checks its own site under the `own-site` profile: that Caddy is healthy and the app `cover` names answers. It used to report the profile off and pass, so `config set cover=` was never undone when the site could not reach the app.

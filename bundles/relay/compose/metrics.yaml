@@ -1,9 +1,13 @@
 # The metrics profile: the relay's traffic per inbound and outbound, and its
 # verdicts on the servers, every minute into the node exporter's textfile
 # directory (metrics_textfile), as dotdash-dotdash-relay-xray.prom. The
-# exporter shares Xray's network namespace, where Xray's metrics listen on
-# 127.0.0.1 alone, and runs as 65532 like the rest: the directory has to be
-# writable by it (sudo setfacl -m u:65532:rwx <it>). Never per device.
+# exporter reaches Xray's metrics on a network of its own, internal, where
+# Xray listens under a name it has there alone (xray-metrics), so nowhere
+# else. Not in Xray's namespace: a namespace shared with a container goes when
+# that one is recreated (morzer restart xray), and the next restart of it then
+# fails on the exporter left behind. It runs as 65532 like the rest: the
+# directory has to be writable by it (sudo setfacl -m u:65532:rwx <it>).
+# Never per device.
 x-exporter: &exporter
   # The Caddy image for its shell and wget, as the server's tasks; jq is the
   # jq image's, mounted whole at /jq.
@@ -31,7 +35,16 @@ x-exporter: &exporter
       bind: {create_host_path: false}
 
 services:
+  xray:
+    # default stays: a service's networks replace the default it is on alone.
+    networks:
+      default: {}
+      metrics: {aliases: [xray-metrics]}
   metrics-xray:
     <<: *exporter
-    network_mode: service:xray
-    command: ["dotdash-relay", "xray", "http://127.0.0.1:11111/debug/vars"]
+    networks: [metrics]
+    command: ["dotdash-relay", "xray", "http://xray-metrics:11111/debug/vars"]
+
+networks:
+  metrics:
+    internal: true
