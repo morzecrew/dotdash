@@ -97,9 +97,12 @@ http://127.0.0.1:8081 {
 	# answers serves it; the servers share their keys, so any has the file.
 	# The device's address stays here. A request a CDN in front passed on,
 	# which says so in one of these headers, gets the site's 404 instead, as
-	# on the server: a device's links never pass through a CDN.
+	# on the server: a device's links never pass through a CDN. So does one
+	# under any name but this relay's domain, which a device always asks by:
+	# a CDN that strips those headers is told apart by the Host it sends.
 	@subscription {
 		path_regexp ^/[0-9a-f]{32}(\.json)?$
+		host {$DOMAIN}
 		not header X-Forwarded-For *
 		not header X-Forwarded-Host *
 		not header X-Forwarded-Proto *
