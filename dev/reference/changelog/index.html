@@ -3062,6 +3062,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>A device's subscription through an own-site relay serves its links again. The relay's Caddy passed the request on with a <code>Via</code> header, which the server takes for a CDN's, so the server answered with its site, and apps reported a config they could not parse.</p>
+</li>
+<li>
 <p>The relay's <code>cover-site</code> health check checks its own site under the <code>own-site</code> profile: that Caddy is healthy and the app <code>cover</code> names answers. It used to report the profile off and pass, so <code>config set cover=</code> was never undone when the site could not reach the app.</p>
 </li>
 <li>
