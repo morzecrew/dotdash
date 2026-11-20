@@ -2049,7 +2049,7 @@ Encryption still protects what they carry. Open the UDP port in the
 provider's firewall, then:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>mkcp<span class="w">   </span><span class="c1"># with the DNS tunnel: xdns,mkcp</span>
 </code></pre></div>
-<p>Each device gets a <code>phone | kcp</code> link and an outbound in the Xray config.</p>
+<p>Each device gets a <code>server · kcp</code> link and an outbound in the Xray config.</p>
 <ul>
 <li><strong>Clients:</strong> v2rayN and v2rayNG. mihomo has no mKCP: it treats the link as
   TCP, which never answers, and its health check skips it. sing-box apps

@@ -2166,22 +2166,26 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
 </code></pre></div>
 <p>Per device it prints:</p>
 <ul>
-<li>an XHTTP link and a REALITY link, <code>phone | xhttp</code> and <code>phone | reality</code>,
-  for each server; <code>phone | xhttp+reality</code> with
-  <a href="../xhttp-reality/">XHTTP with REALITY</a> on; <code>phone | kcp</code> with
-  <a href="../mkcp/">mKCP</a> on; <code>phone | hy2</code> with <a href="../hysteria2/">Hysteria2</a> on; and
-  <code>phone | reality | relay</code> for each <a href="../../relay/">relay</a>, with
-  <code>phone | xhttp | relay</code> before it through a relay with a site of its own,
-  <code>phone | xhttp | relay, cdn</code> after that through each
-  <a href="../cdn/#in-front-of-a-relay">CDN in front of it</a>, <code>phone | hy2 | relay</code>
-  after it through a relay with Hysteria2, and <code>phone | kcp | relay</code>
-  through a relay with mKCP. XHTTP comes first everywhere: an app tends to
+<li>an XHTTP link and a REALITY link, <code>server · xhttp</code> and <code>server · reality</code>,
+  for each server; <code>server · xhttp+reality</code> with
+  <a href="../xhttp-reality/">XHTTP with REALITY</a> on; <code>server · kcp</code> with
+  <a href="../mkcp/">mKCP</a> on; <code>server · hy2</code> with <a href="../hysteria2/">Hysteria2</a> on; and
+  <code>relay · reality</code> for each <a href="../../relay/">relay</a>, with
+  <code>relay · xhttp</code> before it through a relay with a site of its own,
+  <code>relay · cdn</code> after that through each
+  <a href="../cdn/#in-front-of-a-relay">CDN in front of it</a>, <code>relay · hy2</code>
+  after it through a relay with Hysteria2, and <code>relay · kcp</code>
+  through a relay with mKCP; <code>server · cdn</code> through each CDN in front of the
+  server. XHTTP comes first everywhere: an app tends to
   try the first link, and REALITY over raw TCP is the transport blocked most
-  often. Where there are several, each is numbered, <code>relay 1, cdn 2</code>: a
+  often. A link is named <code>&lt;route&gt; · &lt;transport&gt;</code>, without the device's name:
+  its subscription is its own, and the app shows the protocol beside it.
+  Where there are several, each is numbered, <code>relay 1 · cdn 2</code>: a
   relay by its place among the <code>relays</code> lines, a CDN by its place in
   <code>cdn_hosts</code> (or in its relay's <code>cdn=</code>), the same on every device, so an
-  app shows no host name; with several servers, links name theirs
-  <code>server 2</code>, <code>server 3</code> and on, in the order of <code>servers</code>;</li>
+  app shows no host name; with several servers, <code>server 1</code>, <code>server 2</code> and
+  on, in the order of <code>servers</code>. A relay with a
+  <a href="../../relay/reference/#parameters">name</a> goes by it instead: <code>edge-1 · reality</code>;</li>
 <li>an Xray config for v2rayN or v2rayNG (as a custom config) that uses
   whichever link answers fastest, drops a dead one within about 30 s, and
   falls back to the <a href="../dns-tunnel/">DNS tunnel</a> when it is on.</li>

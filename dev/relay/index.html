@@ -2022,8 +2022,8 @@ to the server.</p>
   with a certificate for its name, or the borrowed site's real handshake.</li>
 <li>The relay has keys of its own, and its own copy of the devices allowed in.
   A device uses the same id as on the server, with a separate link per relay,
-  <code>phone | reality | relay</code>, numbered with several relays (<code>relay 2</code>) by its
-  place in the server's <code>relays</code>.</li>
+  <code>relay · reality</code>, numbered with several relays (<code>relay 2 · reality</code>) by
+  its place in the server's <code>relays</code>, or named after the relay's <code>name</code>.</li>
 <li>The relay goes on to the server as one client of its own, a line in the
   server's <code>vless_clients</code>. With <a href="../server/several-servers/">several servers</a>,
   it uses whichever answers fastest, so a ban on one address doesn't cut it off.</li>
