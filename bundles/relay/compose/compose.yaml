@@ -74,6 +74,7 @@ services:
       CDN_HOSTS: ${DOTDASH_RELAY_PARAM_CDN_HOSTS:-none}
       CDN_ONLY: ${DOTDASH_RELAY_PARAM_CDN_ONLY:-false}
       ENTRY_HOST: ${DOTDASH_RELAY_PARAM_ENTRY_HOST:-none}
+      NAME: ${DOTDASH_RELAY_PARAM_NAME:-none}
     volumes:
       - ${DOTDASH_RELAY_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image

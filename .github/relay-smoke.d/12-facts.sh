@@ -26,3 +26,19 @@ want=$(jq -nc --arg h "${host}" --arg s "${site}" --arg p "${pbk}" --arg i "${si
 got=$(jq -c '{entry_host, site, public_key, short_id, encryption}' <<<"${facts}") || die "the facts are not JSON: ${facts}"
 [ "${got}" = "${want}" ] || die "the facts are not relay-entry's line: ${got} against ${want}"
 echo "${0##*/}: facts are relay-entry's line at entry_host, and relay-entry takes entry_host too"
+
+# The name parameter: relay-entry ends the line with name=, the facts carry it,
+# and a malformed one is left out of both.
+if sudo grep -q '^  name:$' /opt/dotdash-relay/current/manifest.yaml; then
+  unname() { sudo morzer config unset entry_host name >/dev/null; }
+  sudo morzer config set entry_host=127.0.0.1 name=edge-1 >/dev/null || die "could not set entry_host and name"
+  entry=$(sudo morzer task run relay-entry --output | grep -m1 '^127\.0\.0\.1 ' || true)
+  facts=$(sudo morzer task run facts --output) || { unname; die "the facts task failed with a name"; }
+  [[ ${entry} == *" name=edge-1" ]] || { unname; die "relay-entry's line does not end with the relay's name"; }
+  [ "$(jq -r .name <<<"${facts}")" = edge-1 ] || { unname; die "the facts do not carry the relay's name"; }
+  sudo morzer config set name=bad/name >/dev/null || { unname; die "could not set a malformed name"; }
+  entry=$(sudo morzer task run relay-entry --output 2>/dev/null | grep -m1 '^127\.0\.0\.1 ' || true)
+  unname
+  if [ -z "${entry}" ] || [[ ${entry} == *name=* ]]; then die "relay-entry put a malformed name on its line, or none"; fi
+  echo "${0##*/}: relay-entry and the facts carry the relay's name; a malformed one neither"
+fi

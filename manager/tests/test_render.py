@@ -118,6 +118,12 @@ def test_a_relay_line_carries_its_hysteria2_port_after_mkcp():
                                       " cdn=c.example.net off=hysteria2")
 
 
+def test_a_relay_line_carries_its_name_before_what_the_manager_adds():
+    f = {"entry_host": "203.0.113.5", "site": "s.example.org", "public_key": "P", "short_id": "S", "encryption": "E",
+         "name": "edge-1"}
+    assert relay_line(f, {"reality"}, split=True) == "203.0.113.5 s.example.org P S E name=edge-1 off=reality split"
+
+
 def test_a_canary_on_a_relay_gets_its_hysteria2_port(net, st, facts):
     docs, _ = render(net, st, facts)
     assert "dotdash_hysteria2_port" not in docs["c1"]["parameters"]

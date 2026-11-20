@@ -12,6 +12,7 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `entry_host` | `none` | the address devices reach the relay at, its IP without a domain, for `relay-entry` with no address and for `facts`; `none` under `own-site` is the relay's domain |
 | `cdn_hosts` | `none` | with `own-site`, the names devices use for [local CDNs](../server/cdn.md#in-front-of-a-relay) in front of the relay, comma-separated; `relay-entry` adds them to the relay's line |
 | `cdn_only` | `false` | `true`: devices get the relay's CDN links alone, none to its own address, so it stays the [CDNs' origin](../server/cdn.md#the-cdns-origin-only); `relay-entry` ends the line with `cdn-only`, and refuses it without `cdn_hosts` |
+| `name` | `none` | a label of up to 24 letters, digits, dots, dashes or underscores that devices' links through the relay carry in place of `relay <n>`: `edge-1 · reality`. `relay-entry` ends the line with `name=`; a name an earlier line took goes by the number. Every device's app shows it, so pick one that says nothing about where the relay is hosted |
 | `dotdash_servers` | none, given at `init` | the dotdash servers sharing one set of keys, comma-separated domains; the relay uses whichever answers fastest |
 | `dotdash_port` | `443` | the servers' `https_port` |
 | `dotdash_public_key` | none, given at `init` | the servers' REALITY public key, the `pbk` of their links |
@@ -38,7 +39,7 @@ certificate. The site also serves devices their subscriptions, fetched from
 the servers through the relay's tunnel, and XHTTP on the secret path
 `xhttp_path`, which `init` generates. With `cdn_hosts` set, `relay-entry`
 ends the relay's line with `cdn=<name>,...`, and the server gives each device
-a `<device> | xhttp | relay, cdn` link through each
+a `relay · cdn` link through each
 ([CDN in front of a relay](../server/cdn.md#in-front-of-a-relay)). See
 [Set up a relay](install.md#1-pick-the-site).
 
@@ -48,14 +49,14 @@ site's certificate, each device's UUID its login, and carries it on to the
 servers like REALITY. It needs `own-site`, whose certificate it serves:
 without it the profile is refused. `relay-entry` then ends the relay's line
 with `hy2=<port>`, from which the server gives each device a
-`<device> | hy2 | relay` link. Open the UDP port in the provider's firewall, and
+`relay · hy2` link. Open the UDP port in the provider's firewall, and
 replace the relay's line on the server after turning it on.
 
 `installation.profile=mkcp` (with a site of its own: `own-site,mkcp`): the
 relay serves [mKCP](../server/mkcp.md) on UDP `kcp_port` too, under its own
 `kcp_seed`, and carries it on to the servers like REALITY. `relay-entry` then
 ends the relay's line with `kcp=<port>,<header>,<seed>`, from which the server
-gives each device a `<device> | kcp | relay` link. Open the UDP port in the
+gives each device a `relay · kcp` link. Open the UDP port in the
 provider's firewall, and replace the relay's line on the server after turning
 it on.
 

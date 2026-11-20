@@ -37,7 +37,7 @@
 | `cover` | `pages` | what the [cover site](cover-site.md) serves past your own files in `/srv/dotdash`: `pages`, the bundled page, or your app's URL, such as `http://cover-app:8080` on the network `dotdash_edge` or `http://host.docker.internal:8080` for one published on the host |
 | `servers` | `self` | servers sharing these keys, comma-separated |
 | `cdn_hosts` | `none` | the names of local [CDNs](cdn.md#a-local-cdn-for-restricted-networks) in front of this server, comma-separated; a link through each |
-| `relays` | a comment | one `<host> <site> <public key> <short id> <encryption>` line per [relay](../relay/install.md), as its `relay-entry` prints it, with `own-site <path>`, `kcp=<port>,<header>,<seed>`, `hy2=<port>` and `cdn=<name>[,<name>]` after it where the relay has them; `off=<path>[,<path>]` (`reality`, `xhttp`, `mkcp`, `hysteria2`) leaves out paths its canaries find [blocked](../manager.md#blocked-paths) |
+| `relays` | a comment | one `<host> <site> <public key> <short id> <encryption>` line per [relay](../relay/install.md), as its `relay-entry` prints it, with `own-site <path>`, `kcp=<port>,<header>,<seed>`, `hy2=<port>`, `cdn=<name>[,<name>]` and `name=<label>` after it where the relay has them; `off=<path>[,<path>]` (`reality`, `xhttp`, `mkcp`, `hysteria2`) leaves out paths its canaries find [blocked](../manager.md#blocked-paths) |
 | `pools` | a comment | one `<pool> <member>...` line per [pool](devices.md#pools), the members device names, relay hosts and CDN hosts |
 | `direct` | `true` | `false`: no server's address in devices' links, configs or subscriptions, only [relays and CDN hosts](devices.md#keeping-the-servers-out-of-devices-links) |
 

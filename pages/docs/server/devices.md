@@ -17,22 +17,26 @@ sudo morzer task run client-config --output -- phone    # one
 
 Per device it prints:
 
-- an XHTTP link and a REALITY link, `phone | xhttp` and `phone | reality`,
-  for each server; `phone | xhttp+reality` with
-  [XHTTP with REALITY](xhttp-reality.md) on; `phone | kcp` with
-  [mKCP](mkcp.md) on; `phone | hy2` with [Hysteria2](hysteria2.md) on; and
-  `phone | reality | relay` for each [relay](../relay/index.md), with
-  `phone | xhttp | relay` before it through a relay with a site of its own,
-  `phone | xhttp | relay, cdn` after that through each
-  [CDN in front of it](cdn.md#in-front-of-a-relay), `phone | hy2 | relay`
-  after it through a relay with Hysteria2, and `phone | kcp | relay`
-  through a relay with mKCP. XHTTP comes first everywhere: an app tends to
+- an XHTTP link and a REALITY link, `server · xhttp` and `server · reality`,
+  for each server; `server · xhttp+reality` with
+  [XHTTP with REALITY](xhttp-reality.md) on; `server · kcp` with
+  [mKCP](mkcp.md) on; `server · hy2` with [Hysteria2](hysteria2.md) on; and
+  `relay · reality` for each [relay](../relay/index.md), with
+  `relay · xhttp` before it through a relay with a site of its own,
+  `relay · cdn` after that through each
+  [CDN in front of it](cdn.md#in-front-of-a-relay), `relay · hy2`
+  after it through a relay with Hysteria2, and `relay · kcp`
+  through a relay with mKCP; `server · cdn` through each CDN in front of the
+  server. XHTTP comes first everywhere: an app tends to
   try the first link, and REALITY over raw TCP is the transport blocked most
-  often. Where there are several, each is numbered, `relay 1, cdn 2`: a
+  often. A link is named `<route> · <transport>`, without the device's name:
+  its subscription is its own, and the app shows the protocol beside it.
+  Where there are several, each is numbered, `relay 1 · cdn 2`: a
   relay by its place among the `relays` lines, a CDN by its place in
   `cdn_hosts` (or in its relay's `cdn=`), the same on every device, so an
-  app shows no host name; with several servers, links name theirs
-  `server 2`, `server 3` and on, in the order of `servers`;
+  app shows no host name; with several servers, `server 1`, `server 2` and
+  on, in the order of `servers`. A relay with a
+  [name](../relay/reference.md#parameters) goes by it instead: `edge-1 · reality`;
 - an Xray config for v2rayN or v2rayNG (as a custom config) that uses
   whichever link answers fastest, drops a dead one within about 30 s, and
   falls back to the [DNS tunnel](dns-tunnel.md) when it is on.

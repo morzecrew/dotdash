@@ -39,6 +39,15 @@ case $cdn in
   *) [ "${OWN_SITE:-}" = true ] ||
        { echo "cdn_hosts needs the own-site profile, whose site a CDN fetches from; leaving it out" >&2; cdn=; } ;;
 esac
+# name: a label devices' links through this relay carry in place of
+# "relay <n>". The server's relays line is split on spaces, so letters,
+# digits, dots, dashes and underscores alone.
+name=${NAME:-none}
+case $name in
+  none) name= ;;
+  '' | ?????????????????????????* | *[!A-Za-z0-9._-]*)
+    echo "name is not 1 to 24 letters, digits, dots, dashes or underscores: $name; leaving it out" >&2; name= ;;
+esac
 # cdn_only: devices get the CDN links alone, so this relay's own address
 # reaches none of them; with no CDN that would be no link at all.
 only=
