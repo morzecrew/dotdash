@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The relay's `cover-site` health check checks its own site under the `own-site` profile: that Caddy is healthy and the app `cover` names answers. It used to report the profile off and pass, so `config set cover=` was never undone when the site could not reach the app.
+
 - `dotdash-manager` runs one at a time on its state, and a second run waits. Two overlapping runs, such as a timer's `sync` during a `rotate`, could lose each other's changes. The state is synced to disk before it replaces the old one, and `sync --dry-run` no longer writes it.
 
 - `dotdash-manager sync` judges a relay only by canary readings within 90 minutes of the newest. A canary that went quiet used to hold a relay up with an old success while another canary found it blocked.

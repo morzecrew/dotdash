@@ -15,7 +15,8 @@
 #   relay's site, and relay-entry marks the line own-site;
 # - with the XHTTP path relay-entry adds, a device gets out over XHTTP behind
 #   the relay's site, under its certificate;
-# - an app behind the site (cover) serves it, and doctor passes;
+# - an app behind the site (cover) serves it, and doctor passes, its
+#   cover-site check on the own site; with the app gone, doctor fails;
 # - dropping the profile brings back the borrowed site, and devices on it.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
@@ -191,9 +192,15 @@ if sudo grep -qx '  cover:' /opt/dotdash-relay/current/manifest.yaml; then
   page=$(curl -sk --max-time 10 --resolve "${domain}:443:127.0.0.1" "https://${domain}/" || true)
   [ "${page}" = "cover app" ] || die "the relay's site is not the app's: $(head -c 200 <<<"${page}")"
   sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the app up: $(sudo morzer doctor 2>&1 | tail -5)"
+  # The check looked at the own site, not past it as for a borrowed one.
+  status=$(sudo morzer status 2>&1 || true)
+  [[ ${status} == *"the relay's own site is up"* ]] ||
+    die "cover-site did not check the own site: $(grep -F cover-site <<<"${status}")"
+  sudo docker stop relay-rig-cover-app >/dev/null
+  ! sudo morzer doctor >/dev/null 2>&1 || die "doctor passes with the app behind the site gone"
   set_config cover=pages
   sudo docker rm -f relay-rig-cover-app >/dev/null
-  echo "${0##*/}: an app behind the relay's site serves it, and doctor passes"
+  echo "${0##*/}: an app behind the relay's site serves it, and doctor passes; with the app gone, it fails"
 fi
 
 sudo morzer config unset installation.profile >/dev/null || die "could not drop the own-site profile"
