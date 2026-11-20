@@ -18,8 +18,13 @@ group, upstream and under ipv6=separate ipv6, the first line is tagged
 <group>-0 and the rest <group>-b<n>, after upstream_pin moves a line to the
 front (gate.env), so the balancers below select them by prefix without
 knowing how many there are. Xray's burst observatory probes every one at
-probe_url every 30 s, each at a moment of its own, and a probe that takes
-more than 1.5 s counts as failed. Its plain observatory gives a probe 5 s,
+probe_url every 10 s, each at a moment of its own, and a probe that takes
+more than 1.5 s counts as failed. One failed probe takes a line out (sampling
+1), so a line gone silent takes new connections until its next probe: about
+8 s on average and 12 at worst every 10 s, against 18 and 31 every 30 s. Not
+shorter: a round drops the last one's probes still pending, and a dead
+line's takes the whole 1.5 s to fail, so at 5 s three in ten were lost and
+lines waited longer (dotdash-lab #62). Its plain observatory gives a probe 5 s,
 about six round trips through a proxy, so a line 300 ms slower each way
 than it should be still counted as answering while it added a second to
 every connection (dotdash-lab #58). At 1.5 s such a line counts as down and
@@ -114,7 +119,7 @@ fails on its empty value with the message. */ -}}
 {{- end }}
 {{- end }}
   ],
-  "burstObservatory": {"subjectSelector": ["upstream-"{{ if $v6 }}, "ipv6-"{{ end }}], "pingConfig": {"destination": "{{ .Parameters.probe_url }}", "interval": "30s", "sampling": 1, "timeout": "1.5s"}},
+  "burstObservatory": {"subjectSelector": ["upstream-"{{ if $v6 }}, "ipv6-"{{ end }}], "pingConfig": {"destination": "{{ .Parameters.probe_url }}", "interval": "10s", "sampling": 1, "timeout": "1.5s"}},
   "routing": {
     "domainStrategy": "AsIs",
     "balancers": [
