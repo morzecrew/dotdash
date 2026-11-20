@@ -108,3 +108,11 @@ def test_a_canary_on_a_server_gets_its_hysteria2_port(st, facts):
     assert "dotdash_hysteria2_port" not in docs["c1"]["parameters"]
     docs, _ = render(net, st, {**facts, "a": {**facts["a"], "hysteria2_port": 8443}})
     assert docs["c1"]["parameters"]["dotdash_hysteria2_port"] == "8443"
+
+
+def test_a_canary_on_a_relay_gets_its_hysteria2_port(net, st, facts):
+    docs, _ = render(net, st, facts)
+    assert "dotdash_hysteria2_port" not in docs["c1"]["parameters"]
+    docs, _ = render(net, st, {**facts, "r1": {**RELAY, "own_site": {"xhttp_path": "x"}, "hysteria2": {"port": 443}}})
+    assert docs["c1"]["parameters"]["dotdash_hysteria2_port"] == "443"
+    assert docs["c1"]["parameters"]["dotdash_server"] == "www.example.net"

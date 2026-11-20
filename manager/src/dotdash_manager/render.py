@@ -145,6 +145,10 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
                 sec["dotdash_xhttp_path"] = f["own_site"]["xhttp_path"]
             if "kcp" in f:
                 sec["dotdash_kcp_seed"] = f["kcp"]["seed"]
+            # A relay with Hysteria2 (its own site's): the canary's hysteria2
+            # profile checks it as it checks a server's.
+            if "hysteria2" in f:
+                params["dotdash_hysteria2_port"] = str(f["hysteria2"]["port"])
         if "kcp" in f:
             params.update(dotdash_kcp_port=str(f["kcp"]["port"]), dotdash_kcp_header=f["kcp"]["header"], dotdash_kcp_open=f["kcp"].get("open", "none"))
         docs[c.name] = {"parameters": params, "secrets": {"dotdash_id": ids[f"canary-{c.name}"], **sec}}
