@@ -1,14 +1,14 @@
-# dotdash 0.11.2
+# dotdash 0.11.3
 
-Nothing needs doing before updating from 0.11.1, and `morzer rollback` back to it works. It needs morzer 0.18.0, as 0.11.1 did.
+Nothing needs doing before updating from 0.11.2, and `morzer rollback` back to it works. It needs morzer 0.18.0, as 0.11.2 did.
 
-- **A CDN in front:** run `cdn-check` again after updating. Behind an app as cover, an earlier one said `SERVES SUBSCRIPTIONS` for a CDN that was in fact refused; this one tells the two apart.
+- **CDN links:** apps pick up the smaller uploads at their next subscription refresh. A CDN link imported by hand keeps the old size, and its larger uploads keep failing, until it is imported again.
 
 ```sh
 sudo morzer update --stage
-sudo morzer update --to 0.11.2
+sudo morzer update --to 0.11.3
 ```
 
 ### Fixed
 
-- `cdn-check` no longer reports a CDN as serving subscriptions when an app behind the site (`cover`) answers every path: it now knows its decoy by the decoy's contents, and calls a 2xx without them refused.
+- CDN links upload at most 8 KiB per request instead of 32 KiB. Base64-encoded into headers, 32 KiB came to about 44 KB, past the 20 KB or so of headers CDN edges take, so any larger upload got a 431 and broke its connection.
