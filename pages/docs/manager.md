@@ -83,28 +83,65 @@ roster doesn't know is refused, so a mistyped one can't pass unnoticed.
 
 ## Add a machine
 
-Name it in the roster first. Then:
+Name it in the roster first, run `sync` so the servers learn its device, then
+pipe `join`'s script to the new machine over ssh, and what it prints back to
+`joined`:
 
 ```sh
-dotdash-manager sync          # the servers learn its device
-dotdash-manager join r1       # what to run on it
+dotdash-manager sync
+dotdash-manager join r1 --site site.example.net --entry-host 203.0.113.7 \
+  | ssh root@203.0.113.7 sh | dotdash-manager joined r1
+dotdash-manager sync          # r1 gets its document
 ```
 
-`join` prints the machine's `init`, its secrets and its sync settings, as
-`relay-config` does, and the line that reads its installation id and signing
-key. Give it those in the roster:
+The script installs what the machine lacks (`scripts/bootstrap.sh`, as on a
+fresh Debian or Ubuntu), runs its `init` with the values it needs, sets its
+secrets, points it at the manager and applies. On a machine where the bundle
+is installed already, it leaves the installation as it is and only points it
+at the manager, whose document brings the rest. Its last line carries the
+machine's installation id and signing key, which `joined` keeps in the
+manager's state, so the next `sync` sends the machine its document. The rest
+of its output passes through, so a failure shows; `joined` then keeps
+nothing, and the script can run again.
 
-```toml
-[[relay]]
-name = "r1"
-id = "inst_01…"
-key = "RW…"
+What each kind needs to be installed:
+
+- **A server:** `--domain` and `--upstreams <file>`, its ways out, one per
+  line. It comes up on keys of its own: the first document replaces them, and
+  relays, canaries and clients move to it once its facts show the manager's
+  key. A relay, canary or client waits for a server that has.
+- **A relay:** `--site` and `--entry-host` (a neighbour's site, and the
+  address devices reach it at), or `--domain` for one of its own site.
+- **A canary or a client:** nothing more.
+
+Backups are encrypted to the identity's age recipient, or to `--recovery`.
+The script holds the machine's credentials: send it to that machine only. A
+roster entry's own `id` and `key`, as earlier releases had you write them,
+still win over what `joined` kept.
+
+## Moving a running network
+
+A network set up by hand moves to the manager without devices noticing: the
+manager takes a running server's keys and its devices' ids instead of making
+its own, so devices keep their links and subscription URLs. Name the server,
+its relays and the devices in the roster under the names the server already
+uses (`client-config` prints them), then, before the first `sync`:
+
+```sh
+dotdash-manager adopt a       # prints what to run on server a
+ssh root@a.example 'sudo sh -c …' | dotdash-manager adopt a
 ```
 
-Then run `sync` again. A new server comes up on keys of its own: the first
-document replaces them, and relays, canaries and clients move to it once its
-facts show the manager's key. A relay, canary or client waits for a server
-that has.
+It says which devices keep their links, which are new to the server, and
+which the server has but the roster doesn't, which lose access at the next
+`sync` unless you add them. Finish a [key rotation](#rotating-the-reality-key)
+first: only the current key is taken. Once the manager has published, `adopt`
+refuses, since it would change the keys on every machine again; `--force` when
+that is meant.
+
+Then join every machine as above, the running server and relays included,
+with no options: the script finds them installed and only points them at the
+manager. Relays keep their own keys, so devices keep their relay links too.
 
 ## Keep it current
 

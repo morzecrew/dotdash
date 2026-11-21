@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `dotdash-manager adopt` takes a running server's keys and its devices' ids, so a network set up by hand moves under the manager without devices getting new links or subscription URLs.
+
+- `dotdash-manager join` prints a script to pipe over ssh, and `joined` keeps the id and key it prints back. Nothing goes into the roster by hand, and a machine installed already is only pointed at the manager.
+
 - dotdash-client's `proxy_rules` send destinations through dotdash even when a direct rule matches them too, such as one site out of a geosite list that otherwise goes around it. Block rules still come first.
 
 ## [0.13.0] - 2026-11-21

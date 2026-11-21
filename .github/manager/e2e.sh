@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # dotdash-manager against a real server, in the rig: an authority on a file://
-# target, the server following it. The first sync hands the server the
-# manager's keys and devices; once it applied them, its facts say so, and the
-# second sync has nothing to change.
+# target, the server following it. The server ran before the manager, with a
+# device of its own: adopt takes its keys and that device's id. The first sync
+# hands the server the manager's keys and devices, which are its own, so the
+# device's links stay as they were; once it applied them, its facts say so,
+# and the second sync has nothing to change.
 set -euo pipefail
 die() { echo "e2e: $*" >&2; exit 1; }
 
@@ -39,6 +41,16 @@ key = "${key}"
 EOF
 mgr() { /rig/venv/bin/dotdash-manager --roster "${m}/network.toml" "$@"; }
 
+phone=$(cat /proc/sys/kernel/random/uuid)
+printf '%s phone\n' "${phone}" | sudo morzer secret set vless_clients >/dev/null || die "could not give the server a device"
+sudo morzer apply >/dev/null || die "the server did not apply its own device"
+pbk_before=$(sudo morzer task run client-config --output -- --full | grep -o 'pbk=[^&]*' | sed -n 1p)
+[ -n "${pbk_before}" ] || die "the server printed no REALITY link before adopt"
+adopt=$(/rig/venv/bin/python -c 'from dotdash_manager.adopt import COMMAND; print(COMMAND)')
+out=$(sudo sh -c "${adopt}" | mgr adopt a) || die "adopt failed: ${out}"
+grep -q '^adopted: the server.s keys; ids of 1 of the roster.s 1 names$' <<<"${out}" || die "adopt did not take the server's device: ${out}"
+echo "e2e: adopt took the server's keys and its device's id"
+
 out=$(mgr sync) || die "the first sync failed: ${out}"
 grep -q '^a: published$' <<<"${out}" || die "the first sync published nothing for the server: ${out}"
 echo "e2e: the first sync published the server's document"
@@ -52,7 +64,9 @@ print(public_key(json.load(open('${m}/dotdash-state.json'))['keys']['reality_key
 links=$(sudo morzer task run client-config --output -- --full)
 grep -q '^== phone ==$' <<<"${links}" || die "the server's devices are not the roster's: ${links}"
 grep 'security=reality' <<<"${links}" | grep -qF "pbk=${pbk}" || die "the server's links do not carry the manager's key"
-echo "e2e: the server applied it: the roster's device, the manager's keys"
+[ "pbk=${pbk}" = "${pbk_before}" ] || die "the manager's key is not the one the server had before adopt"
+grep -qF "vless://${phone}@" <<<"${links}" || die "the device's id changed under the manager"
+echo "e2e: the server applied it: the roster's device and the manager's keys, which are the ones it had"
 
 out=$(mgr sync) || die "the second sync failed: ${out}"
 ! grep -q '^waiting: a:' <<<"${out}" || die "the manager does not see the server's facts with its keys: ${out}"
