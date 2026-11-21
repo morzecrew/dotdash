@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-11-21
+
 ### Fixed
 
 - `cdn-check` no longer reports a CDN as serving subscriptions when an app behind the site (`cover`) answers every path: it now knows its decoy by the decoy's contents, and calls a 2xx without them refused.
