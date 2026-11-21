@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A relay's CDN links take a path of their own (the relay's new `cdn_xhttp_path`, `cdnpath=` on its line in `relays`), so a CDN in front never learns the path devices reach the relay by directly, and look less like a tunnel to it: session, sequence and padding in cookies, no event-stream type.
+
 ## [0.11.3] - 2026-11-21
 
 ### Fixed

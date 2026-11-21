@@ -105,7 +105,7 @@ cheap to replace, rather than this server and its upstream.
    any name.
 2. **On the relay**, list the names devices use, then print its line again
    ([its line](../relay/install.md#4-on-the-relay-its-line)); it now ends in
-   `cdn=cdn.example.net`:
+   `cdn=cdn.example.net cdnpath=…`:
 
     ```sh
     sudo morzer config set cdn_hosts=cdn.example.net
@@ -116,6 +116,17 @@ cheap to replace, rather than this server and its upstream.
    (`sudo morzer config edit relays`). Devices get a
    `relay · cdn` link and an outbound, shaped as
    above, and [pools](devices.md#pools) take the relay's CDN names as members.
+
+A CDN reads every request it passes on, and keeps logs. Through a relay, the
+links go by a path of the CDNs' own, so the CDN never learns the path devices
+reach the relay by directly, and they are disguised: one path, the session,
+sequence and padding in cookies, the padding a random token rather than a run
+of `X`, the upload under a plain header name and no event-stream type on the
+download, so no marker of the protocol shows by name. What it cannot hide is
+the shape: one visitor sending a stream of small requests beside one long
+download. Keep CDN links a fallback, front a relay you can replace (below),
+and expect a CDN account to be closed one day. A relay's line from before
+0.12.0, without `cdnpath=`, gives the plain links by its own path.
 
 #### The CDN's origin only
 

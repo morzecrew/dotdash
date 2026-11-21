@@ -92,6 +92,24 @@ http://127.0.0.1:8081 {
 		}
 	}
 
+	# XHTTP through a CDN in front (cdn_hosts): a path of its own, so the
+	# CDN never learns the one above, to Xray's CDN inbound, which keeps the
+	# session and sequence in cookies and so asks by this one path alone.
+	@cdn path /{file./run/secrets/cdn_xhttp_path}
+	handle @cdn {
+		reverse_proxy xray:8082 {
+			header_up -X-Forwarded-For
+			header_up -X-Forwarded-Host
+			header_up -X-Forwarded-Proto
+			header_up -X-Real-IP
+			header_up -CF-Connecting-IP
+			transport http {
+				versions h2c
+			}
+			flush_interval -1
+		}
+	}
+
 	# A device's subscription, 32 hex characters as the server names it (and
 	# with .json, its Xray config), fetched from the dotdash servers through this relay's own tunnel: Xray's
 	# subscriptions inbound, which dotdash carries as it carries devices. A

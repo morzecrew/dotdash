@@ -2,7 +2,8 @@
 # This relay's facts, as JSON: relay-entry's line, for an authority managing
 # several machines. morzer publishes them to it after every change when
 # sync.recipient is set (manifest `published`). Besides public halves they
-# carry the short id, and under own-site the XHTTP path and under mkcp the
+# carry the short id, and under own-site the XHTTP path (and the CDNs' with
+# cdn_hosts) and under mkcp the
 # seed (and under hysteria2 its port, and its name when set): credentials, but the ones every device's link through this relay
 # carries, so the authority hands them on to devices.
 set -eu
@@ -24,6 +25,7 @@ printf '{"entry_host": %s, "site": %s, "public_key": %s, "short_id": %s, "encryp
     "$KCP_PORT" "$(str "${KCP_HEADER:-dtls}")" "$(str "${KCP_OPEN:-none}")" "$(str "$kcp_seed")"
 [ -z "$hy2_port" ] || printf ', "hysteria2": {"port": %s}' "$hy2_port"
 [ -z "$cdn" ] || printf ', "cdn_hosts": [%s]' "$(printf '%s' "$cdn" | sed 's/[^,]*/"&"/g; s/,/, /g')"
+[ -z "$cdn_path" ] || printf ', "cdn_path": %s' "$(str "$cdn_path")"
 [ -z "$only" ] || printf ', "cdn_only": true'
 [ -z "$name" ] || printf ', "name": %s' "$(str "$name")"
 printf '}\n'

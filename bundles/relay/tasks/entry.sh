@@ -39,6 +39,11 @@ case $cdn in
   *) [ "${OWN_SITE:-}" = true ] ||
        { echo "cdn_hosts needs the own-site profile, whose site a CDN fetches from; leaving it out" >&2; cdn=; } ;;
 esac
+# The CDNs' own XHTTP path, which their links take in place of the one above,
+# with the settings of the CDN inbound. A relay that names none is fetched by
+# a server from before it by the one above, as before.
+cdn_path=
+[ -z "$cdn" ] || cdn_path=$(cat /run/secrets/cdn_xhttp_path)
 # name: a label devices' links through this relay carry in place of
 # "relay <n>". The server's relays line is split on spaces, so letters,
 # digits, dots, dashes and underscores alone.

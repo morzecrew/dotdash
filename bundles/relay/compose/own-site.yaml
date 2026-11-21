@@ -25,7 +25,7 @@ services:
     env_file: /etc/dotdash-relay/caddy.env
     # The path it routes to Xray's XHTTP inbound, and under cert_issuer=acme-dns
     # its acme-dns registration.
-    secrets: [xhttp_path, acme_dns]
+    secrets: [xhttp_path, cdn_xhttp_path, acme_dns]
     # 80 and 443 inside, as uid 65532 with no capabilities.
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
     volumes:

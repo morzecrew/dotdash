@@ -108,6 +108,31 @@ if sudo grep -q 'dotdash-relay-\$n-cdn-' /opt/dotdash/current/tasks/client-confi
   echo "46-relays.sh: CDNs in front of an own-site relay add a packet-up link and outbound each; none without its path"
 fi
 
+# A relay that serves its CDNs on a path of their own (its relay-entry adds
+# cdnpath=<path>): its CDN links and outbounds take that path, disguised as its
+# CDN inbound expects (session, sequence and padding in cookies); one whose
+# cdnpath= is not hex keeps its XHTTP path, plain.
+if sudo grep -q 'cdnpath=\*) cp=' /opt/dotdash/current/tasks/client-config.sh; then
+  printf '%s\n' \
+    "198.51.100.8 relay-c.test pbkC 0123456789abcdef mlkem.c own-site 00112233445566778899aabbccddeeff cdn=cdn-a.test cdnpath=aabbccddeeff001122334455" \
+    "198.51.100.11 relay-f.test pbkF 0011223344556677 mlkem.f own-site 00112233445566778899aabbccddeeff cdn=cdn-f.test cdnpath=not/hex" |
+    sudo morzer config set --set-file relays=- >/dev/null
+  text=$(out)
+  l=$(grep -m1 '#relay%201%20%C2%B7%20cdn$' <<<"${text}") || die "no link through the CDN of the relay with a CDN path"
+  [ "$(param "$l" path)" = "%2Faabbccddeeff001122334455" ] || die "the CDN link does not take the relay's CDN path: $(param "$l" path)"
+  [[ $(param "$l" extra) == *xPaddingObfsMode%22%3Atrue*sessionIDPlacement%22%3A%22cookie%22*seqPlacement%22%3A%22cookie%22* ]] ||
+    die "the CDN link by the relay's CDN path is not disguised"
+  l=$(grep -m1 '#relay%202%20%C2%B7%20cdn$' <<<"${text}") || die "no link through the CDN of the relay with a malformed CDN path"
+  [ "$(param "$l" path)" = "%2F00112233445566778899aabbccddeeff" ] && [[ $(param "$l" extra) != *xPaddingObfsMode* ]] ||
+    die "a relay with a malformed cdnpath= did not keep its XHTTP path, plain"
+  awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"${text}" | jq -e '
+    [.outbounds[] | select(.tag == "dotdash-relay-1-cdn-1")][0].streamSettings.xhttpSettings
+    | .path == "/aabbccddeeff001122334455" and .xPaddingObfsMode == true and .xPaddingMethod == "tokenish"
+      and .sessionIDPlacement == "cookie" and .seqPlacement == "cookie" and .uplinkDataKey == "X-Part"' >/dev/null ||
+    die "the config's outbound through the relay's CDN path is not disguised"
+  echo "46-relays.sh: a relay's CDN path gives disguised CDN links and outbounds; a malformed one the plain path"
+fi
+
 # A relay with mKCP (its relay-entry ends the line with kcp=<port>,<header>,
 # <seed>): an mKCP link through it too, to its port with its header and seed,
 # and an outbound with the same masks.
