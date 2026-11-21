@@ -2076,11 +2076,14 @@
 
 
 <h1 id="rules">Rules<a class="headerlink" href="#rules" title="Permanent link">&para;</a></h1>
-<p>Everything goes through dotdash unless a rule says otherwise. Two parameters
-hold the rules:</p>
+<p>Everything goes through dotdash unless a rule says otherwise. Three parameters
+hold the rules, checked in this order:</p>
 <ul>
-<li><code>direct_rules</code>: destinations reached directly, around dotdash;</li>
-<li><code>block_rules</code>: destinations refused.</li>
+<li><code>block_rules</code>: destinations refused;</li>
+<li><code>proxy_rules</code>: destinations sent through dotdash, even when a direct rule
+  matches them too, such as one site out of a list that otherwise goes
+  around dotdash;</li>
+<li><code>direct_rules</code>: destinations reached directly, around dotdash.</li>
 </ul>
 <p>Each holds rules in the apps' classical form without the target, one per
 line, with <code>#</code> for comments:</p>
