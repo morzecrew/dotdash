@@ -132,6 +132,16 @@ class Network(Strict):
         return self
 
 
+def with_joined(net: Network, joined: dict[str, dict[str, str]]) -> Network:
+    """The roster with the id and key `joined` kept (the state's joined) for
+    each machine whose roster entry gives neither: the roster's own win."""
+    def fill(ms: list) -> list:
+        return [m.model_copy(update=joined[m.name]) if m.name in joined and m.id is None and m.key is None else m
+                for m in ms]
+
+    return net.model_copy(update={kind: fill(getattr(net, kind)) for kind in KINDS})
+
+
 def loads(text: str, origin: str = "network.toml") -> Network:
     try:
         return Network.model_validate(tomllib.loads(text))

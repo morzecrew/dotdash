@@ -1,8 +1,9 @@
-"""The dotdash-manager command: sync, status and join."""
+"""The dotdash-manager command: sync, status, report, rotate, adopt, join and joined."""
 
 import copy
 import hashlib
 import json
+import shlex
 import subprocess
 import sys
 import time
@@ -12,11 +13,11 @@ from typing import Annotated
 
 import typer
 
-from . import Refused, health, roster, rotate, state
+from . import Refused, adopt, health, join as joining, roster, rotate, state
 from .morzer import Morzer, write_roster
 from .render import render
 from .report import report as report_lines
-from .roster import IMAGES, Network
+from .roster import Network
 
 # A document lives 168 h (morzer's default): renew an unchanged one well before.
 RENEW_AFTER = 3 * 86400
@@ -55,6 +56,7 @@ class Options:
         st = state.load(self.state, net)
         if not dry_run:
             state.save(self.state, st)
+        net = roster.with_joined(net, st.get("joined", {}))
         write_roster(self.morzer_roster, net)
         return net, st
 
@@ -103,7 +105,7 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
         if doc is None:
             continue
         if not m.joined:
-            print(f"{m.name}: not joined (no id and key in the roster); run join {m.name}")
+            print(f"{m.name}: not joined (no id and key); run join {m.name} and pipe its output to joined {m.name}")
             continue
         digest = hashlib.sha256(json.dumps(doc, sort_keys=True).encode()).hexdigest()
         last = st["published"].get(m.id, {})
@@ -190,10 +192,44 @@ def status(ctx: typer.Context) -> None:
     raise typer.Exit(r.returncode)
 
 
+@app.command(name="adopt")
+def adopt_server(
+    ctx: typer.Context,
+    name: str,
+    force: Annotated[bool, typer.Option("--force", help="even after the manager published its own keys")] = False,
+) -> None:
+    """A server that ran before the manager keeps its keys and its devices' ids:
+    pipe in what ADOPT prints to run on it, before the first sync."""
+    o: Options = ctx.obj
+    net = roster.load(o.roster)
+    m = net.find(name)
+    if m is None or m.kind != "server":
+        raise Refused(f"{name} is no [[server]] in {o.roster}")
+    if sys.stdin.isatty():
+        print(f"Run on {name}, as root, and pipe what it prints here:\n\n"
+              f"  ssh <{name}> {shlex.quote('sudo sh -c ' + shlex.quote(adopt.COMMAND))} | dotdash-manager adopt {name}")
+        return
+    keys, ids, unnamed = adopt.parse(sys.stdin.read())
+    net, st = o.open()
+    if st["published"] and not force:
+        raise Refused("the manager already published its own keys: adopting now changes them again on every machine; --force if that is meant")
+    for line in adopt.take(st, net, keys, ids, unnamed):
+        print(line)
+    state.save(o.state, st)
+
+
 @app.command()
-def join(ctx: typer.Context, name: str) -> None:
-    """What to run on a new machine already named in the roster: init with the
-    values it needs to come up, sync towards this authority, and how to add it."""
+def join(
+    ctx: typer.Context,
+    name: str,
+    domain: Annotated[str | None, typer.Option(help="a server's domain, or a relay's own site's")] = None,
+    site: Annotated[str | None, typer.Option(help="a relay's neighbour site, without --domain")] = None,
+    entry_host: Annotated[str | None, typer.Option(help="the address devices reach a relay at, with --site")] = None,
+    upstreams: Annotated[Path | None, typer.Option(help="a server's upstreams, one per line")] = None,
+    recovery: Annotated[str | None, typer.Option(help="the age recipient of its backups; the identity's by default")] = None,
+) -> None:
+    """A script that brings a new machine named in the roster up and points it at
+    the manager: pipe it to the machine and its output to `joined`."""
     o: Options = ctx.obj
     net, st = o.open()
     m = net.find(name)
@@ -206,34 +242,35 @@ def join(ctx: typer.Context, name: str) -> None:
         doc = docs.get(m.name)
         if doc is None:
             raise Refused(f"{m.name} can't come up yet: " + "; ".join(w for w in waiting if w.startswith(m.name + ":")))
-    print(f"On the new {m.kind} machine (scripts/bootstrap.sh installs what it needs):\n")
-    if m.kind == "relay":
-        print("# A relay of its own domain: --domain <it> --profile own-site in place of site and entry_host.")
-    init = [f"sudo morzer init --release oci://ghcr.io/morzecrew/{IMAGES[m.kind]}:stable", "--recovery-recipient age1…",
-            f"--sync-target {net.target} --sync-authority {net.authority}"]
-    if m.kind == "server":
-        init.append("--domain <its domain>")
-    elif m.kind == "relay":
-        init.append("--set site=<a site next to it> --set entry_host=<its IP>")
-    init += [f"--set {k}={v}" for k, v in (doc or {}).get("parameters", {}).items()]
-    print(" \\\n  ".join(init))
-    if m.kind == "server":
-        print("sudo morzer secret set upstreams    # its ways out, one line each")
-    for key, value in (doc or {}).get("secrets", {}).items():
-        print(f"sudo morzer secret set {key} <<'END'\n{value}\nEND")
-    # Sync before the first apply, so its facts go out with the first row.
-    cred = ""
-    if net.credentials:
-        print("sudo morzer secret set sync_target < <the target's credential document>")
-        print("sudo morzer config set sync.credentials=sync_target")
-        cred = " --credentials sync_target"
-    print(f"sudo morzer config set sync.recipient={recipient} sync.enabled=true")
-    print(f"sudo morzer backup target add {net.target}{cred}")
-    print("sudo morzer apply\nsudo morzer fleet publish")
-    print("sudo morzer fleet publish --dry-run --json | jq -r '.data.row.installation_id, .data.row.signing_key'")
-    print(f"\nThen give {m.name} those two in {o.roster} (id = \"inst_…\", key = \"RW…\") and run sync.")
-    if doc:
-        print("\nThe secrets above are credentials: send them only to that machine.", file=sys.stderr)
+    sys.stdout.write(joining.script(
+        m, net.target, net.authority, recipient, recovery or recipient, doc, domain, site, entry_host,
+        upstreams.read_text() if upstreams else None,
+        Path(net.credentials).read_text() if net.credentials else None))
+    print(f"The script holds credentials: send it only to {m.name}, as root, and its output back here:\n"
+          f"  dotdash-manager join {m.name} … | ssh <{m.name}> sudo sh | dotdash-manager joined {m.name}", file=sys.stderr)
+
+
+@app.command()
+def joined(ctx: typer.Context, name: str) -> None:
+    """Passes on what a join script printed on the machine (stdin) and keeps the
+    installation id and signing key its last line carries, for the next sync."""
+    o: Options = ctx.obj
+    if roster.load(o.roster).find(name) is None:
+        raise Refused(f"{name} is not in {o.roster}")
+    got = None
+    for line in sys.stdin:
+        if (g := joining.marker(line, name)) is not None:
+            got = g
+        else:
+            sys.stdout.write(line)
+            sys.stdout.flush()
+    if got is None:
+        raise Refused(f"{name}'s script stopped before its last line: nothing kept. Fix what it says above and run it again")
+    # The lock only now: the script ran for minutes, and a timer's sync waits on it.
+    _, st = o.open()
+    st.setdefault("joined", {})[name] = {"id": got[0], "key": got[1]}
+    state.save(o.state, st)
+    print(f"{name}: joined as {got[0]}; the next sync gives it its document")
 
 
 def main() -> None:
