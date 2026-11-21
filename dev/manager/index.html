@@ -1795,6 +1795,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#moving-a-running-network" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Moving a running network
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#keep-it-current" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2083,6 +2094,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#moving-a-running-network" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Moving a running network
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#keep-it-current" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2275,22 +2297,55 @@ waiting for one. Left out, each server keeps its own setting.</p>
 the names the manager gives relays' and canaries' own devices. A field the
 roster doesn't know is refused, so a mistyped one can't pass unnoticed.</p>
 <h2 id="add-a-machine">Add a machine<a class="headerlink" href="#add-a-machine" title="Permanent link">&para;</a></h2>
-<p>Name it in the roster first. Then:</p>
-<div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>sync<span class="w">          </span><span class="c1"># the servers learn its device</span>
-dotdash-manager<span class="w"> </span>join<span class="w"> </span>r1<span class="w">       </span><span class="c1"># what to run on it</span>
+<p>Name it in the roster first, run <code>sync</code> so the servers learn its device, then
+pipe <code>join</code>'s script to the new machine over ssh, and what it prints back to
+<code>joined</code>:</p>
+<div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>sync
+dotdash-manager<span class="w"> </span>join<span class="w"> </span>r1<span class="w"> </span>--site<span class="w"> </span>site.example.net<span class="w"> </span>--entry-host<span class="w"> </span><span class="m">203</span>.0.113.7<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="p">|</span><span class="w"> </span>ssh<span class="w"> </span>root@203.0.113.7<span class="w"> </span>sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>dotdash-manager<span class="w"> </span>joined<span class="w"> </span>r1
+dotdash-manager<span class="w"> </span>sync<span class="w">          </span><span class="c1"># r1 gets its document</span>
 </code></pre></div>
-<p><code>join</code> prints the machine's <code>init</code>, its secrets and its sync settings, as
-<code>relay-config</code> does, and the line that reads its installation id and signing
-key. Give it those in the roster:</p>
-<div class="highlight"><pre><span></span><code><span class="k">[[relay]]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"r1"</span>
-<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"inst_01…"</span>
-<span class="n">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"RW…"</span>
+<p>The script installs what the machine lacks (<code>scripts/bootstrap.sh</code>, as on a
+fresh Debian or Ubuntu), runs its <code>init</code> with the values it needs, sets its
+secrets, points it at the manager and applies. On a machine where the bundle
+is installed already, it leaves the installation as it is and only points it
+at the manager, whose document brings the rest. Its last line carries the
+machine's installation id and signing key, which <code>joined</code> keeps in the
+manager's state, so the next <code>sync</code> sends the machine its document. The rest
+of its output passes through, so a failure shows; <code>joined</code> then keeps
+nothing, and the script can run again.</p>
+<p>What each kind needs to be installed:</p>
+<ul>
+<li><strong>A server:</strong> <code>--domain</code> and <code>--upstreams &lt;file&gt;</code>, its ways out, one per
+  line. It comes up on keys of its own: the first document replaces them, and
+  relays, canaries and clients move to it once its facts show the manager's
+  key. A relay, canary or client waits for a server that has.</li>
+<li><strong>A relay:</strong> <code>--site</code> and <code>--entry-host</code> (a neighbour's site, and the
+  address devices reach it at), or <code>--domain</code> for one of its own site.</li>
+<li><strong>A canary or a client:</strong> nothing more.</li>
+</ul>
+<p>Backups are encrypted to the identity's age recipient, or to <code>--recovery</code>.
+The script holds the machine's credentials: send it to that machine only. A
+roster entry's own <code>id</code> and <code>key</code>, as earlier releases had you write them,
+still win over what <code>joined</code> kept.</p>
+<h2 id="moving-a-running-network">Moving a running network<a class="headerlink" href="#moving-a-running-network" title="Permanent link">&para;</a></h2>
+<p>A network set up by hand moves to the manager without devices noticing: the
+manager takes a running server's keys and its devices' ids instead of making
+its own, so devices keep their links and subscription URLs. Name the server,
+its relays and the devices in the roster under the names the server already
+uses (<code>client-config</code> prints them), then, before the first <code>sync</code>:</p>
+<div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>adopt<span class="w"> </span>a<span class="w">       </span><span class="c1"># prints what to run on server a</span>
+ssh<span class="w"> </span>root@a.example<span class="w"> </span><span class="s1">'sudo sh -c …'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>dotdash-manager<span class="w"> </span>adopt<span class="w"> </span>a
 </code></pre></div>
-<p>Then run <code>sync</code> again. A new server comes up on keys of its own: the first
-document replaces them, and relays, canaries and clients move to it once its
-facts show the manager's key. A relay, canary or client waits for a server
-that has.</p>
+<p>It says which devices keep their links, which are new to the server, and
+which the server has but the roster doesn't, which lose access at the next
+<code>sync</code> unless you add them. Finish a <a href="#rotating-the-reality-key">key rotation</a>
+first: only the current key is taken. Once the manager has published, <code>adopt</code>
+refuses, since it would change the keys on every machine again; <code>--force</code> when
+that is meant.</p>
+<p>Then join every machine as above, the running server and relays included,
+with no options: the script finds them installed and only points them at the
+manager. Relays keep their own keys, so devices keep their relay links too.</p>
 <h2 id="keep-it-current">Keep it current<a class="headerlink" href="#keep-it-current" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>sync<span class="w"> </span>--dry-run<span class="w">   </span><span class="c1"># what would change</span>
 dotdash-manager<span class="w"> </span>sync
