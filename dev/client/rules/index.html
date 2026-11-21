@@ -1635,6 +1635,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#other-geodata" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Other geodata
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#ip-rules-match-addresses-not-names" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1967,6 +1978,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#other-geodata" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Other geodata
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#ip-rules-match-addresses-not-names" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2138,6 +2160,24 @@ IP-CIDR,192.168.0.0/16
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>edit<span class="w"> </span>direct_rules
 sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>--set-file<span class="w"> </span><span class="nv">direct_rules</span><span class="o">=</span>rules.txt
 </code></pre></div>
+<h2 id="other-geodata">Other geodata<a class="headerlink" href="#other-geodata" title="Permanent link">&para;</a></h2>
+<p><code>GEOSITE</code> and <code>GEOIP</code> rules name lists in Xray's own <code>geosite.dat</code> and
+<code>geoip.dat</code>. Lists of your choice need those files from elsewhere: give
+<code>geosite</code> (or <code>geoip</code>) a URL and the file's sha256: a pinned version rather
+than one that changes, with no login or query in the URL, which the client's
+log would show:</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-sL<span class="w"> </span>&lt;url&gt;<span class="w"> </span><span class="p">|</span><span class="w"> </span>sha256sum
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">geosite</span><span class="o">=</span><span class="s2">"&lt;url&gt; &lt;sha256&gt;"</span>
+</code></pre></div>
+<p>The client fetches the file through dotdash once it runs, within a minute,
+tests the rules on it, keeps it, and restarts on it; its log says
+<code>geosite.dat: fetched</code>. Add the rules that name its lists then: until it is
+there, Xray has its own file, which lacks them. A client that has such rules
+and no file yet, as after a reinstall, fetches it at start, once, directly,
+where it can: not under <code>tun</code>, whose kill switch stops it, so unset those
+rules until the file is back. A fetched file replaces Xray's own entirely,
+so every list a rule names has to be in it. Unset, the client is back on
+Xray's own.</p>
 <h2 id="ip-rules-match-addresses-not-names">IP rules match addresses, not names<a class="headerlink" href="#ip-rules-match-addresses-not-names" title="Permanent link">&para;</a></h2>
 <p>An IP rule matches only an address an app gives. A name is never looked up
 to match one, so this machine's resolver never learns the names that go
