@@ -75,7 +75,7 @@ echo "${0##*/}: with pools unset, every device gets everything"
 # A relay's own CDNs (cdn= on its line) are pool members too: with the relay in
 # no pool, pool a holding one of its CDNs and pool b another, pooled gets pool
 # a's and the one in no pool, unpooled all three, and neither is reported.
-if sudo grep -q 'dotdash-relay-\$n-cdn-' /opt/dotdash/current/tasks/client-config.sh; then
+if sudo grep -qE 'dotdash-(cdn-relay-\$n|relay-\$n-cdn)-' /opt/dotdash/current/tasks/client-config.sh; then
   printf '%s\n' "relay-c.test site-c.test pbkC 0123456789abcdef mlkem.c own-site 00112233445566778899aabbccddeeff cdn=cdn-r1.test,cdn-r2.test,cdn-r3.test" |
     sudo morzer config set --set-file relays=- >/dev/null || die "could not set relays"
   printf '%s\n' "a pooled cdn-r1.test" "b cdn-r2.test" |
