@@ -2271,8 +2271,9 @@ CDN fetches from <code>https://example.com</code>.</p>
 </li>
 </ol>
 <p>Some CDNs pass <code>GET</code> alone and no request body, so these links upload in
-small <code>GET</code> requests with the data in headers (XHTTP <code>packet-up</code>). The server
-needs nothing changed for it. An app that imports the link but never
+small <code>GET</code> requests with the data in headers (XHTTP <code>packet-up</code>), 8 KiB at
+most each, under the 20 KB or so of headers a CDN takes. The server needs
+nothing changed for it. An app that imports the link but never
 connects may read its <code>extra</code> settings differently; the Xray config works
 in v2rayN and v2rayNG.</p>
 <div class="admonition warning">
