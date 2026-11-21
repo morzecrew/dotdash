@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.3] - 2026-11-21
+
 ### Fixed
 
 - CDN links upload at most 8 KiB per request instead of 32 KiB. Base64-encoded into headers, 32 KiB came to about 44 KB, past the 20 KB or so of headers CDN edges take, so any larger upload got a 431 and broke its connection.
