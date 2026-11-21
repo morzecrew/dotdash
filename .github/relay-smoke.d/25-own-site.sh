@@ -147,7 +147,7 @@ if sudo jq -e '[.inbounds[].tag] | index("devices-xhttp")' /etc/dotdash-relay/xr
     set_config "cdn_hosts=${domain},cdn-b.test"
     [[ $(entry) == *" cdn=${domain},cdn-b.test" ]] || die "relay-entry does not end the line with cdn=${domain},cdn-b.test: $(entry | grep -o 'cdn=[^ ]*' || true)"
     jq '.outbounds[0].streamSettings.xhttpSettings += {mode: "packet-up", uplinkHTTPMethod: "GET",
-        uplinkDataPlacement: "header", uplinkChunkSize: 16384, scMaxEachPostBytes: 32768, scMinPostsIntervalMs: 10}' \
+        uplinkDataPlacement: "header", uplinkChunkSize: 16384, scMaxEachPostBytes: 8192, scMinPostsIntervalMs: 10}' \
       /rig/relay/xhttp/config.json >/rig/relay/xhttp/cdn.json
     mv /rig/relay/xhttp/cdn.json /rig/relay/xhttp/config.json
     chmod -R a+rX /rig/relay/xhttp

@@ -201,10 +201,12 @@ for m in $(printf '%s\n' "$pools" | awk '{ $1 = ""; print }'); do
 done
 # Their edges take GET alone and no request body (some answer 413 to any),
 # so a device uploads in packet-up GETs with the data in headers. The server's
-# inbound reads that as it is: its placement is auto. The link's extra is the
-# five keys a phone's importer was seen to take, with uplinkChunkSize a string;
-# this is it percent-encoded.
-cdn_extra='%7B%22scMaxEachPostBytes%22%3A32768%2C%22scMinPostsIntervalMs%22%3A10%2C%22uplinkChunkSize%22%3A%2216384%22%2C%22uplinkDataPlacement%22%3A%22header%22%2C%22uplinkHTTPMethod%22%3A%22GET%22%7D'
+# inbound reads that as it is: its placement is auto. Edges cap a request's
+# headers at about 20 KB (431 past it), so a GET carries 8 KiB at most: some
+# 11 KB once base64-encoded, in one header, with room for the rest. The
+# link's extra is the five keys a phone's importer was seen to take, with
+# uplinkChunkSize a string; this is it percent-encoded.
+cdn_extra='%7B%22scMaxEachPostBytes%22%3A8192%2C%22scMinPostsIntervalMs%22%3A10%2C%22uplinkChunkSize%22%3A%2216384%22%2C%22uplinkDataPlacement%22%3A%22header%22%2C%22uplinkHTTPMethod%22%3A%22GET%22%7D'
 
 # support-x25519mlkem768: mihomo strips the X25519MLKEM768 key share unless a
 # link asks for it, and Xray's REALITY refuses a client without it. Other
@@ -340,7 +342,7 @@ cdn_outbound() { # <tag> <id> <cdn> <encryption> <path>: XHTTP through a CDN, up
        "tlsSettings": {"serverName": "$3", "alpn": ["h2"], "fingerprint": "chrome"},
        "xhttpSettings": {"path": "/$5", "host": "$3", "mode": "packet-up",
          "uplinkHTTPMethod": "GET", "uplinkDataPlacement": "header", "uplinkChunkSize": 16384,
-         "scMaxEachPostBytes": 32768, "scMinPostsIntervalMs": 10}${uto}}},
+         "scMaxEachPostBytes": 8192, "scMinPostsIntervalMs": 10}${uto}}},
 EOF
 }
 
