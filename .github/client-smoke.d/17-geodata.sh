@@ -29,10 +29,10 @@ if sudo grep -q '^  geosite:$' /opt/dotdash-client/current/manifest.yaml; then
 
   sudo morzer config set geosite="http://${sub}:8080/geosite.dat ${sum}" >/dev/null || die "could not set geosite"
   for _ in $(seq 45); do
-    xray_logs | grep -q 'geosite.dat: fetched, its sha256 the pinned one; restarting Xray on it' && break
+    xray_logs | grep -q 'geosite.dat: fetched, its sha256 the pinned one, and the running config passes on it' && break
     sleep 2
   done
-  xray_logs | grep -q 'geosite.dat: fetched, its sha256 the pinned one; restarting Xray on it' ||
+  xray_logs | grep -q 'geosite.dat: fetched, its sha256 the pinned one, and the running config passes on it' ||
     { xray_logs | grep 'geodata' | tail -5 >&2; die "the pinned geosite.dat was not fetched through dotdash"; }
 
   printf 'GEOSITE,smoketest\n' | sudo morzer config set --set-file direct_rules=- >/dev/null ||
