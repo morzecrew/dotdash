@@ -2357,7 +2357,9 @@ download, so no marker of the protocol shows by name. What it cannot hide is
 the shape: one visitor sending a stream of small requests beside one long
 download. Keep CDN links a fallback, front a relay you can replace (below),
 and expect a CDN account to be closed one day. A relay's line from before
-0.12.0, without <code>cdnpath=</code>, gives the plain links by its own path.</p>
+0.12.0, without <code>cdnpath=</code>, gives the plain links by its own path. A
+<a href="../../client/reference/">dotdash-client</a> with <code>cdn=skip</code> leaves CDN links
+out while it has any other.</p>
 <h4 id="the-cdns-origin-only">The CDN's origin only<a class="headerlink" href="#the-cdns-origin-only" title="Permanent link">&para;</a></h4>
 <p>Devices behind a CDN connect to the CDN's addresses, never to the relay's, so
 the relay behind it is not exposed the way a relay devices reach directly is.

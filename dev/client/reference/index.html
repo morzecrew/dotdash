@@ -2168,6 +2168,11 @@ with <code>sudo morzer config edit &lt;name&gt;</code>.</p>
 <td>what picking the fastest link and the health check fetch through dotdash</td>
 </tr>
 <tr>
+<td><code>cdn</code></td>
+<td><code>use</code></td>
+<td><code>skip</code>: links through a CDN are never picked nor probed; only a subscription with nothing else still sends traffic to one. A dotdash server of 0.13.0 or later tells a relay's CDN links apart</td>
+</tr>
+<tr>
 <td><code>ipv6</code></td>
 <td><code>allow</code></td>
 <td><code>block</code>: every IPv6 destination refused before any other rule, a direct rule's included, so apps fall back to IPv4; with <code>tun</code> it is still taken in, so nothing leaves around dotdash</td>
