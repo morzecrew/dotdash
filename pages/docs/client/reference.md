@@ -12,6 +12,7 @@ with `sudo morzer config edit <name>`.
 | `proxy_user` | `dotdash` | the username devices give beyond `127.0.0.1` |
 | `direct_rules` | a comment | destinations reached around dotdash, one rule per line ([rules](rules.md)) |
 | `block_rules` | a comment | destinations refused, one rule per line |
+| `proxy_rules` | a comment | destinations sent through dotdash even when a direct rule matches them too, one rule per line |
 | `subscription_interval` | `3600` | seconds between fetches of the subscription |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what picking the fastest link and the health check fetch through dotdash |
 | `cdn` | `use` | `skip`: links through a CDN are never picked nor probed; only a subscription with nothing else still sends traffic to one. A dotdash server of 0.13.0 or later tells a relay's CDN links apart |

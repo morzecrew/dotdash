@@ -1,10 +1,13 @@
 # Rules
 
-Everything goes through dotdash unless a rule says otherwise. Two parameters
-hold the rules:
+Everything goes through dotdash unless a rule says otherwise. Three parameters
+hold the rules, checked in this order:
 
-- `direct_rules`: destinations reached directly, around dotdash;
-- `block_rules`: destinations refused.
+- `block_rules`: destinations refused;
+- `proxy_rules`: destinations sent through dotdash, even when a direct rule
+  matches them too, such as one site out of a list that otherwise goes
+  around dotdash;
+- `direct_rules`: destinations reached directly, around dotdash.
 
 Each holds rules in the apps' classical form without the target, one per
 line, with `#` for comments:

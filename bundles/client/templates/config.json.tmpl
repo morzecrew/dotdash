@@ -71,6 +71,11 @@ through a CDN (dotdash-cdn-*): the servers' (dotdash-<n>-*) and the relays'
       {{- range lines .Parameters.block_rules }}{{ $l := replace (trim .) "\\" "\\\\" }}{{ if and $l (ne (slice $l 0 1) "#") }}
       {"type": "field", {{ template "match" $l }}, "outboundTag": "block"},
       {{- end }}{{ end }}
+      {{- /* Proxy rules after block rules and before direct rules: what both a
+      proxy and a direct rule match goes through dotdash. */}}
+      {{- range lines .Parameters.proxy_rules }}{{ $l := replace (trim .) "\\" "\\\\" }}{{ if and $l (ne (slice $l 0 1) "#") }}
+      {"type": "field", {{ template "match" $l }}, "balancerTag": "dotdash"},
+      {{- end }}{{ end }}
       {{- range lines .Parameters.direct_rules }}{{ $l := replace (trim .) "\\" "\\\\" }}{{ if and $l (ne (slice $l 0 1) "#") }}
       {"type": "field", {{ template "match" $l }}, "outboundTag": "direct"},
       {{- end }}{{ end }}

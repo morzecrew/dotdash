@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The client's promise: the proxy port gets out through dotdash (the stand-in,
 # pre-apply/10-server.sh); a block rule refuses its destination; a direct rule
-# reaches its destination with dotdash gone; and unset, neither does
-# anything. A "#" line is a comment.
+# reaches its destination with dotdash gone, unless a proxy rule matches it
+# too; and unset, none does anything. A "#" line is a comment.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -44,6 +44,22 @@ until_status '!204' "with direct rules unset, it got out with dotdash gone"
 sudo docker start client-rig-server >/dev/null
 until_status 204 "the proxy port does not get out once dotdash is back"
 echo "10-rules.sh: out through dotdash, a block rule refuses, a direct rule needs no dotdash"
+
+# A proxy rule wins over a direct rule that matches the same destination: with
+# both, it needs dotdash.
+if sudo grep -q '^  proxy_rules:$' /opt/dotdash-client/current/manifest.yaml; then
+  printf 'DOMAIN-SUFFIX,gstatic.com\n' | sudo morzer config set --set-file direct_rules=- >/dev/null
+  printf '# through dotdash\nDOMAIN,www.gstatic.com\n' | sudo morzer config set --set-file proxy_rules=- >/dev/null
+  until_status 204 "with a proxy and a direct rule the proxy port does not get out"
+  sudo docker stop client-rig-server >/dev/null
+  until_status '!204' "a proxy rule's destination got out with dotdash gone: the direct rule won"
+  sudo docker start client-rig-server >/dev/null
+  until_status 204 "the proxy port does not get out once dotdash is back"
+  unset_rules proxy_rules
+  unset_rules direct_rules
+  until_status 204 "with the rules unset the proxy port does not get out"
+  echo "10-rules.sh: a proxy rule sends through dotdash what a direct rule also matches"
+fi
 
 # ipv6=block: every IPv6 destination refused before any other rule, a direct
 # rule's included; names still go out through dotdash.

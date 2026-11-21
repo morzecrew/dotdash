@@ -106,6 +106,11 @@ parameters:
     default: "# One rule per line, without its target, such as DOMAIN-SUFFIX,ads.example"
     description: "Destinations refused, one rule per line without its target, such as DOMAIN-SUFFIX,example.com: DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, DOMAIN-REGEX, GEOSITE, IP-CIDR, IP-CIDR6, GEOIP or DST-PORT, an IP rule matching addresses apps give, never looked up; \"#\" starts a comment"
     services: [xray]
+  proxy_rules:
+    type: text
+    default: "# One rule per line, without its target, such as GEOSITE,github"
+    description: "Destinations sent through dotdash even when a direct rule matches them too, one rule per line without its target, of the types block_rules takes; block rules still come first; \"#\" starts a comment"
+    services: [xray]
   direct_rules:
     type: text
     default: "# One rule per line, without its target, such as IP-CIDR,192.168.0.0/16"
