@@ -1,7 +1,9 @@
 # What leaks where
 
 - Traffic leaves only through the upstream. With the upstream down, clients
-  get nothing, never this server's address. Xray has no route out; a gate
+  get nothing, never this server's address, unless `upstreams` holds a
+  [`direct` line](upstreams.md#no-upstream-this-servers-own-address), which
+  makes this server's address an exit on purpose. Xray has no route out; a gate
   container holds the upstream's credentials. Every apply, update and `doctor`
   checks this against what runs.
 - The upstream sees destination addresses, ports and volume, not hostnames:

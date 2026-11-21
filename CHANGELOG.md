@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A `direct` line in `upstreams` makes the server's own address a way out, for a server already on a residential line: alone, or beside proxies as their backup or fallback. `doctor` asks it from the server itself.
+
 - `dotdash-manager adopt` takes a running server's keys and its devices' ids, so a network set up by hand moves under the manager without devices getting new links or subscription URLs.
 
 - `dotdash-manager join` prints a script to pipe over ssh, and `joined` keeps the id and key it prints back. Nothing goes into the roster by hand, and a machine installed already is only pointed at the manager.
