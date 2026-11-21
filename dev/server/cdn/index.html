@@ -2336,7 +2336,7 @@ cheap to replace, rather than this server and its upstream.</p>
 <li>
 <p><strong>On the relay</strong>, list the names devices use, then print its line again
    (<a href="../../relay/install/#4-on-the-relay-its-line">its line</a>); it now ends in
-   <code>cdn=cdn.example.net</code>:</p>
+   <code>cdn=cdn.example.net cdnpath=…</code>:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">cdn_hosts</span><span class="o">=</span>cdn.example.net
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>&lt;address&gt;
 </code></pre></div>
@@ -2348,6 +2348,16 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
    above, and <a href="../devices/#pools">pools</a> take the relay's CDN names as members.</p>
 </li>
 </ol>
+<p>A CDN reads every request it passes on, and keeps logs. Through a relay, the
+links go by a path of the CDNs' own, so the CDN never learns the path devices
+reach the relay by directly, and they are disguised: one path, the session,
+sequence and padding in cookies, the padding a random token rather than a run
+of <code>X</code>, the upload under a plain header name and no event-stream type on the
+download, so no marker of the protocol shows by name. What it cannot hide is
+the shape: one visitor sending a stream of small requests beside one long
+download. Keep CDN links a fallback, front a relay you can replace (below),
+and expect a CDN account to be closed one day. A relay's line from before
+0.12.0, without <code>cdnpath=</code>, gives the plain links by its own path.</p>
 <h4 id="the-cdns-origin-only">The CDN's origin only<a class="headerlink" href="#the-cdns-origin-only" title="Permanent link">&para;</a></h4>
 <p>Devices behind a CDN connect to the CDN's addresses, never to the relay's, so
 the relay behind it is not exposed the way a relay devices reach directly is.
