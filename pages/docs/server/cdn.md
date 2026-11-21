@@ -65,7 +65,8 @@ A CDN is refused subscriptions. A subscription read in the clear gives away
 every link, the device's keys and every relay and CDN name, so one request
 to the provider would list every way in. The server and
 [relays with their own site](../relay/install.md#6-devices) answer a
-subscription request a CDN passed on with the site's own 404. They recognise
+subscription request a CDN passed on with the site, as any other path: its
+404, or your app's answer. They recognise
 one by the headers a CDN adds to say so (`X-Forwarded-For`, `Via`, `Forwarded`
 and the like), which a device asking directly never sends. A CDN that adds
 none of them would still get one. If yours lets you add headers to its
@@ -76,9 +77,9 @@ so: `CDN-Loop` is the one made for this, with any value, such as
 Some CDNs strip such headers, even ones you add. A relay serves subscriptions
 under its own domain alone, the name devices ask by, so in front of a relay
 have the CDN send any other name as `Host`: its own name, or its default. A
-CDN that checks the origin's certificate against that name then fails; turn
-the check off, or, with a [wildcard](certificates.md) on the relay, send
-another name under it. Then check:
+CDN that checks the origin's certificate against that name then can't reach
+the relay; with a [wildcard](certificates.md) on the relay, send another name
+under it. Then check:
 
 ```sh
 sudo morzer task run cdn-check --output
@@ -86,7 +87,9 @@ sudo morzer task run cdn-check --output
 
 It fetches a decoy subscription, with no links in it, through each CDN in
 front of this server and of its relays, and prints `refused` for each, or
-`SERVES SUBSCRIPTIONS` for one that got it. Keep such a CDN's name away from
+`SERVES SUBSCRIPTIONS` for one that got it. It knows the decoy by its
+contents, so an app behind the site that answers every path doesn't pass for
+it. Keep such a CDN's name away from
 devices' subscriptions: an own-site relay serves them inside the restricted
 network with nothing in between reading them.
 

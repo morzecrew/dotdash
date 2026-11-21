@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `cdn-check` no longer reports a CDN as serving subscriptions when an app behind the site (`cover`) answers every path: it now knows its decoy by the decoy's contents, and calls a 2xx without them refused.
+
+- A relay's XHTTP path drops the client address a CDN in front passes on in `X-Real-IP` or `CF-Connecting-IP`, as the server's does, so it no longer reaches the relay's Xray.
+
 ## [0.11.1] - 2026-11-21
 
 ### Changed

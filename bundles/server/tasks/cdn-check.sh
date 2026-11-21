@@ -3,20 +3,25 @@
 # (the cdn= hosts on their lines) is refused a subscription, as it should be.
 # It fetches a decoy through each: a file the subscription service writes
 # beside the devices', with no links in it, named from the key so no one else
-# can ask for it. The site answers a request a CDN marks as passed on with its
-# 404; a CDN that marks nothing gets the decoy. The fetch leaves through Xray's
-# probe inbound, so through the upstreams, as devices' traffic does. Changes
-# nothing; exits 1 only when a CDN gets the decoy.
+# can ask for it, and holding the rest of that hash. A request a CDN marks as
+# passed on gets the site, as any other path does: its 404, or the answer of
+# an app behind it (cover), which may be a 200 but never that hash. A CDN that
+# marks nothing gets the decoy. The fetch leaves through Xray's probe inbound,
+# so through the upstreams, as devices' traffic does. Changes nothing; exits 1
+# only when a CDN gets the decoy.
 set -u
 [ "${SUBSCRIPTION:-false}" = true ] || { echo "subscriptions are off: nothing to refuse"; exit 0; }
-decoy=$(printf '%s:cdn-check' "$(cat /run/secrets/subscription_key)" | sha256sum | cut -c1-32)
+sum=$(printf '%s:cdn-check' "$(cat /run/secrets/subscription_key)" | sha256sum)
+decoy=$(echo "$sum" | cut -c1-32)
 hosts=$({
   printf '%s\n' "${CDN_HOSTS:-none}" | tr ',' '\n'
   printf '%s\n' "${RELAYS:-}" | grep -v '^ *#' | tr ' ' '\n' | sed -n 's/^cdn=//p' | tr ',' '\n'
 } | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e '/^none$/d' | sort -u)
 [ -n "$hosts" ] || { echo "no CDN in front of this server or its relays"; exit 0; }
 
-export XRAY_HEALTHCHECK_PROXY=http://127.0.0.1:10809 XRAY_HEALTHCHECK_TIMEOUT=15s
+# The decoy's own contents: a 2xx without them is the site's.
+XRAY_HEALTHCHECK_EXPECT=$(echo "$sum" | cut -c33-64)
+export XRAY_HEALTHCHECK_PROXY=http://127.0.0.1:10809 XRAY_HEALTHCHECK_TIMEOUT=15s XRAY_HEALTHCHECK_EXPECT
 served=0
 for h in $hosts; do
   out=$(XRAY_HEALTHCHECK_URL="https://$h/$decoy" /opt/xray/xray-entrypoint healthcheck 2>&1)
@@ -30,6 +35,7 @@ for h in $hosts; do
   else
     case $why in
     '404 '*) echo "$h: refused, as it should be" ;;
+    2[0-9][0-9]' '*) echo "$h: refused, as it should be: the site answered, not with the decoy" ;;
     [0-9][0-9][0-9]' '*) echo "$h: answered ${why}, not the site's 404: not served, but the CDN may not reach its origin" ;;
     *) echo "$h: could not tell: ${why:-no answer}" ;;
     esac
