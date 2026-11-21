@@ -35,8 +35,11 @@ if [ "${SUBSCRIPTION:-false}" = true ]; then
     n=$((n + 1))
   done </run/secrets/vless_clients
   # A decoy beside them, with no links, for cdn-check to fetch through each
-  # CDN: named from the key, so no one else can ask for it.
-  : >"$out/$(printf '%s:cdn-check' "$key" | sha256sum | cut -c1-32)"
+  # CDN: named from the key, so no one else can ask for it, and holding the
+  # rest of that hash, so cdn-check tells it from a site that answers any
+  # path, as an app behind it (cover) may.
+  decoy=$(printf '%s:cdn-check' "$key" | sha256sum)
+  echo "$decoy" | cut -c33-64 >"$out/$(echo "$decoy" | cut -c1-32)"
   rm -f "$out/.full"
   echo "subscription: ${n} device(s)"
 else

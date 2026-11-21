@@ -136,6 +136,15 @@ if sudo grep -q 'not header Via' /opt/dotdash/current/caddy/Caddyfile; then
   echo "${0##*/}: a subscription request a CDN marks as passed on gets the site's 404"
 fi
 
+# The decoy cdn-check fetches holds the rest of its name's hash, which tells it
+# from a site that answers any path, as an app behind it may.
+if sudo grep -q 'cut -c33-64' /opt/dotdash/current/tasks/subscription.sh; then
+  sum=$(printf '%s:cdn-check' "$(sudo cat /run/dotdash/secrets/subscription_key)" | sha256sum)
+  [ "$(fetch "https://${domain}/$(cut -c1-32 <<<"${sum}")")" = "$(cut -c33-64 <<<"${sum}")" ] ||
+    die "the decoy does not hold what cdn-check knows it by"
+  echo "${0##*/}: the decoy holds what cdn-check knows it by"
+fi
+
 # An own-site relay fetches the subscription for devices inside the
 # restricted network: client-config adds that URL, the same token, under the
 # server's; a relay on a borrowed site, without the mark, gets none.
