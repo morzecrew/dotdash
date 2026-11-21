@@ -1,8 +1,8 @@
-# dotdash-acme-dns 0.12.0
+# dotdash-acme-dns 0.13.0
 
-Released with dotdash 0.12.0, with no changes of its own. It needs morzer 0.17.1 or later, as 0.11.3 did:
+Released with dotdash 0.13.0, with no changes of its own. It needs morzer 0.17.1 or later, as 0.12.0 did:
 
 ```sh
 sudo morzer update --stage
-sudo morzer update --to 0.12.0
+sudo morzer update --to 0.13.0
 ```
