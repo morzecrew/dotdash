@@ -34,8 +34,9 @@ CDN fetches from `https://example.com`.
    [relay](../relay/index.md).
 
 Some CDNs pass `GET` alone and no request body, so these links upload in
-small `GET` requests with the data in headers (XHTTP `packet-up`). The server
-needs nothing changed for it. An app that imports the link but never
+small `GET` requests with the data in headers (XHTTP `packet-up`), 8 KiB at
+most each, under the 20 KB or so of headers a CDN takes. The server needs
+nothing changed for it. An app that imports the link but never
 connects may read its `extra` settings differently; the Xray config works
 in v2rayN and v2rayNG.
 
