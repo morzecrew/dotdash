@@ -126,7 +126,9 @@ download, so no marker of the protocol shows by name. What it cannot hide is
 the shape: one visitor sending a stream of small requests beside one long
 download. Keep CDN links a fallback, front a relay you can replace (below),
 and expect a CDN account to be closed one day. A relay's line from before
-0.12.0, without `cdnpath=`, gives the plain links by its own path.
+0.12.0, without `cdnpath=`, gives the plain links by its own path. A
+[dotdash-client](../client/reference.md) with `cdn=skip` leaves CDN links
+out while it has any other.
 
 #### The CDN's origin only
 
