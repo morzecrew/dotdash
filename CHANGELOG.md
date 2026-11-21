@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - dotdash-client's `proxy_rules` send destinations through dotdash even when a direct rule matches them too, such as one site out of a geosite list that otherwise goes around it. Block rules still come first.
 
+- dotdash-client's `geoip` and `geosite` take other geodata, as `<url> <sha256>`, for rules naming lists Xray's own lacks. The client fetches the file through dotdash once it runs, keeps it, and restarts on it.
+
 ## [0.13.0] - 2026-11-21
 
 ### Added

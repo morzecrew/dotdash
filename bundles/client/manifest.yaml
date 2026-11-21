@@ -116,6 +116,17 @@ parameters:
     default: "# One rule per line, without its target, such as IP-CIDR,192.168.0.0/16"
     description: "Destinations reached directly, not through dotdash, one rule per line without its target, such as IP-CIDR,192.168.0.0/16, of the types block_rules takes; \"#\" starts a comment"
     services: [xray]
+  # Empty for Xray's own: the xray image fetches a pinned one only when set.
+  geoip:
+    type: string
+    default: ""
+    description: "A geoip.dat in place of Xray's own, as \"<url> <sha256>\": fetched through dotdash once the client runs, within a minute, and kept, so later starts need no fetch. Set it first, and rules naming its lists once the log says it was fetched; empty for Xray's own"
+    services: [xray]
+  geosite:
+    type: string
+    default: ""
+    description: "A geosite.dat in place of Xray's own, as \"<url> <sha256>\", fetched and kept as geoip's is; empty for Xray's own"
+    services: [xray]
   ipv6:
     type: enum
     values: [allow, block]
@@ -141,7 +152,7 @@ images:
   killswitch: ghcr.io/morzecrew/openvpn:2.6.20@sha256:0892a6b6dfd2ce4369eb69c0d2701c24ced35ef9a2f4eee6ef5fa4d6f3684943
   # The proxy-config task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
-  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:e39b11531a5dc3f7214ddb58335055ed9e559b13557f094b177b625dbd35ee76
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:a66faa5bcb63d18a53434453ae6bce506163609c9b5d29d245c2514667a7e399
 
 # What an authority's desired-state document may set here (morzer 0.16): the
 # device's subscription and the password of its local proxy. Neither reaches
