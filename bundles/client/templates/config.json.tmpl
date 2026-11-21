@@ -28,6 +28,10 @@ looked up for a name (routing's domainStrategy AsIs), as no-resolve did. */ -}}
 {{- end -}}
 {{- $lan := ne (default "127.0.0.1" .Parameters.listen) "127.0.0.1" -}}
 {{- $probe := required "set probe_url" .Parameters.probe_url -}}
+{{- /* cdn=skip: the balancer and its probes take every link but those
+through a CDN (dotdash-cdn-*): the servers' (dotdash-<n>-*) and the relays'
+(dotdash-relay-*). Xray picks outbounds by tag prefix alone. */ -}}
+{{- $links := `"dotdash-"` }}{{ if eq .Parameters.cdn "skip" }}{{ $links = `"dotdash-1", "dotdash-2", "dotdash-3", "dotdash-4", "dotdash-5", "dotdash-6", "dotdash-7", "dotdash-8", "dotdash-9", "dotdash-relay-"` }}{{ end -}}
 {
   "log": {"loglevel": "warning"},
   "inbounds": [
@@ -49,10 +53,10 @@ looked up for a name (routing's domainStrategy AsIs), as no-resolve did. */ -}}
   them together, which would tie this device's links to each other for
   whoever watches several of them: burstObservatory, which leastPing reads
   as it read observatory. */}}
-  "burstObservatory": {"subjectSelector": ["dotdash-"], "pingConfig": {"destination": "{{ $probe }}", "interval": "1m", "sampling": 1}},
+  "burstObservatory": {"subjectSelector": [{{ $links }}], "pingConfig": {"destination": "{{ $probe }}", "interval": "1m", "sampling": 1}},
   "routing": {
     "domainStrategy": "AsIs",
-    "balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}}],
+    "balancers": [{"tag": "dotdash", "selector": [{{ $links }}], "strategy": {"type": "leastPing"}}],
     "rules": [
       {{- /* ipv6=block: every IPv6 address refused first, a direct rule's
       included. */}}

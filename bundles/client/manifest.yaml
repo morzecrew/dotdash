@@ -122,6 +122,12 @@ parameters:
     default: https://www.gstatic.com/generate_204
     description: What picking the fastest link and the health check fetch through dotdash; any 2xx is healthy
     services: [xray]
+  cdn:
+    type: enum
+    values: [use, skip]
+    default: use
+    description: "Links through a CDN. use: like any other link. skip: never picked nor probed. A relay's CDN links are told apart from 0.13.0 dotdash servers on. Only a subscription with nothing else still sends traffic to one: what the balancer can't place goes to the first link, and servers list CDN links last"
+    services: [xray]
 
 images:
   # The tun profile's kill switch (killswitch/killswitch.sh): iproute2's ip

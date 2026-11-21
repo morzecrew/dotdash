@@ -26,7 +26,7 @@ id() { local rest=${1#vless://}; echo "${rest%%@*}"; }
 # where there are several.
 relay_links() { grep -E '^vless://.*#relay(%20[0-9]+)?%20%C2%B7%20' <<<"$1" || true; }
 outbound_tags() { awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"$1" |
-  jq -r '.outbounds[].tag' | grep '^dotdash-relay-' || true; }
+  jq -r '.outbounds[].tag' | grep -E '^dotdash-(cdn-)?relay-' || true; }
 
 text=$(out)
 [ -z "$(relay_links "${text}")" ] || die "client-config prints relay links with no relays set"
@@ -79,7 +79,7 @@ fi
 # link per CDN, to the CDN on 443 under its name with the relay's path and
 # encryption, uploading by GET with the data in headers, and an outbound each.
 # The same CDNs on a relay without its XHTTP path, or a malformed field: none.
-if sudo grep -q 'dotdash-relay-\$n-cdn-' /opt/dotdash/current/tasks/client-config.sh; then
+if sudo grep -q 'dotdash-cdn-relay-\$n-' /opt/dotdash/current/tasks/client-config.sh; then
   printf '%s\n' \
     "198.51.100.8 relay-c.test pbkC 0123456789abcdef mlkem.c own-site 00112233445566778899aabbccddeeff cdn=cdn-a.test,cdn-b.test" \
     "198.51.100.10 site-e.test pbkE 0011223344556677 mlkem.e cdn=cdn-e.test" \
@@ -97,14 +97,16 @@ if sudo grep -q 'dotdash-relay-\$n-cdn-' /opt/dotdash/current/tasks/client-confi
   ! grep -qE '#relay%20[23]%20%C2%B7%20cdn' <<<"${text}" ||
     die "a relay without its XHTTP path, or with a malformed cdn= field, got CDN links"
   awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"${text}" | jq -e '
-    [.outbounds[] | select(.tag | startswith("dotdash-relay-1-cdn-"))] as $c
-    | ($c | map(.settings.address)) == ["cdn-a.test", "cdn-b.test"]
+    [.outbounds[].tag | select(startswith("dotdash-")) | startswith("dotdash-cdn-")] as $k
+    | [.outbounds[] | select(.tag | startswith("dotdash-cdn-relay-1-"))] as $c
+    | ($k | .[index(true):] | all)
+    and ($c | map(.settings.address)) == ["cdn-a.test", "cdn-b.test"]
       and ($c | all(.settings.encryption == "mlkem.c"
         and .streamSettings.xhttpSettings.path == "/00112233445566778899aabbccddeeff"
         and .streamSettings.xhttpSettings.mode == "packet-up"
         and .streamSettings.xhttpSettings.uplinkHTTPMethod == "GET"
         and .streamSettings.xhttpSettings.uplinkDataPlacement == "header"))' >/dev/null ||
-    die "the config lacks a packet-up outbound per CDN in front of the relay"
+    die "the config lacks a packet-up outbound per CDN in front of the relay, after every other outbound"
   echo "46-relays.sh: CDNs in front of an own-site relay add a packet-up link and outbound each; none without its path"
 fi
 
@@ -126,7 +128,7 @@ if sudo grep -q 'cdnpath=\*) cp=' /opt/dotdash/current/tasks/client-config.sh; t
   [ "$(param "$l" path)" = "%2F00112233445566778899aabbccddeeff" ] && [[ $(param "$l" extra) != *xPaddingObfsMode* ]] ||
     die "a relay with a malformed cdnpath= did not keep its XHTTP path, plain"
   awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"${text}" | jq -e '
-    [.outbounds[] | select(.tag == "dotdash-relay-1-cdn-1")][0].streamSettings.xhttpSettings
+    [.outbounds[] | select(.tag == "dotdash-cdn-relay-1-1")][0].streamSettings.xhttpSettings
     | .path == "/aabbccddeeff001122334455" and .xPaddingObfsMode == true and .xPaddingMethod == "tokenish"
       and .sessionIDPlacement == "cookie" and .seqPlacement == "cookie" and .uplinkDataKey == "X-Part"' >/dev/null ||
     die "the config's outbound through the relay's CDN path is not disguised"
@@ -188,7 +190,7 @@ if sudo grep -q 'cdn-only) only=cdn-only' /opt/dotdash/current/tasks/client-conf
   links=$(relay_links "${text}")
   [ "$(grep -c . <<<"${links}")" = "${devices}" ] && ! grep -qv '#relay%20%C2%B7%20cdn$' <<<"${links}" ||
     die "a cdn-only relay gave devices links besides its CDN's, or one with no CDN got links"
-  [ "$(outbound_tags "${text}" | tr '\n' ' ')" = "dotdash-relay-1-cdn-1 " ] ||
+  [ "$(outbound_tags "${text}" | tr '\n' ' ')" = "dotdash-cdn-relay-1-1 " ] ||
     die "a cdn-only relay's outbounds are not its CDN's alone: $(outbound_tags "${text}" | tr '\n' ' ')"
   echo "46-relays.sh: a cdn-only relay gives its CDN link and outbound alone, and one with no CDN nothing"
 fi

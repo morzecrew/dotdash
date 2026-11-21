@@ -380,11 +380,23 @@ cdn_outbounds() { # <id>
 # so a browser goes over TCP inside the tunnel, as Vision would have it.
 mux='"mux": {"enabled": true, "concurrency": -1, "xudpConcurrency": 8, "xudpProxyUDP443": "reject"}'
 
-relay_outbounds() { # <id>
+relay_outbounds() { # <id> [cdn]: the relays' own outbounds, or with cdn their CDNs'
   n=0
   printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off sp hy _ cp; do
     [ -n "$h" ] || continue
     n=$((n + 1))
+    if [ "${2:-}" = cdn ]; then
+      m=0
+      [ "$d" = - ] || for x in $(printf '%s' "$d" | tr ',' ' '); do
+        m=$((m + 1))
+        # dotdash-cdn-, as the servers' CDNs: apart from the relay's own
+        # dotdash-relay-<n>, so a client can leave every CDN out by prefix
+        # (dotdash-client's cdn=skip), Xray's only way to pick outbounds.
+        if [ "${cp:--}" = - ]; then cdn_outbound "dotdash-cdn-relay-$n-$m" "$1" "$x" "$e" "$p"
+        else cdn_outbound "dotdash-cdn-relay-$n-$m" "$1" "$x" "$e" "$cp" disguised; fi
+      done
+      continue
+    fi
     # split: REALITY through it with its hello split, even with off=reality.
     rhello=
     [ "$sp" != split ] || rhello=$split_hello
@@ -402,12 +414,6 @@ EOF
        "tlsSettings": {"serverName": "$s", "alpn": ["h2"], "fingerprint": "chrome"},
        "xhttpSettings": {"path": "/$p", "host": "$s", "mode": "auto"}${uto}}},
 EOF
-    m=0
-    [ "$d" = - ] || for x in $(printf '%s' "$d" | tr ',' ' '); do
-      m=$((m + 1))
-      if [ "${cp:--}" = - ]; then cdn_outbound "dotdash-relay-$n-cdn-$m" "$1" "$x" "$e" "$p"
-      else cdn_outbound "dotdash-relay-$n-cdn-$m" "$1" "$x" "$e" "$cp" disguised; fi
-    done
     # Hysteria2 under the relay's own site's name, keepalives as the
     # server's outbound has them.
     [ "$hy" = - ] || [ "$only" = cdn-only ] || cat <<EOF
@@ -429,6 +435,8 @@ EOF
   done
 }
 
+# Every CDN's outbound after every other: Xray sends what its balancer can't
+# place to the first outbound, which is then never a CDN's while any other is.
 outbounds() { # <id>: a REALITY and an XHTTP outbound per server, the third, mKCP, the relays, the CDNs
   n=0
   { for s in $servers; do
@@ -465,7 +473,7 @@ EOF
        "hysteriaSettings": {"version": 2, "auth": "$1"},
        "finalmask": {"quicParams": {"keepAlivePeriod": 10}}}},
 EOF
-  done; relay_outbounds "$1"; cdn_outbounds "$1"; } | sed '$ s/,$//'
+  done; relay_outbounds "$1"; cdn_outbounds "$1"; relay_outbounds "$1" cdn; } | sed '$ s/,$//'
 }
 
 xdns_outbound() { # <id>: the DNS tunnel, for the config's last resort, its queries spread over xdns_resolvers

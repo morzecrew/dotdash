@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- dotdash-client's `cdn=skip` leaves links through a CDN out: the client never picks one, nor probes it. Telling a relay's CDN links apart needs a dotdash server of 0.13.0 or later.
+
+### Changed
+
+- In devices' Xray configs, a relay's CDN outbounds are named `dotdash-cdn-relay-<n>-<m>` (was `dotdash-relay-<n>-cdn-<m>`) and come after every other outbound, so traffic the balancer can't place goes to a CDN only when there is no other link.
+
 ## [0.12.0] - 2026-11-21
 
 ### Added
