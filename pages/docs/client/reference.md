@@ -9,6 +9,8 @@ with `sudo morzer config edit <name>`.
 | --- | --- | --- |
 | `listen` | `127.0.0.1` | the address the proxy port is published on; anything but `127.0.0.1` asks devices for `proxy_user` and `proxy_password` ([sharing](network.md)) |
 | `port` | `7890` | the SOCKS5 and HTTP proxy port |
+| `geoip` | empty | a `geoip.dat` in place of Xray's own, as `<url> <sha256>` ([other geodata](rules.md#other-geodata)) |
+| `geosite` | empty | a `geosite.dat` in place of Xray's own, as `<url> <sha256>` |
 | `proxy_user` | `dotdash` | the username devices give beyond `127.0.0.1` |
 | `direct_rules` | a comment | destinations reached around dotdash, one rule per line ([rules](rules.md)) |
 | `block_rules` | a comment | destinations refused, one rule per line |

@@ -43,6 +43,12 @@ services:
       # The subscription's outbounds as Xray last accepted them, so a restart
       # while the URL can't be reached starts on them.
       XRAY_SUBSCRIPTION_CACHE: /var/lib/xray
+      # geoip and geosite: "<url> <sha256>" or empty for Xray's own, kept in
+      # the home volume once fetched, through the probe port as the
+      # subscription is.
+      XRAY_GEOIP: ${DOTDASH_CLIENT_PARAM_GEOIP:-}
+      XRAY_GEOSITE: ${DOTDASH_CLIENT_PARAM_GEOSITE:-}
+      XRAY_GEODATA_DIR: /var/lib/xray/geodata
     ports: ["${DOTDASH_CLIENT_PARAM_LISTEN:-127.0.0.1}:${DOTDASH_CLIENT_PARAM_PORT:-7890}:7890"]
     tmpfs: ["/run/xray:mode=0700,uid=65532,gid=65532"]
     volumes:

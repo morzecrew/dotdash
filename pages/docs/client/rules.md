@@ -38,6 +38,29 @@ sudo morzer config edit direct_rules
 sudo morzer config set --set-file direct_rules=rules.txt
 ```
 
+## Other geodata
+
+`GEOSITE` and `GEOIP` rules name lists in Xray's own `geosite.dat` and
+`geoip.dat`. Lists of your choice need those files from elsewhere: give
+`geosite` (or `geoip`) a URL and the file's sha256: a pinned version rather
+than one that changes, with no login or query in the URL, which the client's
+log would show:
+
+```sh
+curl -sL <url> | sha256sum
+sudo morzer config set geosite="<url> <sha256>"
+```
+
+The client fetches the file through dotdash once it runs, within a minute,
+tests the rules on it, keeps it, and restarts on it; its log says
+`geosite.dat: fetched`. Add the rules that name its lists then: until it is
+there, Xray has its own file, which lacks them. A client that has such rules
+and no file yet, as after a reinstall, fetches it at start, once, directly,
+where it can: not under `tun`, whose kill switch stops it, so unset those
+rules until the file is back. A fetched file replaces Xray's own entirely,
+so every list a rule names has to be in it. Unset, the client is back on
+Xray's own.
+
 ## IP rules match addresses, not names
 
 An IP rule matches only an address an app gives. A name is never looked up
