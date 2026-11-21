@@ -22,6 +22,8 @@ def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset(), split: boo
         line += f" hy2={f['hysteria2']['port']}"
     if f.get("cdn_hosts"):
         line += " cdn=" + ",".join(f["cdn_hosts"])
+    if f.get("cdn_path"):
+        line += f" cdnpath={f['cdn_path']}"
     if f.get("cdn_only"):
         line += " cdn-only"
     if f.get("name"):

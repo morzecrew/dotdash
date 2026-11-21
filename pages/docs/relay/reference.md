@@ -38,8 +38,10 @@ every connection without the relay's keys. It publishes port 80 too, for the
 certificate. The site also serves devices their subscriptions, fetched from
 the servers through the relay's tunnel, and XHTTP on the secret path
 `xhttp_path`, which `init` generates. With `cdn_hosts` set, `relay-entry`
-ends the relay's line with `cdn=<name>,...`, and the server gives each device
-a `relay · cdn` link through each
+ends the relay's line with `cdn=<name>,...` and `cdnpath=<path>`, and the
+server gives each device a `relay · cdn` link through each, by a secret path
+of the CDNs' own (`cdn_xhttp_path`, generated too) that a CDN reading the
+requests never learns the other from
 ([CDN in front of a relay](../server/cdn.md#in-front-of-a-relay)). See
 [Set up a relay](install.md#1-pick-the-site).
 

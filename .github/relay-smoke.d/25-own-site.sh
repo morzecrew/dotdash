@@ -145,7 +145,8 @@ if sudo jq -e '[.inbounds[].tag] | index("devices-xhttp")' /etc/dotdash-relay/xr
   # the data in headers) gets out, so the relay reads uploads placed so.
   if sudo grep -q '^  cdn_hosts:' /opt/dotdash-relay/current/manifest.yaml; then
     set_config "cdn_hosts=${domain},cdn-b.test"
-    [[ $(entry) == *" cdn=${domain},cdn-b.test" ]] || die "relay-entry does not end the line with cdn=${domain},cdn-b.test: $(entry | grep -o 'cdn=[^ ]*' || true)"
+    [[ $(entry) == *" cdn=${domain},cdn-b.test" || $(entry) == *" cdn=${domain},cdn-b.test cdnpath="* ]] ||
+      die "relay-entry does not end the line with cdn=${domain},cdn-b.test: $(entry | grep -o 'cdn=[^ ]*' || true)"
     jq '.outbounds[0].streamSettings.xhttpSettings += {mode: "packet-up", uplinkHTTPMethod: "GET",
         uplinkDataPlacement: "header", uplinkChunkSize: 16384, scMaxEachPostBytes: 8192, scMinPostsIntervalMs: 10}' \
       /rig/relay/xhttp/config.json >/rig/relay/xhttp/cdn.json
@@ -170,11 +171,30 @@ if sudo jq -e '[.inbounds[].tag] | index("devices-xhttp")' /etc/dotdash-relay/xr
       sudo docker rm -f relay-rig-xhttp >/dev/null
       echo "${0##*/}: a CDN sending its own name as SNI and Host gets through the relay's site"
     fi
+    # The CDNs' own path (cdnpath=), to the CDN inbound: a device shaped as
+    # the server's CDN links through it are, disguised (client-config.sh),
+    # gets out by it.
+    if sudo grep -q cdn_xhttp_path /opt/dotdash-relay/current/secrets.schema.yaml; then
+      cp=$(entry | grep -o 'cdnpath=[0-9a-f]*' | cut -d= -f2)
+      [ "${#cp}" = 24 ] || die "relay-entry gives no cdnpath= of 24 hex characters with cdn_hosts set: $(entry | grep -o 'cdnpath=[^ ]*' || true)"
+      jq --arg p "/${cp}" '.outbounds[0].streamSettings.xhttpSettings += {path: $p, uplinkDataKey: "X-Part",
+          xPaddingBytes: "64-256", xPaddingObfsMode: true, xPaddingMethod: "tokenish", xPaddingPlacement: "cookie",
+          xPaddingKey: "csrftoken", sessionIDPlacement: "cookie", sessionIDKey: "sessionid",
+          seqPlacement: "cookie", seqKey: "seq"}' /rig/relay/xhttp/config.json >/rig/relay/xhttp/cdn.json
+      mv /rig/relay/xhttp/cdn.json /rig/relay/xhttp/config.json
+      chmod -R a+rX /rig/relay/xhttp
+      sudo docker run -d --name relay-rig-xhttp --network host -v /rig/relay/xhttp:/etc/xray:ro \
+        -v /rig/relay/xhttp-ca:/ca:ro "${xray}" >/dev/null
+      gets_out 18084 || die "a device shaped for a CDN, disguised, did not get out by the CDNs' path: $(sudo docker logs relay-rig-xhttp 2>&1 | tail -2)"
+      sudo docker rm -f relay-rig-xhttp >/dev/null
+      sudo morzer task run facts --output 2>/dev/null | grep -qF "\"cdn_path\": \"${cp}\"" || die "the facts do not carry the CDNs' path"
+      echo "${0##*/}: relay-entry gives the CDNs' path, and a device disguised for a CDN gets out by it"
+    fi
     # cdn_only: the line ends with cdn-only, the facts say so, and with no CDN
     # relay-entry refuses, as devices would get nothing through the relay.
     if sudo grep -q '^  cdn_only:' /opt/dotdash-relay/current/manifest.yaml; then
       set_config cdn_only=true
-      [[ $(entry) == *" cdn=${domain},cdn-b.test cdn-only" ]] || die "relay-entry does not end the line with cdn-only under cdn_only=true"
+      [[ $(entry) == *" cdn=${domain},cdn-b.test"*" cdn-only" ]] || die "relay-entry does not end the line with cdn-only under cdn_only=true"
       sudo morzer task run facts --output 2>/dev/null | grep -qF '"cdn_only": true' || die "the facts do not carry cdn_only"
       set_config cdn_hosts=none
       ! sudo morzer task run relay-entry --output -- 127.0.0.1 >/dev/null 2>&1 ||
@@ -183,7 +203,7 @@ if sudo jq -e '[.inbounds[].tag] | index("devices-xhttp")' /etc/dotdash-relay/xr
       echo "${0##*/}: cdn_only ends the line with cdn-only, and relay-entry refuses it with no CDN"
     fi
     set_config cdn_hosts=none
-    [[ $(entry) != *cdn=* ]] || die "relay-entry still prints a cdn= field with cdn_hosts=none"
+    [[ $(entry) != *cdn=* && $(entry) != *cdnpath=* ]] || die "relay-entry still prints a cdn= or cdnpath= field with cdn_hosts=none"
     echo "${0##*/}: cdn_hosts ends the line with cdn=, and a device shaped for a CDN gets out behind the relay's site"
   fi
 fi

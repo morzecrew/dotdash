@@ -118,6 +118,14 @@ def test_a_relay_line_carries_its_hysteria2_port_after_mkcp():
                                       " cdn=c.example.net off=hysteria2")
 
 
+def test_a_relay_line_carries_its_cdn_path_after_its_cdns():
+    f = {"entry_host": "203.0.113.5", "site": "r.example.net", "public_key": "P", "short_id": "S", "encryption": "E",
+         "own_site": {"xhttp_path": "x"}, "cdn_hosts": ["c.example.net"], "cdn_path": "y", "cdn_only": True,
+         "name": "edge-1"}
+    assert relay_line(f) == ("203.0.113.5 r.example.net P S E own-site x cdn=c.example.net cdnpath=y cdn-only"
+                             " name=edge-1")
+
+
 def test_a_relay_line_carries_its_name_before_what_the_manager_adds():
     f = {"entry_host": "203.0.113.5", "site": "s.example.org", "public_key": "P", "short_id": "S", "encryption": "E",
          "name": "edge-1"}
