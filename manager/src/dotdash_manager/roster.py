@@ -67,6 +67,9 @@ class Relay(Target):
     # any relay, but kept out of what devices get until a burnt relay's place
     # needs it (health.spares).
     spare: bool = False
+    # Standby: in what devices get, but last, unchecked, and used only once
+    # every other link fails (its line in the servers' relays ends standby).
+    standby: bool = False
 
 
 class Canary(Machine):

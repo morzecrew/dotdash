@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `standby` at the end of a relay's line in `relays` keeps that relay idle while others get through: devices get its links last, and their Xray configs, dotdash-client's included, don't check them and use them only once every other link fails. The manager's roster takes `standby` on a relay.
+
 - A `direct` line in `upstreams` makes the server's own address a way out, for a server already on a residential line: alone, or beside proxies as their backup or fallback. `doctor` asks it from the server itself.
 
 - `dotdash-manager adopt` takes a running server's keys and its devices' ids, so a network set up by hand moves under the manager without devices getting new links or subscription URLs.

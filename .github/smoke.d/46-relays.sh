@@ -280,6 +280,28 @@ if sudo grep -q 'name=\*) nm=' /opt/dotdash/current/tasks/client-config.sh; then
   echo "46-relays.sh: a named relay's links carry its name; a taken or malformed name leaves its number"
 fi
 
+# standby: a relay's links come last among the share links, and its
+# outbounds first in the config, outside the dotdash- tags the balancer and
+# the checks take, so Xray sends it only what the balancer can't place; and
+# no fallback goes before it.
+if sudo grep -qF '[standby]' /opt/dotdash/current/manifest.yaml; then
+  printf '%s\n%s\n' "relay-a.test site-a.test pbkA 0011223344556677 mlkem.a name=near" \
+    "198.51.100.7 site-b.test pbkB 8899aabbccddeeff mlkem.b name=far standby" |
+    sudo morzer config set --set-file relays=- >/dev/null
+  text=$(out)
+  last=$(grep -E '^(vless|hysteria2)://' <<<"${text}" | tail -n 1)
+  [[ ${last} == *@198.51.100.7:443\?*"#far%20%C2%B7%20reality" ]] || die "a standby relay's links do not come last"
+  config=$(awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"${text}")
+  jq -e '.outbounds[0].tag == "standby-relay-2" and .outbounds[0].settings.address == "198.51.100.7"
+    and ([.outbounds[].tag | select(startswith("dotdash-relay-2"))] | length == 0)
+    and ([.outbounds[].tag] | index("dotdash-relay-1") != null)
+    and .routing.balancers[0].selector == ["dotdash-"] and (.routing.balancers[0] | has("fallbackTag") | not)
+    and .burstObservatory.subjectSelector == ["dotdash-"]' <<<"${config}" >/dev/null ||
+    die "a standby relay's outbound is not first and outside the balancer and the checks, or a fallback goes before it"
+  grep -qF 'the standby relays only when none answers' <<<"${text}" || die "the config's note leaves the standby relays out"
+  echo "46-relays.sh: a standby relay's links come last, its outbound first and outside the balancer and the checks"
+fi
+
 sudo morzer config unset relays >/dev/null
 [ -z "$(relay_links "$(out)")" ] || die "relay links remain once relays is unset"
 echo "46-relays.sh: a link and an outbound per relay and device, none with relays unset"

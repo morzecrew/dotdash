@@ -138,3 +138,10 @@ def test_a_canary_on_a_relay_gets_its_hysteria2_port(net, st, facts):
     docs, _ = render(net, st, {**facts, "r1": {**RELAY, "own_site": {"xhttp_path": "x"}, "hysteria2": {"port": 443}}})
     assert docs["c1"]["parameters"]["dotdash_hysteria2_port"] == "443"
     assert docs["c1"]["parameters"]["dotdash_server"] == "www.example.net"
+
+
+def test_a_standby_relay_ends_its_line_with_standby(st, facts):
+    net = loads(ROSTER.replace('key = "RWr"\n', 'key = "RWr"\nstandby = true\n'))
+    docs, _ = render(net, st, facts)
+    assert docs["a"]["parameters"]["relays"].endswith(" standby")
+    assert relay_line(RELAY, standby=True).endswith("cdn=c.example.net standby")

@@ -39,7 +39,8 @@ Per device it prints:
   [name](../relay/reference.md#parameters) goes by it instead: `edge-1 · reality`;
 - an Xray config for v2rayN or v2rayNG (as a custom config) that uses
   whichever link answers fastest, drops a dead one within about 30 s, and
-  falls back to the [DNS tunnel](dns-tunnel.md) when it is on.
+  falls back to the [DNS tunnel](dns-tunnel.md) when it is on, or to a
+  `standby` relay's links, unchecked until then, when there is one.
 
 !!! warning "The output is a password"
     Anyone holding a device's links can use the server as that device.

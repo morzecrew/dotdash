@@ -120,6 +120,12 @@ One line per relay:
 sudo morzer config edit relays
 ```
 
+A relay to keep idle while the others get through, such as one on an address
+worth keeping, gets `standby` at the end of its line. Devices still get its
+links, last, but their Xray configs, dotdash-client's included, don't check
+them, and send traffic through it only once every other link has failed. In
+an app where you pick a link, pick another while it works.
+
 ## 6. Devices
 
 `client-config` now prints a `relay · reality` link for every device,
