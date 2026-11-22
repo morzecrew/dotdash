@@ -75,6 +75,11 @@ class Relay(Target):
     via: list[Name] = []
     # How it reaches them: REALITY, or XHTTP through their own sites.
     via_link: Literal["reality", "xhttp"] = "reality"
+    # The TLS client hello the xhttp via leg shows: a browser, or none for
+    # Xray's own Go TLS stack (server-shaped). Only affects via_link="xhttp".
+    via_fingerprint: Literal[
+        "chrome", "firefox", "safari", "edge", "ios", "android", "random", "none"
+    ] = "chrome"
 
 
 class Canary(Machine):

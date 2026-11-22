@@ -157,6 +157,8 @@ def test_a_relay_goes_via_another_which_lets_it_in(st, facts):
     x = docs["x"]
     assert x["parameters"]["via"] == "203.0.113.5 www.example.net P S E" and "unset" not in x
     assert x["parameters"]["via_link"] == "reality"
+    # The reality leg takes no fingerprint: it is scoped to the xhttp leg.
+    assert "via_fingerprint" not in x["parameters"]
     assert x["parameters"]["dotdash_servers"] == "a.example.net"
     names = lambda doc: [line.split()[1] for line in doc["secrets"]["vless_clients"].splitlines()]
     assert names(docs["r1"]) == ["phone", "laptop", "canary-c1", "relay-x"]
@@ -169,7 +171,7 @@ def test_a_relay_goes_via_another_which_lets_it_in(st, facts):
     # Off via again, a release that takes it has it unset; one that doesn't is left alone.
     plain = loads(ROSTER + '[[relay]]\nname = "x"\n')
     docs, _ = render(plain, st, {**facts, "x": {**RELAY, "via": True}})
-    assert docs["x"]["unset"] == {"parameters": ["via", "via_link"]} and "via" not in docs["x"]["parameters"]
+    assert docs["x"]["unset"] == {"parameters": ["via", "via_link", "via_fingerprint"]} and "via" not in docs["x"]["parameters"]
     docs, _ = render(plain, st, {**facts, "x": RELAY})
     assert "unset" not in docs["x"] and "via" not in docs["x"]["parameters"]
 
@@ -192,3 +194,15 @@ def test_a_relay_goes_via_another_by_xhttp_through_its_own_site(st, facts):
     docs, _ = render(net, st, {**facts, "r1": {**RELAY, "own_site": {"xhttp_path": "abc"}}})
     assert docs["x"]["parameters"]["via"] == "203.0.113.5 www.example.net P S E own-site abc"
     assert docs["x"]["parameters"]["via_link"] == "xhttp"
+    # The xhttp leg carries a fingerprint, defaulting to chrome.
+    assert docs["x"]["parameters"]["via_fingerprint"] == "chrome"
+
+
+def test_the_xhttp_via_leg_takes_a_server_shaped_fingerprint(st, facts):
+    net = loads(ROSTER + '[[relay]]\nname = "x"\nvia = ["r1"]\nvia_link = "xhttp"\nvia_fingerprint = "none"\n')
+    st = state.load(Path("/nonexistent"), net)
+    pbk = state.public_key(st["keys"]["reality_key"])
+    facts = {**facts, "a": {**facts["a"], "public_key": pbk},
+             "r1": {**RELAY, "own_site": {"xhttp_path": "abc"}}}
+    docs, _ = render(net, st, facts)
+    assert docs["x"]["parameters"]["via_fingerprint"] == "none"

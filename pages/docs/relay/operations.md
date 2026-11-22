@@ -98,6 +98,16 @@ How it reaches the other relay, `via_link`:
   devices make. The other relay needs `own-site`, and its line then carries
   `own-site <path>`, which this one needs.
 
+On the `xhttp` leg, `via_fingerprint` sets the TLS client hello this relay
+shows the other one. The default, `chrome`, mimics that browser, as the leg
+has always done. A browser hello between two machines is itself a small
+tell — an ordinary site is fetched by a server, not a phone — so for a relay
+that only ever talks to the other relay, `none` fits better: it drops the
+browser mimicry and uses Xray's own TLS stack, which looks like a server-side
+HTTP client. `firefox`, `safari`, `edge`, `ios` and `android` pick other
+browsers, and `random` a different one per connection. It changes nothing on
+the `reality` leg or on the way to the servers.
+
 ### Both ways at once
 
 While the other relay's address gets through, devices can reach it directly

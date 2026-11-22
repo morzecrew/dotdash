@@ -157,8 +157,10 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
         if r.via:
             doc["parameters"]["via"] = "\n".join(via_line(facts[v], r.via_link) for v in r.via)
             doc["parameters"]["via_link"] = r.via_link
+            if r.via_link == "xhttp":
+                doc["parameters"]["via_fingerprint"] = r.via_fingerprint
         elif takes_via and r.name in facts:
-            doc["unset"] = {"parameters": ["via", "via_link"]}
+            doc["unset"] = {"parameters": ["via", "via_link", "via_fingerprint"]}
 
     for c in net.canary:
         target = net.find(c.watches)

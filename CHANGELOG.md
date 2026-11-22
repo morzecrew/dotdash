@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - dotdash-client's `geoip` and `geosite` take other geodata, as `<url> <sha256>`, for rules naming lists Xray's own lacks. The client fetches the file through dotdash once it runs, keeps it, and restarts on it.
 
+- A relay's `xhttp` `via` leg takes `via_fingerprint`, the TLS client hello it shows the relay it goes through. `none` drops the browser mimicry for Xray's own TLS stack, which looks like a server fetching from another rather than a phone; the default, `chrome`, is unchanged. The manager's roster takes it.
+
 ## [0.13.0] - 2026-11-21
 
 ### Added
