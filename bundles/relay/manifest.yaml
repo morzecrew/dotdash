@@ -208,6 +208,12 @@ parameters:
     default: reality
     description: "How this relay reaches the relays in via. reality: REALITY with Vision, a connection for each device's, as devices' reality links to a relay. xhttp: XHTTP through each relay's own site, under its certificate, connections reused across devices, as devices' xhttp links to a relay; each via line has to carry own-site <path>"
     services: [xray]
+  via_fingerprint:
+    type: enum
+    values: [chrome, firefox, safari, edge, ios, android, random, none]
+    default: chrome
+    description: "The TLS client hello the xhttp via leg shows the relay it goes through (via_link=xhttp only; the reality leg and the servers' leg are unaffected). The browser values mimic that browser. none uses Xray's own Go TLS stack, which looks like a server-side HTTP client rather than a browser and so fits one datacenter machine fetching from another; random picks a browser per connection. chrome keeps the earlier behaviour"
+    services: [xray]
   ipv6:
     type: enum
     values: [allow, block]

@@ -67,10 +67,19 @@ printf '%s own-site 0123abcd name=mid\n' "${line}" >/rig/relay/via-site
 plan=$(sudo morzer config set via_link=xhttp --set-file via=/rig/relay/via-site --dry-run 2>&1) ||
   die "could not plan via_link=xhttp: ${plan}"
 for want in '"streamSettings": {"network": "xhttp", "security": "tls"' \
-  '"xhttpSettings": {"path": "/0123abcd", "host": "www.gstatic.com", "mode": "auto"}'; do
+  '"xhttpSettings": {"path": "/0123abcd", "host": "www.gstatic.com", "mode": "auto"}' \
+  '"alpn": ["h2"], "fingerprint": "chrome"'; do
   grep -qF -- "${want}" <<<"${plan}" || die "the plan for via_link=xhttp renders no ${want}: $(tail -n 40 <<<"${plan}")"
 done
 echo "${0##*/}: via_link=xhttp renders XHTTP through the other relay's own site"
+
+# via_fingerprint=none empties the field, so the leg uses Xray's own Go TLS
+# stack rather than a browser's client hello.
+plan=$(sudo morzer config set via_link=xhttp via_fingerprint=none --set-file via=/rig/relay/via-site --dry-run 2>&1) ||
+  die "could not plan via_fingerprint=none: ${plan}"
+grep -qF -- '"alpn": ["h2"], "fingerprint": ""' <<<"${plan}" ||
+  die "via_fingerprint=none did not empty the xhttp leg's fingerprint: $(tail -n 40 <<<"${plan}")"
+echo "${0##*/}: via_fingerprint=none renders the xhttp leg with Xray's own TLS stack"
 
 sudo docker stop relay-rig-server >/dev/null
 printf '%s\n' "${line}" >/rig/relay/via-one

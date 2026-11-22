@@ -198,7 +198,7 @@ REALITY connection with Vision for each. */ -}}
         "encryption": "{{ index $f 4 }}"
       },
       "streamSettings": {"network": "xhttp", "security": "tls",
-        "tlsSettings": {"serverName": "{{ index $f 1 }}", "alpn": ["h2"], "fingerprint": "chrome"},
+        "tlsSettings": {"serverName": "{{ index $f 1 }}", "alpn": ["h2"], "fingerprint": "{{ if eq $.Parameters.via_fingerprint "none" }}{{ else }}{{ $.Parameters.via_fingerprint }}{{ end }}"},
         "xhttpSettings": {"path": "/{{ index $f 6 }}", "host": "{{ index $f 1 }}", "mode": "auto"},
         "sockopt": {"tcpUserTimeout": 15000}}
     }
