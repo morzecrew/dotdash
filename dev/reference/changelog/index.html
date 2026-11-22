@@ -3536,6 +3536,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>A relay can go through other relays instead of the servers: <code>via</code> takes their lines as <code>relay-entry</code> prints them, reached by REALITY or, with <code>via_link=xhttp</code>, XHTTP through their own sites. The servers never see its address, for a relay on an address worth keeping. The manager's roster takes both.</p>
 </li>
 <li>
+<p><code>standby</code> at the end of a relay's line in <code>relays</code> keeps that relay idle while others get through: devices get its links last, and their Xray configs, dotdash-client's included, don't check them and use them only once every other link fails. The manager's roster takes <code>standby</code> on a relay.</p>
+</li>
+<li>
 <p>A <code>direct</code> line in <code>upstreams</code> makes the server's own address a way out, for a server already on a residential line: alone, or beside proxies as their backup or fallback. <code>doctor</code> asks it from the server itself.</p>
 </li>
 <li>

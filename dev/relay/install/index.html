@@ -2254,6 +2254,11 @@ their subscriptions and XHTTP (step 6).</p>
 <p>One line per relay:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>edit<span class="w"> </span>relays
 </code></pre></div>
+<p>A relay to keep idle while the others get through, such as one on an address
+worth keeping, gets <code>standby</code> at the end of its line. Devices still get its
+links, last, but their Xray configs, dotdash-client's included, don't check
+them, and send traffic through it only once every other link has failed. In
+an app where you pick a link, pick another while it works.</p>
 <h2 id="6-devices">6. Devices<a class="headerlink" href="#6-devices" title="Permanent link">&para;</a></h2>
 <p><code>client-config</code> now prints a <code>relay · reality</code> link for every device,
 and the Xray config falls back to the relays when the server itself is out of
