@@ -24,6 +24,8 @@ to the server.
 - The relay goes on to the server as one client of its own, a line in the
   server's `vless_clients`. With [several servers](../server/several-servers.md),
   it uses whichever answers fastest, so a ban on one address doesn't cut it off.
+- It can go through another relay instead (`via`), so the servers never
+  see its address: [Through another relay](operations.md#through-another-relay).
 - Nothing leaves the relay except to dotdash: traffic still exits through
   the server's upstream proxy.
 

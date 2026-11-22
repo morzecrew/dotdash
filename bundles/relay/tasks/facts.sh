@@ -28,4 +28,5 @@ printf '{"entry_host": %s, "site": %s, "public_key": %s, "short_id": %s, "encryp
 [ -z "$cdn_path" ] || printf ', "cdn_path": %s' "$(str "$cdn_path")"
 [ -z "$only" ] || printf ', "cdn_only": true'
 [ -z "$name" ] || printf ', "name": %s' "$(str "$name")"
-printf '}\n'
+# This release takes via: an authority sets or unsets it only on one that does.
+printf ', "via": true}\n'

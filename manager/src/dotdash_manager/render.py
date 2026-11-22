@@ -39,6 +39,13 @@ def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset(), split: boo
     return line
 
 
+def via_line(f: dict, link: str) -> str:
+    """A relay's line for another's via: its link's five fields, and with
+    XHTTP the path through its own site, which that needs."""
+    line = " ".join(relay_line(f).split()[:5])
+    return line + (f" own-site {f['own_site']['xhttp_path']}" if link == "xhttp" else "")
+
+
 def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[str] = frozenset(),
            off: dict[str, set[str]] | None = None, stands: dict[str, str] | None = None,
            split: set[str] | frozenset[str] = frozenset()) -> tuple[dict, list[str]]:
@@ -59,7 +66,9 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     ready = [s for s in known if facts[s.name].get("public_key") == pbk]
     waiting = [f"{s.name}: {'no facts yet' if s.id else 'not joined'}" for s in [*net.server, *net.relay] if s.name not in facts]
     waiting += [f"{s.name}: has not applied the keys yet" for s in known if s not in ready]
-    vless = {kind: "\n".join(f"{ids[n]} {n}" for n in net.clients_of(kind)) for kind in ("server", "relay")}
+    def vless(kind: str, relay: str | None = None) -> str:
+        return "\n".join(f"{ids[n]} {n}" for n in net.clients_of(kind, relay))
+
     docs = {}
 
     off = off or {}
@@ -86,7 +95,7 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
                 "subscription": str(net.subscription).lower(),
                 "cdn_hosts": ",".join(s.cdn_hosts) or "none",
             },
-            "secrets": {"vless_clients": vless["server"], **keys},
+            "secrets": {"vless_clients": vless("server"), **keys},
         }
         # Only when the roster says: a server released before direct refuses it.
         if net.direct is not None:
@@ -115,7 +124,22 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
         if not lead:
             waiting.append(f"{r.name}: waits for a server that applied the keys")
             continue
-        docs[r.name] = {
+        # via: the other relays' links, the first five fields of their lines.
+        # A relay with facts says whether its release takes via; one with none
+        # yet installs a release that does, and goes via them from the start.
+        missing = [v for v in r.via if v not in facts]
+        if missing:
+            waiting.append(f"{r.name}: goes via {', '.join(missing)}, which has no facts yet")
+            continue
+        siteless = [v for v in r.via if r.via_link == "xhttp" and "own_site" not in facts[v]]
+        if siteless:
+            waiting.append(f"{r.name}: goes via {', '.join(siteless)} by XHTTP, which needs their own site")
+            continue
+        takes_via = facts.get(r.name, {}).get("via", r.name not in facts)
+        if r.via and not takes_via:
+            waiting.append(f"{r.name}: its release predates via: update it")
+            continue
+        doc = docs[r.name] = {
             "parameters": {
                 "dotdash_servers": ",".join(facts[s.name]["domain"] for s in ready),
                 "dotdash_address": "none",
@@ -124,12 +148,17 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
                 "ipv6": net.ipv6,
             },
             "secrets": {
-                "vless_clients": vless["relay"],
+                "vless_clients": vless("relay", r.name),
                 "dotdash_id": ids[f"relay-{r.name}"],
                 "dotdash_encryption": lead["encryption"],
                 "dotdash_short_id": keys["reality_short_id"],
             },
         }
+        if r.via:
+            doc["parameters"]["via"] = "\n".join(via_line(facts[v], r.via_link) for v in r.via)
+            doc["parameters"]["via_link"] = r.via_link
+        elif takes_via and r.name in facts:
+            doc["unset"] = {"parameters": ["via", "via_link"]}
 
     for c in net.canary:
         target = net.find(c.watches)
