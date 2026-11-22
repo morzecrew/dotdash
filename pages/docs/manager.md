@@ -62,6 +62,8 @@ cdn_hosts = ["cdn.example.net"]             # optional: this server's cdn_hosts
 name = "r1"
 provider = "hoster-a"                       # optional: your own name for who hosts it
 address_since = 2026-11-01                  # optional: since when it has this address
+via = ["r0"]                                # optional: relays it goes through instead of the servers
+via_link = "xhttp"                          # optional, with via: reality (the default) or xhttp through their own sites
 
 [[canary]]
 name = "c1"
@@ -76,6 +78,12 @@ With `direct = false` the servers keep their addresses out of devices'
 links ([direct](server/devices.md#keeping-the-servers-out-of-devices-links)),
 and client machines fetch their subscription through an own-site relay,
 waiting for one. Left out, each server keeps its own setting.
+
+A relay with `via` goes through those relays instead of the servers
+([Through another relay](relay/operations.md#through-another-relay)): they
+let it in by its own id, and its document waits for their facts. A relay
+running a release from before `via` waits to be updated rather than going to
+the servers.
 
 Names are lowercase letters, digits and dashes. `relay-` and `canary-` start
 the names the manager gives relays' and canaries' own devices. A field the
