@@ -2210,6 +2210,11 @@
 <td>how the relay reaches those in <code>via</code>: <code>reality</code>, REALITY with Vision, a connection for each device's; <code>xhttp</code>, XHTTP through each one's own site under its certificate, connections reused across devices, for which each line has to carry <code>own-site &lt;path&gt;</code>, as <code>relay-entry</code> prints it under <code>own-site</code></td>
 </tr>
 <tr>
+<td><code>via_fingerprint</code></td>
+<td><code>chrome</code></td>
+<td>the TLS client hello the <code>xhttp</code> <code>via</code> leg shows the relay it goes through (<code>via_link=xhttp</code> only; the <code>reality</code> leg and the way to the servers are unaffected): <code>chrome</code>, <code>firefox</code>, <code>safari</code>, <code>edge</code>, <code>ios</code>, <code>android</code> mimic that browser; <code>none</code> uses Xray's own Go TLS stack, which looks like a server-side HTTP client rather than a browser; <code>random</code> picks a browser per connection</td>
+</tr>
+<tr>
 <td><code>probe_url</code></td>
 <td><code>https://www.gstatic.com/generate_204</code></td>
 <td>what the health check fetches through dotdash; any 2xx is healthy</td>

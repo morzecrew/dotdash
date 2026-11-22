@@ -3553,6 +3553,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>
 <p>dotdash-client's <code>geoip</code> and <code>geosite</code> take other geodata, as <code>&lt;url&gt; &lt;sha256&gt;</code>, for rules naming lists Xray's own lacks. The client fetches the file through dotdash once it runs, keeps it, and restarts on it.</p>
 </li>
+<li>
+<p>A relay's <code>xhttp</code> <code>via</code> leg takes <code>via_fingerprint</code>, the TLS client hello it shows the relay it goes through. <code>none</code> drops the browser mimicry for Xray's own TLS stack, which looks like a server fetching from another rather than a phone; the default, <code>chrome</code>, is unchanged. The manager's roster takes it.</p>
+</li>
 </ul>
 <h2 id="0130-2026-11-21">[0.13.0] - 2026-11-21<a class="headerlink" href="#0130-2026-11-21" title="Permanent link">&para;</a></h2>
 <h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>

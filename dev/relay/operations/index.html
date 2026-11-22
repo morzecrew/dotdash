@@ -2357,6 +2357,15 @@ fastest, so one going down doesn't cut it off.</p>
   devices make. The other relay needs <code>own-site</code>, and its line then carries
   <code>own-site &lt;path&gt;</code>, which this one needs.</li>
 </ul>
+<p>On the <code>xhttp</code> leg, <code>via_fingerprint</code> sets the TLS client hello this relay
+shows the other one. The default, <code>chrome</code>, mimics that browser, as the leg
+has always done. A browser hello between two machines is itself a small
+tell — an ordinary site is fetched by a server, not a phone — so for a relay
+that only ever talks to the other relay, <code>none</code> fits better: it drops the
+browser mimicry and uses Xray's own TLS stack, which looks like a server-side
+HTTP client. <code>firefox</code>, <code>safari</code>, <code>edge</code>, <code>ios</code> and <code>android</code> pick other
+browsers, and <code>random</code> a different one per connection. It changes nothing on
+the <code>reality</code> leg or on the way to the servers.</p>
 <h3 id="both-ways-at-once">Both ways at once<a class="headerlink" href="#both-ways-at-once" title="Permanent link">&para;</a></h3>
 <p>While the other relay's address gets through, devices can reach it directly
 and leave this one idle; once it doesn't, they go through this one. Put both
