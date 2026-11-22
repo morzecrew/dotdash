@@ -155,7 +155,7 @@ if [ -r "${upstreams}" ]; then
     case ${words[0]:-} in '' | '#'*) continue ;; esac
     url='' groups=upstream
     for w in "${words[@]}"; do
-      case ${w} in *://* | openvpn) url=${w} ;; group=*) groups=${w#group=} ;; esac
+      case ${w} in *://* | openvpn | direct) url=${w} ;; group=*) groups=${w#group=} ;; esac
     done
     case ${url} in wireguard://* | openvpn | openvpn://*) tunnels=$((tunnels + 1)) ;; esac
     case ${url} in openvpn | openvpn://*) openvpn=$((openvpn + 1)) ;; esac

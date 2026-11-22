@@ -45,6 +45,16 @@ upstreams=${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstreams
 ask_line() {
   local label=$1 line=$2 url=$3 err errf rc code scheme
   case $line in
+  direct)
+    # This machine's own address: the probe asked from here, with no proxy.
+    if ! command -v curl >/dev/null; then
+      echo "$label (direct): install curl to check whether this machine gets out"
+      return 1
+    fi
+    code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 6 --noproxy '*' "$url" 2>/dev/null) || code=000
+    [[ $code == [23]* ]] && return 0
+    echo "$label (direct): this machine's own address does not get $url (answered $code): its network is down, or refuses the probe's host"
+    return 1 ;;
   wireguard://*)
     echo "$label (WireGuard): its peer did not carry it, and has no proxy to ask: it may be down, unreachable from here, or not know this key"
     return 1 ;;

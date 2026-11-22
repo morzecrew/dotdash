@@ -25,6 +25,7 @@ socks5://carol:secret@203.0.113.8:1080
 | `https://[user:pass@]host:port` | an HTTP proxy over TLS |
 | `wireguard://…` | a WireGuard exit, from its wg-quick file ([below](#wireguard)) |
 | `openvpn://…` | an OpenVPN exit, from its client config ([below](#openvpn)) |
+| `direct` | this server's own address ([below](#no-upstream-this-servers-own-address)) |
 
 - After the scheme, a proxy is `user:pass@host:port`, or `host:port` with no
   login. The password may contain `:` and `@`, and is not percent-encoded. An
@@ -40,6 +41,31 @@ socks5://carol:secret@203.0.113.8:1080
 
 Proxies with residential exits suit this best. With every line down, devices
 get nothing, never the server's own address: [what leaks where](leaks.md).
+
+## No upstream: this server's own address
+
+A server that is itself on the network traffic should leave from, such as a
+home line with a residential address, needs no proxy in between: the line
+`direct` makes its own address a way out.
+
+```text
+name=home | direct
+```
+
+- **Alone,** every connection leaves from this server's address, and devices
+  see it as their exit.
+- **Beside proxies,** it is a line like any other, probed with them and
+  ordered by `upstream_mode` and `upstream_pin`: first with a proxy as its
+  backup, or last as a fallback. A fallback means that, with every proxy
+  down, traffic leaves from this server's address instead of not at all,
+  which [What leaks where](leaks.md) otherwise rules out.
+- It takes `name=` and `group=ipv6` (the server's own IPv6, under
+  `ipv6=separate`), not `warm=`. It carries UDP, so `upstream_udp` works
+  with it.
+- `resolve=gateway` keeps resolving names over `dns_resolver`, now from this
+  address; `resolve=upstream` leaves them to this machine's resolver.
+- When nothing gets out, `doctor` fetches `probe_url` from this machine
+  directly for that line.
 
 ## Order and modes
 
