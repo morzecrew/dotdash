@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- A relay can go through other relays instead of the servers: `via` takes their lines as their `relay-entry` prints them, and uses whichever answers fastest. The servers never see its address, for a relay on an address worth keeping. The manager's roster takes `via` too.
+- A relay can go through other relays instead of the servers: `via` takes their lines as `relay-entry` prints them, reached by REALITY or, with `via_link=xhttp`, XHTTP through their own sites. The servers never see its address, for a relay on an address worth keeping. The manager's roster takes both.
 
 - A `direct` line in `upstreams` makes the server's own address a way out, for a server already on a residential line: alone, or beside proxies as their backup or fallback. `doctor` asks it from the server itself.
 

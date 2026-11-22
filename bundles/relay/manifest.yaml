@@ -202,6 +202,12 @@ parameters:
     default: "# Relays to go through instead of the servers, one per line, as its relay-entry task prints it: <host> <site> <public key> <short id> <encryption>"
     description: "Other dotdash relays this one goes through instead of the servers, one line per relay as its relay-entry task prints it, \"<host> <site> <public key> <short id> <encryption>\" (the rest of the line is ignored); with several, it uses whichever answers fastest. Each has to let this relay's dotdash_id in. The servers still serve subscriptions, through them. Empty, it goes to the servers"
     services: [xray]
+  via_link:
+    type: enum
+    values: [reality, xhttp]
+    default: reality
+    description: "How this relay reaches the relays in via. reality: REALITY with Vision, a connection for each device's, as devices' reality links to a relay. xhttp: XHTTP through each relay's own site, under its certificate, connections reused across devices, as devices' xhttp links to a relay; each via line has to carry own-site <path>"
+    services: [xray]
   ipv6:
     type: enum
     values: [allow, block]

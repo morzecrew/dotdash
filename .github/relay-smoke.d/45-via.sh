@@ -4,8 +4,9 @@
 # dotdash_id in on 443, as a relay lets devices in, and logs what it carries.
 # The stand-in sits on the relay's own network, where its name resolves: 443
 # on the rig is the relay's. Two lines render an outbound each behind a
-# balancer; a short line, and via with dotdash_link=xhttp-reality, are refused
-# in the plan. Then the relay is back on the stand-in server.
+# balancer in the plan; a short line, and via with dotdash_link=xhttp-reality,
+# fail the render, which a plan doesn't, so a real change is refused and the
+# relay stays as it was. Then the relay is back on the stand-in server.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -46,9 +47,30 @@ for want in '"address": "relay-rig-middle", "port": 443' '"address": "b.invalid"
   grep -qF -- "${want}" <<<"${plan}" || die "the plan for two via lines renders no ${want}: $(tail -n 40 <<<"${plan}")"
 done
 printf 'a.invalid a.invalid %s %s\n' "${public}" "${sid}" >/rig/relay/via-short
-out=$(sudo morzer config set --set-file via=/rig/relay/via-short --dry-run 2>&1) && die "a via line of four fields was taken"
+# A refused change keeps neither the config nor the values.
+unchanged() {
+  sudo jq -e '.outbounds[0].settings.address != "relay-rig-middle"' /etc/dotdash-relay/xray.json >/dev/null &&
+    [ "$(sudo morzer config get via_link)" = reality ] && ! sudo morzer config get via | grep -q relay-rig-middle
+}
+out=$(sudo morzer config set --set-file via=/rig/relay/via-short 2>&1) && die "a via line of four fields was taken"
+unchanged || die "a refused via line changed the relay's config"
 grep -qF "a via line is <host> <site>" <<<"${out}" || die "a short via line was refused without saying why: ${out}"
 echo "${0##*/}: two via lines render an outbound each behind a balancer; a short one is refused"
+
+# via_link=xhttp: XHTTP through the other relay's own site, on the path its
+# line carries after own-site; a line without one is refused. Planned only:
+# the stand-in has no site under a certificate the relay trusts.
+out=$(sudo morzer config set via_link=xhttp --set-file via=/rig/relay/via-two 2>&1) && die "via_link=xhttp took a line without own-site"
+grep -qF "has no own-site <path>" <<<"${out}" || die "a via line without own-site was refused without saying why: ${out}"
+unchanged || die "a refused via_link=xhttp changed the relay's config"
+printf '%s own-site 0123abcd name=mid\n' "${line}" >/rig/relay/via-site
+plan=$(sudo morzer config set via_link=xhttp --set-file via=/rig/relay/via-site --dry-run 2>&1) ||
+  die "could not plan via_link=xhttp: ${plan}"
+for want in '"streamSettings": {"network": "xhttp", "security": "tls"' \
+  '"xhttpSettings": {"path": "/0123abcd", "host": "www.gstatic.com", "mode": "auto"}'; do
+  grep -qF -- "${want}" <<<"${plan}" || die "the plan for via_link=xhttp renders no ${want}: $(tail -n 40 <<<"${plan}")"
+done
+echo "${0##*/}: via_link=xhttp renders XHTTP through the other relay's own site"
 
 sudo docker stop relay-rig-server >/dev/null
 printf '%s\n' "${line}" >/rig/relay/via-one
@@ -57,7 +79,7 @@ sudo morzer config set --set-file via=/rig/relay/via-one >/dev/null ||
 sudo jq -e '(.outbounds | length) == 1 and .outbounds[0].settings.address == "relay-rig-middle" and (.routing == null)' \
   /etc/dotdash-relay/xray.json >/dev/null || die "one via line renders a balancer or another way out"
 sudo morzer doctor >/dev/null 2>&1 || die "doctor fails through the other relay"
-out=$(sudo morzer config set dotdash_link=xhttp-reality --dry-run 2>&1) && die "via took dotdash_link=xhttp-reality"
+out=$(sudo morzer config set dotdash_link=xhttp-reality 2>&1) && die "via took dotdash_link=xhttp-reality"
 grep -qF "not through via" <<<"${out}" || die "xhttp-reality with via was refused without saying why: ${out}"
 echo "${0##*/}: with the server stopped, the relay gets out through the other relay"
 

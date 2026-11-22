@@ -149,6 +149,7 @@ def test_a_relay_goes_via_another_which_lets_it_in(st, facts):
     # x has no facts yet: a fresh install, which takes via from the start.
     x = docs["x"]
     assert x["parameters"]["via"] == "203.0.113.5 www.example.net P S E" and "unset" not in x
+    assert x["parameters"]["via_link"] == "reality"
     assert x["parameters"]["dotdash_servers"] == "a.example.net"
     names = lambda doc: [line.split()[1] for line in doc["secrets"]["vless_clients"].splitlines()]
     assert names(docs["r1"]) == ["phone", "laptop", "canary-c1", "relay-x"]
@@ -161,7 +162,7 @@ def test_a_relay_goes_via_another_which_lets_it_in(st, facts):
     # Off via again, a release that takes it has it unset; one that doesn't is left alone.
     plain = loads(ROSTER + '[[relay]]\nname = "x"\n')
     docs, _ = render(plain, st, {**facts, "x": {**RELAY, "via": True}})
-    assert docs["x"]["unset"] == {"parameters": ["via"]} and "via" not in docs["x"]["parameters"]
+    assert docs["x"]["unset"] == {"parameters": ["via", "via_link"]} and "via" not in docs["x"]["parameters"]
     docs, _ = render(plain, st, {**facts, "x": RELAY})
     assert "unset" not in docs["x"] and "via" not in docs["x"]["parameters"]
 
@@ -172,3 +173,15 @@ def test_a_relay_waits_for_the_facts_of_the_relay_it_goes_via(st, facts):
     pbk = state.public_key(st["keys"]["reality_key"])
     docs, waiting = render(net, st, {**facts, "a": {**facts["a"], "public_key": pbk}})
     assert "y" not in docs and "y: goes via x, which has no facts yet" in waiting
+
+
+def test_a_relay_goes_via_another_by_xhttp_through_its_own_site(st, facts):
+    net = loads(ROSTER + '[[relay]]\nname = "x"\nvia = ["r1"]\nvia_link = "xhttp"\n')
+    st = state.load(Path("/nonexistent"), net)
+    pbk = state.public_key(st["keys"]["reality_key"])
+    facts = {**facts, "a": {**facts["a"], "public_key": pbk}}
+    docs, waiting = render(net, st, facts)
+    assert "x" not in docs and "x: goes via r1 by XHTTP, which needs their own site" in waiting
+    docs, _ = render(net, st, {**facts, "r1": {**RELAY, "own_site": {"xhttp_path": "abc"}}})
+    assert docs["x"]["parameters"]["via"] == "203.0.113.5 www.example.net P S E own-site abc"
+    assert docs["x"]["parameters"]["via_link"] == "xhttp"

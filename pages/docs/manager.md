@@ -63,6 +63,7 @@ name = "r1"
 provider = "hoster-a"                       # optional: your own name for who hosts it
 address_since = 2026-11-01                  # optional: since when it has this address
 via = ["r0"]                                # optional: relays it goes through instead of the servers
+via_link = "xhttp"                          # optional, with via: reality (the default) or xhttp through their own sites
 
 [[canary]]
 name = "c1"

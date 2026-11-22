@@ -35,6 +35,13 @@ def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset(), split: boo
     return line
 
 
+def via_line(f: dict, link: str) -> str:
+    """A relay's line for another's via: its link's five fields, and with
+    XHTTP the path through its own site, which that needs."""
+    line = " ".join(relay_line(f).split()[:5])
+    return line + (f" own-site {f['own_site']['xhttp_path']}" if link == "xhttp" else "")
+
+
 def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[str] = frozenset(),
            off: dict[str, set[str]] | None = None, stands: dict[str, str] | None = None,
            split: set[str] | frozenset[str] = frozenset()) -> tuple[dict, list[str]]:
@@ -120,6 +127,10 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
         if missing:
             waiting.append(f"{r.name}: goes via {', '.join(missing)}, which has no facts yet")
             continue
+        siteless = [v for v in r.via if r.via_link == "xhttp" and "own_site" not in facts[v]]
+        if siteless:
+            waiting.append(f"{r.name}: goes via {', '.join(siteless)} by XHTTP, which needs their own site")
+            continue
         takes_via = facts.get(r.name, {}).get("via", r.name not in facts)
         if r.via and not takes_via:
             waiting.append(f"{r.name}: its release predates via: update it")
@@ -140,9 +151,10 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
             },
         }
         if r.via:
-            doc["parameters"]["via"] = "\n".join(" ".join(relay_line(facts[v]).split()[:5]) for v in r.via)
+            doc["parameters"]["via"] = "\n".join(via_line(facts[v], r.via_link) for v in r.via)
+            doc["parameters"]["via_link"] = r.via_link
         elif takes_via and r.name in facts:
-            doc["unset"] = {"parameters": ["via"]}
+            doc["unset"] = {"parameters": ["via", "via_link"]}
 
     for c in net.canary:
         target = net.find(c.watches)

@@ -70,6 +70,8 @@ class Relay(Target):
     # Other relays this one goes through instead of the servers (its via):
     # they let it in by its own id, and the servers never see its address.
     via: list[Name] = []
+    # How it reaches them: REALITY, or XHTTP through their own sites.
+    via_link: Literal["reality", "xhttp"] = "reality"
 
 
 class Canary(Machine):

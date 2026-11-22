@@ -87,13 +87,37 @@ The apply's health check goes through the other relay, and morzer rolls back
 a line it can't get through. With two lines, it uses whichever relay answers
 fastest, so one going down doesn't cut it off.
 
+How it reaches the other relay, `via_link`:
+
+- `reality` (the default): REALITY with Vision, one connection for each of
+  its devices' connections, as a device's `reality` link to a relay.
+- `xhttp`: XHTTP through the other relay's own site, under that site's
+  certificate, a few connections reused across all its devices, as a
+  device's `xhttp` link to a relay. To whoever watches this relay, that is a
+  machine fetching from a website, rather than as many connections as its
+  devices make. The other relay needs `own-site`, and its line then carries
+  `own-site <path>`, which this one needs.
+
+### Both ways at once
+
+While the other relay's address gets through, devices can reach it directly
+and leave this one idle; once it doesn't, they go through this one. Put both
+relays' lines in the server's `relays`, the other relay's first: devices get
+the other relay's links and this one's, which go through it. A
+[`name`](reference.md) on each says which is which in the apps, such as
+`name=y` on the other relay and `name=y-via-x` on this one: `y · reality`,
+`y · xhttp`, `y-via-x · reality`. In apps where you pick a link, pick the
+other relay's and keep this one's for when they stop working; Xray configs
+that pick the fastest pick the shorter way while it works, though they check
+every link every 30 seconds, this one's too.
+
 - `dotdash_servers` and the server's keys stay as they are: under
   `own-site`, the site still fetches devices' subscriptions from the servers,
   through the other relay.
-- The other relay needs no line in the server's `relays`. Left out, no device
+- Or the other relay has no line in the server's `relays`: then no device
   gets a link to it and only this relay knows its address, so its firewall
   can let in this relay alone (with `cert_issuer=acme-dns`, which needs no
-  port 80). The server's can let in the other relay alone.
+  port 80). Either way, the server's firewall can let in the relays alone.
 - Each relay on the way adds its round trip to every new connection.
 - `dotdash_link=xhttp-reality` is a way to the servers only: with `via`,
   the link is `reality`.

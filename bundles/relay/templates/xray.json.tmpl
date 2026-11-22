@@ -29,9 +29,16 @@ device's, on 443: its host, site, public key, short id and encryption. The
 relay lets this one in as one of its devices, by dotdash_id, and carries it
 on as it carries them; the servers never see this relay's address. Comments
 and blank lines are skipped; the kept lines go one per line into $via. */ -}}
+{{- /* via_link=xhttp: XHTTP through each relay's own site, on the path its
+line carries after own-site (relay-entry prints it sixth and seventh), its
+connections reused across devices, as devices' xhttp links to a relay are;
+so each line has to carry it. */ -}}
+{{- $vx := eq .Parameters.via_link "xhttp" -}}
 {{- $via := "" -}}
 {{- range lines .Parameters.via }}{{ $l := trim . }}{{ if and $l (ne (slice $l 0 1) "#") }}
-{{- if lt (len (split " " $l)) 5 }}{{ required (printf "a via line is <host> <site> <public key> <short id> <encryption>, as the relay's relay-entry prints it, not: %s" $l) "" }}{{ end }}
+{{- $f := split " " $l }}
+{{- if lt (len $f) 5 }}{{ required (printf "a via line is <host> <site> <public key> <short id> <encryption>, as the relay's relay-entry prints it, not: %s" $l) "" }}{{ end }}
+{{- if and $vx (not (and (gt (len $f) 6) (eq (index $f 5) "own-site"))) }}{{ required (printf "via_link=xhttp goes through each relay's own site, and this via line has no own-site <path>: %s" $l) "" }}{{ end }}
 {{- $via = printf "%s%s\n" $via $l }}{{ end }}{{ end -}}
 {{- $hops := lines (trim $via) -}}
 {{- $many := gt (len $servers) 1 -}}
@@ -182,6 +189,20 @@ REALITY connection with Vision for each. */ -}}
   server's address doesn't cut every device off. */}}
   "outbounds": [
     {{- if $hops }}{{ range $i, $h := $hops }}{{ if $i }},{{ end }}{{ $f := split " " $h }}
+    {{- if $vx }}
+    {
+      "tag": "dotdash-{{ $i }}", "protocol": "vless",
+      "settings": {
+        "address": "{{ index $f 0 }}", "port": 443,
+        "id": {"$file": "/run/secrets/dotdash_id"},
+        "encryption": "{{ index $f 4 }}"
+      },
+      "streamSettings": {"network": "xhttp", "security": "tls",
+        "tlsSettings": {"serverName": "{{ index $f 1 }}", "alpn": ["h2"], "fingerprint": "chrome"},
+        "xhttpSettings": {"path": "/{{ index $f 6 }}", "host": "{{ index $f 1 }}", "mode": "auto"},
+        "sockopt": {"tcpUserTimeout": 15000}}
+    }
+    {{- else }}
     {
       "tag": "dotdash-{{ $i }}", "protocol": "vless",
       "settings": {
@@ -195,7 +216,7 @@ REALITY connection with Vision for each. */ -}}
       },
       "sockopt": {"tcpUserTimeout": 15000}}
     }
-    {{- end }}{{ else }}
+    {{- end }}{{ end }}{{ else }}
     {{- range $i, $s := $servers }}{{ if $i }},{{ end }}
     {
       "tag": "dotdash-{{ $i }}", "protocol": "vless",
