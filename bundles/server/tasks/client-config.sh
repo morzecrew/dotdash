@@ -88,7 +88,8 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # The dotdash-relay machines in front of this server (the relays parameter),
 # one "<host> <site> <public key> <short id> <encryption> [own-site [<xhttp
 # path>]] [kcp=<port>,<header>,<seed>[,<open>]] [hy2=<port>] [cdn=<host>[,<host>]]
-# [cdnpath=<path>] [cdn-only] [off=<path>[,<path>]] [split] [name=<label>]" per
+# [cdnpath=<path>] [cdn-only] [off=<path>[,<path>]] [split] [name=<label>]
+# [standby]" per
 # line; blank lines, "#" comments and shorter lines are not relays. own-site:
 # the site is the relay's own, which fetches subscriptions from here and, given
 # its path, routes XHTTP to the relay's Xray. kcp=: the relay serves mKCP on
@@ -108,14 +109,19 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # with off=reality, which share links can't carry. name=: the operator's
 # label for the relay (its name parameter), which its links carry in place of
 # "relay <n>"; one an earlier relay took is left out, so names stay unique.
+# standby: devices hold the relay's links but use them only when every other
+# fails, and don't check them meanwhile, so the relay carries nothing while
+# the rest get through: its share links come last, and in the Xray config its
+# outbounds come first, outside the dotdash- tags the balancer and the checks
+# take, where Xray sends what the balancer can't place.
 # Each becomes "<host> <site> <key> <sid> <enc> <own-site|-> <path|-> <kcp|->
 # <cdn hosts, comma-separated|-> <cdn-only|-> <off paths, comma-separated|->
-# <split|-> <hy2 port|-> <name|-> <cdn path|->".
+# <split|-> <hy2 port|-> <name|-> <cdn path|-> <standby|->".
 all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   case $line in '' | '#'*) continue ;; esac
-  c=- d=- only=- x=- sp=- hy=- nm=- cp=- rest=
+  c=- d=- only=- x=- sp=- hy=- nm=- cp=- sb=- rest=
   for f in $line; do
-    case $f in kcp=*) c=${f#kcp=} ;; hy2=*) hy=${f#hy2=} ;; cdn=*) d=${f#cdn=} ;; cdnpath=*) cp=${f#cdnpath=} ;; cdn-only) only=cdn-only ;; off=*) x=${f#off=} ;; split) sp='split' ;; name=*) nm=${f#name=} ;; *) rest="$rest $f" ;; esac
+    case $f in kcp=*) c=${f#kcp=} ;; hy2=*) hy=${f#hy2=} ;; cdn=*) d=${f#cdn=} ;; cdnpath=*) cp=${f#cdnpath=} ;; cdn-only) only=cdn-only ;; off=*) x=${f#off=} ;; split) sp='split' ;; name=*) nm=${f#name=} ;; standby) sb=standby ;; *) rest="$rest $f" ;; esac
   done
   # shellcheck disable=SC2086 # one field per word
   set -- $rest
@@ -165,7 +171,7 @@ all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
     esac ;;
   esac
   taken="${taken:-} $nm"
-  echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $c $d $only $x $sp $hy $nm $cp"
+  echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $c $d $only $x $sp $hy $nm $cp $sb"
 done)
 
 # The local CDNs in front of this server (the cdn_hosts parameter), each
@@ -185,13 +191,13 @@ sees() { [ -z "$mine" ] || has "$1" "$mine" || ! has "$1" "$pools"; }
 pick() { # <device name>: the relays, CDN hosts and subscription relays it gets
   mine=
   [ -z "$1" ] || mine=$(printf '%s\n' "$pools" | awk -v m="$1" '{ for (i = 2; i <= NF; i++) if ($i == m) { print; next } }')
-  relays=$(printf '%s\n' "$all_relays" | while read -r h s k i e o p c d only off sp hy nm cp; do
+  relays=$(printf '%s\n' "$all_relays" | while read -r h s k i e o p c d only off sp hy nm cp sb; do
     if [ -z "$h" ] || ! sees "$h"; then continue; fi
     if [ "$d" != - ]; then
       d=$(for x in $(printf '%s' "$d" | tr ',' ' '); do if sees "$x"; then printf '%s,' "$x"; fi; done)
       d=${d%,}
     fi
-    echo "$h $s $k $i $e $o $p $c ${d:--} $only $off $sp $hy $nm $cp"
+    echo "$h $s $k $i $e $o $p $c ${d:--} $only $off $sp $hy $nm $cp $sb"
   done)
   cdns=$(for h in $all_cdns; do if sees "$h"; then echo "$h"; fi; done)
   # The own-site relays' domains, where a device inside the restricted network
@@ -288,9 +294,10 @@ blocked() { case ,$1, in *,"$2",*) ;; *) return 1 ;; esac; }
 
 # A relay takes REALITY on 443 under its neighbour site's name, with keys of its
 # own, and carries the device on to this server as its own client.
-relay_links() { # <id> <device>: per relay, "<route> · reality", with "xhttp" and each CDN's "cdn[ <m>]" before it through an own-site one, "hy2" and "kcp" after it with Hysteria2 and mKCP
-  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off _ hy nm cp; do
+relay_links() { # <id> <device> <normal|standby>: per relay of that group, "<route> · reality", with "xhttp" and each CDN's "cdn[ <m>]" before it through an own-site one, "hy2" and "kcp" after it with Hysteria2 and mKCP
+  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off _ hy nm cp sb; do
     [ -n "$h" ] || continue
+    if [ "$sb" = standby ]; then [ "$3" = standby ] || continue; else [ "$3" = normal ] || continue; fi
     if [ "$nm" != - ]; then rn=$nm; else rn="relay$(relay_no "$h")"; fi
     # Its CDNs by their own path, disguised, where it names one.
     xp=$p xe=$cdn_extra
@@ -380,20 +387,23 @@ cdn_outbounds() { # <id>
 # so a browser goes over TCP inside the tunnel, as Vision would have it.
 mux='"mux": {"enabled": true, "concurrency": -1, "xudpConcurrency": 8, "xudpProxyUDP443": "reject"}'
 
-relay_outbounds() { # <id> [cdn]: the relays' own outbounds, or with cdn their CDNs'
+relay_outbounds() { # <id> <own|cdn> <normal|standby>: that group's relays' own outbounds, or their CDNs'
   n=0
-  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off sp hy _ cp; do
+  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off sp hy _ cp sb; do
     [ -n "$h" ] || continue
     n=$((n + 1))
-    if [ "${2:-}" = cdn ]; then
+    # standby: outside dotdash-, which the balancer and the checks take.
+    pre=dotdash
+    if [ "$sb" = standby ]; then [ "$3" = standby ] || continue; pre=standby; else [ "$3" = normal ] || continue; fi
+    if [ "$2" = cdn ]; then
       m=0
       [ "$d" = - ] || for x in $(printf '%s' "$d" | tr ',' ' '); do
         m=$((m + 1))
         # dotdash-cdn-, as the servers' CDNs: apart from the relay's own
         # dotdash-relay-<n>, so a client can leave every CDN out by prefix
         # (dotdash-client's cdn=skip), Xray's only way to pick outbounds.
-        if [ "${cp:--}" = - ]; then cdn_outbound "dotdash-cdn-relay-$n-$m" "$1" "$x" "$e" "$p"
-        else cdn_outbound "dotdash-cdn-relay-$n-$m" "$1" "$x" "$e" "$cp" disguised; fi
+        if [ "${cp:--}" = - ]; then cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$x" "$e" "$p"
+        else cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$x" "$e" "$cp" disguised; fi
       done
       continue
     fi
@@ -401,14 +411,14 @@ relay_outbounds() { # <id> [cdn]: the relays' own outbounds, or with cdn their C
     rhello=
     [ "$sp" != split ] || rhello=$split_hello
     [ "$only" = cdn-only ] || { blocked "$off" reality && [ "$sp" != split ]; } || cat <<EOF
-    {"tag": "dotdash-relay-$n", "protocol": "vless",
+    {"tag": "${pre}-relay-$n", "protocol": "vless",
      "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e", "flow": "xtls-rprx-vision"},
      "streamSettings": {"network": "raw", "security": "reality",
        "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "$k", "shortId": "$i"}${rhello}${uto}},
      ${mux}},
 EOF
     [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp || cat <<EOF
-    {"tag": "dotdash-relay-$n-xhttp", "protocol": "vless",
+    {"tag": "${pre}-relay-$n-xhttp", "protocol": "vless",
      "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e"},
      "streamSettings": {"network": "xhttp", "security": "tls",
        "tlsSettings": {"serverName": "$s", "alpn": ["h2"], "fingerprint": "chrome"},
@@ -417,7 +427,7 @@ EOF
     # Hysteria2 under the relay's own site's name, keepalives as the
     # server's outbound has them.
     [ "$hy" = - ] || [ "$only" = cdn-only ] || cat <<EOF
-    {"tag": "dotdash-relay-$n-hy2", "protocol": "hysteria",
+    {"tag": "${pre}-relay-$n-hy2", "protocol": "hysteria",
      "settings": {"version": 2, "address": "$h", "port": $hy},
      "streamSettings": {"network": "hysteria", "security": "tls",
        "tlsSettings": {"serverName": "$s", "alpn": ["h3"]},
@@ -428,7 +438,7 @@ EOF
     kport=${c%%,*}; r=${c#*,}; kheader=${r%%,*}; r2=${r#*,}; kseed=${r2%%,*}
     kopen=none; case $r2 in *,*) kopen=${r2#*,} ;; esac
     cat <<EOF
-    {"tag": "dotdash-relay-$n-kcp", "protocol": "vless",
+    {"tag": "${pre}-relay-$n-kcp", "protocol": "vless",
      "settings": {"address": "$h", "port": ${kport}, "id": "$1", "encryption": "$e"},
      "streamSettings": {"network": "kcp", "finalmask": {"udp": [$(kcp_masks "$kseed" "$kheader" "$kopen")]}}},
 EOF
@@ -437,9 +447,10 @@ EOF
 
 # Every CDN's outbound after every other: Xray sends what its balancer can't
 # place to the first outbound, which is then never a CDN's while any other is.
-outbounds() { # <id>: a REALITY and an XHTTP outbound per server, the third, mKCP, the relays, the CDNs
+outbounds() { # <id>: the standby relays', then a REALITY and an XHTTP outbound per server, the third, mKCP, the relays, the CDNs
   n=0
-  { for s in $servers; do
+  { relay_outbounds "$1" own standby; relay_outbounds "$1" cdn standby
+  for s in $servers; do
     n=$((n + 1))
     cat <<EOF
     {"tag": "dotdash-$n-reality", "protocol": "vless",
@@ -473,7 +484,7 @@ EOF
        "hysteriaSettings": {"version": 2, "auth": "$1"},
        "finalmask": {"quicParams": {"keepAlivePeriod": 10}}}},
 EOF
-  done; relay_outbounds "$1"; cdn_outbounds "$1"; relay_outbounds "$1" cdn; } | sed '$ s/,$//'
+  done; relay_outbounds "$1" own normal; cdn_outbounds "$1"; relay_outbounds "$1" cdn normal; } | sed '$ s/,$//'
 }
 
 xdns_outbound() { # <id>: the DNS tunnel, for the config's last resort, its queries spread over xdns_resolvers
@@ -528,8 +539,10 @@ EOF
     if [ "$count" -gt 1 ]; then at="server%20$n"; else at=server; fi
     links "$1" "$2" "$s" "$at"
   done
-  relay_links "$1" "$2"
+  relay_links "$1" "$2" normal
   cdn_links "$1" "$2"
+  # The standby relays' last: an app tends to try the first links it holds.
+  relay_links "$1" "$2" standby
   if [ "$count" -gt 1 ]; then where=" on any of the servers"; else where=; fi
   if [ "$direct" = false ]; then which=
   elif [ -n "$xr_port" ]; then which="REALITY, XHTTP and XHTTP with REALITY"
@@ -539,7 +552,13 @@ EOF
   [ -z "$relays" ] || which="${which:+${which}, or }a relay"
   [ -z "$cdns" ] || which="${which:+${which}, or }XHTTP through a CDN"
   case $which in *', or '*) which="${which}," ;; esac
-  if [ -n "${XDNS_DOMAIN:-}" ]; then
+  # The standby relays' outbounds come first, where Xray sends what the
+  # balancer can't place, so they take over only when no other answers; the
+  # DNS tunnel's fallback would come before them, so it is left out then.
+  if [ -n "$(printf '%s\n' "$relays" | awk '$16 == "standby"')" ]; then
+    last=", and the standby relays only when none answers"
+    fallback=''
+  elif [ -n "${XDNS_DOMAIN:-}" ]; then
     last=", and the DNS tunnel only when none answers"
     fallback=', "fallbackTag": "xdns"'
   else

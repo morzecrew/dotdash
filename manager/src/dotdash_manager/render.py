@@ -8,10 +8,12 @@ from .roster import Network
 from .state import public_key
 
 
-def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset(), split: bool = False) -> str:
+def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset(), split: bool = False,
+               standby: bool = False) -> str:
     """The relay's line for a server's relays, as its relay-entry task prints
-    it, with the paths its canaries find blocked (health.blocked) as off=, and
-    split when they got REALITY through only with its hello split (health.splits)."""
+    it, with the paths its canaries find blocked (health.blocked) as off=,
+    split when they got REALITY through only with its hello split
+    (health.splits), and standby when the roster says so."""
     line = f"{f['entry_host']} {f['site']} {f['public_key']} {f['short_id']} {f['encryption']}"
     if "own_site" in f:
         line += f" own-site {f['own_site']['xhttp_path']}"
@@ -32,6 +34,8 @@ def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset(), split: boo
         line += " off=" + ",".join(sorted(off))
     if split:
         line += " split"
+    if standby:
+        line += " standby"
     return line
 
 
@@ -68,7 +72,7 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     docs = {}
 
     off = off or {}
-    relays = "\n".join(relay_line(facts[r.name], off.get(r.name, frozenset()), r.name in split)
+    relays = "\n".join(relay_line(facts[r.name], off.get(r.name, frozenset()), r.name in split, r.standby)
                        for r in net.relay if r.name in facts and r.name not in burnt)
     # A pool naming a relay left out would name nothing: the server warns.
     hosts = lambda name: [facts[name]["entry_host"], *facts[name].get("cdn_hosts", [])]
