@@ -2027,6 +2027,8 @@ to the server.</p>
 <li>The relay goes on to the server as one client of its own, a line in the
   server's <code>vless_clients</code>. With <a href="../server/several-servers/">several servers</a>,
   it uses whichever answers fastest, so a ban on one address doesn't cut it off.</li>
+<li>It can go through another relay instead (<code>via</code>), so the servers never
+  see its address: <a href="operations/#through-another-relay">Through another relay</a>.</li>
 <li>Nothing leaves the relay except to dotdash: traffic still exits through
   the server's upstream proxy.</li>
 </ul>

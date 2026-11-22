@@ -1516,6 +1516,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#through-another-relay" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Through another relay
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Through another relay">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#both-ways-at-once" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Both ways at once
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#move-a-relay" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2077,6 +2105,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#through-another-relay" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Through another relay
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Through another relay">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#both-ways-at-once" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Both ways at once
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#move-a-relay" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2264,6 +2320,70 @@ the keys:</p>
 <p>Under <code>own-site</code>, <code>sudo morzer apply</code> afterwards: the site fetches
 subscriptions from these servers, and only an apply restarts it with the new
 list.</p>
+<h2 id="through-another-relay">Through another relay<a class="headerlink" href="#through-another-relay" title="Permanent link">&para;</a></h2>
+<p>A relay on an address you can't afford to lose can go through another relay
+instead of to the servers. Its one connection out is then to that relay,
+which carries it on as one of its devices, and the servers never see its
+address.</p>
+<ol>
+<li>On the server, a client for this relay in <code>vless_clients</code>, and the relay
+   installed from <code>relay-config</code>, as for any relay.</li>
+<li>The other relay lets this one in by that client's id. Its copy of
+   <code>vless_clients</code> holds every client but its own: after adding this relay's
+   client on the server, set the other relay's copy again from its own
+   <code>relay-config</code> (<a href="#devices">Devices</a>).</li>
+<li>
+<p>On the other relay, its line:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>&lt;its<span class="w"> </span>address&gt;
+</code></pre></div>
+</li>
+<li>
+<p>On this relay, that line in <code>via</code>:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>edit<span class="w"> </span>via
+</code></pre></div>
+</li>
+</ol>
+<p>The apply's health check goes through the other relay, and morzer rolls back
+a line it can't get through. With two lines, it uses whichever relay answers
+fastest, so one going down doesn't cut it off.</p>
+<p>How it reaches the other relay, <code>via_link</code>:</p>
+<ul>
+<li><code>reality</code> (the default): REALITY with Vision, one connection for each of
+  its devices' connections, as a device's <code>reality</code> link to a relay.</li>
+<li><code>xhttp</code>: XHTTP through the other relay's own site, under that site's
+  certificate, a few connections reused across all its devices, as a
+  device's <code>xhttp</code> link to a relay. To whoever watches this relay, that is a
+  machine fetching from a website, rather than as many connections as its
+  devices make. The other relay needs <code>own-site</code>, and its line then carries
+  <code>own-site &lt;path&gt;</code>, which this one needs.</li>
+</ul>
+<h3 id="both-ways-at-once">Both ways at once<a class="headerlink" href="#both-ways-at-once" title="Permanent link">&para;</a></h3>
+<p>While the other relay's address gets through, devices can reach it directly
+and leave this one idle; once it doesn't, they go through this one. Put both
+relays' lines in the server's <code>relays</code>, the other relay's first: devices get
+the other relay's links and this one's, which go through it. A
+<a href="../reference/"><code>name</code></a> on each says which is which in the apps, such as
+<code>name=y</code> on the other relay and <code>name=y-via-x</code> on this one: <code>y · reality</code>,
+<code>y · xhttp</code>, <code>y-via-x · reality</code>. In apps where you pick a link, pick the
+other relay's and keep this one's for when they stop working; Xray configs
+that pick the fastest pick the shorter way while it works, though they check
+every link every 30 seconds, this one's too.</p>
+<ul>
+<li><code>dotdash_servers</code> and the server's keys stay as they are: under
+  <code>own-site</code>, the site still fetches devices' subscriptions from the servers,
+  through the other relay.</li>
+<li>Or the other relay has no line in the server's <code>relays</code>: then no device
+  gets a link to it and only this relay knows its address, so its firewall
+  can let in this relay alone (with <code>cert_issuer=acme-dns</code>, which needs no
+  port 80). Either way, the server's firewall can let in the relays alone.</li>
+<li>Each relay on the way adds its round trip to every new connection.</li>
+<li><code>dotdash_link=xhttp-reality</code> is a way to the servers only: with <code>via</code>,
+  the link is <code>reality</code>.</li>
+<li>Devices added on the server go into this relay's copy as before. The other
+  relay's copy needs this relay's client, and its own devices if any.</li>
+</ul>
+<p>With the <a href="../../manager/">manager</a>, <code>via</code> in the relay's entry of
+<code>network.toml</code> does all of this.</p>
 <h2 id="move-a-relay">Move a relay<a class="headerlink" href="#move-a-relay" title="Permanent link">&para;</a></h2>
 <p>A relay whose links name its domain moves to a new machine, or a new address,
 with a DNS change, and devices keep their links. It keeps its keys, which a

@@ -2280,6 +2280,8 @@ bundles let it, devices and keys included.</p>
 <span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"r1"</span>
 <span class="n">provider</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"hoster-a"</span><span class="w">                       </span><span class="c1"># optional: your own name for who hosts it</span>
 <span class="n">address_since</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ld">2026-11-01</span><span class="w">                  </span><span class="c1"># optional: since when it has this address</span>
+<span class="n">via</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"r0"</span><span class="p">]</span><span class="w">                                </span><span class="c1"># optional: relays it goes through instead of the servers</span>
+<span class="n">via_link</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"xhttp"</span><span class="w">                          </span><span class="c1"># optional, with via: reality (the default) or xhttp through their own sites</span>
 
 <span class="k">[[canary]]</span>
 <span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"c1"</span>
@@ -2293,6 +2295,11 @@ bundles let it, devices and keys included.</p>
 links (<a href="../server/devices/#keeping-the-servers-out-of-devices-links">direct</a>),
 and client machines fetch their subscription through an own-site relay,
 waiting for one. Left out, each server keeps its own setting.</p>
+<p>A relay with <code>via</code> goes through those relays instead of the servers
+(<a href="../relay/operations/#through-another-relay">Through another relay</a>): they
+let it in by its own id, and its document waits for their facts. A relay
+running a release from before <code>via</code> waits to be updated rather than going to
+the servers.</p>
 <p>Names are lowercase letters, digits and dashes. <code>relay-</code> and <code>canary-</code> start
 the names the manager gives relays' and canaries' own devices. A field the
 roster doesn't know is refused, so a mistyped one can't pass unnoticed.</p>
