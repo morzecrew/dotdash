@@ -23,12 +23,25 @@ for internal, and with acme-dns the wildcard over the domain's parent
 {{- /* ipv6=block: an IPv6 destination ends here, in a blackhole after the
 servers' outbounds (the first outbound stays the default); names go on. */ -}}
 {{- $block6 := eq .Parameters.ipv6 "block" -}}
+{{- /* via: other relays to go through instead of the servers, each line as
+its relay-entry prints it, of which the first five fields make a link like a
+device's, on 443: its host, site, public key, short id and encryption. The
+relay lets this one in as one of its devices, by dotdash_id, and carries it
+on as it carries them; the servers never see this relay's address. Comments
+and blank lines are skipped; the kept lines go one per line into $via. */ -}}
+{{- $via := "" -}}
+{{- range lines .Parameters.via }}{{ $l := trim . }}{{ if and $l (ne (slice $l 0 1) "#") }}
+{{- if lt (len (split " " $l)) 5 }}{{ required (printf "a via line is <host> <site> <public key> <short id> <encryption>, as the relay's relay-entry prints it, not: %s" $l) "" }}{{ end }}
+{{- $via = printf "%s%s\n" $via $l }}{{ end }}{{ end -}}
+{{- $hops := lines (trim $via) -}}
 {{- $many := gt (len $servers) 1 -}}
-{{- $pbk := required "set dotdash_public_key" .Parameters.dotdash_public_key -}}
+{{- $pbk := "" -}}
+{{- if $hops }}{{ $many = gt (len $hops) 1 }}{{ else }}{{ $pbk = required "set dotdash_public_key" .Parameters.dotdash_public_key }}{{ end -}}
 {{- /* dotdash_link=xhttp-reality: XHTTP with REALITY to the servers'
 xhttp_reality_port, its connections reused across devices, in place of a
 REALITY connection with Vision for each. */ -}}
 {{- $xr := eq .Parameters.dotdash_link "xhttp-reality" -}}
+{{- if and $hops $xr }}{{ required "dotdash_link=xhttp-reality is a way to the servers, not through via: set dotdash_link=reality, or empty via" "" }}{{ end -}}
 {
   "log": {"loglevel": "warning", "access": "none"},
 {{- if has "metrics" .Profiles }}
@@ -168,6 +181,21 @@ REALITY connection with Vision for each. */ -}}
   several, a balancer takes whichever answers fastest, so a ban on one
   server's address doesn't cut every device off. */}}
   "outbounds": [
+    {{- if $hops }}{{ range $i, $h := $hops }}{{ if $i }},{{ end }}{{ $f := split " " $h }}
+    {
+      "tag": "dotdash-{{ $i }}", "protocol": "vless",
+      "settings": {
+        "address": "{{ index $f 0 }}", "port": 443,
+        "id": {"$file": "/run/secrets/dotdash_id"},
+        "encryption": "{{ index $f 4 }}", "flow": "xtls-rprx-vision"
+      },
+      "streamSettings": {"network": "raw", "security": "reality", "realitySettings": {
+        "serverName": "{{ index $f 1 }}", "fingerprint": "chrome",
+        "password": "{{ index $f 2 }}", "shortId": "{{ index $f 3 }}"
+      },
+      "sockopt": {"tcpUserTimeout": 15000}}
+    }
+    {{- end }}{{ else }}
     {{- range $i, $s := $servers }}{{ if $i }},{{ end }}
     {
       "tag": "dotdash-{{ $i }}", "protocol": "vless",
@@ -188,7 +216,7 @@ REALITY connection with Vision for each. */ -}}
       behind it for a minute (dotdash-lab #57). */}}
       "sockopt": {"tcpUserTimeout": 15000}}
     }
-    {{- end }}
+    {{- end }}{{ end }}
     {{- if $block6 }},
     {"tag": "block", "protocol": "blackhole"}
     {{- end }}

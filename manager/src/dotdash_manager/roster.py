@@ -67,6 +67,9 @@ class Relay(Target):
     # any relay, but kept out of what devices get until a burnt relay's place
     # needs it (health.spares).
     spare: bool = False
+    # Other relays this one goes through instead of the servers (its via):
+    # they let it in by its own id, and the servers never see its address.
+    via: list[Name] = []
 
 
 class Canary(Machine):
@@ -103,11 +106,12 @@ class Network(Strict):
     def find(self, name: str) -> Machine | None:
         return next((m for m in self.machines if m.name == name), None)
 
-    def clients_of(self, kind: str) -> list[str]:
+    def clients_of(self, kind: str, relay: str | None = None) -> list[str]:
         """Who a server's or a relay's vless_clients lets in: every device and canary,
-        and on a server every relay, each through its own id."""
+        on a server every relay, and on the relay named those that go via it,
+        each through its own id."""
         names = [*self.devices, *(f"canary-{c.name}" for c in self.canary)]
-        return names + ([f"relay-{r.name}" for r in self.relay] if kind == "server" else [])
+        return names + [f"relay-{r.name}" for r in self.relay if kind == "server" or relay in r.via]
 
     @model_validator(mode="after")
     def _references(self) -> "Network":
@@ -120,6 +124,20 @@ class Network(Strict):
             if d in names or d.startswith(("relay-", "canary-")):
                 raise ValueError(f"device {d!r} is not a free name (relay- and canary- are the manager's)")
             names.add(d)
+        relays = {r.name: r for r in self.relay}
+        for r in self.relay:
+            for v in r.via:
+                if v not in relays or v == r.name:
+                    raise ValueError(f"relay {r.name} goes via {v!r}, which is no other relay here")
+            # Following via from here must end at relays that go to the servers.
+            seen, todo = {r.name}, list(r.via)
+            while todo:
+                v = todo.pop()
+                if v == r.name:
+                    raise ValueError(f"relay {r.name} goes via a loop back to itself")
+                if v not in seen:
+                    seen.add(v)
+                    todo.extend(relays[v].via)
         targets = {m.name for m in [*self.server, *self.relay]}
         for c in self.canary:
             if c.watches not in targets:

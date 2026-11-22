@@ -55,7 +55,9 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     ready = [s for s in known if facts[s.name].get("public_key") == pbk]
     waiting = [f"{s.name}: {'no facts yet' if s.id else 'not joined'}" for s in [*net.server, *net.relay] if s.name not in facts]
     waiting += [f"{s.name}: has not applied the keys yet" for s in known if s not in ready]
-    vless = {kind: "\n".join(f"{ids[n]} {n}" for n in net.clients_of(kind)) for kind in ("server", "relay")}
+    def vless(kind: str, relay: str | None = None) -> str:
+        return "\n".join(f"{ids[n]} {n}" for n in net.clients_of(kind, relay))
+
     docs = {}
 
     off = off or {}
@@ -82,7 +84,7 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
                 "subscription": str(net.subscription).lower(),
                 "cdn_hosts": ",".join(s.cdn_hosts) or "none",
             },
-            "secrets": {"vless_clients": vless["server"], **keys},
+            "secrets": {"vless_clients": vless("server"), **keys},
         }
         # Only when the roster says: a server released before direct refuses it.
         if net.direct is not None:
@@ -111,7 +113,18 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
         if not lead:
             waiting.append(f"{r.name}: waits for a server that applied the keys")
             continue
-        docs[r.name] = {
+        # via: the other relays' links, the first five fields of their lines.
+        # A relay with facts says whether its release takes via; one with none
+        # yet installs a release that does, and goes via them from the start.
+        missing = [v for v in r.via if v not in facts]
+        if missing:
+            waiting.append(f"{r.name}: goes via {', '.join(missing)}, which has no facts yet")
+            continue
+        takes_via = facts.get(r.name, {}).get("via", r.name not in facts)
+        if r.via and not takes_via:
+            waiting.append(f"{r.name}: its release predates via: update it")
+            continue
+        doc = docs[r.name] = {
             "parameters": {
                 "dotdash_servers": ",".join(facts[s.name]["domain"] for s in ready),
                 "dotdash_address": "none",
@@ -120,12 +133,16 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
                 "ipv6": net.ipv6,
             },
             "secrets": {
-                "vless_clients": vless["relay"],
+                "vless_clients": vless("relay", r.name),
                 "dotdash_id": ids[f"relay-{r.name}"],
                 "dotdash_encryption": lead["encryption"],
                 "dotdash_short_id": keys["reality_short_id"],
             },
         }
+        if r.via:
+            doc["parameters"]["via"] = "\n".join(" ".join(relay_line(facts[v]).split()[:5]) for v in r.via)
+        elif takes_via and r.name in facts:
+            doc["unset"] = {"parameters": ["via"]}
 
     for c in net.canary:
         target = net.find(c.watches)
