@@ -2123,7 +2123,9 @@
 <h1 id="what-leaks-where">What leaks where<a class="headerlink" href="#what-leaks-where" title="Permanent link">&para;</a></h1>
 <ul>
 <li>Traffic leaves only through the upstream. With the upstream down, clients
-  get nothing, never this server's address. Xray has no route out; a gate
+  get nothing, never this server's address, unless <code>upstreams</code> holds a
+  <a href="../upstreams/#no-upstream-this-servers-own-address"><code>direct</code> line</a>, which
+  makes this server's address an exit on purpose. Xray has no route out; a gate
   container holds the upstream's credentials. Every apply, update and <code>doctor</code>
   checks this against what runs.</li>
 <li>The upstream sees destination addresses, ports and volume, not hostnames:
