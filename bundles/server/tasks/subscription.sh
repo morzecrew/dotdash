@@ -41,6 +41,15 @@ if [ "${SUBSCRIPTION:-false}" = true ]; then
   decoy=$(printf '%s:cdn-check' "$key" | sha256sum)
   echo "$decoy" | cut -c33-64 >"$out/$(echo "$decoy" | cut -c1-32)"
   rm -f "$out/.full"
+  # happ_routing: Happ's routing profile, base64-encoded for its routing
+  # header, which Caddy sends with every subscription while this file is
+  # there (a dotfile, never served itself). Its lines are joined: JSON keeps
+  # no meaning in them.
+  case $(printf '%s' "${HAPP_ROUTING:-none}" | tr -d '\r\n') in
+  none | '') ;;
+  '{'*'}') printf '%s' "$HAPP_ROUTING" | tr -d '\r\n' | base64 -w 0 >"$out/.routing" ;;
+  *) echo "happ_routing is not a JSON object: no routing profile sent" >&2 ;;
+  esac
   echo "subscription: ${n} device(s)"
 else
   echo "subscription: off"

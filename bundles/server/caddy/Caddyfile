@@ -141,6 +141,14 @@ http://127.0.0.1:8081 {
 		# again, in hours: a new relay, a rotated key or a revoked device
 		# reaches them within that, where an app left alone may never refetch.
 		header Profile-Update-Interval 6
+		# Happ's routing profile (happ_routing), while subscription.sh has
+		# written one: Happ adds it and turns it on, and takes it again with
+		# every refresh. Other apps ignore the header.
+		@routed file {
+			root /srv/sub
+			try_files /.routing
+		}
+		header @routed Routing "happ://routing/onadd/{file./srv/sub/.routing}"
 		header Cache-Control no-store
 		file_server
 	}

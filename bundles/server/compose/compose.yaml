@@ -214,7 +214,9 @@ services:
     network_mode: none
     init: true
     command: ["sh", "/task/subscription.sh"]
-    environment: *client-env
+    environment:
+      <<: *client-env
+      HAPP_ROUTING: ${DOTDASH_PARAM_HAPP_ROUTING:-none}
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `happ_routing` on the server: a routing profile in Happ's own JSON, which every subscription then carries in Happ's `routing` header (relays' too). Happ adds it and turns it on, so the sites it lists as direct go around the tunnel on every Happ device. Other apps ignore it.
+
 ## [0.16.0] - 2026-11-24
 
 ### Added
