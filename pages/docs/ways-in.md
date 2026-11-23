@@ -33,6 +33,15 @@ start, while devices still reach the server.
 - The Xray config from `client-config` uses whichever of the server, the
   relays and the CDNs answers, on its own. An app holding several links lets
   the user pick one that works.
+- **Pages stall after a few kilobytes while chat still works:** the network
+  freezes a connection to an address abroad once it has carried its first
+  16-20 KB, and leaves it open and silent. Every TCP link to the server
+  fails this way, REALITY and XHTTP alike, and small checks still pass, so
+  an app may keep picking a frozen link. What gets through is a link to an
+  address inside the network, a relay's or a local CDN's, or Hysteria2 where
+  UDP passes (dotdash-lab #64 froze TCP alone; what such a network does to UDP is
+  untested). A canary on that network reports it as `blocked_by: freeze`,
+  with the bytes it got under `stalled`.
 - To hand a link over, show its QR code in person, send a file, or use any
   channel that still gets through. A link or subscription URL is a credential
   that also names your relay, so avoid a messenger whose operator may read or
