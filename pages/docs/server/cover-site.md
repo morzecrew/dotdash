@@ -87,3 +87,9 @@ command means: each names it with `--product`, as in
 server. The commands on these pages leave `--product` out, as they do on a
 machine with one installation. On a relay the product is `dotdash-relay`, and
 the network `dotdash-relay_default`.
+
+On a relay the app shares that network with Xray, unlike on a server. An app
+that makes calls of its own to a site on a relay this one goes through (`via`)
+can send them through `http://xray:10810`, the relay's way into its tunnel,
+which Caddy also uses for subscriptions. The calls then ride inside the link to
+that relay, which sees one TLS client from this one instead of two.
