@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The server drops announces to public BitTorrent trackers, by the trackers' names, and mail on port 25, beside the BitTorrent handshakes it already dropped. Upstream providers forbid both, and an announce puts the line's address in public swarms. Encrypted peer connections still look like any other traffic.
+
 ## [0.15.0] - 2026-11-23
 
 ### Changed
