@@ -3,11 +3,12 @@
 # whose only resolver, 192.0.2.53, answers nothing, and every port-53 packet in
 # its network namespace is captured. An inbound that forwards to 9.9.9.9:53
 # stands in for an app's VPN mode handing the config the device's DNS. Those
-# lookups must be answered through the tunnel with IPv4 addresses only and no
-# port-53 packet; the upstream must be handed the DoH server's address, never
-# the names; and with the upstream stopped they must fail rather than go
-# anywhere else. Last, a lookup sent from the namespace on purpose shows the
-# capture sees port-53 packets, so its silence means something.
+# lookups must be answered on the device with fake IPv4 addresses and no
+# port-53 packet; a connection to a fake address must go out under its name,
+# which the server resolves, the upstream handed the address alone; and with
+# the upstream stopped, connections must fail rather than go anywhere else.
+# Last, a lookup sent from the namespace on purpose shows the capture sees
+# port-53 packets, so its silence means something.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -29,7 +30,7 @@ mkdir -p "${dir}" "${cap}"
 # Pointed at the rig as 10-clients.sh does, but on docker0, from outside the
 # rig's own namespace. The DNS tunnel is left out: its queries are the tunnel.
 jq --arg host "${host}" '
-  .inbounds = [{listen: "0.0.0.0", port: 11095, protocol: "socks"},
+  .inbounds = [(.inbounds[0] | .listen = "0.0.0.0" | .port = 11095),
     {listen: "0.0.0.0", port: 5353, protocol: "dokodemo-door",
      settings: {address: "9.9.9.9", port: 53, network: "tcp,udp"}}]
   | .outbounds |= map(select(.tag != "xdns")
@@ -69,27 +70,35 @@ through || die "the client config does not get through"
 log=/rig/upstream-log/access.log
 mark=$(wc -l <"${log}")
 ask() { dig +time=5 +tries=2 -p 15353 @127.0.0.1 "$@"; }
+fake() { grep -qxE '198\.(18|19)\.[0-9]+\.[0-9]+'; }
+# What a connection to <fake address> under <name> gets back, as curl's code.
+fetch() { curl -sS -o /dev/null -w '%{http_code}' --max-time "$3" --socks5 127.0.0.1:11095 -H "Host: $2" "http://$1/"; }
 a=$(ask +short one.one.one.one A) || true
-grep -qx '1.1.1.1' <<<"${a}" || die "no A answer through the tunnel (${a:-nothing})"
+fake <<<"${a}" || die "no fake address for an A query (${a:-nothing})"
 aaaa=$(ask +noall +comments +answer one.one.one.one AAAA) || true
 grep -q 'status: NOERROR' <<<"${aaaa}" || die "no answer to an AAAA query"
 ! grep -qE 'IN[[:space:]]+AAAA' <<<"${aaaa}" || die "an AAAA query got IPv6 addresses"
 tcp=$(ask +tcp +short dns.google A) || true
-grep -qx '8.8.8.8' <<<"${tcp}" || die "no A answer over TCP through the tunnel (${tcp:-nothing})"
+fake <<<"${tcp}" || die "no fake address for an A query over TCP (${tcp:-nothing})"
+# one.one.one.one answers plain HTTP with a redirect; the name is all that
+# can take the connection there, since the address is the config's own.
+code=$(fetch "${a}" one.one.one.one 30) || true
+case ${code} in [23]??) ;; *) die "a connection to the fake address did not get through under its name (HTTP ${code:-none})" ;; esac
 seen=$(tail -n "+$((mark + 1))" "${log}")
-grep -qF '1.1.1.1:443' <<<"${seen}" || die "the DoH did not go out through the upstream"
+grep -qE '1\.(1\.1\.1|0\.0\.1):80' <<<"${seen}" || die "the server did not resolve the name and go out through the upstream"
 ! grep -qE 'one\.one\.one\.one|dns\.google' <<<"${seen}" || die "the upstream was handed a name that was looked up"
 [ ! -s "${cap}/dns.txt" ] || die "port-53 packets left the client: $(head -3 "${cap}/dns.txt")"
-echo "${0##*/}: DNS is answered through the tunnel over DoH, IPv4 only, and no port-53 packet leaves"
+echo "${0##*/}: DNS is answered with fake addresses, IPv4 only, a connection to one goes out under its name, and no port-53 packet leaves"
 
 sudo docker stop dotdash-rig-upstream >/dev/null
 down=$(ask +short example.com A) || true
+code=$(fetch "${down}" example.com 10) || true
 sudo docker start dotdash-rig-upstream >/dev/null
-# dig prints its timeouts where an answer would be; an address is an answer.
-! grep -qE '^[0-9]+(\.[0-9]+){3}$' <<<"${down}" || die "a lookup was answered with the upstream stopped"
+fake <<<"${down}" || die "with the upstream stopped, a lookup got no fake address (${down:-nothing})"
+case ${code} in [23]??) die "a connection got through with the upstream stopped (HTTP ${code})" ;; esac
 [ ! -s "${cap}/dns.txt" ] || die "with the upstream stopped, port-53 packets left the client: $(head -3 "${cap}/dns.txt")"
 through || die "the client config did not recover with the upstream"
-echo "${0##*/}: with the upstream stopped, lookups fail and nothing goes elsewhere"
+echo "${0##*/}: with the upstream stopped, lookups are still answered on the device, connections fail, and nothing goes elsewhere"
 
 sudo nsenter -t "${pid}" -n dig +time=1 +tries=1 @192.0.2.53 control.invalid >/dev/null 2>&1 || true
 sleep 1

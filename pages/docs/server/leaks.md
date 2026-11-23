@@ -49,7 +49,8 @@ depends on how the device reaches dotdash (dotdash-lab #52 measured each):
 - A [canary](../canary/index.md) reports per transport whether the server
   carries UDP (`udp` in its `facts`).
 - **DNS** stays inside in both modes: browsers send names to a SOCKS proxy,
-  and dotdash-client's TUN answers port 53 itself.
+  and client-config's Xray config and dotdash-client's TUN answer port 53
+  themselves.
 
 ## The browser's location
 
