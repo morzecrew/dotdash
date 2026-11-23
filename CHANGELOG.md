@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-23
+
 ### Added
 
 - A relay can go through other relays instead of the servers: `via` takes their lines as `relay-entry` prints them, reached by REALITY or, with `via_link=xhttp`, XHTTP through their own sites. The servers never see its address, for a relay on an address worth keeping. The manager's roster takes both.
