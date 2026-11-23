@@ -29,7 +29,7 @@
 | `probe6_url` | `http://api6.ipify.org` | IPv6-only URL fetched through the IPv6 lines, with `ipv6=separate` |
 | `resolve` | `gateway` | `gateway`: this server resolves over `dns_resolver`; `upstream`: the upstream proxies see hostnames (no WireGuard or OpenVPN line then) |
 | `ipv6` | `allow` | `allow`: IPv6 leaves like the rest; `separate`: through the [`group=ipv6` lines](upstreams.md#ipv6) alone; `block`: no IPv6 destination leaves, names resolve to IPv4 only, so dual-stack sites still work (with `resolve=upstream`, the upstream resolves names itself) |
-| `dns_resolver` | `https://1.1.1.1/dns-query` | DoH server for `resolve=gateway` and device DNS; `https://` only |
+| `dns_resolver` | `https://1.1.1.1/dns-query` | DoH server for `resolve=gateway`; `https://` only |
 | `subscription` | `false` | a subscription URL per device |
 | `exit_ipv4_url` | `http://api4.ipify.org` | with `subscription`, what the subscription's name asks, through the upstreams every ten minutes, for the exit's IPv4 address: plain HTTP answering with the caller's address alone |
 | `exit_info_url` | `http://ipinfo.io` | with `subscription`, where the name asks `<url>/<address>/country` for the exit's country, whose flag goes before the address |

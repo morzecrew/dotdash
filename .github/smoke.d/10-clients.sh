@@ -74,7 +74,7 @@ check xdns 11082
 # Caddy's CA, the DNS tunnel's resolver at the server, and an observatory that
 # probes the rig's target every 5s. A server that does not exist stays as is.
 rig_config() { # <socks port>
-  jq --argjson port "$1" '.inbounds = [{listen: "127.0.0.1", port: $port, protocol: "socks"}]
+  jq --argjson port "$1" '.inbounds = [.inbounds[0] | .port = $port]
     | .outbounds |= map(
         (if .settings.address == "dotdash.test" then .settings.address = "127.0.0.1" else . end)
         | (if .streamSettings.security == "tls"
@@ -101,6 +101,10 @@ config_check() { # <name> <socks port> <servers>: client-config's config with th
   jq -e 'all(.outbounds[] | select(.streamSettings.network | IN("raw", "xhttp")); .streamSettings.sockopt.tcpUserTimeout == 15000)
     and all(.outbounds[] | select(.streamSettings.network | IN("kcp", "hysteria")); .streamSettings.sockopt == null)' <<<"${config}" >/dev/null ||
     die "$1: the TCP links do not carry tcpUserTimeout alone: $(jq -c '[.outbounds[] | {tag, s: .streamSettings.sockopt}]' <<<"${config}")"
+  # Port-53 DNS answered with fake addresses, which the SOCKS inbound turns back into names.
+  jq -e '.dns.servers == ["fakedns"] and .fakedns[0].ipPool == "198.18.0.0/15"
+    and .inbounds[0].sniffing == {enabled: true, destOverride: ["fakedns"]}' <<<"${config}" >/dev/null ||
+    die "$1: the config does not answer DNS with fake DNS: $(jq -c '{dns, fakedns, inbounds}' <<<"${config}")"
   mkdir -p "${dir}/$1"
   rig_config "$2" <<<"${config}" >"${dir}/$1/client.json"
   chmod -R a+rX "${dir}/$1"
