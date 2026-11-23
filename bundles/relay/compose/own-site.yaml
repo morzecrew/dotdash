@@ -18,6 +18,7 @@ services:
       DOMAIN: ${DOTDASH_RELAY_DOMAIN:?the own-site profile needs a domain, set with installation.domains}
       CERT_ISSUER: ${DOTDASH_RELAY_PARAM_CERT_ISSUER:-acme}
       COVER: ${DOTDASH_RELAY_PARAM_COVER:-pages}
+      TUNNEL_HOST: ${DOTDASH_RELAY_PARAM_TUNNEL_HOST:-none}
     # host.docker.internal: the host, for an app published on one of its
     # ports (cover).
     extra_hosts: ["host.docker.internal:host-gateway"]
@@ -46,6 +47,10 @@ services:
       - /config:uid=65532,gid=65532,mode=0700,size=8m
     ports:
       - "${DOTDASH_RELAY_PARAM_LISTEN-}:${DOTDASH_RELAY_PARAM_HTTP_PORT:-80}:80/tcp"
+    # default, Xray's, for REALITY's hand-off, XHTTP and subscriptions; edge,
+    # a cover app's (cover, tunnel_host), which Xray is never on, so an app
+    # reaches Caddy alone, as on a server.
+    networks: [default, edge]
     logging:
       driver: local
       options: {max-size: 10m, max-file: "3"}
@@ -65,3 +70,6 @@ services:
 
 volumes:
   caddy_data: {}
+
+networks:
+  edge: {}

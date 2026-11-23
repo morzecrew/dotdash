@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **A relay's cover app goes on `dotdash-relay_edge`**, a network of its own with Caddy, as `dotdash_edge` is on a server. On `dotdash-relay_default` it shared Xray's network, where it could reach the subscriptions proxy into the tunnel and the XHTTP inbounds. An app already on `dotdash-relay_default` keeps working, and `doctor` names it until it moves.
+
+### Added
+
+- `tunnel_host` on a relay: one host a cover app may call at `http://caddy:8090`. Caddy sends the calls on as HTTPS inside the link to the servers, or to the relays in `via`, so the relay shows one TLS client, Xray's, where an app calling the host itself showed its own beside it.
+
 ## [0.15.0] - 2026-11-23
 
 ### Changed
