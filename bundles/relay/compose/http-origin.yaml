@@ -1,0 +1,15 @@
+# The http-origin profile: a door for a rented CDN that ends TLS at its own
+# edge and asks its origin in plain HTTP, from gateway addresses it names.
+# Caddy's plain-HTTP site on 8091 (caddy/Caddyfile) is published on
+# http_origin_port; it passes the CDN XHTTP path alone, from the addresses
+# in http_origin_from alone, on to Xray. It goes with own-site.
+services:
+  caddy:
+    ports:
+      - "${DOTDASH_RELAY_PARAM_LISTEN-}:${DOTDASH_RELAY_PARAM_HTTP_ORIGIN_PORT:-8880}:8091/tcp"
+
+  # Set under this profile only: with it, relay-entry ends the line with the
+  # name devices reach the rented CDN at.
+  relay-entry:
+    environment:
+      HTTP_ORIGIN_HOST: ${DOTDASH_RELAY_PARAM_HTTP_ORIGIN_HOST:-none}

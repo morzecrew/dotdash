@@ -12,6 +12,9 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `cert_issuer` | `acme` | with `own-site`, `acme` (Let's Encrypt, over port 80), `acme-dns` (a [wildcard](../server/certificates.md) over a DNS-01 check handed to acme-dns, the `acme_dns` secret) or `internal` (Caddy's own CA, for a machine the internet can't reach) |
 | `entry_host` | `none` | the address devices reach the relay at, its IP without a domain, for `relay-entry` with no address and for `facts`; `none` under `own-site` is the relay's domain |
 | `cdn_hosts` | `none` | with `own-site`, the names devices use for [local CDNs](../server/cdn.md#in-front-of-a-relay) in front of the relay, comma-separated; `relay-entry` adds them to the relay's line |
+| `http_origin_port` | `8880` | with the `http-origin` profile, the host TCP port of its door, published at `listen`: where a [CDN that fetches in plain HTTP](../server/cdn.md#a-cdn-that-fetches-in-plain-http) fetches the relay |
+| `http_origin_from` | `none` | with `http-origin`, the addresses the door answers, comma-separated IPs or CIDR ranges: the CDN's gateways; `any` answers every address, `none` no one |
+| `http_origin_host` | `none` | with `http-origin`, the name devices reach that CDN at; `relay-entry` adds it to the relay's line as `origin=`, and prints the `xhttpSettings` to give the CDN |
 | `cdn_only` | `false` | `true`: devices get the relay's CDN links alone, none to its own address, so it stays the [CDNs' origin](../server/cdn.md#the-cdns-origin-only); `relay-entry` ends the line with `cdn-only`, and refuses it without `cdn_hosts` |
 | `name` | `none` | a label of up to 24 letters, digits, dots, dashes or underscores that devices' links through the relay carry in place of `relay <n>`: `edge-1 · reality`. `relay-entry` ends the line with `name=`; a name an earlier line took goes by the number. Every device's app shows it, so pick one that says nothing about where the relay is hosted |
 | `dotdash_servers` | none, given at `init` | the dotdash servers sharing one set of keys, comma-separated domains; the relay uses whichever answers fastest |
@@ -57,6 +60,15 @@ without it the profile is refused. `relay-entry` then ends the relay's line
 with `hy2=<port>`, from which the server gives each device a
 `relay · hy2` link. Open the UDP port in the provider's firewall, and
 replace the relay's line on the server after turning it on.
+
+`installation.profile=own-site,http-origin`: the relay's Caddy also listens
+in plain HTTP on `http_origin_port`, a door for a
+[CDN that fetches in plain HTTP](../server/cdn.md#a-cdn-that-fetches-in-plain-http).
+It answers the addresses in `http_origin_from` alone, on the CDNs' path
+alone, which it passes on to Xray's XHTTP inbound; everyone else gets a 404.
+`relay-entry` then ends the relay's line with `cdnpath=<path>` and
+`origin=<http_origin_host>`, from which the server gives each device a
+`relay · cdn` link through that name.
 
 `installation.profile=mkcp` (with a site of its own: `own-site,mkcp`): the
 relay serves [mKCP](../server/mkcp.md) on UDP `kcp_port` too, under its own

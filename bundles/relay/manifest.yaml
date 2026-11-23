@@ -29,12 +29,15 @@ runtimes:
       # Hysteria2 on hysteria2_port (UDP), as the server's hysteria2 profile,
       # under the own site's certificate: it goes with own-site.
       hysteria2: [compose/hysteria2.yaml]
+      # A plain-HTTP door on http_origin_port for a rented CDN that ends TLS at
+      # its edge (http_origin_from, http_origin_host): it goes with own-site.
+      http-origin: [compose/http-origin.yaml]
       # Traffic per inbound and outbound, and the verdicts on the servers,
       # into the node exporter's textfile directory.
       metrics: [compose/metrics.yaml]
     # installation.profile=own-site,mkcp runs both, own-site,hysteria2 adds
-    # Hysteria2; metrics goes with any.
-    combinable: [own-site, mkcp, hysteria2, metrics]
+    # Hysteria2, own-site,http-origin the door; metrics goes with any.
+    combinable: [own-site, mkcp, hysteria2, http-origin, metrics]
     options:
       project: dotdash-relay
 
@@ -76,6 +79,7 @@ requirements:
     - '{{ if has "own-site" .Profiles }}{{ .Parameters.listen }}:{{ .Parameters.http_port }}{{ end }}'
     - '{{ if has "mkcp" .Profiles }}{{ .Parameters.kcp_port }}/udp{{ end }}'
     - '{{ if has "hysteria2" .Profiles }}{{ .Parameters.hysteria2_port }}/udp{{ end }}'
+    - '{{ if has "http-origin" .Profiles }}{{ .Parameters.listen }}:{{ .Parameters.http_origin_port }}{{ end }}'
 
 # `morzer task run relay-config -- <client>` on the dotdash server prints the
 # init command and the secrets for this machine.
@@ -129,6 +133,20 @@ parameters:
     default: 443
     description: "Host UDP port devices reach this relay's Hysteria2 on (the hysteria2 profile, with own-site); relay-entry carries it to the server's relays line"
     services: [xray]
+  http_origin_port:
+    type: port
+    default: 8880
+    description: "Host TCP port of the http-origin profile's door, published at listen: the port a rented CDN that ends TLS at its edge is told to fetch this relay from, in plain HTTP"
+    services: [caddy]
+  http_origin_from:
+    type: string
+    default: none
+    description: "With the http-origin profile, the addresses the door answers, comma-separated IPs or CIDR ranges: the rented CDN's gateways, as it lists them; any: every address, for a CDN whose edges ask the origin themselves and publish no list; none: nobody. Everyone else gets a 404"
+    services: [caddy]
+  http_origin_host:
+    type: string
+    default: none
+    description: "With the http-origin profile, the name devices reach the rented CDN at for this relay, its name for the resource; relay-entry carries it to the server's relays line as origin=, and devices get an XHTTP link through it"
   cover:
     type: string
     default: pages

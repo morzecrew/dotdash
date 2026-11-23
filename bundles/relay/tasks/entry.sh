@@ -39,11 +39,26 @@ case $cdn in
   *) [ "${OWN_SITE:-}" = true ] ||
        { echo "cdn_hosts needs the own-site profile, whose site a CDN fetches from; leaving it out" >&2; cdn=; } ;;
 esac
+# http_origin_host (set under the http-origin profile): the name devices reach
+# a rented CDN at, which fetches this relay in plain HTTP through Caddy's
+# door; client-config gives each device an XHTTP link through it, on the CDN
+# path below with smaller uploads.
+origin=$(printf '%s' "${HTTP_ORIGIN_HOST:-none}" | tr -d ' ')
+case $origin in
+  none | '') origin= ;;
+  .* | *. | *..* | *[!A-Za-z0-9.-]*)
+    echo "http_origin_host is not a name: $origin; leaving it out" >&2; origin= ;;
+  *) [ "${OWN_SITE:-}" = true ] ||
+       { echo "http_origin_host needs the own-site profile, whose Caddy is the door; leaving it out" >&2; origin=; } ;;
+esac
 # The CDNs' own XHTTP path, which their links take in place of the one above,
 # with the settings of the CDN inbound. A relay that names none is fetched by
 # a server from before it by the one above, as before.
+# The http-origin profile's door takes it too (HTTP_ORIGIN_PORT is set under
+# that profile alone), so the settings it prints for the CDN's form come
+# before the CDN has given a name for http_origin_host.
 cdn_path=
-[ -z "$cdn" ] || cdn_path=$(cat /run/secrets/cdn_xhttp_path)
+[ -z "$cdn$origin${HTTP_ORIGIN_PORT:-}" ] || cdn_path=$(cat /run/secrets/cdn_xhttp_path)
 # name: a label devices' links through this relay carry in place of
 # "relay <n>". The server's relays line is split on spaces, so letters,
 # digits, dots, dashes and underscores alone.
@@ -57,6 +72,6 @@ esac
 # reaches none of them; with no CDN that would be no link at all.
 only=
 if [ "${CDN_ONLY:-false}" = true ]; then
-  [ -n "$cdn" ] || { echo "cdn_only needs cdn_hosts, with the own-site profile: devices would get no link through this relay" >&2; exit 1; }
+  [ -n "$cdn$origin" ] || { echo "cdn_only needs cdn_hosts or http_origin_host, with the own-site profile: devices would get no link through this relay" >&2; exit 1; }
   only=" cdn-only"
 fi

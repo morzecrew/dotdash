@@ -26,6 +26,8 @@ def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset(), split: boo
         line += " cdn=" + ",".join(f["cdn_hosts"])
     if f.get("cdn_path"):
         line += f" cdnpath={f['cdn_path']}"
+    if f.get("origin_host"):
+        line += f" origin={f['origin_host']}"
     if f.get("cdn_only"):
         line += " cdn-only"
     if f.get("name"):
@@ -75,7 +77,8 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     relays = "\n".join(relay_line(facts[r.name], off.get(r.name, frozenset()), r.name in split, r.standby)
                        for r in net.relay if r.name in facts and r.name not in burnt)
     # A pool naming a relay left out would name nothing: the server warns.
-    hosts = lambda name: [facts[name]["entry_host"], *facts[name].get("cdn_hosts", [])]
+    hosts = lambda name: [facts[name]["entry_host"], *facts[name].get("cdn_hosts", []),
+                          *([facts[name]["origin_host"]] if facts[name].get("origin_host") else [])]
     gone = {h for r in burnt if r in facts for h in hosts(r)}
     stands = stands or {}
 

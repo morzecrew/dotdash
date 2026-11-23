@@ -126,6 +126,12 @@ def test_a_relay_line_carries_its_cdn_path_after_its_cdns():
                              " name=edge-1")
 
 
+def test_a_relay_line_carries_its_door_s_cdn_after_its_cdn_path():
+    f = {"entry_host": "203.0.113.5", "site": "r.example.net", "public_key": "P", "short_id": "S", "encryption": "E",
+         "own_site": {"xhttp_path": "x"}, "cdn_path": "y", "origin_host": "o.example.ru", "cdn_only": True}
+    assert relay_line(f) == "203.0.113.5 r.example.net P S E own-site x cdnpath=y origin=o.example.ru cdn-only"
+
+
 def test_a_relay_line_carries_its_name_before_what_the_manager_adds():
     f = {"entry_host": "203.0.113.5", "site": "s.example.org", "public_key": "P", "short_id": "S", "encryption": "E",
          "name": "edge-1"}

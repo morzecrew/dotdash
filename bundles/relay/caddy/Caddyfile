@@ -56,6 +56,38 @@ http://127.0.0.1:8081 {
 	respond /healthz 200
 }
 
+# The http-origin profile's door: plain HTTP on 8091, which that profile
+# alone publishes (http_origin_port), for a rented CDN that ends TLS at its
+# own edge and fetches from here unencrypted. It answers only the addresses
+# in http_origin_from (the CDN's gateways), and only on the CDN path, the
+# one CDNs get in place of the site's XHTTP path above; everyone else gets
+# a 404. That path goes on to Xray's plain XHTTP inbound under the site's
+# path, so the CDN, which reads every request here, never learns that one,
+# and VLESS Encryption keeps what the requests carry unreadable to it.
+http://:8091 {
+	@door {
+		remote_ip {$HTTP_ORIGIN_FROM:192.0.2.1/32}
+		path /{file./run/secrets/cdn_xhttp_path}/*
+		# What follows the path: uri strip_prefix takes no placeholder.
+		path_regexp door ^/[^/]+(/.*)$
+	}
+	handle @door {
+		rewrite * /{file./run/secrets/xhttp_path}{re.door.1}?{query}
+		reverse_proxy xray:8080 {
+			header_up -X-Forwarded-For
+			header_up -X-Forwarded-Host
+			header_up -X-Forwarded-Proto
+			header_up -X-Real-IP
+			header_up -CF-Connecting-IP
+			transport http {
+				versions h2c
+			}
+			flush_interval -1
+		}
+	}
+	respond 404
+}
+
 # A cover app's way to one host of its choosing (tunnel_host), as
 # subscriptions go: through Xray's subscriptions inbound, so Caddy's TLS to
 # the host rides inside the link to the dotdash servers, or to the relays
