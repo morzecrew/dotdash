@@ -2332,7 +2332,9 @@ nothing, and the script can run again.</p>
   address devices reach it at), or <code>--domain</code> for one of its own site.</li>
 <li><strong>A canary or a client:</strong> nothing more.</li>
 </ul>
-<p>Backups are encrypted to the identity's age recipient, or to <code>--recovery</code>.
+<p>Backups go to the manager's target, encrypted to the identity's age
+recipient or to <code>--recovery</code>. A machine installed before it joined gets both
+too, so its backups outlive it.
 The script holds the machine's credentials: send it to that machine only. A
 roster entry's own <code>id</code> and <code>key</code>, as earlier releases had you write them,
 still win over what <code>joined</code> kept.</p>
