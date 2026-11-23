@@ -2231,6 +2231,11 @@ command means: each names it with <code>--product</code>, as in
 server. The commands on these pages leave <code>--product</code> out, as they do on a
 machine with one installation. On a relay the product is <code>dotdash-relay</code>, and
 the network <code>dotdash-relay_default</code>.</p>
+<p>On a relay the app shares that network with Xray, unlike on a server. An app
+that makes calls of its own to a site on a relay this one goes through (<code>via</code>)
+can send them through <code>http://xray:10810</code>, the relay's way into its tunnel,
+which Caddy also uses for subscriptions. The calls then ride inside the link to
+that relay, which sees one TLS client from this one instead of two.</p>
 
 
 
