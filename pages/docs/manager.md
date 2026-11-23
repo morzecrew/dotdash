@@ -123,7 +123,9 @@ What each kind needs to be installed:
   address devices reach it at), or `--domain` for one of its own site.
 - **A canary or a client:** nothing more.
 
-Backups are encrypted to the identity's age recipient, or to `--recovery`.
+Backups go to the manager's target, encrypted to the identity's age
+recipient or to `--recovery`. A machine installed before it joined gets both
+too, so its backups outlive it.
 The script holds the machine's credentials: send it to that machine only. A
 roster entry's own `id` and `key`, as earlier releases had you write them,
 still win over what `joined` kept.

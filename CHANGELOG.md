@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The manager's `join` gives a machine installed before it joined the recovery recipient too, as `init` gives a fresh one, so its backups can be decrypted once the machine is gone. It already got the backup target.
+
 ## [0.15.0] - 2026-11-23
 
 ### Changed
