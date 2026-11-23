@@ -2137,7 +2137,12 @@
 <tr>
 <td><code>cover</code></td>
 <td><code>pages</code></td>
-<td>with <code>own-site</code>, what the site serves past your own files in <code>/srv/dotdash-relay</code>: <code>pages</code>, the bundled page, or your <a href="../../server/cover-site/#an-app-instead-of-pages">app</a>'s URL, such as <code>http://cover-app:8080</code> on the network <code>dotdash-relay_default</code> or <code>http://host.docker.internal:8080</code></td>
+<td>with <code>own-site</code>, what the site serves past your own files in <code>/srv/dotdash-relay</code>: <code>pages</code>, the bundled page, or your <a href="../../server/cover-site/#an-app-instead-of-pages">app</a>'s URL, such as <code>http://cover-app:8080</code> on the network <code>dotdash-relay_edge</code> or <code>http://host.docker.internal:8080</code></td>
+</tr>
+<tr>
+<td><code>tunnel_host</code></td>
+<td><code>none</code></td>
+<td>with <code>own-site</code>, one host a cover app may call through the tunnel at <code>http://caddy:8090</code>, with no TLS: Caddy sends it on as HTTPS inside the link to the servers or the relays in <code>via</code>, so this machine shows one TLS client, Xray's (<a href="../../server/cover-site/#an-app-installed-with-morzer">cover site</a>)</td>
 </tr>
 <tr>
 <td><code>cert_issuer</code></td>

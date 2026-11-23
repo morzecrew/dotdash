@@ -1898,10 +1898,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Fixed
+        Changed
       </span>
     </span>
   </a>
@@ -1920,10 +1920,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Changed
+        Fixed
       </span>
     </span>
   </a>
@@ -2785,10 +2785,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Fixed
+        Changed
       </span>
     </span>
   </a>
@@ -2807,10 +2807,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Changed
+        Fixed
       </span>
     </span>
   </a>
@@ -3686,17 +3686,27 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
-<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
-<li>The manager's <code>join</code> gives a machine installed before it joined the recovery recipient too, as <code>init</code> gives a fresh one, so its backups can be decrypted once the machine is gone. It already got the backup target.</li>
+<li>
+<p><strong>A relay's cover app goes on <code>dotdash-relay_edge</code></strong>, a network of its own with Caddy, as <code>dotdash_edge</code> is on a server. On <code>dotdash-relay_default</code> it shared Xray's network, where it could reach the subscriptions proxy into the tunnel and the XHTTP inbounds. An app already on <code>dotdash-relay_default</code> keeps working, and <code>doctor</code> names it until it moves.</p>
+</li>
+<li>
+<p>The server drops announces to public BitTorrent trackers, by the trackers' names, and mail on port 25, beside the BitTorrent handshakes it already dropped. Upstream providers forbid both, and an announce puts the line's address in public swarms. Encrypted peer connections still look like any other traffic.</p>
+</li>
 </ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
-<li>A subscription asks the apps that read <code>Profile-Update-Interval</code> (Happ, Hiddify) to fetch it again every 6 hours, so new relays, rotated keys and revoked devices reach them without a manual refresh. A relay's subscription carries it too.</li>
+<li>
+<p><code>tunnel_host</code> on a relay: one host a cover app may call at <code>http://caddy:8090</code>. Caddy sends the calls on as HTTPS inside the link to the servers, or to the relays in <code>via</code>, so the relay shows one TLS client, Xray's, where an app calling the host itself showed its own beside it.</p>
+</li>
+<li>
+<p>A subscription asks the apps that read <code>Profile-Update-Interval</code> (Happ, Hiddify) to fetch it again every 6 hours, so new relays, rotated keys and revoked devices reach them without a manual refresh. A relay's subscription carries it too.</p>
+</li>
 </ul>
-<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
+<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
-<li>The server drops announces to public BitTorrent trackers, by the trackers' names, and mail on port 25, beside the BitTorrent handshakes it already dropped. Upstream providers forbid both, and an announce puts the line's address in public swarms. Encrypted peer connections still look like any other traffic.</li>
+<li>The manager's <code>join</code> gives a machine installed before it joined the recovery recipient too, as <code>init</code> gives a fresh one, so its backups can be decrypted once the machine is gone. It already got the backup target.</li>
 </ul>
 <h2 id="0150-2026-11-23">[0.15.0] - 2026-11-23<a class="headerlink" href="#0150-2026-11-23" title="Permanent link">&para;</a></h2>
 <h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">&para;</a></h3>

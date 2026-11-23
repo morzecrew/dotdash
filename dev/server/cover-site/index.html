@@ -2230,12 +2230,20 @@ command means: each names it with <code>--product</code>, as in
 <code>sudo morzer shell dotdash</code> opens a shell where every command means this
 server. The commands on these pages leave <code>--product</code> out, as they do on a
 machine with one installation. On a relay the product is <code>dotdash-relay</code>, and
-the network <code>dotdash-relay_default</code>.</p>
-<p>On a relay the app shares that network with Xray, unlike on a server. An app
-that makes calls of its own to a site on a relay this one goes through (<code>via</code>)
-can send them through <code>http://xray:10810</code>, the relay's way into its tunnel,
-which Caddy also uses for subscriptions. The calls then ride inside the link to
-that relay, which sees one TLS client from this one instead of two.</p>
+the network <code>dotdash-relay_edge</code>.</p>
+<p>On either, the app shares that network with Caddy alone, never with Xray. An
+app on a relay may make calls of its own to a site on a relay this one goes
+through (<code>via</code>). It can send them through the tunnel instead of straight
+there: name that site in <code>tunnel_host</code>, and have the app call
+<code>http://caddy:8090</code>, with no TLS.</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>--product<span class="w"> </span>dotdash-relay<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">tunnel_host</span><span class="o">=</span>files.example.com
+</code></pre></div>
+<p>Caddy sends the calls on as HTTPS inside the link to that relay, which then
+sees one TLS client from this one, Xray's, instead of two.</p>
+<p>An app that joined <code>dotdash-relay_default</code>, as apps did before
+<code>dotdash-relay_edge</code> existed, still works there, but it reaches Xray's inbounds
+too. <code>doctor</code> names it: move it to <code>dotdash-relay_edge</code> (a cover app bundle
+takes the network as its <code>network</code> parameter).</p>
 
 
 
