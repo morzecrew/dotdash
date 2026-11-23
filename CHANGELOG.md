@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The manager's `join` gives a machine installed before it joined the recovery recipient too, as `init` gives a fresh one, so its backups can be decrypted once the machine is gone. It already got the backup target.
+
 ### Added
 
 - A subscription asks the apps that read `Profile-Update-Interval` (Happ, Hiddify) to fetch it again every 6 hours, so new relays, rotated keys and revoked devices reach them without a manual refresh. A relay's subscription carries it too.
