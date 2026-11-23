@@ -2210,7 +2210,10 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
 <ul>
 <li>Add the URL as a subscription in the app (v2rayN, v2rayNG, Hiddify, Happ,
   Streisand) and refresh every few hours: revocations, key rotations and new
-  relays then reach devices with nothing to resend.</li>
+  relays then reach devices with nothing to resend. The URL asks for a fetch
+  every 6 hours (<code>Profile-Update-Interval</code>), which the apps that read it
+  (Happ, Hiddify) follow on their own; in the others, turn on
+  automatic updates.</li>
 <li>An app on Apple's network stack (its User-Agent names CFNetwork, Darwin, iOS
   or macOS, as Shadowrocket's, Streisand's and Happ's on iOS do) gets the links
   with Safari's TLS hello (<code>fp=safari</code>), as its own platform sends; every other
