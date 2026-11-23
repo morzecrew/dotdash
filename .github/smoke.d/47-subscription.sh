@@ -104,6 +104,18 @@ if sudo grep -q 'json' /opt/dotdash/current/tasks/subscription.sh; then
   echo "${0##*/}: <url>.json serves the device's Xray config, as JSON and no-store"
 fi
 
+if sudo grep -q -- '--local-auth' /opt/dotdash/current/tasks/client-config.sh; then
+  locked() { sudo morzer task run client-config --output -- --local-auth | sed -n '/^{$/,/^}$/p'; }
+  first=$(locked)
+  jq -e '.inbounds | length == 1 and .[0].port == 10808 and .[0].settings.auth == "password"
+    and (.[0].settings.accounts[0].pass | length) == 32' <<<"${first}" >/dev/null ||
+    die "client-config --local-auth prints no Xray config with a password on its one local inbound"
+  [ "$(locked)" = "${first}" ] || die "client-config --local-auth prints another password on another run"
+  [ "$(fetch "${url}.json")" = "${config:-$(sudo morzer task run client-config --output -- --full | sed -n '/^{$/,/^}$/p')}" ] ||
+    die "--local-auth changed the Xray config a subscription serves"
+  echo "${0##*/}: --local-auth puts the same password on the one local inbound every run, and leaves the subscription's config alone"
+fi
+
 # An app on Apple's network stack, by its User-Agent, gets the links with
 # Safari's hello; any other app, Chrome's, as above.
 if sudo grep -q '@apple' /opt/dotdash/current/caddy/Caddyfile; then

@@ -1,7 +1,9 @@
 #!/bin/sh
 # Prints what each client needs, or only the client named in $1. With
 # subscriptions on, that is its subscription URL alone; --full, before the
-# name, adds its links and Xray config. The output is credentials: anyone
+# name, adds its links and Xray config; --local-auth puts a password on that
+# config's local proxy, for apps on the phone that look for one. The output
+# is credentials: anyone
 # holding it can use this server, so send it only over a channel you would
 # send a password on.
 set -eu
@@ -10,7 +12,15 @@ set -eu
 # domain through to https_port.
 case ${ENTRY_PORT:-none} in none) ;; '' | *[!0-9]*) echo "entry_port is not a port: ${ENTRY_PORT}" >&2; exit 1 ;; *) HTTPS_PORT=$ENTRY_PORT ;; esac
 full=false
-[ "${1:-}" != --full ] || { full=true; shift; }
+local_auth=false
+while :; do
+  case ${1:-} in
+  --full) full=true ;;
+  --local-auth) full=true local_auth=true ;;
+  *) break ;;
+  esac
+  shift
+done
 [ "${SUBSCRIPTION:-false}" = true ] || full=true
 want=${1:-}
 # A tunnel zone with no dot is a name under the domain, as in the template.
@@ -561,10 +571,29 @@ EOF
   else
     last='' fallback=''
   fi
+  # --local-auth: a password on the local SOCKS, the same on every run (a
+  # hash of the device's id, which reveals nothing of it), and no
+  # HTTP inbound, which the app's VPN mode never uses. Any other app on the
+  # phone otherwise finds an open proxy there and, through it, the exit.
+  if $local_auth; then
+    pass=$(printf 'dotdash local proxy:%s' "$1" | sha256sum | cut -c1-32)
+    inbounds="{\"listen\": \"127.0.0.1\", \"port\": 10808, \"protocol\": \"socks\",
+     \"settings\": {\"udp\": true, \"auth\": \"password\", \"accounts\": [{\"user\": \"dotdash\", \"pass\": \"${pass}\"}]},
+     \"sniffing\": {\"enabled\": true, \"destOverride\": [\"fakedns\"]}}"
+    intro="Xray client config, for v2rayNG as a custom config. Its local SOCKS
+(10808) takes the user dotdash and the password ${pass}:
+enter both in v2rayNG's settings (Local proxy username and password), or the
+device gets nowhere."
+  else
+    inbounds="{\"listen\": \"127.0.0.1\", \"port\": 10808, \"protocol\": \"socks\", \"settings\": {\"udp\": true},
+     \"sniffing\": {\"enabled\": true, \"destOverride\": [\"fakedns\"]}},
+    {\"listen\": \"127.0.0.1\", \"port\": 10809, \"protocol\": \"http\"}"
+    intro="Xray client config, for v2rayN or v2rayNG as a custom config (local SOCKS on
+10808, HTTP on 10809)."
+  fi
   cat <<EOF
-Xray client config, for v2rayN or v2rayNG as a custom config (local SOCKS on
-10808, HTTP on 10809). It uses whichever of ${which} answers
-fastest${where}${last}.
+${intro}
+It uses whichever of ${which} answers fastest${where}${last}.
 DNS the device sends on port 53, in the app's VPN or TUN mode, gets a stand-in
 IPv4 address at once (fake DNS), and the server looks the name up when the
 connection reaches it; a link leaves DNS to the app's own settings:
@@ -572,9 +601,7 @@ connection reaches it; a link leaves DNS to the app's own settings:
   "dns": {"servers": ["fakedns"], "queryStrategy": "UseIPv4"},
   "fakedns": [{"ipPool": "198.18.0.0/15", "poolSize": 65535}],
   "inbounds": [
-    {"listen": "127.0.0.1", "port": 10808, "protocol": "socks", "settings": {"udp": true},
-     "sniffing": {"enabled": true, "destOverride": ["fakedns"]}},
-    {"listen": "127.0.0.1", "port": 10809, "protocol": "http"}
+    ${inbounds}
   ],
   "outbounds": [
 $(outbounds "$1")$([ -z "${XDNS_DOMAIN:-}" ] || printf ',\n%s' "$(xdns_outbound "$1")"),
