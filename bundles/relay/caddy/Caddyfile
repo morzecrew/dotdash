@@ -56,6 +56,27 @@ http://127.0.0.1:8081 {
 	respond /healthz 200
 }
 
+# A cover app's way to one host of its choosing (tunnel_host), as
+# subscriptions go: through Xray's subscriptions inbound, so Caddy's TLS to
+# the host rides inside the link to the dotdash servers, or to the relays
+# this one goes through (via), and the network sees one TLS client from this
+# machine, Xray's. Never published; the app reaches it on the edge network.
+# Without tunnel_host, the site's 404.
+http://:8090 {
+	@tunnel expression "{$TUNNEL_HOST:none}" != "none"
+	handle @tunnel {
+		reverse_proxy {$TUNNEL_HOST:none}:443 {
+			header_up Host {$TUNNEL_HOST:none}
+			transport http {
+				tls
+				tls_server_name {$TUNNEL_HOST:none}
+				network_proxy url http://xray:10810
+			}
+		}
+	}
+	respond 404
+}
+
 (headers) {
 	header {
 		-Server

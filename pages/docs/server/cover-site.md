@@ -86,10 +86,22 @@ command means: each names it with `--product`, as in
 `sudo morzer shell dotdash` opens a shell where every command means this
 server. The commands on these pages leave `--product` out, as they do on a
 machine with one installation. On a relay the product is `dotdash-relay`, and
-the network `dotdash-relay_default`.
+the network `dotdash-relay_edge`.
 
-On a relay the app shares that network with Xray, unlike on a server. An app
-that makes calls of its own to a site on a relay this one goes through (`via`)
-can send them through `http://xray:10810`, the relay's way into its tunnel,
-which Caddy also uses for subscriptions. The calls then ride inside the link to
-that relay, which sees one TLS client from this one instead of two.
+On either, the app shares that network with Caddy alone, never with Xray. An
+app on a relay may make calls of its own to a site on a relay this one goes
+through (`via`). It can send them through the tunnel instead of straight
+there: name that site in `tunnel_host`, and have the app call
+`http://caddy:8090`, with no TLS.
+
+```sh
+sudo morzer --product dotdash-relay config set tunnel_host=files.example.com
+```
+
+Caddy sends the calls on as HTTPS inside the link to that relay, which then
+sees one TLS client from this one, Xray's, instead of two.
+
+An app that joined `dotdash-relay_default`, as apps did before
+`dotdash-relay_edge` existed, still works there, but it reaches Xray's inbounds
+too. `doctor` names it: move it to `dotdash-relay_edge` (a cover app bundle
+takes the network as its `network` parameter).

@@ -132,7 +132,12 @@ parameters:
   cover:
     type: string
     default: pages
-    description: "With the own-site profile, what the site serves past your own files in /srv/dotdash-relay (readable by uid 65532): pages, the bundled page; or your app's URL, http://cover-app:8080 for a container on the network dotdash-relay_default or http://host.docker.internal:8080 for one published on the host, which gets every request but a subscription's and XHTTP's"
+    description: "With the own-site profile, what the site serves past your own files in /srv/dotdash-relay (readable by uid 65532): pages, the bundled page; or your app's URL, http://cover-app:8080 for a container on the network dotdash-relay_edge or http://host.docker.internal:8080 for one published on the host, which gets every request but a subscription's and XHTTP's"
+    services: [caddy]
+  tunnel_host:
+    type: string
+    default: none
+    description: "With the own-site profile, one host a cover app on dotdash-relay_edge may call through the tunnel, at http://caddy:8090 with no TLS: Caddy sends it on as HTTPS inside the link to the dotdash servers, or to the relays in via, so this machine shows one TLS client, Xray's. For an app whose own calls go to a site on a relay this one goes through; none: no such way"
     services: [caddy]
   cert_issuer:
     type: enum

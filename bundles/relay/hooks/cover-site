@@ -26,4 +26,16 @@ if [ "$app" != pages ] && ! out=$(docker compose -p "$project" exec -T caddy wge
   echo "caddy is up, but the app behind the relay's site (cover) does not answer: ${out#wget: }; visitors get a 502" >&2
   exit 1
 fi
+# A container of another project on this one's default network, as cover
+# apps joined it before the edge network: it reaches Xray's inbounds there,
+# the subscriptions proxy into the tunnel among them. Said, not failed, since
+# the app still works there.
+ours=$(docker ps -q --filter "label=com.docker.compose.project=${project}" | sort)
+others=$(docker ps -q --filter "network=${project}_default" | sort | comm -23 - <(printf '%s\n' "$ours"))
+if [ -n "$others" ]; then
+  # shellcheck disable=SC2086 # one id per word
+  names=$(docker inspect -f '{{.Name}}' $others | sed 's|^/||' | paste -sd, -)
+  echo "the relay's own site is up, but ${names} share Xray's network ${project}_default: move them to ${project}_edge"
+  exit 0
+fi
 echo "the relay's own site is up"

@@ -178,9 +178,9 @@ REALITY connection with Vision for each. */ -}}
           "uplinkDataKey": "X-Part", "noSSEHeader": true}
       }
     },
-    {{- /* Caddy's way to the dotdash servers, for devices' subscriptions,
-    and a cover app's way into the tunnel for calls of its own: on the
-    project's network, which only Caddy and a cover app share, and never
+    {{- /* Caddy's way to the dotdash servers, for devices' subscriptions
+    and a cover app's tunnel_host: on the project's network, where Caddy is
+    the only other container (a cover app is on edge), and never
     published. */}}
     {"tag": "subscriptions", "listen": "0.0.0.0", "port": 10810, "protocol": "http"}
     {{- end }}
