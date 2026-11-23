@@ -279,6 +279,18 @@ Every apply, update and `doctor` refuses `upstream_udp=true` with an HTTP or
 HTTPS proxy line. Whether a SOCKS5 proxy relays UDP shows only by trying it: a
 [canary](../canary/index.md) reports `udp` per transport in its `facts`.
 
+## What never goes out
+
+Providers of upstream lines forbid peer-to-peer traffic and mail, so the
+server drops both before any line sees them:
+
+- **BitTorrent:** the handshake Xray recognises, and the announces to public
+  trackers, by the trackers' names. An announce is what puts a line's address
+  in a public swarm. A torrent app's encrypted peer connections look like any
+  other traffic and still pass, but with the trackers gone the app finds few
+  peers, unless `upstream_udp=true` lets its DHT through, which runs over UDP.
+- **Mail on port 25.** Mail apps send on 465 or 587, which pass.
+
 ## What doctor says
 
 When nothing gets out, `doctor` asks the first lines directly and names each
