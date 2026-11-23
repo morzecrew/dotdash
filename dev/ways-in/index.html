@@ -2053,6 +2053,15 @@ start, while devices still reach the server.</p>
   UDP passes (dotdash-lab #64 froze TCP alone; what such a network does to
   UDP is untested). A canary on that network reports it as
   <code>blocked_by: freeze</code>, with the bytes it got under <code>stalled</code>.</li>
+<li><strong>Pages stall at once while single requests still work, and come back a
+  couple of minutes later:</strong> the network freezes a device that opens more
+  than a few connections to one address within a fraction of a second, for
+  about two minutes. REALITY with Vision opens one for every connection inside
+  it, so a page's parallel requests trip it, while a check of one connection
+  passes. XHTTP shares a few connections and Hysteria2 is UDP: in the lab
+  neither tripped it (dotdash-lab #65). Use an XHTTP or Hysteria2 link there.
+  Links list XHTTP first, and the Xray config from <code>client-config</code> usually
+  picks it, being quicker to a first byte.</li>
 <li>To hand a link over, show its QR code in person, send a file, or use any
   channel that still gets through. A link or subscription URL is a credential
   that also names your relay, so avoid a messenger whose operator may read or
