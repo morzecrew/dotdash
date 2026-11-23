@@ -163,22 +163,30 @@ gateway addresses they list. A relay lets them in through a door of its own,
 the `http-origin` profile: a plain-HTTP port that answers those addresses
 alone, on the CDNs' path alone, and passes nothing else.
 
-1. **On the relay**, turn the profile on, name the CDN's gateways and the
-   name devices use (the CDN's name for the resource), and print the line:
+1. **On the relay**, turn the profile on and name the CDN's gateways, then
+   print its line:
 
     ```sh
     sudo morzer config set installation.profile=own-site,http-origin \
-      http_origin_from=198.51.100.10,198.51.100.11 \
-      http_origin_host=abc123.cdn.example.net
+      http_origin_from=198.51.100.10,198.51.100.11
     sudo morzer task run relay-entry --output -- <address>
     ```
 
-    The line now ends in `cdnpath=… origin=abc123.cdn.example.net`. Below it,
-    `relay-entry` prints the port the CDN fetches (`http_origin_port`, 8880
-    by default) and the `xhttpSettings` to give the CDN where it asks for the
-    node's. Open that port in the provider's firewall.
-2. **At the CDN**, give the relay's address, the port and those settings.
-3. **Here**, replace the relay's line. Devices get one more `relay · cdn`
+    Below the line, `relay-entry` prints the port the CDN fetches
+    (`http_origin_port`, 8880 by default) and the `xhttpSettings` to give the
+    CDN where it asks for the node's. Open that port in the provider's
+    firewall.
+2. **At the CDN**, give the relay's address, the port and those settings. It
+   gives back the name devices use.
+3. **On the relay**, set that name and print the line again; it now ends in
+   `cdnpath=… origin=abc123.cdn.example.net`:
+
+    ```sh
+    sudo morzer config set http_origin_host=abc123.cdn.example.net
+    sudo morzer task run relay-entry --output -- <address>
+    ```
+
+4. **Here**, replace the relay's line. Devices get one more `relay · cdn`
    link and outbound through that name, uploading 4 KiB at a time, which
    such CDNs pass where 8 KiB fail.
 

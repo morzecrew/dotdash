@@ -36,11 +36,15 @@ EOF
 and Hysteria2 beside REALITY, through the relay's own site's certificate:
 sudo morzer config set installation.profile=hysteria2 dotdash_hysteria2_port=${hy2_port}
 EOF
-[ -z "$origin" ] || cat <<EOF
+[ -z "${HTTP_ORIGIN_PORT:-}" ] || cat <<EOF
 
-The rented CDN at ${origin} fetches this relay in plain HTTP on port
-${HTTP_ORIGIN_PORT:-8880} (http_origin_port), from the addresses in http_origin_from. Where it
+The http-origin door: a rented CDN fetches this relay in plain HTTP on port
+${HTTP_ORIGIN_PORT} (http_origin_port), from the addresses in http_origin_from. Where it
 asks for the node's xhttpSettings, give it these, which devices' links through
 it match:
 {"path": "/${cdn_path}", "mode": "packet-up", "extra": {"uplinkHTTPMethod": "GET", "uplinkDataPlacement": "header", "uplinkChunkSize": 4096, "scMaxEachPostBytes": 4096, "scMinPostsIntervalMs": 10}}
+EOF
+[ -n "$origin" ] || [ -z "${HTTP_ORIGIN_PORT:-}" ] || cat <<EOF
+Then set http_origin_host to the name the CDN gives devices, and print this
+line again: devices get links through the door only once it ends in origin=.
 EOF

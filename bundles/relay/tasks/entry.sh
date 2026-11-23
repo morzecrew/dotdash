@@ -54,8 +54,11 @@ esac
 # The CDNs' own XHTTP path, which their links take in place of the one above,
 # with the settings of the CDN inbound. A relay that names none is fetched by
 # a server from before it by the one above, as before.
+# The http-origin profile's door takes it too (HTTP_ORIGIN_PORT is set under
+# that profile alone), so the settings it prints for the CDN's form come
+# before the CDN has given a name for http_origin_host.
 cdn_path=
-[ -z "$cdn$origin" ] || cdn_path=$(cat /run/secrets/cdn_xhttp_path)
+[ -z "$cdn$origin${HTTP_ORIGIN_PORT:-}" ] || cdn_path=$(cat /run/secrets/cdn_xhttp_path)
 # name: a label devices' links through this relay carry in place of
 # "relay <n>". The server's relays line is split on spaces, so letters,
 # digits, dots, dashes and underscores alone.
