@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `client-config --local-auth` prints the Xray config with a password on its local SOCKS, the same on every run, and no local HTTP proxy, for v2rayNG's "Local proxy username and password". Other apps on the phone then find no open proxy to try. devices.md says how to do the same in v2rayNG with links or a subscription.
+
 - `tunnel_host` on a relay: one host a cover app may call at `http://caddy:8090`. Caddy sends the calls on as HTTPS inside the link to the servers, or to the relays in `via`, so the relay shows one TLS client, Xray's, where an app calling the host itself showed its own beside it.
 
 - A subscription asks the apps that read `Profile-Update-Interval` (Happ, Hiddify) to fetch it again every 6 hours, so new relays, rotated keys and revoked devices reach them without a manual refresh. A relay's subscription carries it too.

@@ -54,6 +54,29 @@ sudo morzer task run client-config --output -- phone | grep '^vless://' |
 
 How each app handles DNS: [DNS on devices](device-dns.md).
 
+### Apps that look for a VPN
+
+Some apps on a phone look for a VPN, and refuse to run or report it. One way
+they look is to try the local proxy ports an app like v2rayNG opens: with no
+password there, they get through, and see the exit's address.
+
+- **v2rayNG with links or a subscription:** in its settings, set a "Local
+  proxy username" and "password" (any you like); v2rayNG then puts them on its
+  own local proxy. Keep such apps off the proxy with its per-app settings.
+- **v2rayNG with the Xray config:** print the config with `--local-auth`:
+
+    ```sh
+    sudo morzer task run client-config --output -- --local-auth phone
+    ```
+
+    Its local SOCKS takes the user `dotdash` and a password printed with it,
+    the same on every run. Enter both in v2rayNG's settings, or the device
+    gets nowhere. It has no HTTP proxy on 10809, which only v2rayN's system
+    proxy uses: give v2rayN the plain config.
+- An app kept off the proxy can still tell that a VPN is on from the phone's
+  network interfaces. Only putting it in a separate work profile or user
+  hides that.
+
 ## Subscriptions
 
 With subscriptions on, each device gets one URL instead, and fetches its
