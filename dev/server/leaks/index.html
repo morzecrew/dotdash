@@ -2195,7 +2195,8 @@ depends on how the device reaches dotdash (dotdash-lab #52 measured each):</p>
 <li>A <a href="../../canary/">canary</a> reports per transport whether the server
   carries UDP (<code>udp</code> in its <code>facts</code>).</li>
 <li><strong>DNS</strong> stays inside in both modes: browsers send names to a SOCKS proxy,
-  and dotdash-client's TUN answers port 53 itself.</li>
+  and client-config's Xray config and dotdash-client's TUN answer port 53
+  themselves.</li>
 </ul>
 <h2 id="the-browsers-location">The browser's location<a class="headerlink" href="#the-browsers-location" title="Permanent link">&para;</a></h2>
 <p>dotdash keeps the network consistent: sites see the exit IP, and geolocation
