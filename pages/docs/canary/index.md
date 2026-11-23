@@ -67,8 +67,19 @@ The same goes the other way, for a network that counts what a device sends:
 `facts` uploads 64 KB to `freeze_up_url` through each transport. An upload
 that gets no answer for 8 seconds, twice running, counts the transport as not
 getting through, named under `stalled_up`; one that fails sooner (refused, an
-error page) says nothing about a freeze. Set
-`control_url` to a site this canary's network reaches without dotdash, so the
+error page) says nothing about a freeze.
+
+A network may also freeze a device that opens more than a few connections to
+one address within a fraction of a second, for a couple of minutes. REALITY
+with Vision opens one for every connection inside it, so a page's parallel
+requests set it off, while a check of one connection at a time never does.
+`facts` ends with a burst through REALITY: six connections at once, then one
+more. When REALITY got through alone but not after the burst, it counts as not
+getting through, with `burst: true`. Being last, it freezes nothing `facts`
+still checks, but the server stays out of this canary's reach for a couple of
+minutes after; `burst_check=false` skips it.
+
+Set `control_url` to a site this canary's network reaches without dotdash, so the
 canary's own outage isn't read as its target burnt:
 
 ```sh
@@ -88,6 +99,7 @@ as `blocked_by`:
 | `blocked_by` | What the canary found |
 | --- | --- |
 | `freeze` | connections freeze partway (the freeze checks above) |
+| `burst` | REALITY gets through alone, not after six connections at once (the burst check above) |
 | `ip` | no TCP connection to the server's port at all: a block on its address |
 | `sni` | a connection, and REALITY gets through with its hello split: a block on the name by SNI |
 | `tls` | a connection, but REALITY fails even split: a block on the TLS, or on REALITY itself |
@@ -145,6 +157,7 @@ relay's address no longer gets through for devices.
 | `download_url` | `https://speed.cloudflare.com/__down?bytes=1000000` | what `measure` downloads for its Mbit/s, `https://` only; `none` skips the downloads |
 | `control_url` | `none` | a site this canary's network reaches without dotdash, which `facts` fetches directly; `none` for no such check |
 | `freeze_url` | `https://speed.cloudflare.com/__down?bytes=65536` | what `facts` downloads through each transport after `probe_url`, past the 16-20 KB a freeze lets through, `https://` only; `none` skips it |
+| `burst_check` | `true` | whether `facts` ends with a burst through REALITY, for a network that freezes a device opening several connections at once; `false` skips it |
 | `freeze_up_url` | `https://speed.cloudflare.com/__up` | where `facts` uploads 64 KB through each transport, for a freeze counted on what the device sends, `https://` only; `none` skips it |
 
 | Secret | |

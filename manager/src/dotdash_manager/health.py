@@ -11,7 +11,8 @@ BURN_AFTER = 3
 CAUSES = {"ip": "its canaries' network reaches no TCP port of it: its address is blocked",
           "sni": "its canaries' network blocks its name by SNI",
           "tls": "its canaries' network lets TCP through but not its TLS or REALITY",
-          "freeze": "its canaries' network freezes its connections partway"}
+          "freeze": "its canaries' network freezes its connections partway",
+          "burst": "its canaries' network freezes REALITY once a page opens several connections at once"}
 # The event log keeps this many, the newest.
 EVENTS = 2000
 # Each machine keeps this many of its readings' latencies per path, the newest.
@@ -105,7 +106,7 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None) -> 
         # reading when any canary got through so, else readings in a row it hasn't.
         # What the canaries' network finds stopping REALITY (a canary's
         # blocked_by: ip, sni, tls or freeze), the commonest this reading.
-        causes = [f["blocked_by"] for f in seen if f.get("blocked_by") in ("ip", "sni", "tls", "freeze")]
+        causes = [f["blocked_by"] for f in seen if f.get("blocked_by") in CAUSES]
         if causes:
             h["cause"] = max(set(causes), key=causes.count)
         else:

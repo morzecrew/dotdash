@@ -162,6 +162,10 @@ parameters:
     default: https://speed.cloudflare.com/__down?bytes=65536
     description: "What facts download through each transport after its probe_url check, https:// only: past the first 16-20 KB, after which a network's DPI may freeze a connection to a hosting address abroad, which probe_url's fetch never reaches. A download that stops partway twice makes the path down; none skips it"
   # No services: only the facts task reads it, when it runs.
+  burst_check:
+    type: bool
+    default: true
+    description: "Whether facts ends with a burst through REALITY: six connections at once, then one more, for a network that freezes a device opening several connections to one address within a fraction of a second, which REALITY with Vision does on every page and a check of one connection never shows. Where it freezes REALITY, the path is down (blocked_by burst), and the server is out of the canary's reach for a couple of minutes after; false skips it"
   freeze_up_url:
     type: string
     default: https://speed.cloudflare.com/__up

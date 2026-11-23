@@ -70,6 +70,7 @@ services:
       CONTROL_URL: ${DOTDASH_CANARY_PARAM_CONTROL_URL:-none}
       FREEZE_URL: ${DOTDASH_CANARY_PARAM_FREEZE_URL:-https://speed.cloudflare.com/__down?bytes=65536}
       FREEZE_UP_URL: ${DOTDASH_CANARY_PARAM_FREEZE_UP_URL:-https://speed.cloudflare.com/__up}
+      BURST_CHECK: ${DOTDASH_CANARY_PARAM_BURST_CHECK:-true}
     volumes:
       - ${DOTDASH_CANARY_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image
