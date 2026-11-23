@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-23
+
 ### Changed
 
 - client-config's Xray config answers devices' DNS with fake DNS, as dotdash-client's TUN does: a name gets a stand-in address at once and the server looks it up, so a first visit to a name no longer waits for a lookup through the tunnel (53 ms less in the lab). `dns_resolver` is now the server's alone.
