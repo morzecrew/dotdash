@@ -155,6 +155,48 @@ directly need no CDN. A CDN's origin is one host. If that relay is lost,
 point the CDN at another relay with a site of its own, and move `cdn_hosts`
 and `cdn_only` to it. The name devices use stays the same.
 
+#### A CDN that fetches in plain HTTP
+
+Some CDNs rented for restricted networks end TLS at their own edge and fetch
+the origin in plain HTTP, from an address and port you give them, and from
+gateway addresses they list. A relay lets them in through a door of its own,
+the `http-origin` profile: a plain-HTTP port that answers those addresses
+alone, on the CDNs' path alone, and passes nothing else.
+
+1. **On the relay**, turn the profile on, name the CDN's gateways and the
+   name devices use (the CDN's name for the resource), and print the line:
+
+    ```sh
+    sudo morzer config set installation.profile=own-site,http-origin \
+      http_origin_from=198.51.100.10,198.51.100.11 \
+      http_origin_host=abc123.cdn.example.net
+    sudo morzer task run relay-entry --output -- <address>
+    ```
+
+    The line now ends in `cdnpath=… origin=abc123.cdn.example.net`. Below it,
+    `relay-entry` prints the port the CDN fetches (`http_origin_port`, 8880
+    by default) and the `xhttpSettings` to give the CDN where it asks for the
+    node's. Open that port in the provider's firewall.
+2. **At the CDN**, give the relay's address, the port and those settings.
+3. **Here**, replace the relay's line. Devices get one more `relay · cdn`
+   link and outbound through that name, uploading 4 KiB at a time, which
+   such CDNs pass where 8 KiB fail.
+
+What to keep in mind:
+
+- The CDN and its gateways read every request in the clear, paths and
+  headers included. VLESS Encryption keeps what the requests carry
+  unreadable, and the door's path is the CDNs' own, so the path devices reach
+  the relay by directly stays unknown to them. Use a relay inside the
+  restricted network: the plain-HTTP leg from the gateways then stays inside
+  it.
+- The gateways' addresses change. When the CDN lists new ones, set
+  `http_origin_from` again; until then the door answers no one, and these
+  links alone fail. `http_origin_from=any` answers every address, for a CDN
+  whose edges fetch directly and publish no list: the path and the devices'
+  ids are then all that keep anyone else out.
+- Everyone else gets a 404 from that port.
+
 ## A CDN against address blocking
 
 The XHTTP link works through a CDN that proxies HTTP/2 to

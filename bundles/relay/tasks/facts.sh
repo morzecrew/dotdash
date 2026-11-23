@@ -26,6 +26,7 @@ printf '{"entry_host": %s, "site": %s, "public_key": %s, "short_id": %s, "encryp
 [ -z "$hy2_port" ] || printf ', "hysteria2": {"port": %s}' "$hy2_port"
 [ -z "$cdn" ] || printf ', "cdn_hosts": [%s]' "$(printf '%s' "$cdn" | sed 's/[^,]*/"&"/g; s/,/, /g')"
 [ -z "$cdn_path" ] || printf ', "cdn_path": %s' "$(str "$cdn_path")"
+[ -z "$origin" ] || printf ', "origin_host": %s' "$(str "$origin")"
 [ -z "$only" ] || printf ', "cdn_only": true'
 [ -z "$name" ] || printf ', "name": %s' "$(str "$name")"
 # This release takes via: an authority sets or unsets it only on one that does.

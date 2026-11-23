@@ -10,7 +10,7 @@ set -eu
 own=${path:+ own-site $path}
 # Last on the line, where a server from before them reads no field: kcp= with
 # a fourth field naming the opener under kcp_open=quic, hy2=, cdn= and the
-# CDNs' path as cdnpath=, then name=.
+# CDNs' path as cdnpath=, origin=, then name=.
 kcp=
 if [ -n "$kcp_seed" ]; then
   kcp=" kcp=${KCP_PORT},${KCP_HEADER:-dtls},${kcp_seed}"
@@ -20,7 +20,7 @@ fi
 cat <<EOF
 On the dotdash server, add this line to the relays parameter (sudo morzer
 config edit relays):
-${host} ${SITE} ${pbk} ${sid} ${enc}${own}${kcp}${hy2_port:+ hy2=$hy2_port}${cdn:+ cdn=$cdn}${cdn_path:+ cdnpath=$cdn_path}${only}${name:+ name=$name}
+${host} ${SITE} ${pbk} ${sid} ${enc}${own}${kcp}${hy2_port:+ hy2=$hy2_port}${cdn:+ cdn=$cdn}${cdn_path:+ cdnpath=$cdn_path}${origin:+ origin=$origin}${only}${name:+ name=$name}
 
 A dotdash-canary checks this relay as it checks the server, without the xhttp
 profiles, with the dotdash_id of any device on the relay:
@@ -35,4 +35,12 @@ EOF
 [ -z "$hy2_port" ] || cat <<EOF
 and Hysteria2 beside REALITY, through the relay's own site's certificate:
 sudo morzer config set installation.profile=hysteria2 dotdash_hysteria2_port=${hy2_port}
+EOF
+[ -z "$origin" ] || cat <<EOF
+
+The rented CDN at ${origin} fetches this relay in plain HTTP on port
+${HTTP_ORIGIN_PORT:-8880} (http_origin_port), from the addresses in http_origin_from. Where it
+asks for the node's xhttpSettings, give it these, which devices' links through
+it match:
+{"path": "/${cdn_path}", "mode": "packet-up", "extra": {"uplinkHTTPMethod": "GET", "uplinkDataPlacement": "header", "uplinkChunkSize": 4096, "scMaxEachPostBytes": 4096, "scMinPostsIntervalMs": 10}}
 EOF

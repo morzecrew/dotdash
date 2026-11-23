@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A relay's `http-origin` profile: a door in plain HTTP on `http_origin_port` for a CDN that ends TLS at its own edge and fetches the origin unencrypted, as some rented for restricted networks do. It answers only the gateway addresses in `http_origin_from`, and only on the CDNs' path, which it passes to Xray's XHTTP inbound. `http_origin_host` reaches the server's line as `origin=`, and devices get a `relay · cdn` link through it uploading 4 KiB at a time. `relay-entry` prints the port and the `xhttpSettings` to give the CDN. The manager carries `origin=` too.
+
 ### Changed
 
 - **A relay's cover app goes on `dotdash-relay_edge`**, a network of its own with Caddy, as `dotdash_edge` is on a server. On `dotdash-relay_default` it shared Xray's network, where it could reach the subscriptions proxy into the tunnel and the XHTTP inbounds. An app already on `dotdash-relay_default` keeps working, and `doctor` names it until it moves.
