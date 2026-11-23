@@ -11,9 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A relay's cover app goes on `dotdash-relay_edge`**, a network of its own with Caddy, as `dotdash_edge` is on a server. On `dotdash-relay_default` it shared Xray's network, where it could reach the subscriptions proxy into the tunnel and the XHTTP inbounds. An app already on `dotdash-relay_default` keeps working, and `doctor` names it until it moves.
 
+- The server drops announces to public BitTorrent trackers, by the trackers' names, and mail on port 25, beside the BitTorrent handshakes it already dropped. Upstream providers forbid both, and an announce puts the line's address in public swarms. Encrypted peer connections still look like any other traffic.
+
 ### Added
 
 - `tunnel_host` on a relay: one host a cover app may call at `http://caddy:8090`. Caddy sends the calls on as HTTPS inside the link to the servers, or to the relays in `via`, so the relay shows one TLS client, Xray's, where an app calling the host itself showed its own beside it.
+
+- A subscription asks the apps that read `Profile-Update-Interval` (Happ, Hiddify) to fetch it again every 6 hours, so new relays, rotated keys and revoked devices reach them without a manual refresh. A relay's subscription carries it too.
+
+### Fixed
+
+- The manager's `join` gives a machine installed before it joined the recovery recipient too, as `init` gives a fresh one, so its backups can be decrypted once the machine is gone. It already got the backup target.
 
 ## [0.15.0] - 2026-11-23
 

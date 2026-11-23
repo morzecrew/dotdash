@@ -61,6 +61,10 @@ def script(m: Machine, target: str, authority: str, recipient: str, recovery: st
         f"morzer config set sync.target={shlex.quote(target)} sync.authority={shlex.quote(authority)} "
         f"sync.recipient={shlex.quote(recipient)} sync.enabled=true",
         f"morzer backup target list | grep -qF {shlex.quote(target)} || morzer backup target add {shlex.quote(target)}{cred}",
+        # init names it on a fresh machine; one installed before joining may
+        # have none, and its backups would then die with it.
+        (f"morzer secret recipients list --json | grep -qF {shlex.quote(recovery)} || "
+         f"morzer secret recipients add {shlex.quote(recovery)} --kind recovery"),
     ]
     lines = [
         "#!/bin/sh",

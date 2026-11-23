@@ -30,6 +30,7 @@ def test_a_relay_script_is_sh_and_ends_in_its_id_and_key():
     assert "morzer secret set vless_clients <<'DOTDASH_END'\nid1 phone\nid2 laptop\nDOTDASH_END" in s
     assert "morzer secret set sync_target <<'DOTDASH_END'\nkind: s3\nsecret: x\nDOTDASH_END" in s
     assert "backup target add s3://b/net --credentials sync_target" in s
+    assert "recipients list --json | grep -qF age1me || morzer secret recipients add age1me --kind recovery" in s
     assert "sync.target=s3://b/net sync.authority=RWauth sync.recipient=age1me sync.enabled=true" in s
     assert s.index("sync.enabled=true") < s.index("morzer apply") < s.index("printf 'dotdash-joined")
 
@@ -48,7 +49,8 @@ def test_what_each_kind_needs():
 
 def test_an_installed_machine_only_starts_following(tmp_path):
     """The script against a stand-in morzer, on a machine where the relay is
-    installed already: no init, no secrets, no apply; sync on, and its row."""
+    installed already: no init, no secrets, no apply; sync on, the recovery
+    recipient, and its row."""
     log = tmp_path / "calls"
     (tmp_path / "morzer").write_text(f'#!/bin/sh\necho "$*" >>{log}\n[ "$1 $2" != "fleet publish" ] || [ "${{3:-}}" != --dry-run ] || '
                                      'echo \'{"data": {"row": {"installation_id": "inst_7", "signing_key": "RW7="}}}\'\n')
@@ -56,7 +58,8 @@ def test_an_installed_machine_only_starts_following(tmp_path):
     s = make(site="site.example", entry_host="203.0.113.7").replace("/etc/dotdash-relay", str(tmp_path))
     out = subprocess.run(["sh"], input=s, capture_output=True, text=True, env={"PATH": f"{tmp_path}:/usr/bin:/bin"}, check=True).stdout
     calls = log.read_text().splitlines()
-    assert not any(c.startswith(("init", "secret", "apply")) for c in calls), calls
+    assert not any(c.startswith(("init", "secret set", "apply")) for c in calls), calls
+    assert "secret recipients add age1me --kind recovery" in calls
     assert calls[0].startswith("config set sync.target=s3://b/net") and calls[-2:] == ["fleet publish", "fleet publish --dry-run --json"]
     assert "installed here already" in out and join.marker(out.splitlines()[-1], "r1") == ("inst_7", "RW7=")
 

@@ -67,7 +67,10 @@ sudo morzer task run client-config --output -- --full phone    # plus links and 
 
 - Add the URL as a subscription in the app (v2rayN, v2rayNG, Hiddify, Happ,
   Streisand) and refresh every few hours: revocations, key rotations and new
-  relays then reach devices with nothing to resend.
+  relays then reach devices with nothing to resend. The URL asks for a fetch
+  every 6 hours (`Profile-Update-Interval`), which the apps that read it
+  (Happ, Hiddify) follow on their own; in the others, turn on
+  automatic updates.
 - An app on Apple's network stack (its User-Agent names CFNetwork, Darwin, iOS
   or macOS, as Shadowrocket's, Streisand's and Happ's on iOS do) gets the links
   with Safari's TLS hello (`fp=safari`), as its own platform sends; every other
