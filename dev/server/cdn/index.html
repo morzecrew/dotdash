@@ -1045,6 +1045,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#a-cdn-that-fetches-in-plain-http" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A CDN that fetches in plain HTTP
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2063,6 +2074,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#a-cdn-that-fetches-in-plain-http" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A CDN that fetches in plain HTTP
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2379,6 +2401,53 @@ fronts one origin relay, with <code>cdn_only=true</code>, and the relays devices
 directly need no CDN. A CDN's origin is one host. If that relay is lost,
 point the CDN at another relay with a site of its own, and move <code>cdn_hosts</code>
 and <code>cdn_only</code> to it. The name devices use stays the same.</p>
+<h4 id="a-cdn-that-fetches-in-plain-http">A CDN that fetches in plain HTTP<a class="headerlink" href="#a-cdn-that-fetches-in-plain-http" title="Permanent link">&para;</a></h4>
+<p>Some CDNs rented for restricted networks end TLS at their own edge and fetch
+the origin in plain HTTP, from an address and port you give them, and from
+gateway addresses they list. A relay lets them in through a door of its own,
+the <code>http-origin</code> profile: a plain-HTTP port that answers those addresses
+alone, on the CDNs' path alone, and passes nothing else.</p>
+<ol>
+<li>
+<p><strong>On the relay</strong>, turn the profile on and name the CDN's gateways, then
+   print its line:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>own-site,http-origin<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="nv">http_origin_from</span><span class="o">=</span><span class="m">198</span>.51.100.10,198.51.100.11
+sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>&lt;address&gt;
+</code></pre></div>
+<p>Below the line, <code>relay-entry</code> prints the port the CDN fetches
+(<code>http_origin_port</code>, 8880 by default) and the <code>xhttpSettings</code> to give the
+CDN where it asks for the node's. Open that port in the provider's
+firewall.
+2. <strong>At the CDN</strong>, give the relay's address, the port and those settings. It
+   gives back the name devices use.
+3. <strong>On the relay</strong>, set that name and print the line again; it now ends in
+   <code>cdnpath=… origin=abc123.cdn.example.net</code>:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">http_origin_host</span><span class="o">=</span>abc123.cdn.example.net
+sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>&lt;address&gt;
+</code></pre></div>
+</li>
+<li>
+<p><strong>Here</strong>, replace the relay's line. Devices get one more <code>relay · cdn</code>
+   link and outbound through that name, uploading 4 KiB at a time, which
+   such CDNs pass where 8 KiB fail.</p>
+</li>
+</ol>
+<p>What to keep in mind:</p>
+<ul>
+<li>The CDN and its gateways read every request in the clear, paths and
+  headers included. VLESS Encryption keeps what the requests carry
+  unreadable, and the door's path is the CDNs' own, so the path devices reach
+  the relay by directly stays unknown to them. Use a relay inside the
+  restricted network: the plain-HTTP leg from the gateways then stays inside
+  it.</li>
+<li>The gateways' addresses change. When the CDN lists new ones, set
+  <code>http_origin_from</code> again; until then the door answers no one, and these
+  links alone fail. <code>http_origin_from=any</code> answers every address, for a CDN
+  whose edges fetch directly and publish no list: the path and the devices'
+  ids are then all that keep anyone else out.</li>
+<li>Everyone else gets a 404 from that port.</li>
+</ul>
 <h2 id="a-cdn-against-address-blocking">A CDN against address blocking<a class="headerlink" href="#a-cdn-against-address-blocking" title="Permanent link">&para;</a></h2>
 <p>The XHTTP link works through a CDN that proxies HTTP/2 to
 <code>https://example.com</code>: put the CDN's name in the link's address. Check its

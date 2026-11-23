@@ -2160,6 +2160,21 @@
 <td>with <code>own-site</code>, the names devices use for <a href="../../server/cdn/#in-front-of-a-relay">local CDNs</a> in front of the relay, comma-separated; <code>relay-entry</code> adds them to the relay's line</td>
 </tr>
 <tr>
+<td><code>http_origin_port</code></td>
+<td><code>8880</code></td>
+<td>with the <code>http-origin</code> profile, the host TCP port of its door, published at <code>listen</code>: where a <a href="../../server/cdn/#a-cdn-that-fetches-in-plain-http">CDN that fetches in plain HTTP</a> fetches the relay</td>
+</tr>
+<tr>
+<td><code>http_origin_from</code></td>
+<td><code>none</code></td>
+<td>with <code>http-origin</code>, the addresses the door answers, comma-separated IPs or CIDR ranges: the CDN's gateways; <code>any</code> answers every address, <code>none</code> no one</td>
+</tr>
+<tr>
+<td><code>http_origin_host</code></td>
+<td><code>none</code></td>
+<td>with <code>http-origin</code>, the name devices reach that CDN at; <code>relay-entry</code> adds it to the relay's line as <code>origin=</code>, and prints the <code>xhttpSettings</code> to give the CDN</td>
+</tr>
+<tr>
 <td><code>cdn_only</code></td>
 <td><code>false</code></td>
 <td><code>true</code>: devices get the relay's CDN links alone, none to its own address, so it stays the <a href="../../server/cdn/#the-cdns-origin-only">CDNs' origin</a>; <code>relay-entry</code> ends the line with <code>cdn-only</code>, and refuses it without <code>cdn_hosts</code></td>
@@ -2287,6 +2302,14 @@ without it the profile is refused. <code>relay-entry</code> then ends the relay'
 with <code>hy2=&lt;port&gt;</code>, from which the server gives each device a
 <code>relay · hy2</code> link. Open the UDP port in the provider's firewall, and
 replace the relay's line on the server after turning it on.</p>
+<p><code>installation.profile=own-site,http-origin</code>: the relay's Caddy also listens
+in plain HTTP on <code>http_origin_port</code>, a door for a
+<a href="../../server/cdn/#a-cdn-that-fetches-in-plain-http">CDN that fetches in plain HTTP</a>.
+It answers the addresses in <code>http_origin_from</code> alone, on the CDNs' path
+alone, which it passes on to Xray's XHTTP inbound; everyone else gets a 404.
+<code>relay-entry</code> then ends the relay's line with <code>cdnpath=&lt;path&gt;</code> and
+<code>origin=&lt;http_origin_host&gt;</code>, from which the server gives each device a
+<code>relay · cdn</code> link through that name.</p>
 <p><code>installation.profile=mkcp</code> (with a site of its own: <code>own-site,mkcp</code>): the
 relay serves <a href="../../server/mkcp/">mKCP</a> on UDP <code>kcp_port</code> too, under its own
 <code>kcp_seed</code>, and carries it on to the servers like REALITY. <code>relay-entry</code> then
