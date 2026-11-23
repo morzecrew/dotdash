@@ -7,23 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-24
+
 ### Added
 
 - A relay's `http-origin` profile: a door in plain HTTP on `http_origin_port` for a CDN that ends TLS at its own edge and fetches the origin unencrypted, as some rented for restricted networks do. It answers only the gateway addresses in `http_origin_from`, and only on the CDNs' path, which it passes to Xray's XHTTP inbound. `http_origin_host` reaches the server's line as `origin=`, and devices get a `relay · cdn` link through it uploading 4 KiB at a time. `relay-entry` prints the port and the `xhttpSettings` to give the CDN. The manager carries `origin=` too.
-
-### Changed
-
-- **A relay's cover app goes on `dotdash-relay_edge`**, a network of its own with Caddy, as `dotdash_edge` is on a server. On `dotdash-relay_default` it shared Xray's network, where it could reach the subscriptions proxy into the tunnel and the XHTTP inbounds. An app already on `dotdash-relay_default` keeps working, and `doctor` names it until it moves.
-
-- The server drops announces to public BitTorrent trackers, by the trackers' names, and mail on port 25, beside the BitTorrent handshakes it already dropped. Upstream providers forbid both, and an announce puts the line's address in public swarms. Encrypted peer connections still look like any other traffic.
-
-### Added
 
 - `client-config --local-auth` prints the Xray config with a password on its local SOCKS, the same on every run, and no local HTTP proxy, for v2rayNG's "Local proxy username and password". Other apps on the phone then find no open proxy to try. devices.md says how to do the same in v2rayNG with links or a subscription.
 
 - `tunnel_host` on a relay: one host a cover app may call at `http://caddy:8090`. Caddy sends the calls on as HTTPS inside the link to the servers, or to the relays in `via`, so the relay shows one TLS client, Xray's, where an app calling the host itself showed its own beside it.
 
 - A subscription asks the apps that read `Profile-Update-Interval` (Happ, Hiddify) to fetch it again every 6 hours, so new relays, rotated keys and revoked devices reach them without a manual refresh. A relay's subscription carries it too.
+
+### Changed
+
+- **A relay's cover app goes on `dotdash-relay_edge`**, a network of its own with Caddy, as `dotdash_edge` is on a server. On `dotdash-relay_default` it shared Xray's network, where it could reach the subscriptions proxy into the tunnel and the XHTTP inbounds. An app already on `dotdash-relay_default` keeps working, and `doctor` names it until it moves.
+
+- The server drops announces to public BitTorrent trackers, by the trackers' names, and mail on port 25, beside the BitTorrent handshakes it already dropped. Upstream providers forbid both, and an announce puts the line's address in public swarms. Encrypted peer connections still look like any other traffic.
 
 ### Fixed
 
