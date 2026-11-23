@@ -337,7 +337,14 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
       {"inboundTag": ["dns"], "outboundTag": "upstream"},
 {{- end }}
       {"ip": ["geoip:private"], "outboundTag": "block"},
-      {"protocol": ["bittorrent"], "outboundTag": "block"}
+      {{- /* What the upstreams' providers forbid. Sniffing sees a plain
+      BitTorrent handshake alone, so the announces that put the exit address
+      in public swarms go by the trackers' names; client UDP, DHT's way, is
+      dropped below unless upstream_udp. Mail is sent on 465 and 587, never
+      by a device on 25. */}}
+      {"protocol": ["bittorrent"], "outboundTag": "block"},
+      {"domain": ["geosite:category-public-tracker"], "outboundTag": "block"},
+      {"network": "tcp", "port": "25", "outboundTag": "block"}
       {{- if not $udp }},
       {"network": "udp", "outboundTag": "block"}
       {{- end }},

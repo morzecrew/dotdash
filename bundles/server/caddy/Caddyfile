@@ -137,6 +137,10 @@ http://127.0.0.1:8081 {
 			}
 		}
 		header @titled Profile-Title "base64:{file./srv/exit/title}"
+		# How often the apps that read it (Happ, Hiddify) fetch it
+		# again, in hours: a new relay, a rotated key or a revoked device
+		# reaches them within that, where an app left alone may never refetch.
+		header Profile-Update-Interval 6
 		header Cache-Control no-store
 		file_server
 	}
