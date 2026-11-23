@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A subscription asks the apps that read `Profile-Update-Interval` (Happ, Hiddify) to fetch it again every 6 hours, so new relays, rotated keys and revoked devices reach them without a manual refresh. A relay's subscription carries it too.
+
 ## [0.15.0] - 2026-11-23
 
 ### Changed
