@@ -89,7 +89,7 @@ violations=$(jq '
         check($target == "asis"; "the upstream outbound resolves names with no DNS of Xray'"'"'s own (targetStrategy \($target))")
       end),
     check(.routing.rules[-1] == {network: "tcp,udp", outboundTag: "upstream"}; "the last routing rule does not name the upstream"),
-    # What the upstreams' providers forbid.
+    # What upstream providers forbid.
     ([.routing.rules[] | select(.outboundTag == "block")] as $b
       | check(($b | any(.protocol == ["bittorrent"])) and ($b | any(.domain == ["geosite:category-public-tracker"]))
           and ($b | any(.network == "tcp" and .port == "25"));
