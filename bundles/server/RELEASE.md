@@ -1,17 +1,14 @@
-# dotdash 0.14.0
+# dotdash 0.15.0
 
-Nothing needs doing before updating from 0.13.0, and `morzer rollback` back to it works once no `direct` line is left in `upstreams` (`sudo morzer secret edit upstreams`). A relay line ending in `standby` is an ordinary relay again under 0.13.0. It needs morzer 0.18.0, as 0.13.0 did.
+Nothing needs doing before updating from 0.14.0, and `morzer rollback` back to it works. It needs morzer 0.18.0, as 0.14.0 did.
 
-- **A server already on a residential line** can use its own address as a way out: a `direct` line in `upstreams`, alone or beside proxies as their backup or fallback.
-- **A relay kept for when the others fail:** `standby` at the end of its line in `relays`. Devices get its links last at their next subscription refresh, and their Xray configs leave it unchecked until every other link fails.
+- **Devices running the Xray config from `client-config`** get fake DNS once they import it again (`sudo morzer task run client-config --output -- --full phone`). Links and subscriptions are unchanged.
 
 ```sh
 sudo morzer update --stage
-sudo morzer update --to 0.14.0
+sudo morzer update --to 0.15.0
 ```
 
-### Added
+### Changed
 
-- `standby` at the end of a relay's line in `relays` keeps that relay idle while others get through: devices get its links last, and their Xray configs, dotdash-client's included, don't check them and use them only once every other link fails. The manager's roster takes `standby` on a relay.
-
-- A `direct` line in `upstreams` makes the server's own address a way out, for a server already on a residential line: alone, or beside proxies as their backup or fallback. `doctor` asks it from the server itself.
+- client-config's Xray config answers devices' DNS with fake DNS, as dotdash-client's TUN does: a name gets a stand-in address at once and the server looks it up, so a first visit to a name no longer waits for a lookup through the tunnel (53 ms less in the lab). `dns_resolver` is now the server's alone.
