@@ -698,6 +698,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Links and the Xray config">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#apps-that-look-for-a-vpn" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Apps that look for a VPN
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2017,6 +2034,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Links and the Xray config">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#apps-that-look-for-a-vpn" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Apps that look for a VPN
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2200,6 +2234,27 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
 <span class="w">  </span><span class="k">while</span><span class="w"> </span><span class="nb">read</span><span class="w"> </span>-r<span class="w"> </span>link<span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span>qrencode<span class="w"> </span>-t<span class="w"> </span>ansiutf8<span class="w"> </span><span class="s2">"</span><span class="nv">$link</span><span class="s2">"</span><span class="p">;</span><span class="w"> </span><span class="k">done</span>
 </code></pre></div>
 <p>How each app handles DNS: <a href="../device-dns/">DNS on devices</a>.</p>
+<h3 id="apps-that-look-for-a-vpn">Apps that look for a VPN<a class="headerlink" href="#apps-that-look-for-a-vpn" title="Permanent link">&para;</a></h3>
+<p>Some apps on a phone look for a VPN, and refuse to run or report it. One way
+they look is to try the local proxy ports an app like v2rayNG opens: with no
+password there, they get through, and see the exit's address.</p>
+<ul>
+<li><strong>v2rayNG with links or a subscription:</strong> in its settings, set a "Local
+  proxy username" and "password" (any you like); v2rayNG then puts them on its
+  own local proxy. Keep such apps off the proxy with its per-app settings.</li>
+<li>
+<p><strong>v2rayNG with the Xray config:</strong> print the config with <code>--local-auth</code>:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>client-config<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>--local-auth<span class="w"> </span>phone
+</code></pre></div>
+<p>Its local SOCKS takes the user <code>dotdash</code> and a password printed with it,
+the same on every run. Enter both in v2rayNG's settings, or the device
+gets nowhere. It has no HTTP proxy on 10809, which only v2rayN's system
+proxy uses: give v2rayN the plain config.
+- An app kept off the proxy can still tell that a VPN is on from the phone's
+  network interfaces. Only putting it in a separate work profile or user
+  hides that.</p>
+</li>
+</ul>
 <h2 id="subscriptions">Subscriptions<a class="headerlink" href="#subscriptions" title="Permanent link">&para;</a></h2>
 <p>With subscriptions on, each device gets one URL instead, and fetches its
 links from it:</p>

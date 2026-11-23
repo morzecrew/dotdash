@@ -3698,6 +3698,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p><code>client-config --local-auth</code> prints the Xray config with a password on its local SOCKS, the same on every run, and no local HTTP proxy, for v2rayNG's "Local proxy username and password". Other apps on the phone then find no open proxy to try. devices.md says how to do the same in v2rayNG with links or a subscription.</p>
+</li>
+<li>
 <p><code>tunnel_host</code> on a relay: one host a cover app may call at <code>http://caddy:8090</code>. Caddy sends the calls on as HTTPS inside the link to the servers, or to the relays in <code>via</code>, so the relay shows one TLS client, Xray's, where an app calling the host itself showed its own beside it.</p>
 </li>
 <li>
