@@ -1061,6 +1061,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#what-never-goes-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What never goes out
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-doctor-says" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2121,6 +2132,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#what-never-goes-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What never goes out
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-doctor-says" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2561,6 +2583,17 @@ apps fall back to TCP.</p>
 <p>Every apply, update and <code>doctor</code> refuses <code>upstream_udp=true</code> with an HTTP or
 HTTPS proxy line. Whether a SOCKS5 proxy relays UDP shows only by trying it: a
 <a href="../../canary/">canary</a> reports <code>udp</code> per transport in its <code>facts</code>.</p>
+<h2 id="what-never-goes-out">What never goes out<a class="headerlink" href="#what-never-goes-out" title="Permanent link">&para;</a></h2>
+<p>Providers of upstream lines forbid peer-to-peer traffic and mail, so the
+server drops both before any line sees them:</p>
+<ul>
+<li><strong>BitTorrent:</strong> the handshake Xray recognises, and the announces to public
+  trackers, by the trackers' names. An announce is what puts a line's address
+  in a public swarm. A torrent app's encrypted peer connections look like any
+  other traffic and still pass, but with the trackers gone the app finds few
+  peers, unless <code>upstream_udp=true</code> lets its DHT through, which runs over UDP.</li>
+<li><strong>Mail on port 25.</strong> Mail apps send on 465 or 587, which pass.</li>
+</ul>
 <h2 id="what-doctor-says">What doctor says<a class="headerlink" href="#what-doctor-says" title="Permanent link">&para;</a></h2>
 <p>When nothing gets out, <code>doctor</code> asks the first lines directly and names each
 by its <code>name=</code>: one that doesn't answer, one that refused the credentials in
