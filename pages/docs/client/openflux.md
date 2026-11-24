@@ -5,7 +5,7 @@ services: a laptop on a phone's hotspot, a router on a mobile modem. When
 every dotdash link fails its probe, the `openflux` profile hands the traffic
 to an [OpenFlux](https://github.com/p1neappleXpress/OpenFlux) client. That
 client reaches this device's OpenFlux exit on a dotdash server over a room or
-document on such a service. When a link answers its probe again, the traffic
+call on such a service. When a link answers its probe again, the traffic
 goes back to it.
 
 It needs the server's [`openflux` profile](../server/openflux.md) with a

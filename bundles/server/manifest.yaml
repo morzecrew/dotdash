@@ -47,7 +47,7 @@ runtimes:
       # which flags a device moving far more than usual: a leaked link.
       device-traffic: [compose/device-traffic.yaml]
       # An OpenFlux exit per device listed in openflux_channels, which that
-      # device's OpenFlux app reaches over a carrier, a room or document on a
+      # device's OpenFlux app reaches over a carrier, a room or call on a
       # service a restricted network still lets through: the way in left when
       # nothing else gets through. Its connections leave through the gate.
       openflux: [compose/openflux.yaml]
@@ -272,7 +272,7 @@ parameters:
   openflux_channels:
     type: text
     default: "# One device per line: <device> <kind>[=<link>] ..."
-    description: "Under the openflux profile, the devices that get an OpenFlux channel, one \"<device> <kind>[=<link>] ...\" line each: a vless_clients name or UUID, then the kinds of carrier, one session over all of them. co and av make their own rooms when given no link, and tm its own call with call_provider and call_token; the others (mr, yd, yv, yb) take a link made with your own account. Each channel is an exit of its own, 20-70 MiB; the openflux-link task prints its link for the device's OpenFlux app. \"#\" starts a comment"
+    description: "Under the openflux profile, the devices that get an OpenFlux channel, one \"<device> <kind>[=<link>] ...\" line each: a vless_clients name or UUID, then the kinds of carrier, one session over all of them. co and av make their own rooms when given no link, and tm its own call with call_provider and call_token. Each channel is an exit of its own, 20-70 MiB; the openflux-link task prints its link for the device's OpenFlux app. \"#\" starts a comment"
     services: [openflux]
   call_provider:
     type: enum

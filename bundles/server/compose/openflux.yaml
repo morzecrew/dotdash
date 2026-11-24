@@ -1,7 +1,7 @@
 # The openflux profile: a last-resort way in for a device on a network that
 # lets through only some services. An OpenFlux exit per device listed in
 # openflux_channels (openflux/openflux.sh) meets that device's OpenFlux app on
-# a carrier, a room, document or call on such a service, and opens the
+# a carrier, a room or call on such a service, and opens the
 # device's connections through the gate's egress hop, so they leave through
 # the upstreams like the rest. Its UDP goes the same way, or, with
 # upstream_udp off, nowhere (platform-images, images/openflux).

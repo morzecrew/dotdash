@@ -2,7 +2,7 @@
 # Xray's balancer falls back to when every dotdash link fails its probe, as
 # on a network that lets through only a handful of services. It reaches this
 # device's OpenFlux exit on a dotdash server over a carrier, a room or
-# document on such a service, from the link in openflux_link, and offers
+# call on such a service, from the link in openflux_link, and offers
 # SOCKS5 on port 1080 of the compose network alone: published nowhere, so
 # only Xray reaches it (platform-images, images/openflux).
 services:

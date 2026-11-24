@@ -36,9 +36,8 @@ say() { echo "openflux: $*"; }
 # every channel down with it.
 kind() {
   case $1 in
-  tm) echo telemost ;; co) echo cupsonline ;; av) echo avito ;; mr) echo mailru ;;
-  yd) echo yandex ;; yv) echo vyandex ;; yb) echo boards ;;
-  telemost | cupsonline | avito | mailru | yandex | vyandex | boards | direct) echo "$1" ;;
+  tm) echo telemost ;; co) echo cupsonline ;; av) echo avito ;;
+  telemost | cupsonline | avito | direct) echo "$1" ;;
   *) return 1 ;;
   esac
 }
