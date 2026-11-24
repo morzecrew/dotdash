@@ -19,8 +19,9 @@
 #     no more OpenVPN lines than the tunnels' SOCKS hop carries;
 #   - Xray is on internal networks only, so it has no route out at all, and
 #     publishes nothing; the hops beside the gate (vpn, warm), which reach
-#     the tunnels and proxies, are not on inside, where Xray would reach them
-#     past the gate's routing; the gate publishes only https_port and, where it
+#     the tunnels and proxies, and the OpenFlux exits (openflux), which reach
+#     their carriers, are not on inside, where Xray would reach them past the
+#     gate's routing; the gate publishes only https_port and, where it
 #     forwards them, 53 for the DNS tunnel, xhttp_reality_port, kcp_port and
 #     hysteria2_port,
 #     and Caddy only http_port;
@@ -231,7 +232,7 @@ if [ -n "${xray}" ]; then
   done
 fi
 
-for service in vpn warm; do
+for service in vpn warm openflux; do
   hop=$(docker ps -q --filter "label=com.docker.compose.project=${project}" --filter "label=com.docker.compose.service=${service}")
   [ -n "${hop}" ] || continue
   for net in $(docker inspect -f '{{range $n, $_ := .NetworkSettings.Networks}}{{$n}} {{end}}' "${hop}"); do

@@ -58,6 +58,11 @@ start, while devices still reach the server.
   `vless_clients` and give it a new one. With the manager, the
   `device-traffic` profile names a device that suddenly moves far more than
   usual ([Leaked links](manager.md#leaked-links)).
+- **Nothing gets through at all**, neither relay nor CDN: an
+  [OpenFlux](server/openflux.md) channel meets the device on a service the
+  network still lets through, at 1-2 Mbit/s, in a second app. Set it up
+  before you need it too: its link reaches the device the same way as any
+  other.
 - If a relay's address is blocked, move the relay to a new machine or
   address under the same domain. Its links and subscription URLs work again
   as soon as DNS points there. Devices with links through other relays carry
