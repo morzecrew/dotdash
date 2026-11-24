@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from dotdash_manager import state
-from dotdash_manager.health import BURN_AFTER, FRESH, alive, blocked, judge, spares
+from dotdash_manager.health import BURN_AFTER, CAUSES, FRESH, alive, blocked, judge, spares
 from dotdash_manager.render import relay_line, render
 from dotdash_manager.roster import loads
 
@@ -361,3 +361,26 @@ watches = "r2"
         burnt, say = judge(net, {"r1": relay, "r2": other, "c1": c1, "c2": c2}, health)
     assert burnt == {"r1"} and "its address is blocked" in say[0], say
     assert "cause" not in health["r2"]
+
+
+def test_a_burst_freeze_is_a_cause_and_takes_reality_alone_off():
+    net = loads('''
+target = "t"
+key = "k"
+identity = "i"
+authority = "a"
+[[server]]
+name = "a"
+[[relay]]
+name = "r1"
+[[canary]]
+name = "c1"
+watches = "r1"
+''')
+    relay = {"entry_host": "203.0.113.5", "site": "www.example.net", "public_key": "P", "short_id": "S", "encryption": "E"}
+    health: dict = {}
+    c1 = {"server": "www.example.net", "address": "203.0.113.5", "checked_at": 1,
+          "paths": {"reality": False, "xhttp": True}, "burst": True, "blocked_by": "burst"}
+    burnt, _ = judge(net, {"r1": relay, "c1": c1}, health)
+    assert burnt == set() and health["r1"]["cause"] == "burst" and health["r1"]["paths"] == {"reality": 1, "xhttp": 0}
+    assert "page opens several connections" in CAUSES["burst"]
