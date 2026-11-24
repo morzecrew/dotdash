@@ -14,11 +14,12 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     pids_limit: 128
-    # One channel: about 20 MiB idle and 60 MiB busy in dotdash-lab#68.
-    mem_limit: 128m
+    # One channel: 60 MiB on cupsonline, up to 145 MiB on telemost, whose
+    # client joins a lane per video stream (dotdash-lab#68, #69).
+    mem_limit: 256m
     entrypoint: ["sh", "/openflux/openflux.sh"]
     environment:
-      GOMEMLIMIT: 110MiB
+      GOMEMLIMIT: 230MiB
     # The config made from the link, its key, and the cookie jar.
     tmpfs: ["/tmp:size=4m,mode=0700,uid=65532,gid=65532"]
     volumes:
