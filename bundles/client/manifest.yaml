@@ -23,6 +23,10 @@ runtimes:
       # Every connection on this machine through dotdash, with no proxy
       # settings: TUN, as root with NET_ADMIN on the host's network.
       tun: [compose/tun.yaml]
+      # When every dotdash link fails its probe, an OpenFlux client takes the
+      # traffic to this device's OpenFlux exit on a dotdash server, over a
+      # service the network still lets through (openflux_link). Not with tun.
+      openflux: [compose/openflux.yaml]
     options:
       project: dotdash-client
 
@@ -153,12 +157,14 @@ images:
   # The proxy-config task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
   xray: ghcr.io/morzecrew/xray:26.11.9@sha256:3999828bd106a245387f5e10636cce8d76b1fd6ccd9c50889c3cdddf44503817
+  # The openflux profile's client (platform-images, images/openflux).
+  openflux: ghcr.io/morzecrew/openflux:0.17.1@sha256:eb83da74d8a647f969407d4301f451cd4136c52a772e3c3b746365eb044c247d
 
 # What an authority's desired-state document may set here (morzer 0.16): the
-# device's subscription and the password of its local proxy. Neither reaches
-# a command line or a hook.
+# device's subscription, the password of its local proxy, and its OpenFlux
+# link. None reaches a command line or a hook.
 managed:
-  secrets: [subscription_url, proxy_password]
+  secrets: [subscription_url, proxy_password, openflux_link]
 
 tasks:
   proxy-config:

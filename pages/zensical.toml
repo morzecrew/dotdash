@@ -50,6 +50,7 @@ nav = [
         "client/network.md",
         "client/rules.md",
         "client/tun.md",
+        "client/openflux.md",
         "client/reference.md",
     ] },
     { "Canary" = [

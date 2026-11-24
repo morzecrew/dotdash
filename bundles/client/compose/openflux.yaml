@@ -1,0 +1,33 @@
+# The openflux profile: an OpenFlux client (openflux/openflux.sh) that
+# Xray's balancer falls back to when every dotdash link fails its probe, as
+# on a network that lets through only a handful of services. It reaches this
+# device's OpenFlux exit on a dotdash server over a carrier, a room or
+# document on such a service, from the link in openflux_link, and offers
+# SOCKS5 on port 1080 of the compose network alone: published nowhere, so
+# only Xray reaches it (platform-images, images/openflux).
+services:
+  openflux:
+    image: ${DOTDASH_CLIENT_IMAGE_OPENFLUX:?set by morzer}
+    restart: unless-stopped
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    # One channel: 60 MiB on co, up to 145 MiB on tm, whose
+    # client joins a lane per video stream (dotdash-lab#68, #69).
+    mem_limit: 256m
+    entrypoint: ["sh", "/openflux/openflux.sh"]
+    environment:
+      GOMEMLIMIT: 230MiB
+    # The config made from the link, its key, and the cookie jar.
+    tmpfs: ["/tmp:size=4m,mode=0700,uid=65532,gid=65532"]
+    volumes:
+      - ${DOTDASH_CLIENT_RELEASE_DIR:?set by morzer}/openflux:/openflux:ro
+    secrets: [openflux_link]
+    logging:
+      driver: local
+      options: {max-size: 10m, max-file: "3"}
+
+secrets:
+  openflux_link: {file: "${DOTDASH_CLIENT_SECRETS_DIR:?set by morzer}/openflux_link"}
