@@ -43,10 +43,13 @@ runtimes:
       # Traffic per inbound and outbound, and the gate's verdicts on its
       # upstreams, into the node exporter's textfile directory.
       metrics: [compose/metrics.yaml]
+      # The bytes each device moves, in the facts the manager reads hourly,
+      # which flags a device moving far more than usual: a leaked link.
+      device-traffic: [compose/device-traffic.yaml]
     # installation.profile=xdns,xhttp-reality runs both; any of them with
     # openvpn, such as xdns,openvpn, adds the OpenVPN tunnels; warm and metrics
     # go with any.
-    combinable: [xdns, xhttp-reality, openvpn, mkcp, hysteria2, metrics, warm]
+    combinable: [xdns, xhttp-reality, openvpn, mkcp, hysteria2, metrics, warm, device-traffic]
     options:
       project: dotdash
 
@@ -358,6 +361,11 @@ managed:
 # sync.recipient is set: the facts task's JSON.
 published:
   task: facts
+  # Run again before every fleet publish, hourly, so the device-traffic
+  # profile's counts are an hour old at most; without it the facts are
+  # the same each time and stay as they are. One task operation an hour
+  # in the journal and the attestations (retention.attestations).
+  refresh: publish
 
 tasks:
   client-config:

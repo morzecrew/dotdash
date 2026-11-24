@@ -83,6 +83,25 @@ sudo morzer config set installation.profile=xdns,metrics    # beside the profile
 Every series also carries `product`. `rate(dotdash_inbound_bytes_total[5m])`
 per inbound shows which transport devices use, and one falling to zero while the others carry on is what a block on it looks like.
 
+## Device traffic
+
+The `device-traffic` profile counts the bytes each device moves through Xray,
+for the [manager](../manager.md#leaked-links) to spot a link that may have
+leaked. The facts carry the counts by device name to the authority, hourly.
+They never carry an address, and the counts go nowhere else: not to the
+metrics files. Xray counts a device by its name, so a `vless_clients` line
+with no name after the UUID isn't counted; the manager names every device.
+
+```sh
+sudo morzer config set installation.profile=xdns,device-traffic    # beside the profiles you run
+```
+
+To read the counts, the facts task runs in Xray's namespace. It shares
+client-config's service, so under this profile client-config's tasks too
+reach Xray's internal networks, which have no route out, and start Xray if it
+is down. Devices behind a relay reach this server under the relay's id, so
+turn the profile on at the relays too.
+
 ## What the checks say
 
 - **Alerts** cover failed applies, updates and backups, and each morning's

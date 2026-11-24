@@ -51,14 +51,28 @@ REALITY connection with Vision for each. */ -}}
 {{- if and $hops $xr }}{{ required "dotdash_link=xhttp-reality is a way to the servers, not through via: set dotdash_link=reality, or empty via" "" }}{{ end -}}
 {
   "log": {"loglevel": "warning", "access": "none"},
-{{- if has "metrics" .Profiles }}
+{{- $metrics := has "metrics" .Profiles -}}
+{{- $counted := has "device-traffic" .Profiles -}}
+{{- if $metrics }}
   {{- /* The metrics profile: traffic per inbound and outbound, never per
-  device (no user counters), and the observatory's verdicts, under xray-metrics,
-  a name this has on the metrics network alone, where the metrics profile's
-  exporter reads them (compose/metrics.yaml, metrics/metrics.sh). */}}
-  "stats": {},
+  device (its exporter leaves the user counters out), and the observatory's
+  verdicts, under xray-metrics, a name this has on the metrics network alone,
+  where the metrics profile's exporter reads them (compose/metrics.yaml,
+  metrics/metrics.sh). */}}
   "metrics": {"listen": "xray-metrics:11111"},
-  "policy": {"system": {"statsInboundUplink": true, "statsInboundDownlink": true, "statsOutboundUplink": true, "statsOutboundDownlink": true}},
+{{- end }}
+{{- if $counted }}
+  {{- /* The device-traffic profile: the bytes each device moves, by its name,
+  read by the facts task alone from the StatsService on loopback, which it
+  reaches in this container's namespace (compose/device-traffic.yaml). A
+  device's traffic to 127.0.0.1 never gets here: everything goes on to the servers. */}}
+  "api": {"tag": "api", "listen": "127.0.0.1:10085", "services": ["StatsService"]},
+{{- end }}
+{{- if or $metrics $counted }}
+  "stats": {},
+  "policy": {
+    {{- if $counted }}"levels": {"0": {"statsUserUplink": true, "statsUserDownlink": true}}{{ if $metrics }}, {{ end }}{{ end }}
+    {{- if $metrics }}"system": {"statsInboundUplink": true, "statsInboundDownlink": true, "statsOutboundUplink": true, "statsOutboundDownlink": true}{{ end }}},
 {{- end }}
   "inbounds": [
     {
