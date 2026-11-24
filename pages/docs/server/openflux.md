@@ -18,7 +18,8 @@ One line per device that gets a channel:
 ```text
 # <device> <type>[=<link>] ...
 phone cupsonline
-laptop cupsonline telemost=<a call link of yours>
+laptop telemost                              # a call made for it, with telemost_token
+tablet telemost=<a call link of yours>
 ```
 
 - **The device** is a `vless_clients` name, or the UUID of an unnamed line.
@@ -27,7 +28,8 @@ laptop cupsonline telemost=<a call link of yours>
   The channel's session runs over all of them, and carries on over the others
   when one fails. `cupsonline` and `avito` make their own rooms, once, with
   no account. The others take a link you made with your own account on the
-  service, after `=`.
+  service, after `=`. `telemost` is the fastest, and makes its own call when
+  given no link but the `telemost_token` secret ([below](#calls-made-for-you)).
 - **Each channel is an exit of its own**, because an OpenFlux exit serves one
   client at a time. In the lab one took about 20 MiB idle, and 45 MiB and a
   third of a core while busy.
@@ -60,11 +62,36 @@ The link holds the channel's key. Hand it over as you would any link
 - **Not counted by device.** OpenFlux traffic passes the gate but not Xray, so
   the `device-traffic` profile doesn't see it.
 
+## Calls made for you
+
+With `telemost_token` set, a bare `telemost` in a device's line gets that
+device a call of its own, made once through the call service's API and kept
+with the device's key. The waiting room is open, so the exit and the app join
+with the link alone.
+
+```sh
+sudo morzer secret edit telemost_token    # the token alone
+```
+
+- **The token** is an OAuth token for the service's
+  [API](https://yandex.ru/dev/telemost/doc/ru/access), with the permission to
+  create calls (`telemost-api:conferences.create`). The service grants it only
+  to accounts with its paid subscription.
+- **Calls are never deleted.** Deleting a call through the API needs the
+  service's business plan, so a deleted device's call stays behind, unused:
+  the device's new key makes the old link useless.
+- **Use an account of its own** if you can. Every call belongs to it, so a
+  ban takes them all down, and the calls tie that account to the server.
+
 ## Speed and limits
 
-- In the lab, `cupsonline` carried 1-2 Mbit/s. Under sustained load it
-  stalled after about a minute, and the channel came back on its own about
-  45 s later. That is enough for messages and pages, not for video.
+- In the lab, `telemost` carried 8 Mbit/s down and 6 up with no stall, and
+  more once a long transfer had it add participants. It never goes quiet:
+  each side moves about 2.3 Mbit/s even idle, about 1 GB an hour.
+- `cupsonline` carried 1-2 Mbit/s. Under sustained load it stalled after
+  about a minute, and the channel came back on its own about 45 s later.
+  That is enough for messages and pages, not for video; idle, it is near
+  silent.
 - `avito` rooms were rejected when the exit joined them, as of OpenFlux
   0.17.1 (OpenFlux #224). The log says when rooms can't be made; the channel
   then runs on its other types, and tries again at the next start.

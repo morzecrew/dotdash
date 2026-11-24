@@ -22,8 +22,9 @@ services:
     environment:
       OPENFLUX_CHANNELS: ${DOTDASH_PARAM_OPENFLUX_CHANNELS:-}
     # A device deleted from vless_clients loses its channel and its state at
-    # the restart an edit brings (secrets.schema.yaml).
-    secrets: [vless_clients]
+    # the restart an edit brings (secrets.schema.yaml). telemost_token makes
+    # the devices' Telemost calls.
+    secrets: [vless_clients, telemost_token]
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/openflux:/openflux:ro
       # Each device's key, rooms, cookie jars and link, kept across restarts

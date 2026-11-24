@@ -9,8 +9,9 @@
 #   <device> <type>[=<link>] [<type>[=<link>] ...]
 #
 # A device is a vless_clients name or UUID. A type is an OpenFlux transport.
-# cupsonline and avito make their own rooms when given no link, once; the
-# others take the link the owner made with an account. direct takes the
+# cupsonline and avito make their own rooms when given no link, once, and
+# telemost its own call, with the telemost_token secret; the others take the
+# link the owner made with an account. direct takes the
 # address it listens on, for tests. Each device's state is kept under its
 # UUID in /var/lib/openflux: the key, made once, the rooms, the cookie jars,
 # and the link the openflux-link task prints. A device deleted from
@@ -24,6 +25,7 @@ set -eu
 umask 077
 STATE=${OPENFLUX_STATE:-/var/lib/openflux}
 CLIENTS=${OPENFLUX_CLIENTS:-/run/secrets/vless_clients}
+TOKEN=${OPENFLUX_TELEMOST_TOKEN:-/run/secrets/telemost_token}
 UPSTREAM=${OPENFLUX_UPSTREAM:-gate:1080}
 say() { echo "openflux: $*"; }
 
@@ -45,6 +47,25 @@ rooms() {
   cat "$1/$2.rooms"
 }
 
+# call <dir>: the Telemost call a telemost channel made through Telemost's
+# API, with the telemost_token secret, made once. Its waiting room is open:
+# the exit and the app join with the link alone. Telemost lets only Yandex 360
+# for Business delete calls, so a deleted device's call stays behind, unused.
+# busybox wget takes a header on its command line alone, so the token is in
+# this container's process list for the second the call takes.
+call() {
+  [ -s "$1/telemost.call" ] || {
+    [ -s "$TOKEN" ] || return 2
+    wget -q -O - -T 20 --header "Authorization: OAuth $(tr -d ' \n' <"$TOKEN")" \
+      --header 'Content-Type: application/json' --post-data '{"waiting_room_level":"PUBLIC"}' \
+      https://cloud-api.yandex.net/v1/telemost-api/conferences 2>/dev/null |
+      sed -n 's/.*"join_url":"\([^"]*\)".*/\1/p' >"$1/telemost.call.new" || true
+    [ -s "$1/telemost.call.new" ] || { rm -f "$1/telemost.call.new"; return 1; }
+    mv "$1/telemost.call.new" "$1/telemost.call"
+  }
+  cat "$1/telemost.call"
+}
+
 # channel <device> <uuid> <transport...>: writes the exit's config and the
 # device's link into its state, or fails with nothing to run.
 channel() {
@@ -63,6 +84,14 @@ channel() {
       case $type in
       cupsonline | avito)
         value=$(rooms "$dir" "$type") || { say "$device: $type rooms could not be made, skipped until the next start"; continue; } ;;
+      telemost)
+        rc=0
+        value=$(call "$dir") || rc=$?
+        case $rc in
+        0) ;;
+        2) say "$device: telemost needs its link, as telemost=<link>, or the telemost_token secret, skipped"; continue ;;
+        *) say "$device: telemost: Telemost's API made no call, skipped until the next start"; continue ;;
+        esac ;;
       *) say "$device: $type needs its link, as $type=<link>, skipped"; continue ;;
       esac
     fi

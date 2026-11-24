@@ -272,7 +272,7 @@ parameters:
   openflux_channels:
     type: text
     default: "# One device per line: <device> <type>[=<link>] ..."
-    description: "Under the openflux profile, the devices that get an OpenFlux channel, one \"<device> <type>[=<link>] ...\" line each: a vless_clients name or UUID, then OpenFlux transport types, one session over all of them. cupsonline and avito make their own rooms when given no link; the others take a link made with your own account. Each channel is an exit of its own, about 20 MiB idle and 45 MiB busy; the openflux-link task prints its link for the device's OpenFlux app. \"#\" starts a comment"
+    description: "Under the openflux profile, the devices that get an OpenFlux channel, one \"<device> <type>[=<link>] ...\" line each: a vless_clients name or UUID, then OpenFlux transport types, one session over all of them. cupsonline and avito make their own rooms when given no link, and telemost its own call with the telemost_token secret; the others take a link made with your own account. Each channel is an exit of its own, about 20 MiB idle and 45 MiB busy; the openflux-link task prints its link for the device's OpenFlux app. \"#\" starts a comment"
     services: [openflux]
   exit_ipv4_url:
     type: string
