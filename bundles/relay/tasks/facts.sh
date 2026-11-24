@@ -32,8 +32,9 @@ printf '{"entry_host": %s, "site": %s, "public_key": %s, "short_id": %s, "encryp
 # With the device-traffic profile, in Xray's namespace: the bytes each device
 # has moved through Xray, both ways, since it started, by name, and when that
 # was, from its StatsService on loopback. Left out, with a word on stderr, when
-# Xray does not answer within 5 s, so the rest still goes out. A name that
-# would need escaping in JSON is left out too.
+# Xray does not answer within 5 s, so the rest still goes out. A device with
+# no name in vless_clients is not counted (Xray counts by name), and a name
+# that would need escaping in JSON is left out.
 if [ "${DEVICE_TRAFFIC:-false}" = true ]; then
   up=
   for _ in 1 2 3 4 5; do

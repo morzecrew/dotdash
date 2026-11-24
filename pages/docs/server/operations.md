@@ -89,7 +89,8 @@ The `device-traffic` profile counts the bytes each device moves through Xray,
 for the [manager](../manager.md#leaked-links) to spot a link that may have
 leaked. The facts carry the counts by device name to the authority, hourly.
 They never carry an address, and the counts go nowhere else: not to the
-metrics files.
+metrics files. Xray counts a device by its name, so a `vless_clients` line
+with no name after the UUID isn't counted; the manager names every device.
 
 ```sh
 sudo morzer config set installation.profile=xdns,device-traffic    # beside the profiles you run

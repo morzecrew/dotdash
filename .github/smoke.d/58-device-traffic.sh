@@ -2,8 +2,10 @@
 # The device-traffic profile, beside CI's xdns: Xray counts each device's
 # bytes, and the facts task, run in Xray's namespace, carries them by device
 # name with when Xray started. A fetch through a REALITY client of this
-# hook's own raises the counts, and the policy hook still holds (doctor).
-# Back on xdns, the facts carry no counts.
+# hook's own raises its device's count, and the policy hook still holds
+# (doctor). Back on xdns, the facts carry no counts. Xray counts a device by
+# its name: the rig's devices have none (vless_clients' generator writes a
+# bare UUID), so the client's line gets one here, taken off after.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -12,7 +14,10 @@ if ! sudo grep -qF 'device-traffic: [compose/device-traffic.yaml]' /opt/dotdash/
   echo "${0##*/}: skipped, the installed release predates it"
   exit 0
 fi
+secrets=/run/dotdash/secrets
+before=$(sudo cat "${secrets}/vless_clients")
 restore() {
+  printf '%s\n' "${before}" | sudo morzer secret set vless_clients >/dev/null 2>&1 || true
   sudo morzer config set installation.profile=xdns >/dev/null 2>&1 || true
   sudo docker rm -f dotdash-rig-counted >/dev/null 2>&1 || true
 }
@@ -39,23 +44,27 @@ fetch() { # through this hook's REALITY client
   curl -sS -o /dev/null --max-time 20 --retry 5 --retry-delay 2 --retry-all-errors \
     -w '%{http_code}' --socks5-hostname 127.0.0.1:11183 http://11.99.0.10:8000/
 }
-counted() { # the bytes in the facts' counts, all devices together
+counted() { # the client's device's bytes in the facts' counts
   local facts
   facts=$(sudo morzer task run facts --output) || die "the facts task failed under device-traffic"
   jq -e '.domain and (.traffic.started | type == "number") and (.traffic.devices | type == "object")' \
     >/dev/null <<<"${facts}" || die "the facts carry no counts under device-traffic: ${facts}"
-  jq '[.traffic.devices[]] | add // 0' <<<"${facts}"
+  jq '.traffic.devices.counted // 0' <<<"${facts}"
 }
 
+id=${rest%%@*}
+named=$(awk -v id="${id}" '$1 == id {print id, "counted"; found=1; next} {print} END {exit !found}' <<<"${before}") ||
+  die "the REALITY link's id is not in vless_clients"
+printf '%s\n' "${named}" | sudo morzer secret set vless_clients >/dev/null || die "could not name the client's device"
 sudo morzer config set installation.profile=xdns,device-traffic >/dev/null || die "could not switch to xdns,device-traffic"
 sudo docker rm -f dotdash-rig-counted >/dev/null 2>&1 || true
 sudo docker run -d --name dotdash-rig-counted --network host -v /rig/clients/counted:/etc/xray:ro "${xray}" >/dev/null
 [ "$(fetch)" = 200 ] || die "the REALITY client got nowhere under device-traffic"
 first=$(counted)
-[ "${first}" -gt 0 ] || die "a fetch through a device left no count"
+[ "${first}" -gt 0 ] || die "a fetch through the device counted left no count"
 fetch >/dev/null
 second=$(counted)
-[ "${second}" -gt "${first}" ] || die "a second fetch did not raise the counts (${first}, then ${second})"
+[ "${second}" -gt "${first}" ] || die "a second fetch did not raise its count (${first}, then ${second})"
 out=$(sudo morzer doctor 2>&1) || die "doctor fails under device-traffic: ${out}"
 echo "${0##*/}: under device-traffic, the facts count each device's bytes, policy holding"
 
