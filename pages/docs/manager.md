@@ -326,6 +326,26 @@ enough to compare relays, but canaries sit on different networks, so it is
 no exact measure. A machine whose canaries predate these timings is left out
 until they update.
 
+## Leaked links
+
+With the `device-traffic` profile on the servers and relays
+([server](server/operations.md#device-traffic),
+[relay](relay/reference.md)), their facts carry how many bytes each device
+has moved. `sync` adds each device's bytes up by day, over the last 30 days.
+It names a device whose day reached five times its median day and at least
+2 GB, once it has 7 days to judge by:
+
+```
+phone-2: 14.2 GB on 2026-12-03, against 0.4 GB on its usual day: if its link may have leaked, delete the device and add it again
+```
+
+`sync` prints yesterday's and today's; `report` ends with the last 30 days'.
+A link passed around shows this way: its device suddenly moves far more than
+it ever did. A long video call or a big download can too, so ask before
+deleting the device. Only counts reach the manager, never an address. They
+are an hour behind at most, as the facts refresh hourly. A server or relay
+that restarts loses only what it counted since the last refresh.
+
 ## Rotating the REALITY key
 
 `rotate` changes the servers' REALITY key with no device cut off, over their

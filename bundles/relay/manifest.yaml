@@ -35,9 +35,12 @@ runtimes:
       # Traffic per inbound and outbound, and the verdicts on the servers,
       # into the node exporter's textfile directory.
       metrics: [compose/metrics.yaml]
+      # The bytes each device moves, in the facts the manager reads hourly,
+      # which flags a device moving far more than usual: a leaked link.
+      device-traffic: [compose/device-traffic.yaml]
     # installation.profile=own-site,mkcp runs both, own-site,hysteria2 adds
     # Hysteria2, own-site,http-origin the door; metrics goes with any.
-    combinable: [own-site, mkcp, hysteria2, http-origin, metrics]
+    combinable: [own-site, mkcp, hysteria2, http-origin, metrics, device-traffic]
     options:
       project: dotdash-relay
 
@@ -272,6 +275,11 @@ managed:
 # sync.recipient is set: the facts task's JSON.
 published:
   task: facts
+  # Run again before every fleet publish, hourly, so the device-traffic
+  # profile's counts are an hour old at most; without it the facts are
+  # the same each time and stay as they are. One task operation an hour
+  # in the journal and the attestations (retention.attestations).
+  refresh: publish
 
 tasks:
   relay-entry:

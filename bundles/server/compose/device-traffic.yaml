@@ -1,0 +1,12 @@
+# The device-traffic profile: Xray counts the bytes each device moves
+# (xray.json.tmpl), and the facts task reads them from its StatsService on
+# loopback, so it runs in Xray's namespace. The facts task runs in
+# client-config's service, which client-config's other tasks share: under
+# this profile they all join Xray's internal networks (no route out) and
+# start Xray if it is down. The counts go to the authority with the facts,
+# hourly (manifest `published`); never an address.
+services:
+  client-config:
+    network_mode: service:xray
+    environment:
+      DEVICE_TRAFFIC: "true"

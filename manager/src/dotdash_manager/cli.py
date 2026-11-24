@@ -13,7 +13,7 @@ from typing import Annotated
 
 import typer
 
-from . import Refused, adopt, health, join as joining, roster, rotate, state
+from . import Refused, adopt, health, join as joining, roster, rotate, state, traffic
 from .morzer import Morzer, write_roster
 from .render import render
 from .report import report as report_lines
@@ -90,6 +90,10 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     del log[:-health.EVENTS]
     labels(net, st)
     st["stands"] = stands
+    now = int(time.time())
+    traffic.record(st.setdefault("traffic", {}), facts, now)
+    # Yesterday's whole day and today's so far.
+    verdicts += traffic.unusual(st["traffic"], since=traffic.day(now - 86400))
     if not dry_run:
         state.save(o.state, st)
     for v in verdicts:
@@ -142,13 +146,18 @@ def report(ctx: typer.Context) -> None:
     """How long each server and relay lasted before it burnt, how often and for
     how long it was burnt, which paths went off, how long each path lasted,
     lifetimes per provider, and each path's latency against the canaries' own
-    network; from what sync logged."""
+    network; from what sync logged. With device-traffic, the devices that
+    moved far more than usual on a day."""
     o: Options = ctx.obj
     net, st = o.open()
     labels(net, st)
     for line in report_lines(net, st.get("events", []), int(time.time()), st.get("stands", {}), st.get("health", {}),
                              st.get("labels", {})):
         print(line)
+    if st.get("traffic", {}).get("days"):
+        print(f"\ndevices far above their usual day, the last {len(st['traffic']['days'])} days (device-traffic):")
+        for line in traffic.unusual(st["traffic"]) or ["none"]:
+            print(f"  {line}")
 
 
 @app.command(name="rotate")

@@ -78,6 +78,13 @@ gives each device a `relay · kcp` link. Open the UDP port in the
 provider's firewall, and replace the relay's line on the server after turning
 it on.
 
+`installation.profile=device-traffic` (with any of the others): the relay
+counts the bytes each device moves through it, and its facts carry the counts
+to the authority hourly, for the [manager](../manager.md#leaked-links). The
+server counts the relay as one client, so a relay's devices are counted here.
+The facts task, and with it `relay-entry`, then runs in Xray's namespace, and
+starts Xray if it is down.
+
 ## Secrets
 
 `init` generates the relay's own keys; the rest come from the server's

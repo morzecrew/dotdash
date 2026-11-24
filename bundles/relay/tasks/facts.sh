@@ -29,5 +29,31 @@ printf '{"entry_host": %s, "site": %s, "public_key": %s, "short_id": %s, "encryp
 [ -z "$origin" ] || printf ', "origin_host": %s' "$(str "$origin")"
 [ -z "$only" ] || printf ', "cdn_only": true'
 [ -z "$name" ] || printf ', "name": %s' "$(str "$name")"
+# With the device-traffic profile, in Xray's namespace: the bytes each device
+# has moved through Xray, both ways, since it started, by name, and when that
+# was, from its StatsService on loopback. Left out, with a word on stderr, when
+# Xray does not answer within 5 s, so the rest still goes out. A name that
+# would need escaping in JSON is left out too.
+if [ "${DEVICE_TRAFFIC:-false}" = true ]; then
+  up=
+  for _ in 1 2 3 4 5; do
+    up=$(/opt/xray/xray api statssys --server=127.0.0.1:10085 2>/dev/null | sed -n 's/^ *"Uptime": *\([0-9]*\).*/\1/p')
+    [ -z "$up" ] || break
+    sleep 1
+  done
+  if [ -n "$up" ]; then
+    /opt/xray/xray api statsquery --server=127.0.0.1:10085 -pattern 'user>>>' 2>/dev/null |
+      awk -F'"' -v "started=$(($(date +%s) - up))" '
+        $2 == "name" { split($4, p, ">>>"); n = p[2] }
+        $2 == "value" && n ~ /^[A-Za-z0-9._@+-]+$/ { v = $3; gsub(/[^0-9]/, "", v); t[n] += v }
+        END {
+          printf ", \"traffic\": {\"started\": %.0f, \"devices\": {", started
+          s = ""; for (n in t) { printf "%s\"%s\": %.0f", s, n, t[n]; s = ", " }
+          printf "}}"
+        }'
+  else
+    echo "facts: Xray's stats did not answer: no traffic this time" >&2
+  fi
+fi
 # This release takes via: an authority sets or unsets it only on one that does.
 printf ', "via": true}\n'

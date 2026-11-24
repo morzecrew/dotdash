@@ -1,0 +1,13 @@
+# The device-traffic profile: Xray counts the bytes each device moves
+# through this relay (xray.json.tmpl), and the facts task reads them from its
+# StatsService on loopback, so it runs in Xray's namespace. The facts task
+# runs in relay-entry's service, which relay-entry shares: under this profile
+# both join Xray's network and start Xray if it is down. The counts go to the
+# authority with the facts, hourly (manifest `published`); never an address.
+# The server counts a relay's devices as the relay alone: their counts are
+# here.
+services:
+  relay-entry:
+    network_mode: service:xray
+    environment:
+      DEVICE_TRAFFIC: "true"
