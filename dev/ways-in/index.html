@@ -2066,7 +2066,9 @@ start, while devices still reach the server.</p>
   channel that still gets through. A link or subscription URL is a credential
   that also names your relay, so avoid a messenger whose operator may read or
   hand over messages. If a link may have leaked, delete the device from
-  <code>vless_clients</code> and give it a new one.</li>
+  <code>vless_clients</code> and give it a new one. With the manager, the
+  <code>device-traffic</code> profile names a device that suddenly moves far more than
+  usual (<a href="../manager/#leaked-links">Leaked links</a>).</li>
 <li>If a relay's address is blocked, move the relay to a new machine or
   address under the same domain. Its links and subscription URLs work again
   as soon as DNS points there. Devices with links through other relays carry

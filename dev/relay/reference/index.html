@@ -2317,6 +2317,12 @@ ends the relay's line with <code>kcp=&lt;port&gt;,&lt;header&gt;,&lt;seed&gt;</c
 gives each device a <code>relay · kcp</code> link. Open the UDP port in the
 provider's firewall, and replace the relay's line on the server after turning
 it on.</p>
+<p><code>installation.profile=device-traffic</code> (with any of the others): the relay
+counts the bytes each device moves through it, and its facts carry the counts
+to the authority hourly, for the <a href="../../manager/#leaked-links">manager</a>. The
+server counts the relay as one client, so a relay's devices are counted here.
+The facts task, and with it <code>relay-entry</code>, then runs in Xray's namespace, and
+starts Xray if it is down.</p>
 <h2 id="secrets">Secrets<a class="headerlink" href="#secrets" title="Permanent link">&para;</a></h2>
 <p><code>init</code> generates the relay's own keys; the rest come from the server's
 <code>relay-config</code>.</p>

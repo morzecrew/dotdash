@@ -1861,6 +1861,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#leaked-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Leaked links
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#rotating-the-reality-key" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2153,6 +2164,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Where the time goes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#leaked-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Leaked links
       </span>
     </span>
   </a>
@@ -2491,6 +2513,21 @@ servers on the same path, which is the hop to the server. That's close
 enough to compare relays, but canaries sit on different networks, so it is
 no exact measure. A machine whose canaries predate these timings is left out
 until they update.</p>
+<h2 id="leaked-links">Leaked links<a class="headerlink" href="#leaked-links" title="Permanent link">&para;</a></h2>
+<p>With the <code>device-traffic</code> profile on the servers and relays
+(<a href="../server/operations/#device-traffic">server</a>,
+<a href="../relay/reference/">relay</a>), their facts carry how many bytes each device
+has moved. <code>sync</code> adds each device's bytes up by day, over the last 30 days.
+It names a device whose day reached five times its median day and at least
+2 GB, once it has 7 days to judge by:</p>
+<div class="highlight"><pre><span></span><code>phone-2: 14.2 GB on 2026-12-03, against 0.4 GB on its usual day: if its link may have leaked, delete the device and add it again
+</code></pre></div>
+<p><code>sync</code> prints yesterday's and today's; <code>report</code> ends with the last 30 days'.
+A link passed around shows this way: its device suddenly moves far more than
+it ever did. A long video call or a big download can too, so ask before
+deleting the device. Only counts reach the manager, never an address. They
+are an hour behind at most, as the facts refresh hourly. A server or relay
+that restarts loses only what it counted since the last refresh.</p>
 <h2 id="rotating-the-reality-key">Rotating the REALITY key<a class="headerlink" href="#rotating-the-reality-key" title="Permanent link">&para;</a></h2>
 <p><code>rotate</code> changes the servers' REALITY key with no device cut off, over their
 second key (<a href="../server/secrets/#rotating-the-reality-key">Rotating the REALITY key</a>),

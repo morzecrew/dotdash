@@ -1207,6 +1207,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#device-traffic" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Device traffic
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-the-checks-say" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2055,6 +2066,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#device-traffic" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Device traffic
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-the-checks-say" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2341,6 +2363,20 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w">
 </table>
 <p>Every series also carries <code>product</code>. <code>rate(dotdash_inbound_bytes_total[5m])</code>
 per inbound shows which transport devices use, and one falling to zero while the others carry on is what a block on it looks like.</p>
+<h2 id="device-traffic">Device traffic<a class="headerlink" href="#device-traffic" title="Permanent link">&para;</a></h2>
+<p>The <code>device-traffic</code> profile counts the bytes each device moves through Xray,
+for the <a href="../../manager/#leaked-links">manager</a> to spot a link that may have
+leaked. The facts carry the counts by device name to the authority, hourly.
+They never carry an address, and the counts go nowhere else: not to the
+metrics files. Xray counts a device by its name, so a <code>vless_clients</code> line
+with no name after the UUID isn't counted; the manager names every device.</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>xdns,device-traffic<span class="w">    </span><span class="c1"># beside the profiles you run</span>
+</code></pre></div>
+<p>To read the counts, the facts task runs in Xray's namespace. It shares
+client-config's service, so under this profile client-config's tasks too
+reach Xray's internal networks, which have no route out, and start Xray if it
+is down. Devices behind a relay reach this server under the relay's id, so
+turn the profile on at the relays too.</p>
 <h2 id="what-the-checks-say">What the checks say<a class="headerlink" href="#what-the-checks-say" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Alerts</strong> cover failed applies, updates and backups, and each morning's
