@@ -3,7 +3,8 @@
 # the server counts the relay alone, and the facts task, run in Xray's
 # namespace, carries them by device name. 10-through.sh's phone, started
 # again from its config, raises the counts. Without the profile, the facts
-# carry none.
+# carry none. The rig's relay has no entry_host, which facts needs
+# (12-facts.sh): set here, and unset after.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -15,6 +16,7 @@ fi
 xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)
 restore() {
   sudo morzer config unset installation.profile >/dev/null 2>&1 || true
+  sudo morzer config unset entry_host >/dev/null 2>&1 || true
   sudo docker rm -f relay-rig-counted >/dev/null 2>&1 || true
 }
 trap restore EXIT
@@ -30,6 +32,7 @@ counted() { # the phone's bytes in the facts' counts
   jq '.traffic.devices.phone // 0' <<<"${facts}"
 }
 
+sudo morzer config set entry_host=127.0.0.1 >/dev/null || die "could not set entry_host"
 sudo morzer config set installation.profile=device-traffic >/dev/null || die "could not switch to the device-traffic profile"
 sudo docker run -d --name relay-rig-counted --network host -v /rig/relay/phone:/etc/xray:ro "${xray}" >/dev/null
 [ "$(fetch)" = 204 ] || die "the phone got nowhere through the relay under device-traffic"
@@ -40,7 +43,7 @@ second=$(counted)
 [ "${second}" -gt "${first}" ] || die "a second fetch did not raise the phone's count (${first}, then ${second})"
 echo "${0##*/}: under device-traffic, the facts count the phone's bytes through the relay"
 
-restore
+sudo morzer config unset installation.profile >/dev/null || die "could not drop the device-traffic profile"
 facts=$(sudo morzer task run facts --output) || die "the facts task failed without the profile"
 jq -e 'has("traffic") | not' >/dev/null <<<"${facts}" || die "without the profile, the facts still carry counts"
 echo "${0##*/}: without the profile, the facts carry no counts"
