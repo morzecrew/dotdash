@@ -94,6 +94,24 @@ sudo morzer task run client-config --output -- --full phone    # plus links and 
   every 6 hours (`Profile-Update-Interval`), which the apps that read it
   (Happ, Hiddify) follow on their own; in the others, turn on
   automatic updates.
+- **Happ's routing:** `happ_routing` takes a routing profile in Happ's own
+  JSON, and every subscription then carries it. Happ adds it, turns it on, and
+  takes it again with each refresh, so the sites and addresses it lists as
+  direct go around the tunnel on every Happ device: quicker, and they never
+  see the server's exit. Other apps ignore it. For example, with a geosite
+  list of your country's sites (any `geosite.dat` with one, by URL):
+
+    ```sh
+    sudo morzer config set --set-file happ_routing=- <<'END'
+    {"Name": "dotdash", "GlobalProxy": "true",
+     "Geositeurl": "https://example.net/geosite.dat", "Geoipurl": "https://example.net/geoip.dat",
+     "DirectSites": ["geosite:<your-list>"], "DirectIp": ["geoip:private", "geoip:<your-list>"],
+     "DomainStrategy": "IPIfNonMatch"}
+    END
+    ```
+
+    Happ fetches the geo files itself, at most weekly. `none` stops sending
+    it; a device keeps the profile it has until it is removed in the app.
 - An app on Apple's network stack (its User-Agent names CFNetwork, Darwin, iOS
   or macOS, as Shadowrocket's, Streisand's and Happ's on iOS do) gets the links
   with Safari's TLS hello (`fp=safari`), as its own platform sends; every other
