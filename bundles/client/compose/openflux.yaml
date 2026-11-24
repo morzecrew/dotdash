@@ -14,7 +14,7 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     pids_limit: 128
-    # One channel: 60 MiB on cupsonline, up to 145 MiB on telemost, whose
+    # One channel: 60 MiB on co, up to 145 MiB on tm, whose
     # client joins a lane per video stream (dotdash-lab#68, #69).
     mem_limit: 256m
     entrypoint: ["sh", "/openflux/openflux.sh"]
