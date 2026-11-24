@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A `device-traffic` profile on servers and relays: Xray counts the bytes each device moves, and the facts carry the counts by device name to the authority. The manager adds them up by day and names a device whose day reached five times its median and at least 2 GB, as a link passed around shows: `sync` for yesterday and today, `report` for the last 30 days. Only counts, never an address, and not in the metrics files. Xray counts a device by its name, so a `vless_clients` line with no name isn't counted; the manager names every device. A relay counts its own devices, which the server sees as the relay alone. The facts task, with the other tasks of its service, runs in Xray's namespace under the profile.
 
+- `happ_routing` on the server: a routing profile in Happ's own JSON, which every subscription then carries in Happ's `routing` header (relays' too). Happ adds it and turns it on, so the sites it lists as direct go around the tunnel on every Happ device. Other apps ignore it.
+
 - The canary ends its `facts` with a burst through REALITY: six connections at once, then one more (`burst_check`, on by default). A network that freezes a device opening several connections to one address within a fraction of a second freezes REALITY with Vision on every page while a check of one connection passes; the canary now reports REALITY down there, with `burst: true` and `blocked_by: burst`, and the manager takes REALITY off that relay's links as for any blocked path.
 
 ### Changed

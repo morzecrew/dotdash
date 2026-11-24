@@ -259,6 +259,11 @@ parameters:
     default: false
     description: "Serve each device a subscription URL on the cover site, which client-config prints: its links, which the app refreshes, so a revocation or a key rotation reaches it without resending links. A URL is as secret as the links"
     services: [subscription, exit-title]
+  happ_routing:
+    type: text
+    default: none
+    description: "With subscriptions on, a routing profile for Happ, as Happ's own JSON (Name, DirectSites, DirectIp, Geoipurl, Geositeurl and the rest): sent with every subscription in Happ's routing header, which adds the profile and turns it on, so the sites it lists go around the tunnel on every Happ device. Other apps ignore it; none sends none"
+    services: [subscription]
   exit_ipv4_url:
     type: string
     default: http://api4.ipify.org

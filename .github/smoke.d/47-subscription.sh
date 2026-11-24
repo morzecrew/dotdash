@@ -51,6 +51,7 @@ restore() {
   [ -z "${before:-}" ] || printf '%s\n' "${before}" | sudo morzer secret set vless_clients >/dev/null 2>&1 || true
   sudo morzer config unset subscription >/dev/null 2>&1 || true
   sudo morzer config unset exit_ipv4_url exit_info_url >/dev/null 2>&1 || true
+  sudo morzer config unset happ_routing >/dev/null 2>&1 || true
 }
 trap restore EXIT
 
@@ -102,6 +103,21 @@ if sudo grep -q 'json' /opt/dotdash/current/tasks/subscription.sh; then
     echo "${0##*/}: the URL asked for as JSON serves the Xray config, and asked otherwise the links"
   fi
   echo "${0##*/}: <url>.json serves the device's Xray config, as JSON and no-store"
+fi
+
+if sudo grep -q 'happ_routing' /opt/dotdash/current/manifest.yaml; then
+  headers "${url}" | grep -qi '^routing:' && die "a subscription sends Happ's routing header with happ_routing none"
+  profile='{"Name": "dotdash-smoke", "GlobalProxy": "true", "DirectSites": [], "DirectIp": ["geoip:private"]}'
+  sudo morzer config set "happ_routing=${profile}" >/dev/null || die "could not set happ_routing"
+  want="happ://routing/onadd/$(printf '%s' "${profile}" | base64 -w 0)"
+  for _ in $(seq 30); do
+    got=$(headers "${url}" | sed -n 's/^routing: //Ip')
+    [ "${got}" = "${want}" ] && break
+    sleep 2
+  done
+  [ "${got}" = "${want}" ] || die "the subscription's routing header is not happ_routing, base64-encoded: ${got:-none}"
+  sudo morzer config unset happ_routing >/dev/null || die "could not unset happ_routing"
+  echo "${0##*/}: happ_routing goes out in Happ's routing header, base64-encoded, and none sends none"
 fi
 
 if sudo grep -q -- '--local-auth' /opt/dotdash/current/tasks/client-config.sh; then
