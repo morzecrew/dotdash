@@ -771,6 +771,8 @@
       
         
       
+        
+      
     
     
     
@@ -965,6 +967,33 @@
     
   
   Hysteria2
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server/openflux/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  OpenFlux
 
     
   </span>
@@ -2069,6 +2098,11 @@ start, while devices still reach the server.</p>
   <code>vless_clients</code> and give it a new one. With the manager, the
   <code>device-traffic</code> profile names a device that suddenly moves far more than
   usual (<a href="../manager/#leaked-links">Leaked links</a>).</li>
+<li><strong>Nothing gets through at all</strong>, neither relay nor CDN: an
+  <a href="../server/openflux/">OpenFlux</a> channel meets the device on a service the
+  network still lets through, at 1-2 Mbit/s, in a second app. Set it up
+  before you need it too: its link reaches the device the same way as any
+  other.</li>
 <li>If a relay's address is blocked, move the relay to a new machine or
   address under the same domain. Its links and subscription URLs work again
   as soon as DNS points there. Devices with links through other relays carry
