@@ -21,16 +21,17 @@ services:
     entrypoint: ["sh", "/openflux/openflux.sh"]
     environment:
       OPENFLUX_CHANNELS: ${DOTDASH_PARAM_OPENFLUX_CHANNELS:-}
+      OPENFLUX_CALL_PROVIDER: ${DOTDASH_PARAM_CALL_PROVIDER:-none}
     # A device deleted from vless_clients loses its channel and its state at
-    # the restart an edit brings (secrets.schema.yaml). telemost_token makes
-    # the devices' Telemost calls.
-    secrets: [vless_clients, telemost_token]
+    # the restart an edit brings (secrets.schema.yaml). call_token makes the
+    # devices' calls, with call_provider.
+    secrets: [vless_clients, call_token]
     volumes:
       - ${DOTDASH_RELEASE_DIR:?set by morzer}/openflux:/openflux:ro
       # Each device's key, rooms, cookie jars and link, kept across restarts
       # and releases, so the link on the device stays good.
       - openflux:/var/lib/openflux
-    # The avito carrier's gate file, and the like.
+    # A room carrier's gate file, and the like.
     tmpfs: ["/tmp:size=8m"]
     networks: [egress]
     # Measured on one channel in dotdash-lab#68: about 45 MiB and a third of

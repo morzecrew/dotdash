@@ -346,8 +346,8 @@ secrets:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/kcp_seed
   upstreams:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstreams
-  telemost_token:
-    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/telemost_token
+  call_token:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/call_token
   reality_key:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/reality_key
   reality_short_id:

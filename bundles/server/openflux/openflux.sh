@@ -6,17 +6,18 @@
 # upstreams; UDP goes the same way, or nowhere where upstream_udp is off.
 # Only the carriers' own connections leave this container directly.
 #
-#   <device> <type>[=<link>] [<type>[=<link>] ...]
+#   <device> <kind>[=<link>] [<kind>[=<link>] ...]
 #
-# A device is a vless_clients name or UUID. A type is an OpenFlux transport.
-# cupsonline and avito make their own rooms when given no link, once, and
-# telemost its own call, with the telemost_token secret; the others take the
-# link the owner made with an account. direct takes the
-# address it listens on, for tests. Each device's state is kept under its
-# UUID in /var/lib/openflux: the key, made once, the rooms, the cookie jars,
+# A device is a vless_clients name or UUID. A kind is a short alias of an
+# OpenFlux transport type (kind below), or the type itself. co and av make
+# their own rooms when given no link, once, and tm its own call where
+# call_provider is tm and the call_token secret is set; the others take the
+# link the owner made with an account. direct takes the address it listens
+# on, for tests. Each device's state is kept under its UUID in
+# /var/lib/openflux: the key, made once, the rooms, the call, the cookie jars,
 # and the link the openflux-link task prints. A device deleted from
 # vless_clients loses its state at the next start, so adding it again, with a
-# new UUID, gives it a new key and new rooms; one left out of
+# new UUID, gives it a new key, rooms and call; one left out of
 # openflux_channels keeps them.
 #
 # Any exit stopping stops the container, which the restart policy brings
@@ -25,16 +26,29 @@ set -eu
 umask 077
 STATE=${OPENFLUX_STATE:-/var/lib/openflux}
 CLIENTS=${OPENFLUX_CLIENTS:-/run/secrets/vless_clients}
-TOKEN=${OPENFLUX_TELEMOST_TOKEN:-/run/secrets/telemost_token}
+PROVIDER=${OPENFLUX_CALL_PROVIDER:-none}
+TOKEN=${OPENFLUX_CALL_TOKEN:-/run/secrets/call_token}
 UPSTREAM=${OPENFLUX_UPSTREAM:-gate:1080}
 say() { echo "openflux: $*"; }
+
+# kind <alias>: the OpenFlux transport type an alias names, or a type itself;
+# status 1 for anything else, which OpenFlux would refuse at start, taking
+# every channel down with it.
+kind() {
+  case $1 in
+  tm) echo telemost ;; co) echo cupsonline ;; av) echo avito ;; mr) echo mailru ;;
+  yd) echo yandex ;; yv) echo vyandex ;; yb) echo boards ;;
+  telemost | cupsonline | avito | mailru | yandex | vyandex | boards | direct) echo "$1" ;;
+  *) return 1 ;;
+  esac
+}
 
 # uuid_of <device>: the device's UUID from vless_clients, by name or UUID.
 uuid_of() {
   awk -v d="$1" '$1 !~ /^#/ && NF && ($1 == d || $2 == d) { print $1; exit }' "$CLIENTS"
 }
 
-# rooms <dir> <type>: the rooms a cupsonline or avito channel made, made once.
+# rooms <dir> <type>: the rooms a co or av channel made, made once.
 rooms() {
   [ -s "$1/$2.rooms" ] || {
     case $2 in cupsonline) m=createRooms ;; avito) m=createAvitoRooms ;; esac
@@ -47,26 +61,26 @@ rooms() {
   cat "$1/$2.rooms"
 }
 
-# call <dir>: the Telemost call a telemost channel made through Telemost's
-# API, with the telemost_token secret, made once. Its waiting room is open:
-# the exit and the app join with the link alone. Telemost lets only Yandex 360
-# for Business delete calls, so a deleted device's call stays behind, unused.
-# busybox wget takes a header on its command line alone, so the token is in
-# this container's process list for the second the call takes.
+# call <dir>: the call a tm channel made through call_provider's API with the
+# call_token secret, made once; status 2 when they aren't set. Its waiting
+# room is open: the exit and the app join with the link alone. The provider
+# deletes calls only for business accounts, so a deleted device's call stays
+# behind, unused. busybox wget takes a header on its command line alone, so
+# the token is in this container's process list for the second it takes.
 call() {
-  [ -s "$1/telemost.call" ] || {
-    [ -s "$TOKEN" ] || return 2
+  [ -s "$1/call" ] || {
+    [ "$PROVIDER" = tm ] && [ -s "$TOKEN" ] || return 2
     wget -q -O - -T 20 --header "Authorization: OAuth $(tr -d ' \n' <"$TOKEN")" \
       --header 'Content-Type: application/json' --post-data '{"waiting_room_level":"PUBLIC"}' \
       https://cloud-api.yandex.net/v1/telemost-api/conferences 2>/dev/null |
-      sed -n 's/.*"join_url":"\([^"]*\)".*/\1/p' >"$1/telemost.call.new" || true
-    [ -s "$1/telemost.call.new" ] || { rm -f "$1/telemost.call.new"; return 1; }
-    mv "$1/telemost.call.new" "$1/telemost.call"
+      sed -n 's/.*"join_url":"\([^"]*\)".*/\1/p' >"$1/call.new" || true
+    [ -s "$1/call.new" ] || { rm -f "$1/call.new"; return 1; }
+    mv "$1/call.new" "$1/call"
   }
-  cat "$1/telemost.call"
+  cat "$1/call"
 }
 
-# channel <device> <uuid> <transport...>: writes the exit's config and the
+# channel <device> <uuid> <kind...>: writes the exit's config and the
 # device's link into its state, or fails with nothing to run.
 channel() {
   device=$1 dir=$STATE/$2
@@ -77,30 +91,31 @@ channel() {
     "$dir" "$dir" >"$dir/node.conf"
   json='' n=0
   for t in "$@"; do
-    type=${t%%=*} value=
+    short=${t%%=*} value=
     case $t in *=*) value=${t#*=} ;; esac
     case $t in *[\"\\]*) say "$device: '$t' holds a quote or a backslash, skipped"; continue ;; esac
+    type=$(kind "$short") || { say "$device: '$short' is no kind of carrier, skipped"; continue; }
     if [ -z "$value" ]; then
       case $type in
       cupsonline | avito)
-        value=$(rooms "$dir" "$type") || { say "$device: $type rooms could not be made, skipped until the next start"; continue; } ;;
+        value=$(rooms "$dir" "$type") || { say "$device: $short rooms could not be made, skipped until the next start"; continue; } ;;
       telemost)
         rc=0
         value=$(call "$dir") || rc=$?
         case $rc in
         0) ;;
-        2) say "$device: telemost needs its link, as telemost=<link>, or the telemost_token secret, skipped"; continue ;;
-        *) say "$device: telemost: Telemost's API made no call, skipped until the next start"; continue ;;
+        2) say "$device: $short needs its link, as $short=<link>, or call_provider=tm and the call_token secret, skipped"; continue ;;
+        *) say "$device: $short: call_provider's API made no call, skipped until the next start"; continue ;;
         esac ;;
-      *) say "$device: $type needs its link, as $type=<link>, skipped"; continue ;;
+      *) say "$device: $short needs its link, as $short=<link>, skipped"; continue ;;
       esac
     fi
     n=$((n + 1))
     if [ "$type" = direct ]; then
-      printf '\n[Transport %s-%s]\nType = direct\nPriority = 50\nListen = %s\n' "$type" "$n" "$value" >>"$dir/node.conf"
+      printf '\n[Transport %s-%s]\nType = direct\nPriority = 50\nListen = %s\n' "$short" "$n" "$value" >>"$dir/node.conf"
       json="$json,{\"type\":\"direct\",\"dial\":\"$value\"}"
     else
-      printf '\n[Transport %s-%s]\nType = %s\nPriority = 50\nURL = %s\n' "$type" "$n" "$type" "$value" >>"$dir/node.conf"
+      printf '\n[Transport %s-%s]\nType = %s\nPriority = 50\nURL = %s\n' "$short" "$n" "$type" "$value" >>"$dir/node.conf"
       json="$json,{\"type\":\"$type\",\"url\":\"$value\"}"
     fi
   done

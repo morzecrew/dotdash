@@ -271,8 +271,14 @@ parameters:
     services: [subscription]
   openflux_channels:
     type: text
-    default: "# One device per line: <device> <type>[=<link>] ..."
-    description: "Under the openflux profile, the devices that get an OpenFlux channel, one \"<device> <type>[=<link>] ...\" line each: a vless_clients name or UUID, then OpenFlux transport types, one session over all of them. cupsonline and avito make their own rooms when given no link, and telemost its own call with the telemost_token secret; the others take a link made with your own account. Each channel is an exit of its own, about 20 MiB idle and 45 MiB busy; the openflux-link task prints its link for the device's OpenFlux app. \"#\" starts a comment"
+    default: "# One device per line: <device> <kind>[=<link>] ..."
+    description: "Under the openflux profile, the devices that get an OpenFlux channel, one \"<device> <kind>[=<link>] ...\" line each: a vless_clients name or UUID, then the kinds of carrier, one session over all of them. co and av make their own rooms when given no link, and tm its own call with call_provider and call_token; the others (mr, yd, yv, yb) take a link made with your own account. Each channel is an exit of its own, 20-70 MiB; the openflux-link task prints its link for the device's OpenFlux app. \"#\" starts a comment"
+    services: [openflux]
+  call_provider:
+    type: enum
+    values: [none, tm]
+    default: none
+    description: "Under the openflux profile, whose API makes a call for a bare tm in openflux_channels, with the call_token secret; none: tm needs a link"
     services: [openflux]
   exit_ipv4_url:
     type: string
@@ -324,7 +330,7 @@ images:
   # The openflux profile's exits, OpenFlux's core built from a release tag's
   # source, its exit's UDP kept behind its upstream proxy (platform-images,
   # images/openflux).
-  openflux: ghcr.io/morzecrew/openflux:0.17.1@sha256:PENDING
+  openflux: ghcr.io/morzecrew/openflux:0.17.1@sha256:eb83da74d8a647f969407d4301f451cd4136c52a772e3c3b746365eb044c247d
 
 # Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);
 # its content is JSON, which is also YAML. Secrets are not in it: it holds

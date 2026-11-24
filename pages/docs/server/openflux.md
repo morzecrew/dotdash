@@ -16,20 +16,23 @@ sudo morzer config edit openflux_channels
 One line per device that gets a channel:
 
 ```text
-# <device> <type>[=<link>] ...
-phone cupsonline
-laptop telemost                              # a call made for it, with telemost_token
-tablet telemost=<a call link of yours>
+# <device> <kind>[=<link>] ...
+phone co
+laptop tm                                    # a call made for it (below)
+tablet tm=<a call link of yours>
 ```
 
 - **The device** is a `vless_clients` name, or the UUID of an unnamed line.
   A device not in `vless_clients` gets no channel, and the log says so.
-- **The types** are [OpenFlux transport types](https://github.com/p1neappleXpress/OpenFlux).
-  The channel's session runs over all of them, and carries on over the others
-  when one fails. `cupsonline` and `avito` make their own rooms, once, with
-  no account. The others take a link you made with your own account on the
-  service, after `=`. `telemost` is the fastest, and makes its own call when
-  given no link but the `telemost_token` secret ([below](#calls-made-for-you)).
+- **The kinds** are short names for OpenFlux's transport types. The channel's
+  session runs over all of them, and carries on over the others when one
+  fails.
+
+  | Kind | What it is | Needs |
+  | --- | --- | --- |
+  | `tm` | a call, the fastest | a call link of yours, or one made for it ([below](#calls-made-for-you)) |
+  | `co`, `av` | rooms | nothing: they make their own, once |
+  | `mr`, `yd`, `yv`, `yb` | documents | a document link of yours |
 - **Each channel is an exit of its own**, because an OpenFlux exit serves one
   client at a time. In the lab one took about 20 MiB idle, and 45 MiB and a
   third of a core while busy.
@@ -64,19 +67,16 @@ The link holds the channel's key. Hand it over as you would any link
 
 ## Calls made for you
 
-With `telemost_token` set, a bare `telemost` in a device's line gets that
-device a call of its own, made once through the call service's API and kept
-with the device's key. The waiting room is open, so the exit and the app join
-with the link alone.
+With `call_provider=tm` and the `call_token` secret, a bare `tm` in a device's
+line gets that device a call of its own, made once through the provider's API
+and kept with the device's key. The waiting room is open, so the exit and the
+app join with the link alone.
 
 ```sh
-sudo morzer secret edit telemost_token    # the token alone
+sudo morzer config set call_provider=tm
+sudo morzer secret edit call_token    # the token alone
 ```
 
-- **The token** is an OAuth token for the service's
-  [API](https://yandex.ru/dev/telemost/doc/ru/access), with the permission to
-  create calls (`telemost-api:conferences.create`). The service grants it only
-  to accounts with its paid subscription.
 - **Calls are never deleted.** Deleting a call through the API needs the
   service's business plan, so a deleted device's call stays behind, unused:
   the device's new key makes the old link useless.
@@ -85,16 +85,16 @@ sudo morzer secret edit telemost_token    # the token alone
 
 ## Speed and limits
 
-- In the lab, `telemost` carried 8 Mbit/s down and 6 up with no stall, and
+- In the lab, `tm` carried 8 Mbit/s down and 6 up with no stall, and
   more once a long transfer had it add participants. It never goes quiet:
   each side moves about 2.3 Mbit/s even idle, about 1 GB an hour.
-- `cupsonline` carried 1-2 Mbit/s. Under sustained load it stalled after
+- `co` carried 1-2 Mbit/s. Under sustained load it stalled after
   about a minute, and the channel came back on its own about 45 s later.
   That is enough for messages and pages, not for video; idle, it is near
   silent.
-- `avito` rooms were rejected when the exit joined them, as of OpenFlux
-  0.17.1 (OpenFlux #224). The log says when rooms can't be made; the channel
-  then runs on its other types, and tries again at the next start.
+- `av` rooms were rejected when the exit joined them, as of OpenFlux 0.17.1.
+  The log says when rooms can't be made; the channel then runs on its other
+  kinds, and tries again at the next start.
 - Carriers break when the services change, until OpenFlux catches up, and
   using them may break those services' terms.
 - The exit and the app must speak the same OpenFlux version: a change to how
