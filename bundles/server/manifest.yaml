@@ -46,10 +46,15 @@ runtimes:
       # The bytes each device moves, in the facts the manager reads hourly,
       # which flags a device moving far more than usual: a leaked link.
       device-traffic: [compose/device-traffic.yaml]
+      # An OpenFlux exit per device listed in openflux_channels, which that
+      # device's OpenFlux app reaches over a carrier, a room or document on a
+      # service a restricted network still lets through: the way in left when
+      # nothing else gets through. Its connections leave through the gate.
+      openflux: [compose/openflux.yaml]
     # installation.profile=xdns,xhttp-reality runs both; any of them with
     # openvpn, such as xdns,openvpn, adds the OpenVPN tunnels; warm and metrics
     # go with any.
-    combinable: [xdns, xhttp-reality, openvpn, mkcp, hysteria2, metrics, warm, device-traffic]
+    combinable: [xdns, xhttp-reality, openvpn, mkcp, hysteria2, metrics, warm, device-traffic, openflux]
     options:
       project: dotdash
 
@@ -264,6 +269,17 @@ parameters:
     default: none
     description: "With subscriptions on, a routing profile for Happ, as Happ's own JSON (Name, DirectSites, DirectIp, Geoipurl, Geositeurl and the rest): sent with every subscription in Happ's routing header, which adds the profile and turns it on, so the sites it lists go around the tunnel on every Happ device. Other apps ignore it; none sends none"
     services: [subscription]
+  openflux_channels:
+    type: text
+    default: "# One device per line: <device> <kind>[=<link>] ..."
+    description: "Under the openflux profile, the devices that get an OpenFlux channel, one \"<device> <kind>[=<link>] ...\" line each: a vless_clients name or UUID, then the kinds of carrier, one session over all of them. co and av make their own rooms when given no link, and tm its own call with call_provider and call_token; the others (mr, yd, yv, yb) take a link made with your own account. Each channel is an exit of its own, 20-70 MiB; the openflux-link task prints its link for the device's OpenFlux app. \"#\" starts a comment"
+    services: [openflux]
+  call_provider:
+    type: enum
+    values: [none, tm]
+    default: none
+    description: "Under the openflux profile, whose API makes a call for a bare tm in openflux_channels, with the call_token secret; none: tm needs a link"
+    services: [openflux]
   exit_ipv4_url:
     type: string
     default: http://api4.ipify.org
@@ -311,6 +327,10 @@ images:
   # The warm profile's keeper of ready connections to the upstreams' proxies
   # (platform-images, images/proxy-warm).
   warm: ghcr.io/morzecrew/proxy-warm:0.1.1@sha256:aa0121aa3baa668242f26c0eaf8337894c8724ae6432d8735cda86e797e952ad
+  # The openflux profile's exits, OpenFlux's core built from a release tag's
+  # source, its exit's UDP kept behind its upstream proxy (platform-images,
+  # images/openflux).
+  openflux: ghcr.io/morzecrew/openflux:0.17.1@sha256:eb83da74d8a647f969407d4301f451cd4136c52a772e3c3b746365eb044c247d
 
 # Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);
 # its content is JSON, which is also YAML. Secrets are not in it: it holds
@@ -408,6 +428,12 @@ tasks:
       conf:
         description: The OpenVPN exit's client config, as a provider or router exports it
         max_size: 64KiB
+    timeout: 1m
+  openflux-link:
+    description: "Print the OpenFlux link of each device with a channel under the openflux profile, or of the one named after --, for its OpenFlux app (output is credentials)"
+    service: openflux-link
+    command: ["sh", "/task/openflux-link.sh"]
+    args: true
     timeout: 1m
   facts:
     description: "Print this server's facts as JSON, which morzer publishes to the authority it follows: its domain and ports, the REALITY public key and the VLESS encryption string; no credentials"

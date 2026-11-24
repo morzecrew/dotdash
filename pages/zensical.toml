@@ -23,6 +23,7 @@ nav = [
             "server/xhttp-reality.md",
             "server/mkcp.md",
             "server/hysteria2.md",
+            "server/openflux.md",
             "server/upstreams.md",
             "server/cdn.md",
             "server/several-servers.md",

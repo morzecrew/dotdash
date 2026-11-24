@@ -1,0 +1,44 @@
+# The openflux profile: a last-resort way in for a device on a network that
+# lets through only some services. An OpenFlux exit per device listed in
+# openflux_channels (openflux/openflux.sh) meets that device's OpenFlux app on
+# a carrier, a room, document or call on such a service, and opens the
+# device's connections through the gate's egress hop, so they leave through
+# the upstreams like the rest. Its UDP goes the same way, or, with
+# upstream_udp off, nowhere (platform-images, images/openflux).
+#
+# On egress alone, beside the gate: the carriers need a route out, and on
+# inside Xray would reach the container past the gate's routing (hooks/policy).
+# It listens on nothing a device dials; a carrier's connections are its own,
+# outward.
+services:
+  openflux:
+    image: ${DOTDASH_IMAGE_OPENFLUX:?set by morzer}
+    restart: unless-stopped
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    entrypoint: ["sh", "/openflux/openflux.sh"]
+    environment:
+      OPENFLUX_CHANNELS: ${DOTDASH_PARAM_OPENFLUX_CHANNELS:-}
+      OPENFLUX_CALL_PROVIDER: ${DOTDASH_PARAM_CALL_PROVIDER:-none}
+    # A device deleted from vless_clients loses its channel and its state at
+    # the restart an edit brings (secrets.schema.yaml). call_token makes the
+    # devices' calls, with call_provider.
+    secrets: [vless_clients, call_token]
+    volumes:
+      - ${DOTDASH_RELEASE_DIR:?set by morzer}/openflux:/openflux:ro
+      # Each device's key, rooms, cookie jars and link, kept across restarts
+      # and releases, so the link on the device stays good.
+      - openflux:/var/lib/openflux
+    # A room carrier's gate file, and the like.
+    tmpfs: ["/tmp:size=8m"]
+    networks: [egress]
+    # Measured on one channel in dotdash-lab#68: about 45 MiB and a third of
+    # a core while it carries traffic, about 20 MiB idle. Several devices
+    # fit; a call carrier costs more.
+    mem_limit: 1g
+    pids_limit: 512
+    logging:
+      driver: local
+      options: {max-size: 10m, max-file: "3"}
