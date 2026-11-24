@@ -3,7 +3,7 @@
 The way in for when nothing else gets through. Some networks let through only
 a handful of services. Where neither a relay nor a CDN answers there,
 [OpenFlux](https://github.com/p1neappleXpress/OpenFlux) may still work:
-a device and your server meet on a room, a document or a call on one of
+a device and your server meet on a room or a call on one of
 those services. It is slow, a second app on the device, and runs on other
 companies' services, so it only sits under the other
 [ways in](../ways-in.md). It never replaces them.
@@ -31,8 +31,7 @@ tablet tm=<a call link of yours>
   | Kind | What it is | Needs |
   | --- | --- | --- |
   | `tm` | a call, the fastest | a call link of yours, or one made for it ([below](#calls-made-for-you)) |
-  | `co`, `av` | rooms | nothing: they make their own, once |
-  | `mr`, `yd`, `yv`, `yb` | documents | a document link of yours |
+  | `co` | rooms | nothing: it makes its own, once |
 - **Each channel is an exit of its own**, because an OpenFlux exit serves one
   client at a time. In the lab one took about 20 MiB idle, and 45 MiB and a
   third of a core while busy.
@@ -52,7 +51,7 @@ The link holds the channel's key. Hand it over as you would any link
 - **Device traffic leaves through the upstreams**, as it does from Xray: each
   exit opens its connections through the gate. UDP goes the same way where
   `upstream_udp` is on, and is dropped where it is off. Only the connections
-  to the carrier, the service the rooms or documents are on, leave the server
+  to the carrier, the service the rooms or calls are on, leave the server
   directly.
 - **The link stays good** across restarts and releases. Each device's key,
   rooms and link are kept on the `dotdash_openflux` volume.
@@ -92,9 +91,8 @@ sudo morzer secret edit call_token    # the token alone
   about a minute, and the channel came back on its own about 45 s later.
   That is enough for messages and pages, not for video; idle, it is near
   silent.
-- `av` rooms were rejected when the exit joined them, as of OpenFlux 0.17.1.
-  The log says when rooms can't be made; the channel then runs on its other
-  kinds, and tries again at the next start.
+- When rooms or a call can't be made, the log says so; the channel then runs
+  on its other kinds, and tries again at the next start.
 - Carriers break when the services change, until OpenFlux catches up, and
   using them may break those services' terms.
 - The exit and the app must speak the same OpenFlux version: a change to how
