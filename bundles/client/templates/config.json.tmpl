@@ -28,6 +28,10 @@ looked up for a name (routing's domainStrategy AsIs), as no-resolve did. */ -}}
 {{- end -}}
 {{- $lan := ne (default "127.0.0.1" .Parameters.listen) "127.0.0.1" -}}
 {{- $probe := required "set probe_url" .Parameters.probe_url -}}
+{{- /* The openflux profile: when every link failed its last probe, the
+balancer hands traffic to the OpenFlux client (compose/openflux.yaml), not to
+the first link. Never probed: it is the way left, not one to pick. */ -}}
+{{- $openflux := has "openflux" .Profiles -}}
 {{- /* cdn=skip: the balancer and its probes take every link but those
 through a CDN (dotdash-cdn-*): the servers' (dotdash-<n>-*) and the relays'
 (dotdash-relay-*). Xray picks outbounds by tag prefix alone. */ -}}
@@ -48,6 +52,9 @@ through a CDN (dotdash-cdn-*): the servers' (dotdash-<n>-*) and the relays'
   "outbounds": [
     {"tag": "block", "protocol": "blackhole"},
     {"tag": "direct", "protocol": "freedom"}
+    {{- if $openflux }},
+    {"tag": "openflux", "protocol": "socks", "settings": {"address": "openflux", "port": 1080}}
+    {{- end }}
   ],
   {{- /* Each link is probed once a minute at a moment of its own, not all of
   them together, which would tie this device's links to each other for
@@ -56,7 +63,7 @@ through a CDN (dotdash-cdn-*): the servers' (dotdash-<n>-*) and the relays'
   "burstObservatory": {"subjectSelector": [{{ $links }}], "pingConfig": {"destination": "{{ $probe }}", "interval": "1m", "sampling": 1}},
   "routing": {
     "domainStrategy": "AsIs",
-    "balancers": [{"tag": "dotdash", "selector": [{{ $links }}], "strategy": {"type": "leastPing"}}],
+    "balancers": [{"tag": "dotdash", "selector": [{{ $links }}], "strategy": {"type": "leastPing"}{{ if $openflux }}, "fallbackTag": "openflux"{{ end }}}],
     "rules": [
       {{- /* ipv6=block: every IPv6 address refused first, a direct rule's
       included. */}}

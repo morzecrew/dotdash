@@ -6,6 +6,8 @@ On the host's network, so the proxy port listens on the listen address
 itself. Rules only this file has name a TUN-only inbound (tun, dns-in,
 resolver) or the DNS module's tag (dns-internal); the smoke test drops those,
 the dns outbound, the inbounds, dns and fakedns, and compares the rest.
+The openflux profile's fallback is config.json's alone: that profile doesn't
+run under tun, whose host network has no name for its client.
 
 Xray's own lookups, of dotdash's server names and of what direct rules send
 around it, go through the system resolver, which /etc/resolv.conf

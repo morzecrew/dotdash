@@ -18,7 +18,8 @@ Three ways in, from least to most:
 
 [Rules](rules.md) send chosen destinations around dotdash or refuse them;
 everything else goes through it. With dotdash out of reach, nothing leaves
-around it.
+around it. With the [`openflux` profile](openflux.md), traffic goes over
+OpenFlux instead, to the same server.
 
 ## Install
 
