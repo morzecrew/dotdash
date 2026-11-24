@@ -2109,8 +2109,17 @@ transport as <code>probe_url</code> found it.</p>
 <code>facts</code> uploads 64 KB to <code>freeze_up_url</code> through each transport. An upload
 that gets no answer for 8 seconds, twice running, counts the transport as not
 getting through, named under <code>stalled_up</code>; one that fails sooner (refused, an
-error page) says nothing about a freeze. Set
-<code>control_url</code> to a site this canary's network reaches without dotdash, so the
+error page) says nothing about a freeze.</p>
+<p>A network may also freeze a device that opens more than a few connections to
+one address within a fraction of a second, for a couple of minutes. REALITY
+with Vision opens one for every connection inside it, so a page's parallel
+requests set it off, while a check of one connection at a time never does.
+<code>facts</code> ends with a burst through REALITY: six connections at once, then one
+more. When REALITY got through alone but not after the burst, it counts as not
+getting through, with <code>burst: true</code>. Being last, it freezes nothing <code>facts</code>
+still checks, but the server stays out of this canary's reach for a couple of
+minutes after; <code>burst_check=false</code> skips it.</p>
+<p>Set <code>control_url</code> to a site this canary's network reaches without dotdash, so the
 canary's own outage isn't read as its target burnt:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">control_url</span><span class="o">=</span>https://www.example.net/
 </code></pre></div>
@@ -2133,6 +2142,10 @@ as <code>blocked_by</code>:</p>
 <tr>
 <td><code>freeze</code></td>
 <td>connections freeze partway (the freeze checks above)</td>
+</tr>
+<tr>
+<td><code>burst</code></td>
+<td>REALITY gets through alone, not after six connections at once (the burst check above)</td>
 </tr>
 <tr>
 <td><code>ip</code></td>
@@ -2255,6 +2268,11 @@ relay's address no longer gets through for devices.</p>
 <td><code>freeze_url</code></td>
 <td><code>https://speed.cloudflare.com/__down?bytes=65536</code></td>
 <td>what <code>facts</code> downloads through each transport after <code>probe_url</code>, past the 16-20 KB a freeze lets through, <code>https://</code> only; <code>none</code> skips it</td>
+</tr>
+<tr>
+<td><code>burst_check</code></td>
+<td><code>true</code></td>
+<td>whether <code>facts</code> ends with a burst through REALITY, for a network that freezes a device opening several connections at once; <code>false</code> skips it</td>
 </tr>
 <tr>
 <td><code>freeze_up_url</code></td>
