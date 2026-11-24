@@ -37,3 +37,22 @@ jobs:
         --set cert_issuer=internal --profile xdns
       # smoke-update installs the published :main first, trusting this key.
       dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}
+
+  # client-config.sh against a matrix of parameters, in the images the bundle
+  # pins, without a rig: seconds, where the smoke needs an install.
+  client-config:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Registry login
+        env:
+          TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+        run: printf '%s' "${TOKEN}" | docker login ghcr.io -u "${ACTOR}" --password-stdin
+      - name: client-config's cases
+        run: bash .github/tests/client-config.sh
