@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `happ_routing` on the server: a routing profile in Happ's own JSON, which every subscription then carries in Happ's `routing` header (relays' too). Happ adds it and turns it on, so the sites it lists as direct go around the tunnel on every Happ device. Other apps ignore it.
 
+- The canary ends its `facts` with a burst through REALITY: six connections at once, then one more (`burst_check`, on by default). A network that freezes a device opening several connections to one address within a fraction of a second freezes REALITY with Vision on every page while a check of one connection passes; the canary now reports REALITY down there, with `burst: true` and `blocked_by: burst`, and the manager takes REALITY off that relay's links as for any blocked path.
+
 ## [0.16.0] - 2026-11-24
 
 ### Added

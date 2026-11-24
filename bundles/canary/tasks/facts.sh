@@ -139,15 +139,43 @@ reality_split=null
 if nc -z -w 2 reality 10810 2>/dev/null; then
 	if up reality 10810 >/dev/null; then reality_split=true; else reality_split=false; fi
 fi
+# A burst through REALITY: six connections at once, as a page's parallel
+# requests make with Vision, which opens one outer connection to the server
+# for each, then one more. A network that freezes a device opening more than
+# a few connections to one address within a fraction of a second freezes it
+# for minutes (dotdash-lab #65), which a check of one connection at a time
+# never sets off: REALITY then passes alone and stalls pages. Last of the
+# checks, since it freezes every one after it, and only while REALITY gets
+# through, which it then no longer does.
+burst=null
+case "${BURST_CHECK:-true}:$paths" in
+true:*'"reality": true'*)
+	for _ in 1 2 3 4 5 6; do
+		XRAY_HEALTHCHECK_PROXY=http://reality:10809 XRAY_HEALTHCHECK_URL="$PROBE_URL" XRAY_HEALTHCHECK_TIMEOUT=7s \
+			/opt/xray/xray-entrypoint healthcheck >/dev/null 2>&1 &
+	done
+	wait
+	sleep 2
+	if up reality >/dev/null; then
+		burst=false
+	else
+		burst=true
+		paths=$(printf '%s' "$paths" | sed 's/"reality": true/"reality": false/')
+		# Its time, first in the list as REALITY is in the loop, goes too.
+		latency=$(printf '%s' "$latency" | sed 's/^"reality": [0-9]*\(, \)\{0,1\}//')
+	fi
+	;;
+esac
 # With REALITY failing, what stops it, from this network: its connections
 # frozen partway (freeze_url, freeze_up_url: freeze); no TCP connection to the
 # server's port at all, a block on its address (ip); a connection, with the
 # split hello getting through, a block on its name by SNI (sni); a connection,
-# with the split failing too, a block on the TLS or on REALITY itself (tls).
-# Null while REALITY gets through.
+# with the split failing too, a block on the TLS or on REALITY itself (tls);
+# alone through, frozen by a burst (burst). Null while REALITY gets through.
 blocked_by=null
 case $paths in *'"reality": false'*)
-	case "$stalled $stalled_up" in
+	case "$burst $stalled $stalled_up" in
+	true*) blocked_by='"burst"' ;;
 	*'"reality"'*) blocked_by='"freeze"' ;;
 	*)
 		if ! nc -z -w 5 "$DOTDASH_ADDRESS" "${DOTDASH_PORT:-443}" 2>/dev/null; then blocked_by='"ip"'
@@ -156,6 +184,6 @@ case $paths in *'"reality": false'*)
 	esac ;;
 esac
 
-printf '{"server": %s, "address": %s, "public_key": %s, "checked_at": %s, "internet": %s, "paths": {%s}, "reality_split": %s, "blocked_by": %s, "udp": {%s}, "ipv6": {%s}, "stalled": {%s}, "stalled_up": [%s], "latency_ms": {%s}, "direct_ms": %s}\n' \
-	"$(str "$DOTDASH_SERVER")" "$(str "$DOTDASH_ADDRESS")" "$(str "${DOTDASH_PUBLIC_KEY:-}")" "$(date +%s)" "$internet" "$paths" "$reality_split" "$blocked_by" "$udp" "$ipv6" "$stalled" "$stalled_up" \
+printf '{"server": %s, "address": %s, "public_key": %s, "checked_at": %s, "internet": %s, "paths": {%s}, "reality_split": %s, "burst": %s, "blocked_by": %s, "udp": {%s}, "ipv6": {%s}, "stalled": {%s}, "stalled_up": [%s], "latency_ms": {%s}, "direct_ms": %s}\n' \
+	"$(str "$DOTDASH_SERVER")" "$(str "$DOTDASH_ADDRESS")" "$(str "${DOTDASH_PUBLIC_KEY:-}")" "$(date +%s)" "$internet" "$paths" "$reality_split" "$burst" "$blocked_by" "$udp" "$ipv6" "$stalled" "$stalled_up" \
 	"$latency" "$direct"
