@@ -31,7 +31,7 @@ tablet tm=<a call link of yours>
   | Kind | What it is | Needs |
   | --- | --- | --- |
   | `tm` | a call, the fastest | a call link of yours, or one made for it ([below](#calls-made-for-you)) |
-  | `co`, `av` | rooms | nothing: they make their own, once |
+  | `co` | rooms | nothing: it makes its own, once |
 - **Each channel is an exit of its own**, because an OpenFlux exit serves one
   client at a time. In the lab one took about 20 MiB idle, and 45 MiB and a
   third of a core while busy.
@@ -91,9 +91,8 @@ sudo morzer secret edit call_token    # the token alone
   about a minute, and the channel came back on its own about 45 s later.
   That is enough for messages and pages, not for video; idle, it is near
   silent.
-- `av` rooms were rejected when the exit joined them, as of OpenFlux 0.17.1.
-  The log says when rooms can't be made; the channel then runs on its other
-  kinds, and tries again at the next start.
+- When rooms or a call can't be made, the log says so; the channel then runs
+  on its other kinds, and tries again at the next start.
 - Carriers break when the services change, until OpenFlux catches up, and
   using them may break those services' terms.
 - The exit and the app must speak the same OpenFlux version: a change to how

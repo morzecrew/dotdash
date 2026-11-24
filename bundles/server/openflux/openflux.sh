@@ -9,10 +9,9 @@
 #   <device> <kind>[=<link>] [<kind>[=<link>] ...]
 #
 # A device is a vless_clients name or UUID. A kind is a short alias of an
-# OpenFlux transport type (kind below), or the type itself. co and av make
-# their own rooms when given no link, once, and tm its own call where
-# call_provider is tm and the call_token secret is set; the others take the
-# link the owner made with an account. direct takes the address it listens
+# OpenFlux transport type (kind below), or the type itself. co makes its own
+# rooms when given no link, once, and tm its own call where call_provider is
+# tm and the call_token secret is set. direct takes the address it listens
 # on, for tests. Each device's state is kept under its UUID in
 # /var/lib/openflux: the key, made once, the rooms, the call, the cookie jars,
 # and the link the openflux-link task prints. A device deleted from
@@ -36,8 +35,8 @@ say() { echo "openflux: $*"; }
 # every channel down with it.
 kind() {
   case $1 in
-  tm) echo telemost ;; co) echo cupsonline ;; av) echo avito ;;
-  telemost | cupsonline | avito | direct) echo "$1" ;;
+  tm) echo telemost ;; co) echo cupsonline ;;
+  telemost | cupsonline | direct) echo "$1" ;;
   *) return 1 ;;
   esac
 }
@@ -47,11 +46,10 @@ uuid_of() {
   awk -v d="$1" '$1 !~ /^#/ && NF && ($1 == d || $2 == d) { print $1; exit }' "$CLIENTS"
 }
 
-# rooms <dir> <type>: the rooms a co or av channel made, made once.
+# rooms <dir> <type>: the rooms a co channel made, made once.
 rooms() {
   [ -s "$1/$2.rooms" ] || {
-    case $2 in cupsonline) m=createRooms ;; avito) m=createAvitoRooms ;; esac
-    printf '{"id":1,"method":"%s","params":{}}\n' "$m" |
+    printf '{"id":1,"method":"createRooms","params":{}}\n' |
       timeout 120 openflux --node-wizard 2>/dev/null |
       sed -n 's/.*"rooms":"\([^"]*\)".*/\1/p' | sed -n 1p >"$1/$2.rooms.new" || true
     [ -s "$1/$2.rooms.new" ] || { rm -f "$1/$2.rooms.new"; return 1; }
@@ -96,7 +94,7 @@ channel() {
     type=$(kind "$short") || { say "$device: '$short' is no kind of carrier, skipped"; continue; }
     if [ -z "$value" ]; then
       case $type in
-      cupsonline | avito)
+      cupsonline)
         value=$(rooms "$dir" "$type") || { say "$device: $short rooms could not be made, skipped until the next start"; continue; } ;;
       telemost)
         rc=0
