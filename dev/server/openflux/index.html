@@ -2222,7 +2222,7 @@
 <p>The way in for when nothing else gets through. Some networks let through only
 a handful of services. Where neither a relay nor a CDN answers there,
 <a href="https://github.com/p1neappleXpress/OpenFlux">OpenFlux</a> may still work:
-a device and your server meet on a room, a document or a call on one of
+a device and your server meet on a room or a call on one of
 those services. It is slow, a second app on the device, and runs on other
 companies' services, so it only sits under the other
 <a href="../../ways-in/">ways in</a>. It never replaces them.</p>
@@ -2257,14 +2257,9 @@ tablet tm=&lt;a call link of yours&gt;
 <td>a call link of yours, or one made for it (<a href="#calls-made-for-you">below</a>)</td>
 </tr>
 <tr>
-<td><code>co</code>, <code>av</code></td>
+<td><code>co</code></td>
 <td>rooms</td>
-<td>nothing: they make their own, once</td>
-</tr>
-<tr>
-<td><code>mr</code>, <code>yd</code>, <code>yv</code>, <code>yb</code></td>
-<td>documents</td>
-<td>a document link of yours</td>
+<td>nothing: it makes its own, once</td>
 </tr>
 <tr>
 <td>- <strong>Each channel is an exit of its own</strong>, because an OpenFlux exit serves one</td>
@@ -2294,7 +2289,7 @@ code made from it):</p>
 <li><strong>Device traffic leaves through the upstreams</strong>, as it does from Xray: each
   exit opens its connections through the gate. UDP goes the same way where
   <code>upstream_udp</code> is on, and is dropped where it is off. Only the connections
-  to the carrier, the service the rooms or documents are on, leave the server
+  to the carrier, the service the rooms or calls are on, leave the server
   directly.</li>
 <li><strong>The link stays good</strong> across restarts and releases. Each device's key,
   rooms and link are kept on the <code>dotdash_openflux</code> volume.</li>
@@ -2331,9 +2326,8 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w">
   about a minute, and the channel came back on its own about 45 s later.
   That is enough for messages and pages, not for video; idle, it is near
   silent.</li>
-<li><code>av</code> rooms were rejected when the exit joined them, as of OpenFlux 0.17.1.
-  The log says when rooms can't be made; the channel then runs on its other
-  kinds, and tries again at the next start.</li>
+<li>When rooms or a call can't be made, the log says so; the channel then runs
+  on its other kinds, and tries again at the next start.</li>
 <li>Carriers break when the services change, until OpenFlux catches up, and
   using them may break those services' terms.</li>
 <li>The exit and the app must speak the same OpenFlux version: a change to how
