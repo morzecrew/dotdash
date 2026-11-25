@@ -46,6 +46,7 @@ it match:
 EOF
 [ -n "$origin" ] || [ -z "${HTTP_ORIGIN_PORT:-}" ] || cat <<EOF
 Then set http_origin_host to the name the CDN gives devices (several,
-comma-separated, where it gives more than one), and print this
-line again: devices get links through the door only once it ends in origin=.
+comma-separated, where it gives more than one, each followed by the path
+it gives, /<path>, where that is not the one above), and print this line
+again: devices get links through the door only once it ends in origin=.
 EOF

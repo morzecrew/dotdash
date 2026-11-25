@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `cdn_extra` on the server: the XHTTP settings a CDN or its gateway asks for, by name, pasted as the CDN gives them. Links and outbounds through that name carry them in place of dotdash's own, so a CDN that wants its own settings needs no change to dotdash. Settings Xray refuses are left out with a warning. The manager's roster takes `cdn_extra` too.
+
 - A device's kind, `desktop` or `mobile`, after its name in `vless_clients`. A desktop gets no CDN link: none through the server's `cdn_hosts`, none through a relay's `cdn=` or `origin=`, and nothing through a relay that offers CDN links alone. CDNs serve restricted mobile networks, some paid by the gigabyte, where a desktop moves the most. A changed kind reaches the device at its next subscription fetch. The manager's roster takes `desktops`, a list of its devices. Servers and relays take such lines from this release on: update the relays before giving a device a kind, and take the kinds off before rolling back to an earlier release, whose image refuses them.
 
 - An `openflux` profile on the client: when every dotdash link fails its probe, Xray's balancer hands the traffic to an OpenFlux client, which reaches this device's OpenFlux exit on a dotdash server (the server's `openflux` profile) over a room or call on a service the network still lets through. The link goes in a new `openflux_link` secret, as the server's `openflux-link` task prints it. The traffic goes back to the links once one answers its probe again. It serves the proxy port, not `tun`.
@@ -23,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- A relay's `http_origin_host` takes several names, comma-separated, for a rented CDN that gives more than one, such as a spare for when one is blocked. Devices get a 4 KiB `relay · cdn` link and outbound through each, numbered with the relay's other CDN links: `relay · cdn 1`, `relay · cdn 2`. The server and the manager read the list from the relay's line as they read one name.
+- A relay's `http_origin_host` takes several names, comma-separated, for a rented CDN that gives more than one, such as a spare for when one is blocked. Devices get a 4 KiB `relay · cdn` link and outbound through each, numbered with the relay's other CDN links: `relay · cdn 1`, `relay · cdn 2`. A name may carry a path of the CDN's own, `<name>/<path>`, which its links take in place of the CDN path. The server and the manager read the list from the relay's line as they read one name.
 
 - Servers' and relays' facts run again before every fleet publish, hourly (morzer's `published.refresh`), so the `device-traffic` counts reach the manager within the hour. Without the profile their output stays the same and so do the facts; each run is one task operation in the journal and the attestations (`retention.attestations`).
 

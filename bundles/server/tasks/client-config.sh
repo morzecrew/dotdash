@@ -95,7 +95,7 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # The dotdash-relay machines in front of this server (the relays parameter),
 # one "<host> <site> <public key> <short id> <encryption> [own-site [<xhttp
 # path>]] [kcp=<port>,<header>,<seed>[,<open>]] [hy2=<port>] [cdn=<host>[,<host>]]
-# [cdnpath=<path>] [origin=<host>[,<host>]] [cdn-only] [off=<path>[,<path>]] [split] [name=<label>]
+# [cdnpath=<path>] [origin=<host>[/<path>][,<host>[/<path>]]] [cdn-only] [off=<path>[,<path>]] [split] [name=<label>]
 # [standby]" per
 # line; blank lines, "#" comments and shorter lines are not relays. own-site:
 # the site is the relay's own, which fetches subscriptions from here and, given
@@ -124,10 +124,21 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # origin=: the names of a rented CDN that ends TLS at its edge and fetches
 # the relay in plain HTTP through its door (the relay's http-origin profile),
 # on the CDN path: more of its CDN hosts, whose links upload in 4 KiB GETs.
+# A name may carry a path, which its links take in place of the CDN path: a
+# gateway's own, which it turns back into the relay's on the way.
 # Each becomes "<host> <site> <key> <sid> <enc> <own-site|-> <path|-> <kcp|->
 # <cdn hosts, comma-separated, the origin's among them|-> <cdn-only|-> <off
 # paths, comma-separated|-> <split|-> <hy2 port|-> <name|-> <cdn path|->
 # <standby|-> <origin hosts, comma-separated|->".
+# fronts_ok <list>: whether it is "<host>[/<path>]", comma-separated.
+fronts_ok() {
+  case $1 in '' | ,* | *, | *,,*) return 1 ;; esac
+  for fe in $(printf '%s' "$1" | tr ',' ' '); do
+    fh=${fe%%/*}
+    case $fh in '' | .* | *. | *..* | *[!A-Za-z0-9.-]*) return 1 ;; esac
+    case ${fe#"$fh"} in *[!A-Za-z0-9._~/-]*) return 1 ;; esac
+  done
+}
 all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   case $line in '' | '#'*) continue ;; esac
   c=- d=- only=- x=- sp=- hy=- nm=- cp=- sb=- or=- rest=
@@ -162,9 +173,9 @@ all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   esac
   case $or in
     -) ;;
-    '' | ,* | *, | *,,* | .* | *. | *..* | *,.* | *.,* | *[!A-Za-z0-9.,-]*)
-      echo "relays: the origin= field of $1 is not <host>[,<host>]; no link through it" >&2; or=- ;;
-    *) if [ "$cp" = - ]; then
+    *) if ! fronts_ok "$or"; then
+         echo "relays: the origin= field of $1 is not <host>[/<path>][,<host>[/<path>]]; no link through it" >&2; or=-
+       elif [ "$cp" = - ]; then
          echo "relays: $1 names origin= but no cdnpath=, the path its door passes; no link through it" >&2; or=-
        elif [ "$d" = - ]; then d=$or
        else d="$d,$or"; fi ;;
@@ -223,7 +234,7 @@ pick() { # <device name> [<kind>]: the relays, CDN hosts and subscription relays
       d=-
     fi
     if [ "$d" != - ]; then
-      d=$(for x in $(printf '%s' "$d" | tr ',' ' '); do if sees "$x"; then printf '%s,' "$x"; fi; done)
+      d=$(for x in $(printf '%s' "$d" | tr ',' ' '); do if sees "${x%%/*}"; then printf '%s,' "$x"; fi; done)
       d=${d%,}
     fi
     echo "$h $s $k $i $e $o $p $c ${d:--} $only $off $sp $hy $nm $cp $sb $or"
@@ -237,7 +248,7 @@ pick() { # <device name> [<kind>]: the relays, CDN hosts and subscription relays
 # A member that names nothing would leave its device in no pool, or its relay
 # or CDN host in none, and so seen by every device: say so.
 names=$(awk '$1 !~ /^#/ && NF > 1 { print $2 }' /run/secrets/vless_clients)
-relay_names=$(printf '%s\n' "$all_relays" | awk '{ print $1; if ($9 != "-") { gsub(",", "\n", $9); print $9 } }')
+relay_names=$(printf '%s\n' "$all_relays" | awk '{ print $1; if ($9 != "-") { gsub(",", "\n", $9); gsub("/[^\n]*", "", $9); print $9 } }')
 for m in $(printf '%s\n' "$pools" | awk '{ $1 = ""; print }'); do
   printf '%s\n%s\n%s\n' "$names" "$all_cdns" "$relay_names" | grep -qxF -- "$m" ||
     echo "pools: $m is no device name, relay host or CDN host" >&2
@@ -260,6 +271,31 @@ cdn_disguise='"uplinkDataKey": "X-Part", "xPaddingBytes": "64-256", "xPaddingObf
 # forward headers past which 8 KiB uploads fail, so 4 KiB each, in 4 KiB
 # chunks; percent-encoded as above.
 origin_extra='%7B%22scMaxEachPostBytes%22%3A4096%2C%22scMinPostsIntervalMs%22%3A10%2C%22uplinkChunkSize%22%3A%224096%22%2C%22uplinkDataPlacement%22%3A%22header%22%2C%22uplinkHTTPMethod%22%3A%22GET%22%7D'
+# cdn_extra: "<host> <JSON object>", the object across lines if need be: the
+# XHTTP extra a CDN or a gateway in front asks for, as it gives it. Links and
+# outbounds through that host carry it whole in place of dotdash's own, which
+# Xray then reads alone, but for the path, host and mode (packet-up). One
+# Xray refuses is left out, as a device's Xray would refuse its whole config
+# over it.
+# ponytail: braces are counted, so a "{" or "}" inside a JSON string breaks
+# the object across lines; one line holds any.
+cdn_extras=$(printf '%s\n' "${CDN_EXTRA:-none}" | awk '
+  !depth && /^[ \t]*(#|$)/ { next }
+  !depth { h = $1; sub(/^[ \t]*[^ \t]+[ \t]*/, ""); j = "" }
+  { sub(/^[ \t]+/, ""); sub(/[ \t]+$/, ""); j = j $0; t = $0; depth += gsub(/[{]/, "", t); t = $0; depth -= gsub(/[}]/, "", t) }
+  !depth { print h, j }
+  END { if (depth) print h, j }' | while read -r h j; do
+  case $h in none) continue ;; esac
+  case $h in '' | .* | *. | *..* | *[!A-Za-z0-9.-]*) echo "cdn_extra: $h is not a host; its line is left out" >&2; continue ;; esac
+  case $j in '{'*'}') ;; *) echo "cdn_extra: the extra for $h is not a JSON object; dotdash's own through it" >&2; continue ;; esac
+  printf '{"outbounds": [{"protocol": "vless", "settings": {"address": "%s", "port": 443, "id": "00000000-0000-0000-0000-000000000000", "encryption": "none"}, "streamSettings": {"network": "xhttp", "security": "tls", "xhttpSettings": {"path": "/", "mode": "packet-up", "extra": %s}}}]}' "$h" "$j" |
+    /opt/xray/xray run -test -config stdin: >/dev/null 2>&1 ||
+    { echo "cdn_extra: Xray refuses the extra for $h; dotdash's own through it" >&2; continue; }
+  echo "$h $j"
+done)
+extra_of() { printf '%s\n' "$cdn_extras" | awk -v h="$1" '$1 == h { sub(/^[^ ]+ /, ""); print; exit }'; }
+# Percent-encoded whole, for a link.
+uri() { printf '%s' "$1" | od -An -v -tx1 | tr -d ' \n' | sed 's/../%&/g'; }
 cdn_disguised_extra='%7B%22scMaxEachPostBytes%22%3A8192%2C%22scMinPostsIntervalMs%22%3A10%2C%22uplinkChunkSize%22%3A%2216384%22%2C%22uplinkDataPlacement%22%3A%22header%22%2C%22uplinkHTTPMethod%22%3A%22GET%22%2C%22uplinkDataKey%22%3A%22X-Part%22%2C%22xPaddingBytes%22%3A%2264-256%22%2C%22xPaddingObfsMode%22%3Atrue%2C%22xPaddingMethod%22%3A%22tokenish%22%2C%22xPaddingPlacement%22%3A%22cookie%22%2C%22xPaddingKey%22%3A%22csrftoken%22%2C%22sessionIDPlacement%22%3A%22cookie%22%2C%22sessionIDKey%22%3A%22sessionid%22%2C%22seqPlacement%22%3A%22cookie%22%2C%22seqKey%22%3A%22seq%22%7D'
 
 # support-x25519mlkem768: mihomo strips the X25519MLKEM768 key share unless a
@@ -345,11 +381,14 @@ vless://$1@$h:443?encryption=$e&security=tls&sni=$s&host=$s&alpn=h2&fp=chrome&ty
 
 EOF
     [ "$d" = - ] || for x in $(printf '%s' "$d" | tr ',' ' '); do
-      lp=$xp le=$xe
+      xh=${x%%/*} lp=$xp le=$xe
       ! is_origin "$or" "$x" || lp=$cp le=$origin_extra
+      [ "$xh" = "$x" ] || lp=$(printf '%s' "${x#*/}" | sed 's#/#%2F#g')
+      ex=$(extra_of "$xh")
+      [ -z "$ex" ] || le=$(uri "$ex")
       cat <<EOF
-XHTTP through the CDN $x, in front of the relay $h (v2rayN, v2rayNG, Happ):
-vless://$1@$x:443?encryption=$e&security=tls&sni=$x&host=$x&alpn=h2&fp=chrome&type=xhttp&path=%2F$lp&mode=packet-up&extra=${le}#${rn}${sep}cdn$(relay_cdn_no "$h" "$x")
+XHTTP through the CDN $xh, in front of the relay $h (v2rayN, v2rayNG, Happ):
+vless://$1@$xh:443?encryption=$e&security=tls&sni=$xh&host=$xh&alpn=h2&fp=chrome&type=xhttp&path=%2F$lp&mode=packet-up&extra=${le}#${rn}${sep}cdn$(relay_cdn_no "$h" "$x")
 
 EOF
     done
@@ -383,9 +422,11 @@ EOF
 
 cdn_links() { # <id> <device>: one per CDN, named "server · cdn[ <n>]"
   for h in $cdns; do
+    le=$cdn_extra ex=$(extra_of "$h")
+    [ -z "$ex" ] || le=$(uri "$ex")
     cat <<EOF
 XHTTP through the CDN $h (v2rayN, v2rayNG, Happ):
-vless://$1@$h:443?encryption=${enc}&security=tls&sni=$h&host=$h&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=packet-up&extra=${cdn_extra}#server${sep}cdn$(cdn_no "$h")
+vless://$1@$h:443?encryption=${enc}&security=tls&sni=$h&host=$h&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=packet-up&extra=${le}#server${sep}cdn$(cdn_no "$h")
 
 EOF
   done
@@ -398,18 +439,20 @@ EOF
 # lossy link never trips it (dotdash-lab #57).
 uto=', "sockopt": {"tcpUserTimeout": 15000}'
 
-cdn_outbound() { # <tag> <id> <cdn> <encryption> <path> [disguised|origin]: XHTTP through a CDN, uploading by GET with the data in headers
+cdn_outbound() { # <tag> <id> <cdn> <encryption> <path> [disguised|origin|-] [<cdn_extra's JSON>]: XHTTP through a CDN, uploading by GET with the data in headers
   more='' chunk=16384 post=8192
   [ "${6:-}" != disguised ] || more=", ${cdn_disguise}"
   [ "${6:-}" != origin ] || chunk=4096 post=4096
+  xs="\"uplinkHTTPMethod\": \"GET\", \"uplinkDataPlacement\": \"header\", \"uplinkChunkSize\": ${chunk},
+         \"scMaxEachPostBytes\": ${post}, \"scMinPostsIntervalMs\": 10${more}"
+  [ -z "${7:-}" ] || xs="\"extra\": $7"
   cat <<EOF
     {"tag": "$1", "protocol": "vless",
      "settings": {"address": "$3", "port": 443, "id": "$2", "encryption": "$4"},
      "streamSettings": {"network": "xhttp", "security": "tls",
        "tlsSettings": {"serverName": "$3", "alpn": ["h2"], "fingerprint": "chrome"},
        "xhttpSettings": {"path": "/$5", "host": "$3", "mode": "packet-up",
-         "uplinkHTTPMethod": "GET", "uplinkDataPlacement": "header", "uplinkChunkSize": ${chunk},
-         "scMaxEachPostBytes": ${post}, "scMinPostsIntervalMs": 10${more}}${uto}}},
+         ${xs}}${uto}}},
 EOF
 }
 
@@ -417,7 +460,7 @@ cdn_outbounds() { # <id>
   n=0
   for h in $cdns; do
     n=$((n + 1))
-    cdn_outbound "dotdash-cdn-$n" "$1" "$h" "${enc}" "${path}"
+    cdn_outbound "dotdash-cdn-$n" "$1" "$h" "${enc}" "${path}" - "$(extra_of "$h")"
   done
 }
 
@@ -443,9 +486,13 @@ relay_outbounds() { # <id> <own|cdn> <normal|standby>: that group's relays' own 
         # dotdash-cdn-, as the servers' CDNs: apart from the relay's own
         # dotdash-relay-<n>, so a client can leave every CDN out by prefix
         # (dotdash-client's cdn=skip), Xray's only way to pick outbounds.
-        if is_origin "$or" "$x"; then cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$x" "$e" "$cp" origin
-        elif [ "${cp:--}" = - ]; then cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$x" "$e" "$p"
-        else cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$x" "$e" "$cp" disguised; fi
+        xh=${x%%/*} ex=$(extra_of "${x%%/*}")
+        if is_origin "$or" "$x"; then
+          xp=$cp
+          [ "$xh" = "$x" ] || xp=${x#*/}
+          cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$xh" "$e" "$xp" origin "$ex"
+        elif [ "${cp:--}" = - ]; then cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$x" "$e" "$p" - "$ex"
+        else cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$x" "$e" "$cp" disguised "$ex"; fi
       done
       continue
     fi
