@@ -24,7 +24,7 @@ printf ab12 >"$work/secrets/reality_short_id"
 printf 'aaaa1111bbbb2222' >"$work/secrets/xhttp_path"
 printf seedkcp >"$work/secrets/kcp_seed"
 printf subkey >"$work/secrets/subscription_key"
-printf '0593b52c-b345-41cb-96b8-134724f6ca65 phone\n1b2c3d4e-5f60-4718-8a9b-0c1d2e3f4a5b laptop\n' >"$work/secrets/vless_clients"
+printf '0593b52c-b345-41cb-96b8-134724f6ca65 phone\n1b2c3d4e-5f60-4718-8a9b-0c1d2e3f4a5b laptop\n2c3d4e5f-6071-4829-9bac-1d2e3f4a5b6c desk desktop\n' >"$work/secrets/vless_clients"
 chmod 644 "$work"/secrets/*
 
 failed=0
@@ -83,6 +83,21 @@ done
 out=$(cc SUBSCRIPTION=false "RELAYS=${relay/origin=o.example.ru/origin=o.example.ru,,x}" -- --full phone)
 grep -q "origin= field of 203.0.113.7 is not <host>\[,<host>\]" "$work/err" || fail "a bad door list: not said"
 
+echo "== a desktop: no CDN link or outbound, the server's or a relay's, and nothing through a cdn-only relay"
+only='203.0.113.9 q.example.com PBK ab12 ENC own-site aaaa1111bbbb2222 cdn=cdn2.example.net cdn-only name=hidden'
+envs=(SUBSCRIPTION=false CDN_HOSTS=scdn.example.net "RELAYS=$relay
+$only")
+out=$(cc "${envs[@]}" -- --full desk)
+[ -z "$(printf '%s\n' "$out" | links | grep -E '@(scdn|cdn|cdn2|o)\.example\.(net|ru):|@203\.0\.113\.9:')" ] ||
+  fail "desktop: a CDN link, or one through the cdn-only relay"
+printf '%s\n' "$out" | links | grep -q '^vless://[^@]*@203\.0\.113\.7:443?.*security=reality.*#edge%20%C2%B7%20reality$' ||
+  fail "desktop: no REALITY link through the relay"
+printf '%s\n' "$out" | config | jq -e '[.outbounds[].tag | select(test("cdn"))] == []' >/dev/null ||
+  fail "desktop: a CDN outbound in the config"
+out=$(cc "${envs[@]}" -- --full phone)
+[ "$(printf '%s\n' "$out" | links | grep -cE '@(scdn|cdn|cdn2|o)\.example\.(net|ru):')" = 4 ] ||
+  fail "a device of no kind: not every CDN link"
+
 echo "== origin= without cdnpath=: said, and no link through it"
 out=$(cc SUBSCRIPTION=false "RELAYS=203.0.113.7 r.example.com PBK ab12 ENC own-site aaaa1111bbbb2222 origin=o.example.ru" -- --full phone)
 grep -q "names origin= but no cdnpath=" "$work/err" || fail "origin without cdnpath: not said"
@@ -117,7 +132,7 @@ out=$(cc SUBSCRIPTION=false CDN_HOSTS=cdn1.example.net,cdn2.example.net -- --ful
   fail "cdn_hosts: not two 8 KiB GET outbounds"
 
 echo "== subscriptions on: the URL alone without --full, one per device"
-[ "$(cc SUBSCRIPTION=true -- | grep -cE '^https://s\.example\.com/[0-9a-f]{32}$')" = 2 ] || fail "subscription: not one URL per device"
+[ "$(cc SUBSCRIPTION=true -- | grep -cE '^https://s\.example\.com/[0-9a-f]{32}$')" = 3 ] || fail "subscription: not one URL per device"
 
 [ "$failed" = 0 ] && echo "client-config: all cases pass"
 exit "$failed"

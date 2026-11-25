@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from dotdash_manager import state
+from dotdash_manager import Refused, state
 from dotdash_manager.render import relay_line, render
 from dotdash_manager.roster import loads
 
@@ -212,3 +212,16 @@ def test_the_xhttp_via_leg_takes_a_server_shaped_fingerprint(st, facts):
              "r1": {**RELAY, "own_site": {"xhttp_path": "abc"}}}
     docs, _ = render(net, st, facts)
     assert docs["x"]["parameters"]["via_fingerprint"] == "none"
+
+
+def test_a_desktop_ends_its_line_with_desktop_on_servers_and_relays(st, facts):
+    net = loads(ROSTER.replace('devices = ["phone", "laptop"]', 'devices = ["phone", "laptop"]\ndesktops = ["laptop"]'))
+    docs, _ = render(net, st, facts)
+    for doc in docs["a"], docs["r1"]:
+        lines = doc["secrets"]["vless_clients"].splitlines()
+        assert lines[0].split()[1:] == ["phone"] and lines[1].split()[1:] == ["laptop", "desktop"]
+
+
+def test_a_desktop_must_be_a_device():
+    with pytest.raises(Refused, match="desktop 'tv' is not in devices"):
+        loads(ROSTER.replace('devices = ["phone", "laptop"]', 'devices = ["phone", "laptop"]\ndesktops = ["tv"]'))

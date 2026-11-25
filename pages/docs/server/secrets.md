@@ -7,7 +7,7 @@ replace a generated one with `sudo morzer secret rotate <name>`.
 | Name | Generated | |
 | --- | --- | --- |
 | `upstreams` | no | every way out, one per line, in order ([Upstreams](upstreams.md)); required |
-| `vless_clients` | yes | one `<uuid> [name]` line per device |
+| `vless_clients` | yes | one `<uuid> [name [desktop|mobile]]` line per device ([desktops](devices.md#desktops)) |
 | `vless_seed` | yes | ML-KEM-768 seed the VLESS Encryption key pair derives from |
 | `acme_dns` | no | with `cert_issuer=acme-dns`, the acme-dns registration as JSON ([Certificates](certificates.md)) |
 | `reality_key` | yes | REALITY private key (x25519) |

@@ -103,6 +103,8 @@ class Network(Strict):
     # None leaves each server's own setting: a server released before direct refuses it.
     direct: bool | None = None
     devices: list[Name] = []
+    # Devices that get no CDN link: "desktop" after their names in vless_clients.
+    desktops: list[Name] = []
     pools: dict[Name, list[Host]] = {}
     server: list[Server] = []
     relay: list[Relay] = []
@@ -152,6 +154,9 @@ class Network(Strict):
         for c in self.canary:
             if c.watches not in targets:
                 raise ValueError(f"canary {c.name} watches {c.watches!r}, which is no server or relay here")
+        for d in self.desktops:
+            if d not in self.devices:
+                raise ValueError(f"desktop {d!r} is not in devices")
         for c in self.client:
             if c.device not in self.devices:
                 raise ValueError(f"client {c.name} follows device {c.device!r}, which devices does not list")
