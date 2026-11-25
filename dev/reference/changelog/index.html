@@ -3866,7 +3866,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Servers' and relays' facts run again before every fleet publish, hourly (morzer's <code>published.refresh</code>), so the <code>device-traffic</code> counts reach the manager within the hour. Without the profile their output stays the same and so do the facts; each run is one task operation in the journal and the attestations (<code>retention.attestations</code>).</li>
+<li>
+<p>A relay's <code>http_origin_host</code> takes several names, comma-separated, for a rented CDN that gives more than one, such as a spare for when one is blocked. Devices get a 4 KiB <code>relay · cdn</code> link and outbound through each, numbered with the relay's other CDN links: <code>relay · cdn 1</code>, <code>relay · cdn 2</code>. The server and the manager read the list from the relay's line as they read one name.</p>
+</li>
+<li>
+<p>Servers' and relays' facts run again before every fleet publish, hourly (morzer's <code>published.refresh</code>), so the <code>device-traffic</code> counts reach the manager within the hour. Without the profile their output stays the same and so do the facts; each run is one task operation in the journal and the attestations (<code>retention.attestations</code>).</p>
+</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>

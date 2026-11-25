@@ -2488,11 +2488,14 @@ firewall.
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">http_origin_host</span><span class="o">=</span>abc123.cdn.example.net
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>&lt;address&gt;
 </code></pre></div>
+<p>Where the CDN gives more than one name, a spare for when one is blocked,
+set them all, comma-separated: <code>http_origin_host=abc123.cdn.example.net,alt.cdn.example.net</code>.</p>
 </li>
 <li>
-<p><strong>Here</strong>, replace the relay's line. Devices get one more <code>relay · cdn</code>
-   link and outbound through that name, uploading 4 KiB at a time, which
-   such CDNs pass where 8 KiB fail.</p>
+<p><strong>Here</strong>, replace the relay's line. Devices get a <code>relay · cdn</code> link
+   and outbound through each name, uploading 4 KiB at a time, which
+   such CDNs pass where 8 KiB fail. With several CDN names, the links are
+   numbered: <code>relay · cdn 1</code>, <code>relay · cdn 2</code>.</p>
 </li>
 </ol>
 <p>What to keep in mind:</p>

@@ -2369,7 +2369,9 @@ It answers the addresses in <code>http_origin_from</code> alone, on the CDNs' pa
 alone, which it passes on to Xray's XHTTP inbound; everyone else gets a 404.
 <code>relay-entry</code> then ends the relay's line with <code>cdnpath=&lt;path&gt;</code> and
 <code>origin=&lt;http_origin_host&gt;</code>, from which the server gives each device a
-<code>relay · cdn</code> link through that name.</p>
+<code>relay · cdn</code> link through that name. Where the CDN gives several names,
+set them all, comma-separated: each gets a link of its own, <code>cdn 1</code>,
+<code>cdn 2</code> and on.</p>
 <p><code>installation.profile=mkcp</code> (with a site of its own: <code>own-site,mkcp</code>): the
 relay serves <a href="../../server/mkcp/">mKCP</a> on UDP <code>kcp_port</code> too, under its own
 <code>kcp_seed</code>, and carries it on to the servers like REALITY. <code>relay-entry</code> then
