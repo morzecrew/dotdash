@@ -28,8 +28,10 @@ entry() { sudo morzer task run relay-entry --output -- 127.0.0.1; }
 # download open, so curl's timeout ends it after the status has come.
 code() { curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:8880$1" || true; }
 
-set_config installation.domains=relay.test cert_issuer=internal
-set_config installation.profile=own-site,http-origin http_origin_from=any
+# Settings and parameters go in separate calls: morzer refuses them mixed.
+set_config installation.domains=relay.test
+set_config cert_issuer=internal http_origin_from=any
+set_config installation.profile=own-site,http-origin
 out=$(entry)
 grep -q '^8880 (http_origin_port)' <<<"${out}" || die "relay-entry did not print the door's port: ${out}"
 grep -qF '"uplinkChunkSize": 4096' <<<"${out}" || die "relay-entry did not print the door's xhttpSettings: ${out}"
