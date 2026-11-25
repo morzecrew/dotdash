@@ -2232,7 +2232,7 @@
 <tr>
 <td><code>http_origin_host</code></td>
 <td><code>none</code></td>
-<td>with <code>http-origin</code>, the name devices reach that CDN at; <code>relay-entry</code> adds it to the relay's line as <code>origin=</code>, and prints the <code>xhttpSettings</code> to give the CDN</td>
+<td>with <code>http-origin</code>, the names devices reach that CDN at, comma-separated, each <code>&lt;name&gt;/&lt;path&gt;</code> where the CDN gives a path of its own; <code>relay-entry</code> adds it to the relay's line as <code>origin=</code>, and prints the <code>xhttpSettings</code> to give the CDN</td>
 </tr>
 <tr>
 <td><code>cdn_only</code></td>
@@ -2371,7 +2371,9 @@ alone, which it passes on to Xray's XHTTP inbound; everyone else gets a 404.
 <code>origin=&lt;http_origin_host&gt;</code>, from which the server gives each device a
 <code>relay · cdn</code> link through that name. Where the CDN gives several names,
 set them all, comma-separated: each gets a link of its own, <code>cdn 1</code>,
-<code>cdn 2</code> and on.</p>
+<code>cdn 2</code> and on. A name the CDN gives with a path of its own takes it after
+the name, <code>&lt;name&gt;/&lt;path&gt;</code>, and its settings go in the server's <code>cdn_extra</code>
+(<a href="../../server/cdn/#a-cdn-that-fetches-in-plain-http">A CDN that fetches in plain HTTP</a>).</p>
 <p><code>installation.profile=mkcp</code> (with a site of its own: <code>own-site,mkcp</code>): the
 relay serves <a href="../../server/mkcp/">mKCP</a> on UDP <code>kcp_port</code> too, under its own
 <code>kcp_seed</code>, and carries it on to the servers like REALITY. <code>relay-entry</code> then

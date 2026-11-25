@@ -3849,6 +3849,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p><code>cdn_extra</code> on the server: the XHTTP settings a CDN or its gateway asks for, by name, pasted as the CDN gives them. Links and outbounds through that name carry them in place of dotdash's own, so a CDN that wants its own settings needs no change to dotdash. Settings Xray refuses are left out with a warning. The manager's roster takes <code>cdn_extra</code> too.</p>
+</li>
+<li>
 <p>A device's kind, <code>desktop</code> or <code>mobile</code>, after its name in <code>vless_clients</code>. A desktop gets no CDN link: none through the server's <code>cdn_hosts</code>, none through a relay's <code>cdn=</code> or <code>origin=</code>, and nothing through a relay that offers CDN links alone. CDNs serve restricted mobile networks, some paid by the gigabyte, where a desktop moves the most. A changed kind reaches the device at its next subscription fetch. The manager's roster takes <code>desktops</code>, a list of its devices. Servers and relays take such lines from this release on: update the relays before giving a device a kind, and take the kinds off before rolling back to an earlier release, whose image refuses them.</p>
 </li>
 <li>
@@ -3870,7 +3873,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p>A relay's <code>http_origin_host</code> takes several names, comma-separated, for a rented CDN that gives more than one, such as a spare for when one is blocked. Devices get a 4 KiB <code>relay · cdn</code> link and outbound through each, numbered with the relay's other CDN links: <code>relay · cdn 1</code>, <code>relay · cdn 2</code>. The server and the manager read the list from the relay's line as they read one name.</p>
+<p>A relay's <code>http_origin_host</code> takes several names, comma-separated, for a rented CDN that gives more than one, such as a spare for when one is blocked. Devices get a 4 KiB <code>relay · cdn</code> link and outbound through each, numbered with the relay's other CDN links: <code>relay · cdn 1</code>, <code>relay · cdn 2</code>. A name may carry a path of the CDN's own, <code>&lt;name&gt;/&lt;path&gt;</code>, which its links take in place of the CDN path. The server and the manager read the list from the relay's line as they read one name.</p>
 </li>
 <li>
 <p>Servers' and relays' facts run again before every fleet publish, hourly (morzer's <code>published.refresh</code>), so the <code>device-traffic</code> counts reach the manager within the hour. Without the profile their output stays the same and so do the facts; each run is one task operation in the journal and the attestations (<code>retention.attestations</code>).</p>

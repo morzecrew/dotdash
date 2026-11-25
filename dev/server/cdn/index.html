@@ -2498,6 +2498,33 @@ set them all, comma-separated: <code>http_origin_host=abc123.cdn.example.net,alt
    numbered: <code>relay · cdn 1</code>, <code>relay · cdn 2</code>.</p>
 </li>
 </ol>
+<p>Some CDNs also give a name with a path and XHTTP settings of their own:
+often a name shared by every customer, in front of a gateway that turns your
+path and settings back into the relay's on the way. Set the name with its
+path on the relay, and the settings here in <code>cdn_extra</code>, as the CDN gives
+them:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># on the relay</span>
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">http_origin_host</span><span class="o">=</span>abc123.cdn.example.net,edge.example.net/e/k3y/s/
+<span class="c1"># here</span>
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>--set-file<span class="w"> </span><span class="nv">cdn_extra</span><span class="o">=</span>-<span class="w"> </span><span class="s">&lt;&lt;'END'</span>
+<span class="s">edge.example.net {</span>
+<span class="s">  "mode": "packet-up",</span>
+<span class="s">  "uplinkHTTPMethod": "GET",</span>
+<span class="s">  "uplinkDataPlacement": "header",</span>
+<span class="s">  "uplinkChunkSize": 4096,</span>
+<span class="s">  "scMaxEachPostBytes": 4096,</span>
+<span class="s">  "xPaddingObfsMode": true</span>
+<span class="s">}</span>
+<span class="s">END</span>
+</code></pre></div>
+<p>Links and outbounds through <code>edge.example.net</code> then take that path and those
+settings in place of dotdash's. <code>cdn_extra</code> takes one such block for each
+name that needs one: a name in <code>cdn_hosts</code>, or in a relay's <code>cdn=</code> or
+<code>origin=</code>. The settings must suit the inbound behind the name, unless the
+CDN's gateway turns them back as above. Settings Xray refuses are left out,
+and the warning says so. An app whose Xray is older than the settings need
+fails this link alone. A CDN that fetches the relay directly, with no
+gateway, needs <code>http_origin_from=any</code> (below).</p>
 <p>What to keep in mind:</p>
 <ul>
 <li>The CDN and its gateways read every request in the clear, paths and

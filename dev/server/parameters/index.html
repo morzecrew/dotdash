@@ -2270,6 +2270,11 @@
 <td>the names of local <a href="../cdn/#a-local-cdn-for-restricted-networks">CDNs</a> in front of this server, comma-separated; a link through each</td>
 </tr>
 <tr>
+<td><code>cdn_extra</code></td>
+<td><code>none</code></td>
+<td><code>&lt;name&gt; &lt;JSON object&gt;</code> for each CDN name that asks for <a href="../cdn/#a-cdn-that-fetches-in-plain-http">XHTTP settings of its own</a>, the object as the CDN gives it; links and outbounds through that name carry it in place of dotdash's</td>
+</tr>
+<tr>
 <td><code>relays</code></td>
 <td>a comment</td>
 <td>one <code>&lt;host&gt; &lt;site&gt; &lt;public key&gt; &lt;short id&gt; &lt;encryption&gt;</code> line per <a href="../../relay/install/">relay</a>, as its <code>relay-entry</code> prints it, with <code>own-site &lt;path&gt;</code>, <code>kcp=&lt;port&gt;,&lt;header&gt;,&lt;seed&gt;</code>, <code>hy2=&lt;port&gt;</code>, <code>cdn=&lt;name&gt;[,&lt;name&gt;]</code> and <code>name=&lt;label&gt;</code> after it where the relay has them; <code>off=&lt;path&gt;[,&lt;path&gt;]</code> (<code>reality</code>, <code>xhttp</code>, <code>mkcp</code>, <code>hysteria2</code>) leaves out paths its canaries find <a href="../../manager/#blocked-paths">blocked</a>, and <code>standby</code> makes it the <a href="../../relay/install/#5-on-the-server-add-the-line-to-relays">last resort</a>, unchecked</td>
@@ -2287,7 +2292,7 @@
 </tbody>
 </table>
 <p>Set one with <code>sudo morzer config set &lt;name&gt;=&lt;value&gt;</code>, unset it with
-<code>sudo morzer config unset &lt;name&gt;</code>, edit <code>relays</code> or <code>pools</code> with
+<code>sudo morzer config unset &lt;name&gt;</code>, edit <code>relays</code>, <code>pools</code> or <code>cdn_extra</code> with
 <code>sudo morzer config edit &lt;name&gt;</code>. Profiles (<code>installation.profile</code>): <code>xdns</code>,
 <code>xhttp-reality</code>, <code>mkcp</code>, <code>hysteria2</code>, <code>openvpn</code> (for an <a href="../upstreams/#openvpn">OpenVPN line</a>),
 <code>warm</code> (for <a href="../upstreams/#warm-connections">warm connections</a>),
