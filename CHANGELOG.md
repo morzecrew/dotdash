@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Servers' and relays' facts run again before every fleet publish, hourly (morzer's `published.refresh`), so the `device-traffic` counts reach the manager within the hour. Without the profile their output stays the same and so do the facts; each run is one task operation in the journal and the attestations (`retention.attestations`).
 
+### Fixed
+
+- A relay's `relay-entry` prints the `http-origin` door's port and the `xhttpSettings` for the CDN's form again. 0.16.0 never handed the task the port, so it printed neither, and the line carried no `cdnpath=` until `http_origin_host` was set.
+
 ## [0.16.0] - 2026-11-24
 
 ### Added
