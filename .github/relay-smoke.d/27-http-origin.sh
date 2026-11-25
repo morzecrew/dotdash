@@ -3,8 +3,8 @@
 #
 # - relay-entry prints the door's port and the xhttpSettings for the CDN's
 #   form before http_origin_host is set, and asks for that name;
-# - with http_origin_host set, the line ends in origin=, and the settings'
-#   path is the line's cdnpath;
+# - with http_origin_host set to two names, the line ends in origin= with
+#   both, and the settings' path is the line's cdnpath;
 # - the door passes the CDNs' path on to Xray for an address in
 #   http_origin_from, answers any other path with a 404, and answers nobody
 #   with http_origin_from=none.
@@ -41,10 +41,10 @@ grep -qF '"uplinkChunkSize": 4096' <<<"${out}" || die "relay-entry did not print
 grep -q 'Then set http_origin_host' <<<"${out}" || die "relay-entry did not ask for http_origin_host: ${out}"
 echo "${0##*/}: relay-entry prints the door's port and settings, and asks for the CDN's name"
 
-set_config http_origin_host=cdn-door.test
+set_config http_origin_host=cdn-door.test,alt-door.test
 out=$(entry)
 line=$(grep -m1 '^127\.0\.0\.1 ' <<<"${out}" || true)
-grep -q ' origin=cdn-door\.test' <<<"${line}" || die "the line does not end in origin=: ${line}"
+grep -q ' origin=cdn-door\.test,alt-door\.test' <<<"${line}" || die "the line does not end in origin= with both names: ${line}"
 path=$(grep -o 'cdnpath=[^ ]*' <<<"${line}" | cut -d= -f2)
 [ -n "${path}" ] || die "the line carries no cdnpath: ${line}"
 grep -qF "\"path\": \"/${path}\"" <<<"${out}" || die "the settings' path is not the line's cdnpath /${path}: ${out}"

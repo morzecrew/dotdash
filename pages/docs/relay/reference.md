@@ -68,7 +68,9 @@ It answers the addresses in `http_origin_from` alone, on the CDNs' path
 alone, which it passes on to Xray's XHTTP inbound; everyone else gets a 404.
 `relay-entry` then ends the relay's line with `cdnpath=<path>` and
 `origin=<http_origin_host>`, from which the server gives each device a
-`relay · cdn` link through that name.
+`relay · cdn` link through that name. Where the CDN gives several names,
+set them all, comma-separated: each gets a link of its own, `cdn 1`,
+`cdn 2` and on.
 
 `installation.profile=mkcp` (with a site of its own: `own-site,mkcp`): the
 relay serves [mKCP](../server/mkcp.md) on UDP `kcp_port` too, under its own

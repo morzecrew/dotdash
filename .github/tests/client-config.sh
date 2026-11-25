@@ -70,6 +70,19 @@ jq -e '[.outbounds[] | select(.tag == "dotdash-cdn-relay-1-2") | .settings.addre
 printf '%s\n' "$out" | links | grep -q '^vless://[^@]*@o\.example\.ru:443?.*scMaxEachPostBytes%22%3A4096.*#edge%20%C2%B7%20cdn%202$' ||
   fail "relay: no 4 KiB link through the door, named edge · cdn 2"
 
+echo "== a door with two names: a 4 KiB link and outbound through each, numbered after the CDN's"
+out=$(cc SUBSCRIPTION=false "RELAYS=${relay/origin=o.example.ru/origin=o.example.ru,alt.example.ru}" -- --full phone)
+cfg=$(printf '%s\n' "$out" | config)
+jq -e '[.outbounds[] | select(.tag == "dotdash-cdn-relay-1-3") | .settings.address as $a | .streamSettings.xhttpSettings |
+    $a == "alt.example.ru" and .scMaxEachPostBytes == 4096 and .path == "/cccc3333dddd4444"] == [true]' <<<"$cfg" >/dev/null ||
+  fail "two door names: the second's outbound is not plain, 4 KiB, on the CDN path, to its name"
+for n in '2 o\.example\.ru' '3 alt\.example\.ru'; do
+  printf '%s\n' "$out" | links | grep -q "^vless://[^@]*@${n#* }:443?.*scMaxEachPostBytes%22%3A4096.*#edge%20%C2%B7%20cdn%20${n%% *}\$" ||
+    fail "two door names: no 4 KiB link through ${n#* }, named edge · cdn ${n%% *}"
+done
+out=$(cc SUBSCRIPTION=false "RELAYS=${relay/origin=o.example.ru/origin=o.example.ru,,x}" -- --full phone)
+grep -q "origin= field of 203.0.113.7 is not <host>\[,<host>\]" "$work/err" || fail "a bad door list: not said"
+
 echo "== origin= without cdnpath=: said, and no link through it"
 out=$(cc SUBSCRIPTION=false "RELAYS=203.0.113.7 r.example.com PBK ab12 ENC own-site aaaa1111bbbb2222 origin=o.example.ru" -- --full phone)
 grep -q "names origin= but no cdnpath=" "$work/err" || fail "origin without cdnpath: not said"

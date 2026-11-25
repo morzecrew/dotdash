@@ -95,7 +95,7 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # The dotdash-relay machines in front of this server (the relays parameter),
 # one "<host> <site> <public key> <short id> <encryption> [own-site [<xhttp
 # path>]] [kcp=<port>,<header>,<seed>[,<open>]] [hy2=<port>] [cdn=<host>[,<host>]]
-# [cdnpath=<path>] [origin=<host>] [cdn-only] [off=<path>[,<path>]] [split] [name=<label>]
+# [cdnpath=<path>] [origin=<host>[,<host>]] [cdn-only] [off=<path>[,<path>]] [split] [name=<label>]
 # [standby]" per
 # line; blank lines, "#" comments and shorter lines are not relays. own-site:
 # the site is the relay's own, which fetches subscriptions from here and, given
@@ -121,13 +121,13 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # the rest get through: its share links come last, and in the Xray config its
 # outbounds come first, outside the dotdash- tags the balancer and the checks
 # take, where Xray sends what the balancer can't place.
-# origin=: a rented CDN that ends TLS at its edge and fetches the relay in
-# plain HTTP through its door (the relay's http-origin profile), on the CDN
-# path: one more of its CDN hosts, whose links upload in 4 KiB GETs.
+# origin=: the names of a rented CDN that ends TLS at its edge and fetches
+# the relay in plain HTTP through its door (the relay's http-origin profile),
+# on the CDN path: more of its CDN hosts, whose links upload in 4 KiB GETs.
 # Each becomes "<host> <site> <key> <sid> <enc> <own-site|-> <path|-> <kcp|->
 # <cdn hosts, comma-separated, the origin's among them|-> <cdn-only|-> <off
 # paths, comma-separated|-> <split|-> <hy2 port|-> <name|-> <cdn path|->
-# <standby|-> <origin host|->".
+# <standby|-> <origin hosts, comma-separated|->".
 all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   case $line in '' | '#'*) continue ;; esac
   c=- d=- only=- x=- sp=- hy=- nm=- cp=- sb=- or=- rest=
@@ -162,7 +162,8 @@ all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   esac
   case $or in
     -) ;;
-    '' | .* | *. | *..* | *[!A-Za-z0-9.-]*) echo "relays: the origin= field of $1 is not a name; no link through it" >&2; or=- ;;
+    '' | ,* | *, | *,,* | .* | *. | *..* | *,.* | *.,* | *[!A-Za-z0-9.,-]*)
+      echo "relays: the origin= field of $1 is not <host>[,<host>]; no link through it" >&2; or=- ;;
     *) if [ "$cp" = - ]; then
          echo "relays: $1 names origin= but no cdnpath=, the path its door passes; no link through it" >&2; or=-
        elif [ "$d" = - ]; then d=$or
@@ -273,6 +274,9 @@ cdn_disguised_extra='%7B%22scMaxEachPostBytes%22%3A8192%2C%22scMinPostsIntervalM
 sep='%20%C2%B7%20'
 # Each prints " <n>", percent-encoded, or nothing when its list holds one.
 relay_no() { printf '%s\n' "$all_relays" | awk -v h="$1" '$1 == h && !n { n = NR } END { if (NR > 1) printf "%%20%d", n }'; }
+# is_origin <origin hosts|-> <cdn host>: whether that CDN host is one of the
+# relay's door's (origin=), whose links upload in 4 KiB GETs.
+is_origin() { case ,$1, in *,"$2",*) return 0 ;; esac; return 1; }
 relay_cdn_no() { # <relay host> <cdn host>
   printf '%s\n' "$all_relays" | awk -v h="$1" -v c="$2" '$1 == h { n = split($9, a, ","); if (n > 1) for (i = 1; i <= n; i++) if (a[i] == c) printf "%%20%d", i; exit }'
 }
@@ -332,7 +336,7 @@ vless://$1@$h:443?encryption=$e&security=tls&sni=$s&host=$s&alpn=h2&fp=chrome&ty
 EOF
     [ "$d" = - ] || for x in $(printf '%s' "$d" | tr ',' ' '); do
       lp=$xp le=$xe
-      [ "$x" != "$or" ] || lp=$cp le=$origin_extra
+      ! is_origin "$or" "$x" || lp=$cp le=$origin_extra
       cat <<EOF
 XHTTP through the CDN $x, in front of the relay $h (v2rayN, v2rayNG, Happ):
 vless://$1@$x:443?encryption=$e&security=tls&sni=$x&host=$x&alpn=h2&fp=chrome&type=xhttp&path=%2F$lp&mode=packet-up&extra=${le}#${rn}${sep}cdn$(relay_cdn_no "$h" "$x")
@@ -429,7 +433,7 @@ relay_outbounds() { # <id> <own|cdn> <normal|standby>: that group's relays' own 
         # dotdash-cdn-, as the servers' CDNs: apart from the relay's own
         # dotdash-relay-<n>, so a client can leave every CDN out by prefix
         # (dotdash-client's cdn=skip), Xray's only way to pick outbounds.
-        if [ "$x" = "$or" ]; then cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$x" "$e" "$cp" origin
+        if is_origin "$or" "$x"; then cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$x" "$e" "$cp" origin
         elif [ "${cp:--}" = - ]; then cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$x" "$e" "$p"
         else cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$x" "$e" "$cp" disguised; fi
       done

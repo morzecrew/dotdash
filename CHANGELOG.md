@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- A relay's `http_origin_host` takes several names, comma-separated, for a rented CDN that gives more than one, such as a spare for when one is blocked. Devices get a 4 KiB `relay · cdn` link and outbound through each, numbered with the relay's other CDN links: `relay · cdn 1`, `relay · cdn 2`. The server and the manager read the list from the relay's line as they read one name.
+
 - Servers' and relays' facts run again before every fleet publish, hourly (morzer's `published.refresh`), so the `device-traffic` counts reach the manager within the hour. Without the profile their output stays the same and so do the facts; each run is one task operation in the journal and the attestations (`retention.attestations`).
 
 ### Fixed

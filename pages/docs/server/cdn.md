@@ -186,9 +186,13 @@ alone, on the CDNs' path alone, and passes nothing else.
     sudo morzer task run relay-entry --output -- <address>
     ```
 
-4. **Here**, replace the relay's line. Devices get one more `relay · cdn`
-   link and outbound through that name, uploading 4 KiB at a time, which
-   such CDNs pass where 8 KiB fail.
+    Where the CDN gives more than one name, a spare for when one is blocked,
+    set them all, comma-separated: `http_origin_host=abc123.cdn.example.net,alt.cdn.example.net`.
+
+4. **Here**, replace the relay's line. Devices get a `relay · cdn` link
+   and outbound through each name, uploading 4 KiB at a time, which
+   such CDNs pass where 8 KiB fail. With several CDN names, the links are
+   numbered: `relay · cdn 1`, `relay · cdn 2`.
 
 What to keep in mind:
 
