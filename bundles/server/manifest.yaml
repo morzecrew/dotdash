@@ -239,6 +239,11 @@ parameters:
     default: none
     description: "Local CDN names devices reach this server through, comma-separated, each fronting https://<domain> as its origin; client-config and the subscriptions add an XHTTP link through each, shaped for such CDNs: packet-up, uploads by GET with the data in headers. none for none"
     services: [subscription]
+  cdn_extra:
+    type: text
+    default: none
+    description: "The XHTTP extra a CDN or a gateway in front asks for, where it asks for its own: \"<host> <JSON object>\", the object as it gives it, across lines if need be, for a host in cdn_hosts or a relay's cdn= or origin=. Links and outbounds through that host carry it in place of dotdash's own, which must suit the inbound behind it unless the gateway turns it back; one Xray refuses is left out. none for none"
+    services: [subscription]
   pools:
     type: text
     default: "# One pool per line: <pool> <device name, relay host or CDN host>..."
@@ -374,7 +379,7 @@ operations:
 # or anything else this machine alone knows. None of these reaches a command
 # line or a hook.
 managed:
-  parameters: [servers, relays, cdn_hosts, pools, subscription, direct, reality_second_key]
+  parameters: [servers, relays, cdn_hosts, cdn_extra, pools, subscription, direct, reality_second_key]
   secrets: [vless_clients, reality_key, vless_seed, reality_short_id, xhttp_path, kcp_seed, subscription_key, reality_key_second, reality_short_id_second]
 
 # What this machine tells the authority it follows, after every change, when

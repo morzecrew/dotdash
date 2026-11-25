@@ -194,6 +194,37 @@ alone, on the CDNs' path alone, and passes nothing else.
    such CDNs pass where 8 KiB fail. With several CDN names, the links are
    numbered: `relay · cdn 1`, `relay · cdn 2`.
 
+Some CDNs also give a name with a path and XHTTP settings of their own:
+often a name shared by every customer, in front of a gateway that turns your
+path and settings back into the relay's on the way. Set the name with its
+path on the relay, and the settings here in `cdn_extra`, as the CDN gives
+them:
+
+```sh
+# on the relay
+sudo morzer config set http_origin_host=abc123.cdn.example.net,edge.example.net/e/k3y/s/
+# here
+sudo morzer config set --set-file cdn_extra=- <<'END'
+edge.example.net {
+  "mode": "packet-up",
+  "uplinkHTTPMethod": "GET",
+  "uplinkDataPlacement": "header",
+  "uplinkChunkSize": 4096,
+  "scMaxEachPostBytes": 4096,
+  "xPaddingObfsMode": true
+}
+END
+```
+
+Links and outbounds through `edge.example.net` then take that path and those
+settings in place of dotdash's. `cdn_extra` takes one such block for each
+name that needs one: a name in `cdn_hosts`, or in a relay's `cdn=` or
+`origin=`. The settings must suit the inbound behind the name, unless the
+CDN's gateway turns them back as above. Settings Xray refuses are left out,
+and the warning says so. An app whose Xray is older than the settings need
+fails this link alone. A CDN that fetches the relay directly, with no
+gateway, needs `http_origin_from=any` (below).
+
 What to keep in mind:
 
 - The CDN and its gateways read every request in the clear, paths and

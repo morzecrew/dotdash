@@ -42,12 +42,23 @@ esac
 # http_origin_host (set under the http-origin profile): the names devices
 # reach a rented CDN at, comma-separated, which fetches this relay in plain
 # HTTP through Caddy's door; client-config gives each device an XHTTP link
-# through each, on the CDN path below with smaller uploads.
+# through each, on the CDN path below with smaller uploads. A name may carry
+# a path, <name>/<path>, which its links take instead: a gateway's own, which
+# it turns back into the CDN path on its way here.
 origin=$(printf '%s' "${HTTP_ORIGIN_HOST:-none}" | tr -d ' ')
+ok=true
+case $origin in none | '' | ,* | *, | *,,* | *[!A-Za-z0-9.,/_~-]*) ok=false ;; esac
+[ "$ok" = false ] || for o in $(printf '%s' "$origin" | tr ',' ' '); do
+  oh=${o%%/*}
+  case $oh in '' | .* | *. | *..* | *[!A-Za-z0-9.-]*) ok=false ;; esac
+  case ${o#"$oh"} in *[!A-Za-z0-9._~/-]*) ok=false ;; esac
+done
 case $origin in
   none | '') origin= ;;
-  ,* | *, | *,,* | .* | *. | *..* | *,.* | *.,* | *[!A-Za-z0-9.,-]*)
-    echo "http_origin_host is not a name or names, comma-separated: $origin; leaving it out" >&2; origin= ;;
+  *) [ "$ok" = true ] || { echo "http_origin_host is not <name>[/<path>], comma-separated: $origin; leaving it out" >&2; origin=; } ;;
+esac
+case $origin in
+  '') ;;
   *) [ "${OWN_SITE:-}" = true ] ||
        { echo "http_origin_host needs the own-site profile, whose Caddy is the door; leaving it out" >&2; origin=; } ;;
 esac

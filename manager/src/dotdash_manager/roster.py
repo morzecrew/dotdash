@@ -4,7 +4,7 @@ import re
 import tomllib
 from datetime import date
 from pathlib import Path
-from typing import Annotated, ClassVar, Literal
+from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, ValidationError, model_validator
 
@@ -105,6 +105,10 @@ class Network(Strict):
     devices: list[Name] = []
     # Devices that get no CDN link: "desktop" after their names in vless_clients.
     desktops: list[Name] = []
+    # The XHTTP extra a CDN or gateway in front asks for, by its host: every
+    # server's cdn_extra. None leaves each server's own: one released before
+    # cdn_extra refuses it.
+    cdn_extra: dict[Host, dict[str, Any]] | None = None
     pools: dict[Name, list[Host]] = {}
     server: list[Server] = []
     relay: list[Relay] = []

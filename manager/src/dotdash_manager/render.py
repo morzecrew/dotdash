@@ -2,6 +2,7 @@
 at hand. Pure: it reads nothing and writes nothing."""
 
 import hashlib
+import json
 
 from . import rotate
 from .roster import Network
@@ -77,8 +78,9 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     relays = "\n".join(relay_line(facts[r.name], off.get(r.name, frozenset()), r.name in split, r.standby)
                        for r in net.relay if r.name in facts and r.name not in burnt)
     # A pool naming a relay left out would name nothing: the server warns.
+    # An origin name may carry its gateway's path, <host>/<path>: pools name the host.
     hosts = lambda name: [facts[name]["entry_host"], *facts[name].get("cdn_hosts", []),
-                          *filter(None, facts[name].get("origin_host", "").split(","))]
+                          *(o.split("/")[0] for o in facts[name].get("origin_host", "").split(",") if o)]
     gone = {h for r in burnt if r in facts for h in hosts(r)}
     stands = stands or {}
 
@@ -103,6 +105,8 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
         # Only when the roster says: a server released before direct refuses it.
         if net.direct is not None:
             doc["parameters"]["direct"] = str(net.direct).lower()
+        if net.cdn_extra is not None:
+            doc["parameters"]["cdn_extra"] = "\n".join(f"{h} {json.dumps(x)}" for h, x in net.cdn_extra.items()) or "none"
         unset = [name for name, value in (("relays", relays), ("pools", pools)) if not value]
         doc["parameters"].update({name: value for name, value in (("relays", relays), ("pools", pools)) if value})
         if unset:

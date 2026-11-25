@@ -225,3 +225,25 @@ def test_a_desktop_ends_its_line_with_desktop_on_servers_and_relays(st, facts):
 def test_a_desktop_must_be_a_device():
     with pytest.raises(Refused, match="desktop 'tv' is not in devices"):
         loads(ROSTER.replace('devices = ["phone", "laptop"]', 'devices = ["phone", "laptop"]\ndesktops = ["tv"]'))
+
+
+def test_cdn_extra_reaches_every_server_only_when_the_roster_says(st, facts):
+    docs, _ = render(loads(ROSTER), st, facts)
+    assert "cdn_extra" not in docs["a"]["parameters"]
+    net = loads(ROSTER.replace("subscription = true", 'subscription = true\n'
+                               'cdn_extra = { "alt.example.ru" = { uplinkHTTPMethod = "GET", xPaddingObfsMode = true } }'))
+    docs, _ = render(net, st, facts)
+    for s in "a", "b":
+        assert docs[s]["parameters"]["cdn_extra"] == 'alt.example.ru {"uplinkHTTPMethod": "GET", "xPaddingObfsMode": true}'
+    net = loads(ROSTER.replace("subscription = true", "subscription = true\ncdn_extra = {}"))
+    assert render(net, st, facts)[0]["a"]["parameters"]["cdn_extra"] == "none"
+
+
+def test_a_burnt_relays_origin_names_leave_the_pools_without_their_paths(st, facts):
+    net = loads(ROSTER.replace('pools = { a = ["laptop", "203.0.113.5"] }',
+                               'pools = { a = ["laptop", "o.example.ru", "alt.example.ru"] }'))
+    r1 = {**RELAY, "own_site": {"xhttp_path": "x"}, "cdn_path": "y", "origin_host": "o.example.ru,alt.example.ru/e/t/s/"}
+    docs, _ = render(net, st, {**facts, "r1": r1})
+    assert "origin=o.example.ru,alt.example.ru/e/t/s/" in docs["a"]["parameters"]["relays"]
+    docs, _ = render(net, st, {**facts, "r1": r1}, burnt={"r1"})
+    assert docs["a"]["parameters"]["pools"] == "a laptop"

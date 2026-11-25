@@ -14,7 +14,7 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `cdn_hosts` | `none` | with `own-site`, the names devices use for [local CDNs](../server/cdn.md#in-front-of-a-relay) in front of the relay, comma-separated; `relay-entry` adds them to the relay's line |
 | `http_origin_port` | `8880` | with the `http-origin` profile, the host TCP port of its door, published at `listen`: where a [CDN that fetches in plain HTTP](../server/cdn.md#a-cdn-that-fetches-in-plain-http) fetches the relay |
 | `http_origin_from` | `none` | with `http-origin`, the addresses the door answers, comma-separated IPs or CIDR ranges: the CDN's gateways; `any` answers every address, `none` no one |
-| `http_origin_host` | `none` | with `http-origin`, the name devices reach that CDN at; `relay-entry` adds it to the relay's line as `origin=`, and prints the `xhttpSettings` to give the CDN |
+| `http_origin_host` | `none` | with `http-origin`, the names devices reach that CDN at, comma-separated, each `<name>/<path>` where the CDN gives a path of its own; `relay-entry` adds it to the relay's line as `origin=`, and prints the `xhttpSettings` to give the CDN |
 | `cdn_only` | `false` | `true`: devices get the relay's CDN links alone, none to its own address, so it stays the [CDNs' origin](../server/cdn.md#the-cdns-origin-only); `relay-entry` ends the line with `cdn-only`, and refuses it without `cdn_hosts` |
 | `name` | `none` | a label of up to 24 letters, digits, dots, dashes or underscores that devices' links through the relay carry in place of `relay <n>`: `edge-1 · reality`. `relay-entry` ends the line with `name=`; a name an earlier line took goes by the number. Every device's app shows it, so pick one that says nothing about where the relay is hosted |
 | `dotdash_servers` | none, given at `init` | the dotdash servers sharing one set of keys, comma-separated domains; the relay uses whichever answers fastest |
@@ -70,7 +70,9 @@ alone, which it passes on to Xray's XHTTP inbound; everyone else gets a 404.
 `origin=<http_origin_host>`, from which the server gives each device a
 `relay · cdn` link through that name. Where the CDN gives several names,
 set them all, comma-separated: each gets a link of its own, `cdn 1`,
-`cdn 2` and on.
+`cdn 2` and on. A name the CDN gives with a path of its own takes it after
+the name, `<name>/<path>`, and its settings go in the server's `cdn_extra`
+([A CDN that fetches in plain HTTP](../server/cdn.md#a-cdn-that-fetches-in-plain-http)).
 
 `installation.profile=mkcp` (with a site of its own: `own-site,mkcp`): the
 relay serves [mKCP](../server/mkcp.md) on UDP `kcp_port` too, under its own

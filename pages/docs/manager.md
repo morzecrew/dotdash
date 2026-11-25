@@ -51,6 +51,8 @@ ipv6 = "allow"                              # or block, on the relays
 direct = false                              # optional: devices reach servers only through relays and CDNs
 devices = ["phone", "laptop"]
 desktops = ["laptop"]                       # optional: devices that get no CDN link (desktops in Devices)
+# optional: every server's cdn_extra, by CDN name (A CDN that fetches in plain HTTP)
+cdn_extra = { "edge.example.net" = { uplinkHTTPMethod = "GET", xPaddingObfsMode = true } }
 
 [pools]                                     # optional: the server's pools, member by member
 a = ["laptop", "203.0.113.5"]

@@ -81,7 +81,36 @@ for n in '2 o\.example\.ru' '3 alt\.example\.ru'; do
     fail "two door names: no 4 KiB link through ${n#* }, named edge · cdn ${n%% *}"
 done
 out=$(cc SUBSCRIPTION=false "RELAYS=${relay/origin=o.example.ru/origin=o.example.ru,,x}" -- --full phone)
-grep -q "origin= field of 203.0.113.7 is not <host>\[,<host>\]" "$work/err" || fail "a bad door list: not said"
+grep -q "origin= field of 203.0.113.7 is not <host>\[/<path>\]" "$work/err" || fail "a bad door list: not said"
+
+echo "== a door name with a gateway's path, and cdn_extra: links and outbounds take both; one Xray refuses is said, and left out"
+extra='alt.example.ru {
+  "mode": "packet-up",
+  "uplinkHTTPMethod": "GET",
+  "xPaddingKey": "_t", "xPaddingObfsMode": true
+}
+# a comment
+scdn.example.net {"uplinkHTTPMethod": "GET", "uplinkChunkSize": 2048}
+cdn.example.net {"mode": broken}'
+out=$(cc SUBSCRIPTION=false CDN_HOSTS=scdn.example.net "RELAYS=${relay/origin=o.example.ru/origin=o.example.ru,alt.example.ru/e/tok/s/}" \
+  "CDN_EXTRA=$extra" "POOLS=p1 phone alt.example.ru" -- --full phone)
+cfg=$(printf '%s\n' "$out" | config)
+jq -e '[.outbounds[] | select(.tag == "dotdash-cdn-relay-1-3") | .settings.address as $a | .streamSettings.xhttpSettings |
+    $a == "alt.example.ru" and .host == "alt.example.ru" and .path == "/e/tok/s/" and .extra.xPaddingKey == "_t"
+    and .extra.xPaddingObfsMode == true and .scMaxEachPostBytes == null] == [true]' <<<"$cfg" >/dev/null ||
+  fail "gateway path: the outbound is not to alt.example.ru on /e/tok/s/ with its extra alone"
+jq -e '[.outbounds[] | select(.tag == "dotdash-cdn-1") | .streamSettings.xhttpSettings.extra.uplinkChunkSize] == [2048]' <<<"$cfg" >/dev/null ||
+  fail "cdn_extra: the server's CDN outbound does not carry its extra"
+jq -e '[.outbounds[] | select(.tag == "dotdash-cdn-relay-1-1") | .streamSettings.xhttpSettings |
+    .xPaddingObfsMode == true and .scMaxEachPostBytes == 8192 and .extra == null] == [true]' <<<"$cfg" >/dev/null ||
+  fail "cdn_extra: a refused extra was not left out, the CDN's outbound not disguised as before"
+grep -q "Xray refuses the extra for cdn.example.net" "$work/err" || fail "cdn_extra: a refused extra not said"
+grep -q "pools: alt.example.ru" "$work/err" && fail "pools: a door name with a path not taken as a member"
+link=$(printf '%s\n' "$out" | links | grep '^vless://[^@]*@alt\.example\.ru:443?.*sni=alt\.example\.ru&host=alt\.example\.ru&.*path=%2Fe%2Ftok%2Fs%2F&.*#edge%20%C2%B7%20cdn%203$') ||
+  fail "gateway path: no link through alt.example.ru on its path, named edge · cdn 3"
+e=$(printf '%s' "$link" | sed -n 's/.*[?&]extra=\([^&#]*\).*/\1/p')
+printf '%b' "${e//%/\\x}" | jq -e '.xPaddingKey == "_t" and .uplinkHTTPMethod == "GET"' >/dev/null ||
+  fail "gateway path: the link's extra is not cdn_extra's, percent-encoded"
 
 echo "== a desktop: no CDN link or outbound, the server's or a relay's, and nothing through a cdn-only relay"
 only='203.0.113.9 q.example.com PBK ab12 ENC own-site aaaa1111bbbb2222 cdn=cdn2.example.net cdn-only name=hidden'
