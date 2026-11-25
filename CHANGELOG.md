@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-25
+
 ### Added
 
 - `cdn_extra` on the server: the XHTTP settings a CDN or its gateway asks for, by name, pasted as the CDN gives them. Links and outbounds through that name carry them in place of dotdash's own, so a CDN that wants its own settings needs no change to dotdash. Settings Xray refuses are left out with a warning. The manager's roster takes `cdn_extra` too.
