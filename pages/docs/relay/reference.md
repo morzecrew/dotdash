@@ -94,7 +94,7 @@ starts Xray if it is down.
 
 | Name | Generated | |
 | --- | --- | --- |
-| `vless_clients` | no | the devices the relay lets in, one `<uuid> [name]` per line |
+| `vless_clients` | no | the devices the relay lets in, one `<uuid> [name [desktop|mobile]]` per line |
 | `dotdash_id` | no | the id the relay uses on the server, its line in the server's `vless_clients` |
 | `dotdash_encryption` | no | the `encryption=` value of the server's links |
 | `dotdash_short_id` | no | the `sid=` value of the server's REALITY links |

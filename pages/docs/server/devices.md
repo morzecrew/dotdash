@@ -1,12 +1,32 @@
 # Devices
 
-Each device has its own id, a `<uuid> [name]` line in the `vless_clients`
-secret. `init` creates the first; add one per device:
+Each device has its own id, a `<uuid> [name [desktop|mobile]]` line in the
+`vless_clients` secret. `init` creates the first; add one per device:
 
 ```sh
 uuidgen                                          # a new id
 sudo EDITOR=nano morzer secret edit vless_clients  # add "<uuid> phone"; Xray restarts on save
 ```
+
+### Desktops
+
+A device whose line ends in `desktop` gets no CDN link: neither through the
+CDNs in front of the server (`cdn_hosts`) nor through a relay's (its `cdn=`
+and `origin=`), and nothing through a relay that offers CDN links alone.
+CDNs are for restricted mobile networks, and some are paid by the gigabyte,
+where a desktop moves the most. Its other links stay. `mobile`, or no word,
+gets every link.
+
+```text
+0593b52c-b345-41cb-96b8-134724f6ca65 phone
+1b2c3d4e-5f60-4718-8a9b-0c1d2e3f4a5b laptop desktop
+```
+
+A changed kind reaches the device with its next subscription fetch. It
+picks links, it doesn't lock any: a CDN link the device already holds, handed
+over by hand, still works. A kind needs a name before it. Relays running a
+release from before kinds refuse such a line, and `relay-config` copies it to
+them, so update them before giving a device a kind.
 
 ## Links and the Xray config
 

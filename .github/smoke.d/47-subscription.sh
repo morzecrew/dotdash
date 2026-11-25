@@ -196,7 +196,9 @@ echo "${0##*/}: a guessed URL gets the site's own 404"
 
 before=$(sudo cat /run/dotdash/secrets/vless_clients)
 spare=$(cat /proc/sys/kernel/random/uuid)
-printf '%s\n%s spare\n' "${before}" "${spare}" | sudo morzer secret set vless_clients >/dev/null
+# A desktop, as the kind after its name says: the image takes the line.
+printf '%s\n%s spare desktop\n' "${before}" "${spare}" | sudo morzer secret set vless_clients >/dev/null \
+  || die "a line ending in a device's kind was refused"
 spare_url=$(url_of spare)
 [ -n "${spare_url}" ] && [ "$(fetch "${spare_url}" | base64 -d 2>/dev/null)" = "$(links_of spare)" ] \
   || die "a device added to vless_clients gets no subscription"

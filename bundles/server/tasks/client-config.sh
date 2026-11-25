@@ -208,18 +208,28 @@ has() { # <member> <pool lines>: whether a line lists it
   printf '%s\n' "$2" | awk -v m="$1" '{ for (i = 2; i <= NF; i++) if ($i == m) f = 1 } END { exit !f }'
 }
 sees() { [ -z "$mine" ] || has "$1" "$mine" || ! has "$1" "$pools"; }
-pick() { # <device name>: the relays, CDN hosts and subscription relays it gets
+# A desktop (the kind after a device's name in vless_clients) gets no CDN
+# link: CDNs are for the restricted mobile networks, some paid by the GB, and
+# a desktop moves the most. So no cdn_hosts, no relay's cdn= or origin=, and
+# no cdn-only relay, which would give it nothing. Any other kind, or none,
+# gets them all.
+pick() { # <device name> [<kind>]: the relays, CDN hosts and subscription relays it gets
   mine=
   [ -z "$1" ] || mine=$(printf '%s\n' "$pools" | awk -v m="$1" '{ for (i = 2; i <= NF; i++) if ($i == m) { print; next } }')
   relays=$(printf '%s\n' "$all_relays" | while read -r h s k i e o p c d only off sp hy nm cp sb or; do
     if [ -z "$h" ] || ! sees "$h"; then continue; fi
+    if [ "${2:-}" = desktop ]; then
+      [ "$only" != cdn-only ] || continue
+      d=-
+    fi
     if [ "$d" != - ]; then
       d=$(for x in $(printf '%s' "$d" | tr ',' ' '); do if sees "$x"; then printf '%s,' "$x"; fi; done)
       d=${d%,}
     fi
     echo "$h $s $k $i $e $o $p $c ${d:--} $only $off $sp $hy $nm $cp $sb $or"
   done)
-  cdns=$(for h in $all_cdns; do if sees "$h"; then echo "$h"; fi; done)
+  cdns=
+  [ "${2:-}" = desktop ] || cdns=$(for h in $all_cdns; do if sees "$h"; then echo "$h"; fi; done)
   # The own-site relays' domains, where a device inside the restricted network
   # fetches its subscription; not a cdn-only one's, whose address stays out.
   sub_relays=$(printf '%s\n' "$relays" | awk '$6 == "own-site" && $10 != "cdn-only" { print $2 }')
@@ -651,14 +661,15 @@ Streisand to fetch its links from and refresh them; --full prints the links
 and the Xray config too.
 
 EOF
-# One client per line, "<uuid> [name]"; blank lines and "#" comments skipped,
-# as the image reads it. $1 names one client, or gives its uuid.
+# One client per line, "<uuid> [name [desktop|mobile]]"; blank lines and "#"
+# comments skipped, as the image reads it. $1 names one client, or gives its
+# uuid.
 found=
-while read -r id name _ || [ -n "${id:-}" ]; do
+while read -r id name kind _ || [ -n "${id:-}" ]; do
   case $id in '' | '#'*) continue ;; esac
   [ -z "$want" ] || [ "$want" = "${name:-}" ] || [ "$want" = "$id" ] || continue
   found=1
-  pick "${name:-}"
+  pick "${name:-}" "${kind:-}"
   client "$id" "${name:-client}"
 done </run/secrets/vless_clients
 [ -n "$found" ] || { echo "no client named '$want' in vless_clients" >&2; exit 1; }

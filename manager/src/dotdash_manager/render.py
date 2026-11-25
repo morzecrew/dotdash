@@ -69,7 +69,7 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     waiting = [f"{s.name}: {'no facts yet' if s.id else 'not joined'}" for s in [*net.server, *net.relay] if s.name not in facts]
     waiting += [f"{s.name}: has not applied the keys yet" for s in known if s not in ready]
     def vless(kind: str, relay: str | None = None) -> str:
-        return "\n".join(f"{ids[n]} {n}" for n in net.clients_of(kind, relay))
+        return "\n".join(f"{ids[n]} {n}" + (" desktop" if n in net.desktops else "") for n in net.clients_of(kind, relay))
 
     docs = {}
 

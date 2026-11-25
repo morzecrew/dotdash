@@ -50,6 +50,7 @@ subscription = true                         # every device gets a subscription U
 ipv6 = "allow"                              # or block, on the relays
 direct = false                              # optional: devices reach servers only through relays and CDNs
 devices = ["phone", "laptop"]
+desktops = ["laptop"]                       # optional: devices that get no CDN link (desktops in Devices)
 
 [pools]                                     # optional: the server's pools, member by member
 a = ["laptop", "203.0.113.5"]
