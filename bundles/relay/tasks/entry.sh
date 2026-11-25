@@ -39,15 +39,15 @@ case $cdn in
   *) [ "${OWN_SITE:-}" = true ] ||
        { echo "cdn_hosts needs the own-site profile, whose site a CDN fetches from; leaving it out" >&2; cdn=; } ;;
 esac
-# http_origin_host (set under the http-origin profile): the name devices reach
-# a rented CDN at, which fetches this relay in plain HTTP through Caddy's
-# door; client-config gives each device an XHTTP link through it, on the CDN
-# path below with smaller uploads.
+# http_origin_host (set under the http-origin profile): the names devices
+# reach a rented CDN at, comma-separated, which fetches this relay in plain
+# HTTP through Caddy's door; client-config gives each device an XHTTP link
+# through each, on the CDN path below with smaller uploads.
 origin=$(printf '%s' "${HTTP_ORIGIN_HOST:-none}" | tr -d ' ')
 case $origin in
   none | '') origin= ;;
-  .* | *. | *..* | *[!A-Za-z0-9.-]*)
-    echo "http_origin_host is not a name: $origin; leaving it out" >&2; origin= ;;
+  ,* | *, | *,,* | .* | *. | *..* | *,.* | *.,* | *[!A-Za-z0-9.,-]*)
+    echo "http_origin_host is not a name or names, comma-separated: $origin; leaving it out" >&2; origin= ;;
   *) [ "${OWN_SITE:-}" = true ] ||
        { echo "http_origin_host needs the own-site profile, whose Caddy is the door; leaving it out" >&2; origin=; } ;;
 esac

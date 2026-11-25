@@ -45,6 +45,7 @@ it match:
 {"path": "/${cdn_path}", "mode": "packet-up", "extra": {"uplinkHTTPMethod": "GET", "uplinkDataPlacement": "header", "uplinkChunkSize": 4096, "scMaxEachPostBytes": 4096, "scMinPostsIntervalMs": 10}}
 EOF
 [ -n "$origin" ] || [ -z "${HTTP_ORIGIN_PORT:-}" ] || cat <<EOF
-Then set http_origin_host to the name the CDN gives devices, and print this
+Then set http_origin_host to the name the CDN gives devices (several,
+comma-separated, where it gives more than one), and print this
 line again: devices get links through the door only once it ends in origin=.
 EOF

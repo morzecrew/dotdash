@@ -149,7 +149,7 @@ parameters:
   http_origin_host:
     type: string
     default: none
-    description: "With the http-origin profile, the name devices reach the rented CDN at for this relay, its name for the resource; relay-entry carries it to the server's relays line as origin=, and devices get an XHTTP link through it"
+    description: "With the http-origin profile, the name devices reach the rented CDN at for this relay, its name for the resource, or several, comma-separated, where the CDN gives more than one; relay-entry carries them to the server's relays line as origin=, and devices get an XHTTP link through each"
   cover:
     type: string
     default: pages

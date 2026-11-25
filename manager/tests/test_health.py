@@ -104,6 +104,15 @@ def test_a_burnt_relay_leaves_the_servers_relays_and_pools():
     assert docs["s"]["parameters"]["pools"] == "a phone 203.0.113.5 c.example.net\nb 203.0.113.5"
 
 
+def test_a_burnt_relays_door_names_leave_the_pools_too():
+    net = loads(ROSTER.replace('"c.example.net"]', '"c.example.net", "o.example.ru", "alt.example.ru"]'))
+    st = state.load(Path("/nonexistent"), net)
+    r1 = {**R1, "cdn_path": "y", "origin_host": "o.example.ru,alt.example.ru"}
+    facts = {"s": {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
+                   "encryption": "E"}, "r1": r1, "r2": R2}
+    assert render(net, st, facts, {"r1"})[0]["s"]["parameters"]["pools"] == "a phone"
+
+
 def test_a_cdn_only_relay_carries_the_flag_is_never_judged_and_serves_no_subscription():
     net, health = loads(ROSTER), {"r1": {"fails": BURN_AFTER, "at": 1}}
     only = {**R1, "cdn_only": True, "own_site": {"xhttp_path": "p"}}
