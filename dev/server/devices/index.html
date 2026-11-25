@@ -692,6 +692,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#desktops" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Desktops
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#links-and-the-xray-config" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2086,6 +2097,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#desktops" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Desktops
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#links-and-the-xray-config" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2249,11 +2271,26 @@
 
 
 <h1 id="devices">Devices<a class="headerlink" href="#devices" title="Permanent link">&para;</a></h1>
-<p>Each device has its own id, a <code>&lt;uuid&gt; [name]</code> line in the <code>vless_clients</code>
-secret. <code>init</code> creates the first; add one per device:</p>
+<p>Each device has its own id, a <code>&lt;uuid&gt; [name [desktop|mobile]]</code> line in the
+<code>vless_clients</code> secret. <code>init</code> creates the first; add one per device:</p>
 <div class="highlight"><pre><span></span><code>uuidgen<span class="w">                                          </span><span class="c1"># a new id</span>
 sudo<span class="w"> </span><span class="nv">EDITOR</span><span class="o">=</span>nano<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>vless_clients<span class="w">  </span><span class="c1"># add "&lt;uuid&gt; phone"; Xray restarts on save</span>
 </code></pre></div>
+<h3 id="desktops">Desktops<a class="headerlink" href="#desktops" title="Permanent link">&para;</a></h3>
+<p>A device whose line ends in <code>desktop</code> gets no CDN link: neither through the
+CDNs in front of the server (<code>cdn_hosts</code>) nor through a relay's (its <code>cdn=</code>
+and <code>origin=</code>), and nothing through a relay that offers CDN links alone.
+CDNs are for restricted mobile networks, and some are paid by the gigabyte,
+where a desktop moves the most. Its other links stay. <code>mobile</code>, or no word,
+gets every link.</p>
+<div class="highlight"><pre><span></span><code>0593b52c-b345-41cb-96b8-134724f6ca65 phone
+1b2c3d4e-5f60-4718-8a9b-0c1d2e3f4a5b laptop desktop
+</code></pre></div>
+<p>A changed kind reaches the device with its next subscription fetch. It
+picks links, it doesn't lock any: a CDN link the device already holds, handed
+over by hand, still works. A kind needs a name before it. Relays running a
+release from before kinds refuse such a line, and <code>relay-config</code> copies it to
+them, so update them before giving a device a kind.</p>
 <h2 id="links-and-the-xray-config">Links and the Xray config<a class="headerlink" href="#links-and-the-xray-config" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>client-config<span class="w"> </span>--output<span class="w">             </span><span class="c1"># every device</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>client-config<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>phone<span class="w">    </span><span class="c1"># one</span>

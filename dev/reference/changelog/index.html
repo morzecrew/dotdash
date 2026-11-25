@@ -3849,6 +3849,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>A device's kind, <code>desktop</code> or <code>mobile</code>, after its name in <code>vless_clients</code>. A desktop gets no CDN link: none through the server's <code>cdn_hosts</code>, none through a relay's <code>cdn=</code> or <code>origin=</code>, and nothing through a relay that offers CDN links alone. CDNs serve restricted mobile networks, some paid by the gigabyte, where a desktop moves the most. A changed kind reaches the device at its next subscription fetch. The manager's roster takes <code>desktops</code>, a list of its devices. Servers and relays take such lines from this release on: update the relays before giving a device a kind, and take the kinds off before rolling back to an earlier release, whose image refuses them.</p>
+</li>
+<li>
 <p>An <code>openflux</code> profile on the client: when every dotdash link fails its probe, Xray's balancer hands the traffic to an OpenFlux client, which reaches this device's OpenFlux exit on a dotdash server (the server's <code>openflux</code> profile) over a room or call on a service the network still lets through. The link goes in a new <code>openflux_link</code> secret, as the server's <code>openflux-link</code> task prints it. The traffic goes back to the links once one answers its probe again. It serves the proxy port, not <code>tun</code>.</p>
 </li>
 <li>
