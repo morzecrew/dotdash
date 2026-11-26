@@ -276,8 +276,12 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
         "tlsSettings": {"alpn": ["h3"], "certificates": [{
           "certificateFile": "/caddy-data/caddy/certificates/{{ $issuer }}/{{ $cert }}/{{ $cert }}.crt",
           "keyFile": "/caddy-data/caddy/certificates/{{ $issuer }}/{{ $cert }}/{{ $cert }}.key"}]},
+        {{- /* The masquerade passes the visitor's own Host on to Caddy, as REALITY
+        does: with rewriteHost, Xray's reverse proxy sent caddy:443 in its
+        place, so the cover site's redirects and cookies over HTTP/3 named
+        caddy where over TCP they name the domain. */}}
         "hysteriaSettings": {"version": 2, "udpIdleTimeout": 60,
-          "masquerade": {"type": "proxy", "url": "https://caddy:443", "rewriteHost": true, "insecure": true}},
+          "masquerade": {"type": "proxy", "url": "https://caddy:443", "rewriteHost": false, "insecure": true}},
         {{- /* No stateless resets: Caddy's QUIC sends none, so a prober's stray
         packet to UDP 443 got an answer from Hysteria2 that the site's own
         HTTP/3 never gives (dotdash-lab #46). A device whose connection the

@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `bootstrap.sh` runs morzer's installer from a pinned commit, checked by sha256, where it piped whatever a movable tag served into `sh`. It also trusts Docker's apt key only when the file holds that one key, by its fingerprint.
 
+- Under the `hysteria2` profile, a visitor over HTTP/3 reaches the cover site with the domain as its Host, as over TCP. Hysteria2's masquerade sent `caddy:443` in its place, so an app's redirects and cookies over HTTP/3 named `caddy`.
+
 ## [0.17.0] - 2026-11-25
 
 ### Added
