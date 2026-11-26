@@ -35,7 +35,23 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `listen` | empty | host address for `https_port` and `http_port`: empty for every address, IPv4 and IPv6; `0.0.0.0` for IPv4 alone; `127.0.0.1` beside your own web server |
 | `kcp_port` | `8447` | with `mkcp`, the UDP port devices reach the relay's mKCP on |
 | `kcp_header` | `dtls` | with `mkcp`, what its packets start with, as the server's [`kcp_header`](../server/mkcp.md) |
+| `kcp_open` | `none` | with `mkcp`, `quic` sends a QUIC-Initial-shaped packet before the flow, as the server's [`kcp_open`](../server/mkcp.md); `relay-entry` ends `kcp=` with `,quic` |
 | `hysteria2_port` | `443` | with `hysteria2`, the UDP port devices reach the relay's Hysteria2 on |
+
+### What changes the relay's line
+
+The servers know the relay by its line in `relays`. After changing any of
+these, print it again with `relay-entry` and replace it on every server
+(under the [manager](../manager.md), its next sync does that from the
+relay's facts): `entry_host` (or the address after `--`), `site`, the relay's
+domain under `own-site`, the `own-site`, `mkcp`, `hysteria2` and
+`http-origin` profiles, `kcp_port`, `kcp_header`, `kcp_open`,
+`hysteria2_port`, `cdn_hosts`, `http_origin_host`, `cdn_only`, `name`, and a
+rotated `reality_key`, `reality_short_id`, `vless_seed`, `xhttp_path`,
+`cdn_xhttp_path` or `kcp_seed`. The rest change nothing on the servers:
+`http_origin_port` (the CDN needs it, the servers don't), `http_origin_from`,
+`cover`, `tunnel_host`, `cert_issuer`, `https_port`, `http_port`, `listen`,
+`via`, the `dotdash_*` parameters and the rest.
 
 ## Profiles
 
