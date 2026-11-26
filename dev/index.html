@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Five morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client, a canary and an acme-dns server">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -2074,8 +2074,8 @@
 a server of yours outside it. It comes as five
 <a href="https://github.com/morzecrew/morzer">morzer</a> bundles, released together from
 one tag:</p>
-<p><img alt="The four bundles: phones, the client and the canary inside the restricted network reach the dotdash server outside it directly, or through the relay while only some addresses get through; the server leaves only through your upstream proxy" src="assets/diagrams/overview.light.svg#only-light" />
-<img alt="The four bundles: phones, the client and the canary inside the restricted network reach the dotdash server outside it directly, or through the relay while only some addresses get through; the server leaves only through your upstream proxy" src="assets/diagrams/overview.dark.svg#only-dark" /></p>
+<p><img alt="Four of the five bundles: phones, the client and the canary inside the restricted network reach the dotdash server outside it directly, or through the relay while only some addresses get through; the server leaves only through your upstream proxy" src="assets/diagrams/overview.light.svg#only-light" />
+<img alt="Four of the five bundles: phones, the client and the canary inside the restricted network reach the dotdash server outside it directly, or through the relay while only some addresses get through; the server leaves only through your upstream proxy" src="assets/diagrams/overview.dark.svg#only-dark" /></p>
 <table>
 <thead>
 <tr>
@@ -2153,6 +2153,26 @@ trusts it, and requires every later release to be signed by it.</p>
 <code>dotdash-canary</code> or <code>dotdash-acme-dns</code>. These docs are versioned with the
 releases: the version menu shows each released minor, and <code>dev</code> follows
 <code>main</code>.</p>
+<p>The keys are minisign public keys. Compare the one <code>init</code> prints with them,
+or pass one to <code>morzer init --signing-key</code> to check even the first release:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Public key</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>release</td>
+<td><code>RWSodSvG4wmCA2FCL20MQ43y0Tw+/bcMnej3bzmFYr/yXmSKUx3YdF/B</code></td>
+</tr>
+<tr>
+<td>dev</td>
+<td><code>RWQAQKYQdRbOZq2c9JoqAoq1mSvGmnVih04GY8vLgxd3cg5eXlgvDlcg</code></td>
+</tr>
+</tbody>
+</table>
 
 
 

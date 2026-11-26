@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Four morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client and a canary">
+        <meta name="description" content="Five morzer bundles that get devices in a restricted network out through a server of yours: the server, a relay, a client, a canary and an acme-dns server">
       
       
         <meta name="author" content="Lev Litvinov">
@@ -2100,8 +2100,8 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>apply
   <a href="../upstreams/">Upstreams</a> for backups, IPv6, WireGuard and OpenVPN.</li>
 <li>Changing proxy later is one <code>secret edit upstreams</code> and one restart.</li>
 <li><code>init</code> prints the release's signing key and trusts it. To check even
-  this first release against the key published with the repository, add
-  <code>--signing-key "$(gh variable get MINISIGN_RELEASE_PUBKEY -R morzecrew/dotdash)"</code>.</li>
+  this first release against the <a href="../../#releases">release key</a>, add
+  <code>--signing-key RWSodSvG4wmCA2FCL20MQ43y0Tw+/bcMnej3bzmFYr/yXmSKUx3YdF/B</code>.</li>
 </ul>
 </li>
 <li>
