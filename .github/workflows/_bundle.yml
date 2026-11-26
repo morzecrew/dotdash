@@ -1,0 +1,100 @@
+# One bundle, bundles/<bundle>, built, signed and smoke-tested by bundle-ci as
+# ghcr.io/morzecrew/dotdash-<bundle>: what pr.yml's and _main.yml's runs share.
+# It publishes nothing and asks for no write, so a pull request may call it:
+# a called workflow's jobs are checked against the caller's grant when it
+# loads, and _main.yml publishes after it.
+name: bundle
+
+on:
+  workflow_call:
+    inputs:
+      bundle:
+        description: "The bundle: server, relay, client, canary or acme-dns"
+        type: string
+        required: true
+      version:
+        description: Version to stamp; empty takes bundle-ci's dev version
+        type: string
+        default: ""
+      channel:
+        description: The channel the caller publishes to; empty for none
+        type: string
+        default: ""
+      signing:
+        description: "dev, or ephemeral: a key made in the job"
+        type: string
+        required: true
+      runs-on:
+        description: The runner label every job runs on
+        type: string
+        required: true
+    secrets:
+      minisign-key:
+        description: The dev signing key
+        required: false
+    outputs:
+      version:
+        description: The version the bundle was built as
+        value: ${{ jobs.bundle.outputs.version }}
+      archive:
+        description: The archive's file name in the artifact named after the bundle
+        value: ${{ jobs.bundle.outputs.archive }}
+      proceed:
+        description: "'true' when the version is not published yet"
+        value: ${{ jobs.bundle.outputs.proceed }}
+
+permissions: {}
+
+jobs:
+  # What each smoke install adds: the secrets only an operator sets, which
+  # smoke.sh sets from random, and what init refuses without. The server's: a
+  # domain, the healthcheck's URL and cert_issuer=internal, which needs no Let's
+  # Encrypt; .github/smoke.d/pre-apply supplies the rest. The relay's, client's
+  # and canary's: placeholders their pre-apply hooks replace with the stand-in
+  # server's. acme-dns's: the rig's zone and loopback address, the API on plain
+  # HTTP, since no CA reaches a rig.
+  bundle:
+    permissions:
+      contents: read
+      packages: read
+    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@6360c44fecddb64b29d176ea2f935b7e8a8f6916 # v0.12.2
+    with:
+      morzer-version: "0.18.0"
+      ref: ${{ github.sha }}
+      version: ${{ inputs.version }}
+      channel: ${{ inputs.channel }}
+      signing: ${{ inputs.signing }}
+      # The key that signs, shipped as minisign.pub: init trusts it on first use.
+      ship-pubkey: true
+      # Nothing moved since the last run: the version is already published.
+      on-existing: skip
+      runs-on: ${{ inputs.runs-on }}
+      # One run builds several bundles: each archive travels under its own name.
+      artifact: ${{ inputs.bundle }}
+      bundle-dir: bundles/${{ inputs.bundle }}
+      version-paths: bundles/${{ inputs.bundle }}
+      package: dotdash-${{ inputs.bundle }}
+      smoke-hooks: ${{ inputs.bundle == 'server' && '.github/smoke.d' || format('.github/{0}-smoke.d', inputs.bundle) }}
+      components: ""
+      probe-paths: ""
+      # Folded: each line one space in the JSON.
+      operator-secrets: >-
+        ${{ fromJSON('{
+        "server": "upstreams",
+        "relay": "vless_clients dotdash_id dotdash_encryption dotdash_short_id",
+        "client": "subscription_url",
+        "canary": "dotdash_id dotdash_encryption dotdash_short_id dotdash_xhttp_path",
+        "acme-dns": ""
+        }')[inputs.bundle] }}
+      init-args: >-
+        ${{ fromJSON('{
+        "server": "--domain dotdash.test --set probe_url=http://11.99.0.10:8000/ --set cert_issuer=internal --profile xdns",
+        "relay": "--set site=www.gstatic.com --set dotdash_servers=www.gstatic.com --set dotdash_address=rig.invalid --set dotdash_public_key=set-by-the-rig",
+        "client": "",
+        "canary": "--set dotdash_server=www.gstatic.com --set dotdash_address=rig.invalid --set dotdash_public_key=set-by-the-rig",
+        "acme-dns": "--domain auth.rig.invalid --set address=127.0.0.1 --set nameserver=ns.rig.invalid --set api_tls=none"
+        }')[inputs.bundle] }}
+      # smoke-update installs the published :main first, trusting this key.
+      dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}
+    secrets:
+      minisign-key: ${{ secrets.minisign-key }}

@@ -1,20 +1,20 @@
-# A pull request's bundle, built and smoke-tested, never published. It signs
-# with a key made in the job: the dev and release keys are never given to a
-# pull request. The jobs are bundle-ci's.
+# A pull request's bundles, each it touches built and smoke-tested
+# (_bundle.yml), never published. Each signs with a key made in the job: the
+# dev and release keys are never given to a pull request. The jobs are
+# bundle-ci's.
 name: pr
 
 on:
   pull_request:
     paths:
-      - bundles/server/**
-      - .github/smoke.d/**
+      - bundles/**
+      - .github/*smoke.d/**
       - .github/tests/**
-      # The client smoke's stand-in, which tests/client-config.sh holds to
-      # client-config's output.
-      - .github/client-smoke.d/pre-apply/server.txt
       - .github/workflows/pr.yml
       - .github/workflows/main.yml
-      - .github/workflows/release.yml
+      - .github/workflows/_bundle.yml
+      - .github/workflows/_main.yml
+      - .github/workflows/*release.yml
 
 permissions: {}
 
@@ -23,36 +23,65 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The bundles the pull request touches, as each bundle's own workflow once
+  # chose them: bundles/<bundle>/, its smoke hooks and its release workflow;
+  # the server's also client-config's cases and the client smoke's stand-in,
+  # which they hold to client-config's output; every bundle the workflows
+  # they share.
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      bundles: ${{ steps.changes.outputs.bundles }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - id: changes
+        run: |
+          set -euo pipefail
+          all="server relay client canary acme-dns"
+          # The merge commit's first parent is the base branch.
+          names=$(git diff --name-only HEAD^1 HEAD | while read -r f; do
+            case ${f} in
+            bundles/*/*) f=${f#bundles/} && echo "${f%%/*}" ;;
+            .github/smoke.d/* | .github/tests/* | .github/workflows/release.yml) echo server ;;
+            .github/client-smoke.d/pre-apply/server.txt) echo server client ;;
+            .github/*-smoke.d/*) f=${f#.github/} && echo "${f%%-smoke.d/*}" ;;
+            .github/workflows/*-release.yml) f=${f#.github/workflows/} && echo "${f%-release.yml}" ;;
+            .github/workflows/pr.yml | .github/workflows/main.yml | .github/workflows/_bundle.yml | .github/workflows/_main.yml) echo "${all}" ;;
+            esac
+          done)
+          bundles=$(tr ' ' '\n' <<<"${names}" | jq -Rnc --arg all "${all}" '[inputs] | unique | map(select(IN($all | splits(" "))))')
+          echo "bundles=${bundles}" | tee -a "${GITHUB_OUTPUT}"
+
   bundle:
+    needs: changes
+    if: needs.changes.outputs.bundles != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        bundle: ${{ fromJSON(needs.changes.outputs.bundles) }}
     permissions:
       contents: read
       packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@6360c44fecddb64b29d176ea2f935b7e8a8f6916 # v0.12.2
+    uses: ./.github/workflows/_bundle.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses $/
     with:
-      morzer-version: "0.18.0"
-      bundle-dir: bundles/server
-      version-paths: bundles/server
-      package: dotdash-server
-      ref: ${{ github.sha }}
+      bundle: ${{ matrix.bundle }}
       version: 0.0.0-pr.${{ github.event.pull_request.number }}
       signing: ephemeral
-      # The key that signs, shipped as minisign.pub: init trusts it on first use.
-      ship-pubkey: true
       # GitHub-hosted, never vars.RUNS_ON: a fork's pull request must not reach
       # a self-hosted runner or its image cache.
       runs-on: ubuntu-24.04
-      components: ""
-      probe-paths: ""
-      operator-secrets: upstreams
-      init-args: >-
-        --domain dotdash.test --set probe_url=http://11.99.0.10:8000/
-        --set cert_issuer=internal --profile xdns
-      # smoke-update installs the published :main first, trusting this key.
-      dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}
 
   # client-config.sh against a matrix of parameters, in the images the bundle
   # pins, without a rig: seconds, where the smoke needs an install.
   client-config:
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.bundles), 'server')
     runs-on: ubuntu-24.04
     permissions:
       contents: read
