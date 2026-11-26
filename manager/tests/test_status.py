@@ -2,7 +2,9 @@
 --json (tests/fixtures, shaped by its FleetRowStatus, FleetRow, FleetSync and
 StateRow), and from what the last sync kept."""
 
+import fcntl
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -115,18 +117,29 @@ def test_wait_asks_again_until_every_document_is_applied_or_refused(tmp_path, mo
                                            '[[server]]\nname = "a"\nid = "inst_A"\nkey = "RWa"\n')
     (tmp_path / "dotdash-state.json").write_text(json.dumps({}))
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(state, "lock", lambda path: 0)
     monkeypatch.setattr(cli, "POLL", 0)
     row = lambda serial: {"a": {"age": "1m0s ago", "stale": False, "services": 5, "running": 5, "problem": "",
                                 "version": "0.17.0", "staged": None, "facts_problem": None,
                                 "sync": {"enabled": True, "applied": {"serial": serial, "at": None}, "refused": None,
                                          "fetch": "ok", "pending": []}}}
     seen = iter([row(1), row(1), row(2)])
-    monkeypatch.setattr(Morzer, "rows", lambda self: next(seen))
+
+    def rows(self):
+        # While it waits a sync can run: the lock is free, and the state that
+        # sync leaves is what the next look reads.
+        other = os.open(tmp_path / "dotdash-state.lock", os.O_RDWR)
+        fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        state.save(tmp_path / "dotdash-state.json",
+                   {"facts": {"a": {"id": "inst_A", "at": 0, "facts": {"domain": "a.example.net", "https_port": 443}}}})
+        os.close(other)
+        return next(seen)
+
+    monkeypatch.setattr(Morzer, "rows", rows)
     monkeypatch.setattr(Morzer, "published", lambda self: {"a": 2})
     r = CliRunner().invoke(cli.app, ["status", "--wait"])
     assert r.exit_code == 0, r.output
     assert "applied 2" in r.output
+    assert "server a: a.example.net:443" in r.output, "the state a sync left while it waited is not read"
     monkeypatch.setattr(Morzer, "rows", lambda self: row(1))
     r = CliRunner().invoke(cli.app, ["status", "--wait", "--timeout", "0"])
     assert r.exit_code == 1 and "pending 2" in r.output
