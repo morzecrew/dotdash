@@ -5,6 +5,12 @@
 # domain through to https_port.
 case ${ENTRY_PORT:-none} in none) ;; '' | *[!0-9]*) echo "entry_port is not a port: ${ENTRY_PORT}" >&2; exit 1 ;; *) HTTPS_PORT=$ENTRY_PORT ;; esac
 
+# warn <message>: on stderr, for what costs devices nothing: a field this
+# release doesn't know, a name taken twice, a pool member that names nothing.
+# Under client-config --check, marked "warning: ", which the lists health
+# check lets through, where a line or field devices would lose fails it.
+warn() { if [ "${check:-false}" = true ]; then echo "warning: $*" >&2; else echo "$*" >&2; fi; }
+
 hosts() { # <parameter> <list>: the list's host names, one per line, "none" aside; any other entry is said and left out
   printf '%s\n' "$2" | tr ',' '\n' | awk -v p="$1" '{ gsub(/^ +| +$/, "") } $0 == "" || $0 == "none" { next }
     /^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*$/ { print; next } { print p ": " $0 " is not a host name; left out" > "/dev/stderr" }'
@@ -15,7 +21,7 @@ hosts() { # <parameter> <list>: the list's host names, one per line, "none" asid
 # as " , ", is this one alone, as an empty one is.
 server_list() {
   hosts servers "${SERVERS:-self}" | sed "s/^self\$/${DOMAIN}/" | grep . ||
-    { echo "servers names no server: this one alone" >&2; echo "$DOMAIN"; }
+    { warn "servers names no server: this one alone"; echo "$DOMAIN"; }
 }
 
 client_id() { # <name>: the id of the client of that name in vless_clients; else it says so and exits

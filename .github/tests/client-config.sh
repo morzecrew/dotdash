@@ -219,6 +219,13 @@ for w in 'relays: line 2: the cdn= field of 203.0.113.8' 'pools: line 1: ghost.e
   'cdn_extra: line 1: Xray refuses the extra for cdn.example.net'; do
   grep -qF "$w" "$work/err" || fail "--check: not said: $w"
 done
+grep -q '^warning: pools: line 1: ghost' "$work/err" || fail "--check: a pool member that names nothing is not a warning"
+grep -q '^relays: line 2: the cdn= field' "$work/err" || fail "--check: a dropped field is marked a warning"
+# What the lists health check lets through: a field a newer relay's line may
+# carry, a name two relays share, a pool member that names nothing.
+out=$(cc "RELAYS=$relay future=1
+203.0.113.8 b.example.com ${pbk} ab12 ${enc} name=edge" "POOLS=p1 phone ghost.example.net" -- --check)
+[ -s "$work/err" ] && ! grep -qv '^warning: ' "$work/err" || fail "--check: an unknown field, a taken name or a stray pool member is not a warning alone"
 
 echo "== servers naming none: this server alone, and said"
 [ "$(cc SUBSCRIPTION=false 'SERVERS= , ' -- --full phone)" = "$out_self" ] || fail "servers naming none: not this server alone"

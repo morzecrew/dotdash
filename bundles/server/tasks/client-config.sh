@@ -5,10 +5,10 @@
 # config's local proxy, for apps on the phone that look for one. The output
 # is credentials: anyone
 # holding it can use this server, so send it only over a channel you would
-# send a password on. --check reads the parameters alone and stops: what it
-# says on stderr about a relays, pools or cdn_extra line, or any other, fails
-# the change that brought it (hooks/healthy lists), where devices would lose
-# that line or field.
+# send a password on. --check reads the parameters alone and stops: a line
+# or field of relays, cdn_extra or any other that devices would lose, which
+# it says on stderr, fails the change that brought it (hooks/healthy lists);
+# what costs them nothing it marks "warning: " (warn), and that passes.
 set -eu
 # shellcheck source=common.sh
 . /task/common.sh
@@ -161,7 +161,7 @@ all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
     case $f in kcp=*) c=${f#kcp=} ;; hy2=*) hy=${f#hy2=} ;; cdn=*) d=${f#cdn=} ;; cdnpath=*) cp=${f#cdnpath=} ;; origin=*) or=${f#origin=} ;; cdn-only) only=cdn-only ;; off=*) x=${f#off=} ;; split) sp='split' ;; name=*) nm=${f#name=} ;; standby) sb=standby ;;
       # No other field holds "=": a typo, such as cdn_path=, would drop a transport unsaid.
       *=*) case ${f%%=*} in *[!A-Za-z0-9_-]*) k='?' ;; *) k=${f%%=*} ;; esac
-        echo "relays: line $n: no field is named $k=; ignored" >&2 ;;
+        warn "relays: line $n: no field is named $k=; ignored" ;;
       *) rest="$rest $f" ;; esac
   done
   # shellcheck disable=SC2086 # one field per word
@@ -233,7 +233,7 @@ all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   case ,$x, in *,hysteria2,*) hy=- ;; esac
   for y in $(printf '%s' "$x" | tr ',' ' '); do
     case $y in - | reality | xhttp | mkcp | hysteria2) continue ;; cdn:*) ! name_ok "${y#cdn:}" || continue ;; esac
-    echo "relays: line $n: the off= field of $1 names $y, not reality, xhttp, mkcp, hysteria2 or cdn:<host>; ignored" >&2
+    warn "relays: line $n: the off= field of $1 names $y, not reality, xhttp, mkcp, hysteria2 or cdn:<host>; ignored"
   done
   # off=cdn:<name>: that CDN in front of it gets nothing through (dotdash-manager
   # sets it), so its links and outbounds go, under every path of the name, and
@@ -253,10 +253,10 @@ all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   case $nm in
     -) ;;
     '' | ?????????????????????????* | *[!A-Za-z0-9._-]*)
-      echo "relays: line $n: the name= field of $1 is not 1 to 24 letters, digits, dots, dashes or underscores; it goes by its number" >&2
+      warn "relays: line $n: the name= field of $1 is not 1 to 24 letters, digits, dots, dashes or underscores; it goes by its number"
       nm=- ;;
     *) case " ${taken:-} " in *" $nm "*)
-      echo "relays: line $n: $1 is named $nm, as an earlier relay is; it goes by its number" >&2
+      warn "relays: line $n: $1 is named $nm, as an earlier relay is; it goes by its number"
       nm=- ;;
     esac ;;
   esac
@@ -319,7 +319,7 @@ names=$(awk '$1 !~ /^#/ && NF > 1 { print $2 }' /run/secrets/vless_clients)
 relay_names=$(printf '%s\n' "$all_relays" | awk '{ print $1; if ($21 != "-") { gsub(",", "\n", $21); gsub("/[^\n]*", "", $21); print $21 } }')
 printf '%s\n' "${POOLS:-}" | sed 's/#.*//' | awk 'NF > 1 { for (i = 2; i <= NF; i++) print NR, $i }' | while read -r n m; do
   printf '%s\n%s\n%s\n' "$names" "$all_cdns" "$relay_names" | grep -qxF -- "$m" ||
-    echo "pools: line $n: $m is no device name, relay host or CDN host" >&2
+    warn "pools: line $n: $m is no device name, relay host or CDN host"
 done
 # Their edges take GET alone and no request body (some answer 413 to any),
 # so a device uploads in packet-up GETs with the data in headers. The server's

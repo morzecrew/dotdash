@@ -10,8 +10,8 @@
 #               line by its name= (its address, its credentials, the
 #               destination behind it, its tunnel), or an exit that no
 #               longer matches probe_expect.
-#   lists       client-config reads relays, pools, cdn_extra and the rest
-#               without a word about any line.
+#   lists       client-config reads relays, cdn_extra and the rest with no
+#               line or field that devices would lose.
 #
 # Every upstream_mode falls through all of a group's lines before it fails, so
 # a failed fetch means each line failed. Through Xray a refused login and a
@@ -218,17 +218,18 @@ egress6() {
 }
 
 # The lists devices' links are made from, as the subscription service reads
-# them, in its container (client-config --check): what it says about a line
-# of relays, pools or cdn_extra, or any other parameter, by its line and
-# field. Failing, a `config set` or a document that brought the line is
-# rolled back, where devices would otherwise lose that line at their next
-# subscription. The first problem leads, as morzer shows one line.
+# them, in its container (client-config --check): a line or field of relays,
+# cdn_extra or any other parameter that it leaves out, by its line and field.
+# Failing, a `config set` or a document that brought the line is rolled back,
+# where devices would otherwise lose it at their next subscription. What it
+# marks "warning: " passes: a field this release doesn't know, which a newer
+# relay's line may carry, a name taken twice, a pool member that names
+# nothing. The first problem leads, as morzer shows one line.
 lists() {
-  local said n
-  if said=$(docker compose -p "$project" exec -T subscription sh /task/client-config.sh --check 2>&1 >/dev/null) &&
-    [ -z "$said" ]; then
-    return 0
-  fi
+  local said rc=0 n
+  said=$(docker compose -p "$project" exec -T subscription sh /task/client-config.sh --check 2>&1 >/dev/null) || rc=$?
+  said=$(grep -v '^warning: ' <<<"$said" || true)
+  [ "$rc" != 0 ] || [ -n "$said" ] || return 0
   said=${said:-client-config --check failed}
   n=$(grep -c . <<<"$said")
   [ "$n" -le 1 ] || said=$(sed "1s/\$/ (and $((n - 1)) more: sudo morzer task run client-config --output -- --check)/" <<<"$said")

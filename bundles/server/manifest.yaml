@@ -460,10 +460,11 @@ health:
     # destination, the exit). `doctor` fails while any check does.
     - {name: cover-site, type: command, command: ["hooks/healthy", "cover-site"], timeout: 10s}
     - {name: egress, type: command, command: ["hooks/healthy", "egress"], timeout: 30s}
-    # A relays, pools or cdn_extra line client-config would leave out or cut
-    # down fails it, by its line and field, so the change that brought it is
-    # rolled back; a start period, so it fails at once rather than when the
-    # operation runs out of time.
+    # A relays or cdn_extra line, or a field of one, that client-config
+    # would leave out fails it, by its line and field, so the change that
+    # brought it is rolled back; a field it doesn't know, a name taken twice
+    # or a pool member that names nothing only warns. A start period, so it
+    # fails at once rather than when the operation runs out of time.
     - {name: lists, type: command, command: ["hooks/healthy", "lists"], timeout: 30s, start_period: 20s}
 
 # The release's invariants (hooks/policy), against what runs: `doctor` fails

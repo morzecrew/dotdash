@@ -48,12 +48,13 @@
 
 Set one with `sudo morzer config set <name>=<value>`, unset it with
 `sudo morzer config unset <name>`, edit `relays`, `pools`, `cdn_extra`, `happ_routing` or `openflux_channels`
-with `sudo morzer config edit <name>`. A `relays`, `pools` or `cdn_extra` line
-devices would lose, or lose a field of (a malformed field, a pool member that
-names nothing, an extra Xray refuses), fails the change that brings it, naming
-its line and field, and morzer puts the old value back: the `lists` health
-check, which `doctor` runs too. `sudo morzer task run client-config --output
--- --check` prints every such line. Profiles (`installation.profile`): `xdns`,
+with `sudo morzer config edit <name>`. A `relays` or `cdn_extra` line
+devices would lose, or lose a field of (a malformed field, an extra Xray
+refuses), fails the change that brings it, naming its line and field, and
+morzer puts the old value back: the `lists` health check, which `doctor` runs
+too. A field this release doesn't know, as a newer relay's line may carry, a
+name two relays share, or a pool member that names nothing is only a warning.
+`sudo morzer task run client-config --output -- --check` prints them all. Profiles (`installation.profile`): `xdns`,
 `xhttp-reality`, `mkcp`, `hysteria2`, `openvpn` (for an [OpenVPN line](upstreams.md#openvpn)),
 `warm` (for [warm connections](upstreams.md#warm-connections)),
 `openflux` (for [OpenFlux](openflux.md), with `openflux_channels`),
