@@ -77,3 +77,8 @@ out=$(mgr status) || die "status says something is wrong: ${out}"
 grep -Eq '^a +server +[^ ]+ +applied [0-9]+ +[0-9]+/[0-9]+ up' <<<"${out}" || die "status does not show the server's document applied: ${out}"
 grep -q '^  server a: dotdash\.test:443: reality, xhttp' <<<"${out}" || die "status's topology lacks the server: ${out}"
 echo "e2e: status shows the server applied its newest document, from its real fleet row"
+
+url=$(sudo morzer task run client-config --output -- phone | grep -m1 '^https://') || die "client-config printed no subscription URL"
+got=$(mgr link phone) || die "link failed: ${got}"
+[ "${got}" = "${url}" ] || die "link printed ${got}, client-config ${url}"
+echo "e2e: link prints the subscription URL client-config does"

@@ -53,6 +53,60 @@ def via_line(f: dict, link: str) -> str:
     return line + (f" own-site {f['own_site']['xhttp_path']}" if link == "xhttp" else "")
 
 
+def applied_keys(net: Network, state: dict, facts: dict) -> list:
+    """The servers whose facts carry the manager's public key: those that
+    applied its document, and so its keys."""
+    pbk = public_key(state["keys"]["reality_key"])
+    return [s for s in net.server if facts.get(s.name, {}).get("public_key") == pbk]
+
+
+def kept_pools(net: Network, facts: dict, burnt: set[str] | frozenset[str],
+               stands: dict[str, str]) -> tuple[dict[str, list[str]], list[str]]:
+    """The pools as the servers get them, each with its members kept, and
+    what to say: a burnt or held relay's hosts out, a spare standing in for
+    one (stands: spare, its burnt relay) in its place. A pool left with no
+    member is left out."""
+    # A pool naming a relay left out would name nothing: the server warns.
+    # An origin name may carry its gateway's path, <host>/<path>: pools name the host.
+    hosts = lambda name: [facts[name]["entry_host"], *facts[name].get("cdn_hosts", []),
+                          *(o.split("/")[0] for o in facts[name].get("origin_host", "").split(",") if o)]
+    # A host counts as a relay's only while no other relay's facts name it: a
+    # burnt or held one claiming another's must not take it out of the pools,
+    # nor bring its stand-in into that one's.
+    named = Counter(h for r in net.relay if r.name in facts for h in set(hosts(r.name)))
+    own = lambda name: [h for h in hosts(name) if named[h] == 1]
+    say = [f"{h}: more than one relay's facts name it, so no burnt relay or spare moves it in the pools"
+           for h in sorted(h for h, n in named.items() if n > 1)]
+    gone = {h for r in burnt if r in facts for h in own(r)}
+
+    def members(ms: list[str]) -> list[str]:
+        kept = [m for m in ms if m not in gone]
+        for s, r in stands.items():
+            if r in facts and s in facts and set(own(r)) & set(ms):
+                kept += [h for h in own(s) if h not in kept]
+        return kept
+
+    return {p: kept for p, ms in net.pools.items() if (kept := members(ms))}, say
+
+
+def subscription_urls(net: Network, state: dict, facts: dict, device: str, lead: dict,
+                      burnt: set[str] | frozenset[str], pools_kept: dict[str, list[str]]) -> list[str]:
+    """A device's subscription URLs, as client-config prints them: the lead
+    server's (the first that applied the keys), unless direct = false keeps
+    it out, then the same through each own-site relay the device sees, in
+    the servers' relays order. A device in a pool sees its pools' relays and
+    those in none; one in none sees all. The token is subscription.sh's:
+    sha256 of <subscription_key>:<id>, its first 32 hex characters."""
+    token = hashlib.sha256(f"{state['keys']['subscription_key']}:{state['ids'][device]}".encode()).hexdigest()[:32]
+    port = "" if lead["https_port"] == 443 else f":{lead['https_port']}"
+    listed = {h for kept in pools_kept.values() for h in kept}
+    mine = {h for kept in pools_kept.values() if device in kept for h in kept}
+    sites = [f["site"] for r in net.relay if "own_site" in (f := facts.get(r.name, {})) and r.name not in burnt
+             and not f.get("cdn_only") and (not mine or f["entry_host"] in mine or f["entry_host"] not in listed)]
+    server = [] if net.direct is False else [f"https://{lead['domain']}{port}/{token}"]
+    return server + [f"https://{site}/{token}" for site in sites]
+
+
 def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[str] = frozenset(),
            off: dict[str, set[str]] | None = None, stands: dict[str, str] | None = None,
            split: set[str] | frozenset[str] = frozenset()) -> tuple[dict, list[str]]:
@@ -69,8 +123,7 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     keys, ids = state["keys"], state["ids"]
     pbk = public_key(keys["reality_key"])
     known = [s for s in net.server if s.name in facts]
-    # A server whose facts carry the manager's public key applied its document.
-    ready = [s for s in known if facts[s.name].get("public_key") == pbk]
+    ready = applied_keys(net, state, facts)
     waiting = [f"{s.name}: {'no facts yet' if s.id else 'not joined'}" for s in [*net.server, *net.relay] if s.name not in facts]
     waiting += [f"{s.name}: has not applied the keys yet" for s in known if s not in ready]
     def vless(kind: str, relay: str | None = None) -> str:
@@ -81,28 +134,8 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     off = off or {}
     relays = "\n".join(relay_line(facts[r.name], off.get(r.name, frozenset()), r.name in split, r.standby)
                        for r in net.relay if r.name in facts and r.name not in burnt)
-    # A pool naming a relay left out would name nothing: the server warns.
-    # An origin name may carry its gateway's path, <host>/<path>: pools name the host.
-    hosts = lambda name: [facts[name]["entry_host"], *facts[name].get("cdn_hosts", []),
-                          *(o.split("/")[0] for o in facts[name].get("origin_host", "").split(",") if o)]
-    # A host counts as a relay's only while no other relay's facts name it: a
-    # burnt or held one claiming another's must not take it out of the pools,
-    # nor bring its stand-in into that one's.
-    named = Counter(h for r in net.relay if r.name in facts for h in set(hosts(r.name)))
-    own = lambda name: [h for h in hosts(name) if named[h] == 1]
-    waiting += [f"{h}: more than one relay's facts name it, so no burnt relay or spare moves it in the pools"
-                for h in sorted(h for h, n in named.items() if n > 1)]
-    gone = {h for r in burnt if r in facts for h in own(r)}
-    stands = stands or {}
-
-    def members(ms: list[str]) -> list[str]:
-        kept = [m for m in ms if m not in gone]
-        for s, r in stands.items():
-            if r in facts and s in facts and set(own(r)) & set(ms):
-                kept += [h for h in own(s) if h not in kept]
-        return kept
-
-    pools_kept = {p: kept for p, ms in net.pools.items() if (kept := members(ms))}
+    pools_kept, more = kept_pools(net, facts, burnt, stands or {})
+    waiting += more
     pools = "\n".join(f"{p} {' '.join(kept)}" for p, kept in pools_kept.items())
     for s in net.server:
         others = [facts[o.name]["domain"] for o in known if o is not s]
@@ -246,28 +279,15 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
 
     # direct = false keeps the servers' domains out of what devices hold, so a
     # client machine fetches through an own-site relay, as a phone does: the
-    # first its device sees, as client-config's pick has it. A device in a
-    # pool sees its pools' relays and those in none; one in none sees all.
-    listed = {h for kept in pools_kept.values() for h in kept}
-
-    def own_site(device: str) -> list[str]:
-        mine = {h for kept in pools_kept.values() if device in kept for h in kept}
-        return [f["site"] for r in net.relay if "own_site" in (f := facts.get(r.name, {})) and r.name not in burnt
-                and not f.get("cdn_only") and (not mine or f["entry_host"] in mine or f["entry_host"] not in listed)]
-
+    # first its device sees, as client-config's pick has it.
     for c in net.client:
         if not lead:
             waiting.append(f"{c.name}: waits for a server that applied the keys")
             continue
-        token = hashlib.sha256(f"{keys['subscription_key']}:{ids[c.device]}".encode()).hexdigest()[:32]
-        port = "" if lead["https_port"] == 443 else f":{lead['https_port']}"
-        url = f"https://{lead['domain']}{port}/{token}"
-        if net.direct is False:
-            sites = own_site(c.device)
-            if not sites:
-                waiting.append(f"{c.name}: waits for an own-site relay that {c.device}'s pools give it: "
-                               "direct = false keeps the servers' URL out")
-                continue
-            url = f"https://{sites[0]}/{token}"
-        docs[c.name] = {"secrets": {"subscription_url": url, "proxy_password": state["passwords"][c.name]}}
+        urls = subscription_urls(net, state, facts, c.device, lead, burnt, pools_kept)
+        if not urls:
+            waiting.append(f"{c.name}: waits for an own-site relay that {c.device}'s pools give it: "
+                           "direct = false keeps the servers' URL out")
+            continue
+        docs[c.name] = {"secrets": {"subscription_url": urls[0], "proxy_password": state["passwords"][c.name]}}
     return docs, waiting

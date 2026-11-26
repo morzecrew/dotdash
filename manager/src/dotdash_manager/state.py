@@ -59,6 +59,12 @@ def load(path: Path, net: Network) -> dict:
     return state
 
 
+def saved_ids(path: Path) -> dict[str, str]:
+    """The ids the state on disk holds: a run before this one made them, as a
+    sync does before it hands them out."""
+    return json.loads(path.read_text()).get("ids", {}) if path.exists() else {}
+
+
 def lock(path: Path) -> int:
     """Hold <state>.lock beside the state until the process exits: one run at
     a time reads, changes and writes the state, so a timer's sync and a rotate

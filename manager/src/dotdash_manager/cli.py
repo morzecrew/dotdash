@@ -1,12 +1,14 @@
-"""The dotdash-manager command: sync, status, report, rotate, adopt, join and joined."""
+"""The dotdash-manager command: sync, status, link, renew, report, rotate, adopt, join and joined."""
 
 import copy
 import hashlib
 import json
 import shlex
+import shutil
 import subprocess
 import sys
 import time
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
@@ -16,7 +18,7 @@ import typer
 from . import Refused, adopt, health, join as joining, roster, rotate, state, traffic
 from . import status as overview
 from .morzer import Morzer, write_roster
-from .render import render
+from .render import applied_keys, kept_pools, render, subscription_urls
 from .report import report as report_lines
 from .roster import Network
 
@@ -107,6 +109,9 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     del log[:-health.EVENTS]
     labels(net, st)
     st["stands"] = stands
+    # The relays devices don't get, for link to give a device what the
+    # servers do.
+    st["out"] = sorted(burnt | held)
     traffic.record(st.setdefault("traffic", {}), facts, now)
     # Yesterday's whole day and today's so far.
     verdicts += traffic.unusual(st["traffic"], since=traffic.day(now - 86400))
@@ -243,6 +248,72 @@ def status(
         time.sleep(POLL)
     print(*lines, *overview.topology(net, st), sep="\n")
     raise typer.Exit(1 if bad or (wait and pending) else 0)
+
+
+def device_urls(o: Options, net: Network, st: dict, device: str) -> list[str]:
+    """A device's subscription URLs as the servers serve them, from the facts,
+    the relays left out and the spares standing in at the last sync."""
+    if device not in net.devices:
+        raise Refused(f"{device} is not in {o.roster}'s devices")
+    if not net.subscription:
+        raise Refused("subscription = false: run `sudo morzer task run client-config --output -- "
+                      f"{device}` on a server for its links")
+    facts = {n: k["facts"] for n, k in st.get("facts", {}).items()}
+    lead = next((facts[s.name] for s in applied_keys(net, st, facts)), None)
+    if lead is None:
+        raise Refused("no server has applied the manager's keys yet: run sync, and status --wait")
+    out = set(st.get("out", []))
+    urls = subscription_urls(net, st, facts, device, lead, out, kept_pools(net, facts, out, st.get("stands", {}))[0])
+    if not urls:
+        raise Refused(f"direct = false keeps the servers' URL out, and {device}'s pools give it no own-site relay")
+    return urls
+
+
+def show(urls: list[str], through: bool, qr: bool) -> None:
+    """Each URL as client-config prints it, and with qr its QR code by
+    qrencode, the URL on its stdin rather than in the process list."""
+    if qr and not shutil.which("qrencode"):
+        print("qrencode is not installed here: no QR codes", file=sys.stderr)
+        qr = False
+    for i, url in enumerate(urls):
+        print(f"through the relay {url.split('/')[2]}: {url}" if through or i else url, flush=True)
+        if qr:
+            subprocess.run(["qrencode", "-t", "ANSIUTF8"], input=url, text=True, check=False)
+
+
+@app.command()
+def link(
+    ctx: typer.Context,
+    device: str,
+    qr: Annotated[bool, typer.Option("--qr", help="each as a QR code too, by qrencode")] = False,
+) -> None:
+    """A device's subscription URLs, as client-config prints them: the
+    server's unless direct = false, then through each own-site relay its pools
+    give it. They are its credentials: printed here, kept nowhere."""
+    o: Options = ctx.obj
+    net, st = o.open(dry_run=True)
+    # A device added since the last sync has an id only in this run's memory,
+    # which no server has.
+    if device in net.devices and device not in state.saved_ids(o.state):
+        raise Refused(f"{device} has no id yet: run sync, which makes it and gives it to every server and relay")
+    show(device_urls(o, net, st, device), net.direct is False, qr)
+
+
+@app.command()
+def renew(ctx: typer.Context, device: str) -> None:
+    """A new id for a device whose link leaked: new links and subscription URL
+    from the next sync, and its old ones let no one in once every server and
+    relay applied it. Prints the new URLs."""
+    o: Options = ctx.obj
+    net, st = o.open()
+    if device not in net.devices:
+        raise Refused(f"{device} is not in {o.roster}'s devices")
+    st["ids"][device] = str(uuid.uuid4())
+    state.save(o.state, st)
+    print(f"{device}: a new id. Run sync and status --wait; its old links and URL stop once every server and relay "
+          "applied it. Its new " + ("URLs:" if net.subscription else "links: client-config on a server, after the sync"))
+    if net.subscription:
+        show(device_urls(o, net, st, device), net.direct is False, False)
 
 
 @app.command(name="adopt")

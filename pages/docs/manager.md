@@ -176,8 +176,38 @@ sync; one removed loses its access everywhere, each machine within its next
 cycle. The manager forgets its id at that sync, so a device added back later
 gets a new one: new links and a new subscription URL, and its old ones let no
 one in. The same goes for a relay's or canary's own id and a client machine's
-proxy password. That's how to revoke a device whose link leaked: take it out,
-`sync`, then add it back.
+proxy password.
+
+## A device's link
+
+Add the device's name to `devices`, then:
+
+```sh
+dotdash-manager sync
+dotdash-manager status --wait     # every server and relay has it
+dotdash-manager link phone --qr
+```
+
+`link` prints the device's subscription URLs, as the servers' `client-config`
+does: the server's, unless `direct = false`, then the same through each
+own-site relay its `pools` give it, which a device inside the restricted
+network fetches from. A burnt relay or a waiting spare is left out, as at the
+last `sync`. `--qr` adds a QR code for each, by `qrencode` if it is
+installed. The URLs are the device's credentials: `link` prints them and
+keeps them nowhere. With `subscription = false`, run `client-config` on a
+server for the device's links.
+
+When a device's link leaks, give it a new id:
+
+```sh
+dotdash-manager renew phone
+dotdash-manager sync
+dotdash-manager status --wait
+```
+
+`renew` prints the device's new URLs, which work once the servers applied
+the `sync`. Its old links and URL stop once every server and relay has. The
+device fetches its new links from the new URL, so send it that.
 
 Before it uses a machine's facts, `sync` checks them. Facts no release
 prints are refused: a value holding whitespace, a quote, a backslash, a brace
@@ -421,13 +451,13 @@ It names a device whose day reached five times its median day and at least
 2 GB, once it has 7 days to judge by:
 
 ```
-phone-2: 14.2 GB on 2026-12-03, against 0.4 GB on its usual day: if its link may have leaked, take the device out, sync, and add it back
+phone-2: 14.2 GB on 2026-12-03, against 0.4 GB on its usual day: if its link may have leaked, renew phone-2 and sync
 ```
 
 `sync` prints yesterday's and today's; `report` ends with the last 30 days'.
 A link passed around shows this way: its device suddenly moves far more than
 it ever did. A long video call or a big download can too, so ask before
-deleting the device. Only counts reach the manager, never an address. They
+renewing it. Only counts reach the manager, never an address. They
 are an hour behind at most, as the facts refresh hourly. A server or relay
 that restarts loses only what it counted since the last refresh.
 
