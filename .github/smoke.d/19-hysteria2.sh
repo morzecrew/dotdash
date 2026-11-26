@@ -7,7 +7,7 @@
 #    before; the gate publishes 443/udp; a client from the link, trusting the
 #    site's certificate (Caddy's own CA here, cert_issuer=internal), gets
 #    through, and so do 10-clients.sh's; one with another login does not, and
-#    with the upstream stopped nothing does.
+#    with the upstream stopped nothing does; hysteria2_port=53 is refused.
 # 2. hysteria2_up: the inbound turns to Brutal at that rate, and a client
 #    asking for it still gets through; 0 again is BBR.
 # 3. xdns again: the port is shut, client-config prints exactly what it did
@@ -104,6 +104,13 @@ for p in 11080 11081 11082; do
   gets_through "${p}" || die "the client on ${p} no longer gets through under xdns,hysteria2"
 done
 echo "19-hysteria2.sh: xdns,hysteria2 adds a Hysteria2 link and outbound that work beside the others"
+
+if out=$(sudo morzer config set hysteria2_port=53 2>&1); then
+  die "hysteria2_port=53 was accepted beside the DNS tunnel"
+fi
+grep -qF 'hysteria2_port must not be 53' <<<"${out}" || die "hysteria2_port=53 failed, but not saying why: ${out}"
+gets_through 11096 || die "the deployment stopped serving after hysteria2_port=53 was refused"
+echo "19-hysteria2.sh: hysteria2_port=53 is refused beside the DNS tunnel"
 
 client hy2-auth 11097 "${hl}" "$(cat /proc/sys/kernel/random/uuid)"
 locked_out 11097 || die "a client with another login gets through Hysteria2"

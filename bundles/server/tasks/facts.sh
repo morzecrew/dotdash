@@ -2,7 +2,8 @@
 # This server's facts, as JSON, for an authority managing several machines:
 # morzer publishes them to it after every change when sync.recipient is set
 # (manifest `published`). Public halves and addresses only: the REALITY public
-# key and the VLESS encryption string are what every device's link carries.
+# key and the VLESS encryption string are what every device's link carries,
+# and the certificate's days left are on it for anyone to read.
 # The shared keys themselves come from the authority, which made them.
 set -eu
 : "${DOMAIN:?}" "${HTTPS_PORT:?}"
@@ -25,6 +26,22 @@ printf ', "subscription": %s' "$([ "${SUBSCRIPTION:-false}" = true ] && echo tru
 [ -z "${KCP_PORT:-}" ] ||
   printf ', "kcp": {"port": %s, "header": %s, "open": %s}' "$KCP_PORT" "$(str "${KCP_HEADER:-dtls}")" "$(str "${KCP_OPEN:-none}")"
 [ -z "${HYSTERIA2_PORT:-}" ] || printf ', "hysteria2_port": %s' "$HYSTERIA2_PORT"
+# Whole days left on the certificate Caddy serves for the domain, so the
+# authority sees a renewal failing before XHTTP, Hysteria2 and the CDN paths
+# break: the one Caddy wrote last for the domain, or the wildcard over its
+# parent, in its data (read-only). The image has no openssl: notAfter is the
+# second UTCTime in the leaf's DER, the first two being its validity. Left
+# out when there is no such file or date.
+# shellcheck disable=SC2012 # by time, of names Caddy gives them
+crt=$(ls -t /caddy-data/caddy/certificates/*/"$DOMAIN"/"$DOMAIN".crt \
+  /caddy-data/caddy/certificates/*/"wildcard_.${DOMAIN#*.}"/"wildcard_.${DOMAIN#*.}".crt 2>/dev/null | sed -n 1p)
+if [ -n "$crt" ]; then
+  after=$(awk '/-----BEGIN/ { n++; next } /-----END/ && n == 1 { exit } n == 1' "$crt" | base64 -d 2>/dev/null |
+    tr -c '0-9Z' '\n' | grep -oE '[0-9]{12}Z' | sed -n 2p |
+    sed 's/^\(..\)\(..\)\(..\)\(..\)\(..\)\(..\)Z$/20\1-\2-\3 \4:\5:\6/')
+  [ -z "$after" ] || ! end=$(date -u -d "$after" +%s 2>/dev/null) ||
+    printf ', "cert_days": %s' "$(((end - $(date +%s)) / 86400))"
+fi
 # With the device-traffic profile, in Xray's namespace: the bytes each device
 # has moved through Xray, both ways, since it started, by name, and when that
 # was, from its StatsService on loopback. Left out, with a word on stderr, when

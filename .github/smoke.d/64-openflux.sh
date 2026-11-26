@@ -9,6 +9,7 @@
 #   the log;
 # - a client of this hook's own, from that link, reaches the rig's target,
 #   and the rig's upstream logs the fetch: the exit left through the gate;
+#   port 25 and a private address, which Xray blocks, never reach it;
 # - the line removed: openflux-link prints no channel, and the device's key
 #   is kept for its return;
 # - openflux on inside, beside Xray, is a policy violation;
@@ -76,6 +77,17 @@ done
 [ "$(sudo sh -c "grep -c '11.99.0.10:8000' ${log} 2>/dev/null || true")" -gt "${before}" ] ||
   die "the rig's upstream did not carry the fetch: the exit went around the gate"
 echo "${0##*/}: a client from the link reaches the target, and the rig's upstream carried it"
+
+# The exits take the routing devices' connections take: mail on port 25 and
+# a private address, which Xray blocks, never reach the rig's upstream.
+mark=$(sudo sh -c "wc -l <${log}")
+for url in http://11.99.0.10:25/ http://10.255.255.1:8000/; do
+  curl -s -o /dev/null --max-time 5 --socks5-hostname 127.0.0.1:11098 "${url}" || true
+done
+sleep 2
+leaked=$(sudo tail -n "+$((mark + 1))" "${log}" | grep -E '11\.99\.0\.10:25|10\.255\.255\.1' || true)
+[ -z "${leaked}" ] || die "an exit reached what Xray blocks for devices: ${leaked}"
+echo "${0##*/}: port 25 and a private address, blocked for devices, are blocked for the exits"
 sudo docker rm -f dotdash-rig-ofclient >/dev/null
 
 channels '# no device' || die "could not clear openflux_channels"

@@ -198,7 +198,7 @@ parameters:
     type: enum
     values: [gateway, upstream]
     default: gateway
-    description: "Who turns hostnames into addresses. gateway: this server, over dns_resolver, which itself goes out through the upstreams, so they see addresses only; a name resolving to a private address is blocked. upstream: the upstream proxies, which then see every hostname; not with a WireGuard or OpenVPN line, which resolves no names"
+    description: "Who turns hostnames into addresses. gateway: this server, over dns_resolver, which itself goes out through the upstreams, so they see addresses only; a name resolving to a private address is blocked. upstream: the upstream proxies, which then see every hostname; not with a WireGuard or OpenVPN line, which resolves no names, nor a direct line, which would resolve them on this machine"
     services: [xray]
   ipv6:
     type: enum
@@ -375,11 +375,11 @@ operations:
 
 # What an authority's desired-state document may set here (morzer 0.16): the
 # devices and the keys every server shares, which the authority makes once,
-# and the lists it derives from the other machines' facts. Not the upstreams
-# or anything else this machine alone knows. None of these reaches a command
-# line or a hook.
+# and the lists it derives from the other machines' facts, the split hello
+# from its canaries' included. Not the upstreams or anything else this
+# machine alone knows. None of these reaches a command line or a hook.
 managed:
-  parameters: [servers, relays, cdn_hosts, cdn_extra, pools, subscription, direct, reality_second_key]
+  parameters: [servers, relays, cdn_hosts, cdn_extra, pools, subscription, direct, reality_second_key, hello_split]
   secrets: [vless_clients, reality_key, vless_seed, reality_short_id, xhttp_path, kcp_seed, subscription_key, reality_key_second, reality_short_id_second]
 
 # What this machine tells the authority it follows, after every change, when
@@ -441,7 +441,7 @@ tasks:
     args: true
     timeout: 1m
   facts:
-    description: "Print this server's facts as JSON, which morzer publishes to the authority it follows: its domain and ports, the REALITY public key and the VLESS encryption string; no credentials"
+    description: "Print this server's facts as JSON, which morzer publishes to its authority: its domain and ports, REALITY public key, VLESS encryption and certificate's days left; no credentials"
     service: client-config
     command: ["sh", "/task/facts.sh"]
     timeout: 1m

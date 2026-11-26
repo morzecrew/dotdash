@@ -2,9 +2,10 @@
 # The openflux profile's container: one OpenFlux exit for each line of
 # openflux_channels whose device is in vless_clients, each on a channel of its
 # own, because an exit serves one client at a time. Every connection an exit
-# opens goes through the gate's egress hop, which takes it out through the
-# upstreams; UDP goes the same way, or nowhere where upstream_udp is off.
-# Only the carriers' own connections leave this container directly.
+# opens goes through Xray's openflux hop, so it takes the routing devices'
+# connections take, the blocks included, and leaves through the upstreams;
+# UDP goes the same way, or nowhere where upstream_udp is off. Only the
+# carriers' own connections leave this container directly.
 #
 #   <device> <kind>[=<link>] [<kind>[=<link>] ...]
 #
@@ -27,7 +28,7 @@ STATE=${OPENFLUX_STATE:-/var/lib/openflux}
 CLIENTS=${OPENFLUX_CLIENTS:-/run/secrets/vless_clients}
 PROVIDER=${OPENFLUX_CALL_PROVIDER:-none}
 TOKEN=${OPENFLUX_CALL_TOKEN:-/run/secrets/call_token}
-UPSTREAM=${OPENFLUX_UPSTREAM:-gate:1080}
+UPSTREAM=${OPENFLUX_UPSTREAM:-xray:1082}
 say() { echo "openflux: $*"; }
 
 # kind <alias>: the OpenFlux transport type an alias names, or a type itself;

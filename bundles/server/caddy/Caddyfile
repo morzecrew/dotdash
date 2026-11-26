@@ -45,6 +45,24 @@
 	# certificate rather than none. A CDN that checks the origin's certificate
 	# against its own name still fails; tell it to send this domain.
 	fallback_sni {$DOMAIN}
+	# The redirect to HTTPS is the http:// site's, for every name.
+	auto_https disable_redirects
+	# On 443, a connection from XRAY_NET, the backend network Caddy shares
+	# with Xray alone (caddy/start.sh), may open with a PROXY header naming
+	# the visitor Xray relays, which the cover app then gets as
+	# X-Forwarded-For. Hysteria2's masquerade sends none, and is taken as
+	# Xray's own address. A header from anywhere else is read and ignored.
+	# The first servers block that names a server's address is the one it
+	# takes.
+	servers :443 {
+		listener_wrappers {
+			proxy_protocol {
+				allow {$XRAY_NET}
+			}
+			tls
+		}
+		protocols h1 h2
+	}
 	servers {
 		protocols h1 h2
 	}
@@ -57,10 +75,13 @@ http://127.0.0.1:8081 {
 }
 
 # On every answer, errors too: those skip the site's own routes, so without
-# handle_errors a 404 or 405 would name the server and drop the rest.
+# handle_errors a 404 or 405 would name the server and drop the rest. The
+# Via that reverse_proxy adds to an app's answers names Caddy as Server
+# would; a deletion waits until the answer is written, so it goes too.
 (headers) {
 	header {
 		-Server
+		-Via
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer
@@ -207,4 +228,15 @@ http://127.0.0.1:8081 {
 # CDN works on its defaults. The secret path, not the name, lets a device in.
 https:// {
 	import site
+}
+
+# Port 80 (http_port): the redirect to HTTPS Caddy makes of its own, the same
+# 308, Location and closed connection, but naming no server. The ACME check
+# is answered before any site, as it was.
+http:// {
+	header -Server
+	header Location https://{host}{uri}
+	respond 308 {
+		close
+	}
 }
