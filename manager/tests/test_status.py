@@ -130,3 +130,17 @@ def test_wait_asks_again_until_every_document_is_applied_or_refused(tmp_path, mo
     monkeypatch.setattr(Morzer, "rows", lambda self: row(1))
     r = CliRunner().invoke(cli.app, ["status", "--wait", "--timeout", "0"])
     assert r.exit_code == 1 and "pending 2" in r.output
+
+
+def test_a_relay_whose_device_list_is_not_the_one_sent_is_said():
+    r2 = loads(ROSTER).find("r2")
+    row = {"sync": {"applied": {"serial": 1, "at": "2027-01-15T08:00:00Z"}}}
+    applied = 1_800_000_000 - 1_800_000_000 % 86400 + 8 * 3600
+    st = lambda at, digest: {"facts": {"r2": {"id": "inst_R2", "at": at, "facts": {"clients": {"count": 2, "digest": digest}}}},
+                             "published": {"inst_R2": {"digest": "x", "at": 0, "clients": "0123abcd"}}}
+    assert overview.devices(r2, st(applied + 60, "deadbeef"), row) == (
+        "r2: its device list (2, digest deadbeef) is not the one the manager sent (digest 0123abcd): "
+        "changed on the relay by hand? The manager's next document for it puts it back")
+    assert overview.devices(r2, st(applied + 60, "0123abcd"), row) is None
+    # Facts read before its last apply carry the list from before it.
+    assert overview.devices(r2, st(applied - 60, "deadbeef"), row) is None

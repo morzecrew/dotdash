@@ -4,6 +4,8 @@ are and what its canaries found; then the topology. From what morzer returns
 (each machine's fleet row, state ls's newest serials) and what the last sync
 kept. Pure: it reads nothing and writes nothing, and prints no secret."""
 
+from datetime import datetime
+
 from .health import BURN_AFTER
 from .report import span
 from .roster import Network
@@ -64,6 +66,27 @@ def canaries(net: Network, st: dict, name: str, kind: str, now: int) -> str:
     return ("BURNT: " if h.get("fails", 0) >= BURN_AFTER else "") + (paths or "no path")
 
 
+def epoch(at: str | None) -> float | None:
+    try:
+        return datetime.fromisoformat(at).timestamp() if at else None
+    except ValueError:
+        return None
+
+
+def devices(m, st: dict, row: dict | None) -> str | None:
+    """A relay whose device list, by the digest its facts carry, is not the
+    one the manager last sent it: changed on the relay by hand. Said only of
+    facts read after its last apply, which carry what that apply gave it."""
+    kept = st.get("facts", {}).get(m.name)
+    has = (kept or {}).get("facts", {}).get("clients")
+    sent = st.get("published", {}).get(m.id, {}).get("clients")
+    applied = epoch((((row or {}).get("sync") or {}).get("applied") or {}).get("at"))
+    if not (has and sent and applied) or kept["at"] <= applied or has["digest"] == sent:
+        return None
+    return (f"{m.name}: its device list ({has['count']}, digest {has['digest']}) is not the one the manager sent "
+            f"(digest {sent}): changed on the relay by hand? The manager's next document for it puts it back")
+
+
 def table(rows: list[list[str]]) -> list[str]:
     widths = [max(len(r[i]) for r in rows) for i in range(len(rows[0]))]
     return ["  ".join(c.ljust(w) for c, w in zip(r, widths, strict=True)).rstrip() for r in rows]
@@ -71,7 +94,8 @@ def table(rows: list[list[str]]) -> list[str]:
 
 def machines(net: Network, st: dict, rows: dict, published: dict, now: int) -> tuple[list[str], bool, bool]:
     """The table and its notes, whether any document is still pending, and
-    whether anything is bad: refused, not followed, stale or down."""
+    whether anything is bad: refused, not followed, stale, down, or a relay's
+    device list not the one sent."""
     out = [["machine", "kind", "release", "document", "health", "facts", "canaries"]]
     notes, pending, bad = [], False, False
     for m in net.machines:
@@ -89,8 +113,10 @@ def machines(net: Network, st: dict, rows: dict, published: dict, now: int) -> t
         out.append([m.name, m.kind, release, doc, well, facts, canaries(net, st, m.name, m.kind, now)])
         if row and row["facts_problem"]:
             notes.append(f"{m.name}: its last facts run didn't replace them: {row['facts_problem']}")
+        stale = devices(m, st, row) if m.kind == "relay" and said == "ok" else None
+        notes += [stale] if stale else []
         pending |= said == "pending"
-        bad |= said == "bad" or down
+        bad |= said == "bad" or down or bool(stale)
     return table(out) + (["", *notes] if notes else []), pending, bad
 
 

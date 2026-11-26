@@ -82,7 +82,8 @@ services:
         target: /opt/xray
         image:
           subpath: usr/local/bin
-    secrets: [vless_seed, reality_key, reality_short_id, xhttp_path, cdn_xhttp_path, kcp_seed]
+    # vless_clients for the count and digest of the devices it lets in.
+    secrets: [vless_clients, vless_seed, reality_key, reality_short_id, xhttp_path, cdn_xhttp_path, kcp_seed]
 
 secrets:
   vless_clients: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/vless_clients"}

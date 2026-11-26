@@ -18,7 +18,7 @@ import typer
 from . import Refused, adopt, health, join as joining, roster, rotate, state, traffic
 from . import status as overview
 from .morzer import Morzer, write_roster
-from .render import applied_keys, kept_pools, render, subscription_urls
+from .render import applied_keys, clients_digest, kept_pools, render, subscription_urls
 from .report import report as report_lines
 from .roster import Network
 
@@ -141,6 +141,9 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
         print(f"{m.name}: {'would publish' if dry_run else 'published'}")
         holds.add(m.name)
         st["published"][m.id] = {"digest": digest, "at": int(time.time())}
+        # What a relay's facts say of the device list it has, status compares with this.
+        if "vless_clients" in doc.get("secrets", {}):
+            st["published"][m.id]["clients"] = clients_digest(doc["secrets"]["vless_clients"])
     # Who was sent hello_split and via, for the next render to take them off
     # where they no longer hold, and to name them nowhere else.
     names = {m.name for m in net.machines}

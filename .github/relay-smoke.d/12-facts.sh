@@ -27,6 +27,16 @@ got=$(jq -c '{entry_host, site, public_key, short_id, encryption}' <<<"${facts}"
 [ "${got}" = "${want}" ] || die "the facts are not relay-entry's line: ${got} against ${want}"
 echo "${0##*/}: facts are relay-entry's line at entry_host, and relay-entry takes entry_host too"
 
+# The devices it lets in, the rig's one (pre-apply/10-server.sh): their count,
+# and the digest of their ids, sorted, one per line, as relay-config prints
+# it of the copy it hands out and the manager of what it sent.
+digest=$(sha256sum <<<"$(cat /rig/relay/device)" | cut -c1-8)
+got=$(jq -c .clients <<<"${facts}")
+[ "${got}" = "{\"count\":1,\"digest\":\"${digest}\"}" ] || die "the facts' device count and digest: ${got}, not 1 and ${digest}"
+out=$(sudo morzer task run relay-entry --output -- 127.0.0.1)
+grep -qF "The devices it lets in: 1, digest ${digest}." <<<"${out}" || die "relay-entry does not print the device digest: ${out}"
+echo "${0##*/}: facts and relay-entry carry the count and digest of the devices the relay lets in"
+
 # The name parameter: relay-entry ends the line with name=, the facts carry it,
 # and a malformed one is left out of both.
 if sudo grep -q '^  name:$' /opt/dotdash-relay/current/manifest.yaml; then

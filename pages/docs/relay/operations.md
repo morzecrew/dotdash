@@ -18,6 +18,21 @@ sudo morzer secret set vless_clients <<'END'
 END
 ```
 
+A relay copy you forget rejects a device added on the server, and still lets
+in one deleted there. To check, compare the digests: `relay-config` ends with
+the devices its copy lets in and their digest, and the relay's `relay-entry`
+prints the same of its own copy:
+
+```
+The devices this copy lets in: 14, digest 3f9a1c2b.     # relay-config, on the server
+The devices it lets in: 14, digest 3f9a1c2b.            # relay-entry, on the relay
+```
+
+The same digest means the same devices. The relay's facts carry it too, and
+under the [manager](../manager.md#status), `status` says when a relay's list
+isn't the one the manager sent. It is taken over the devices' ids alone, and
+reveals none of them.
+
 ## Keys
 
 | What changed | What to do |

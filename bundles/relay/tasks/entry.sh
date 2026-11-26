@@ -14,6 +14,15 @@ host=${1:-${ENTRY_HOST:-none}}
 pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 enc=$(/opt/xray/xray-entrypoint vless-encryption /run/secrets/vless_seed)
 sid=$(cat /run/secrets/reality_short_id)
+# The devices this relay lets in: how many, and the first 8 hex characters of
+# the sha256 of their ids, sorted, one per line, as the server's relay-config
+# prints them of the copy it hands out and the manager of what it sent. A
+# copy left stale by hand, still letting in a device deleted on the server,
+# shows as a digest that differs. Ids alone: a digest of random UUIDs says
+# nothing of them.
+ids=$(awk '$1 !~ /^#/ && NF { print $1 }' /run/secrets/vless_clients | LC_ALL=C sort)
+clients=$(printf '%s' "$ids" | awk 'NF' | wc -l | tr -d ' ')
+clients_digest=$(printf '%s' "$ids" | awk 'NF' | sha256sum | cut -c1-8)
 
 # own-site: this relay serves its own site under SITE, which fetches devices'
 # subscriptions from the server and routes the XHTTP path to Xray, so

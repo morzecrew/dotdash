@@ -29,6 +29,7 @@ printf '{"entry_host": %s, "site": %s, "public_key": %s, "short_id": %s, "encryp
 [ -z "$origin" ] || printf ', "origin_host": %s' "$(str "$origin")"
 [ -z "$only" ] || printf ', "cdn_only": true'
 [ -z "$name" ] || printf ', "name": %s' "$(str "$name")"
+printf ', "clients": {"count": %s, "digest": %s}' "$clients" "$(str "$clients_digest")"
 # Under own-site, the whole days left on the certificate the site serves,
 # from Caddy's data where xray.json.tmpl finds it for Hysteria2: the leaf's
 # notAfter, the second UTCTime (YYMMDDHHMMSSZ) in its DER. Left out while

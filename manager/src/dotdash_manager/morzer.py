@@ -63,6 +63,13 @@ class OwnSite(Facts):
     xhttp_path: Word
 
 
+class Clients(Facts):
+    """How many devices a relay lets in, and their ids' digest (render's
+    clients_digest), which status compares with what it was sent."""
+    count: Annotated[int, Field(ge=0)]
+    digest: Annotated[str, Field(pattern=r"^[0-9a-f]{8}$")]
+
+
 class Traffic(Facts):
     started: int
     devices: dict[str, int]
@@ -98,6 +105,7 @@ class RelayFacts(TargetFacts):
     cdn_only: bool | None = None
     name: Word | None = None
     via: bool | None = None
+    clients: Clients | None = None
 
 
 class CanaryFacts(Facts):

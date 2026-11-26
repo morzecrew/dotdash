@@ -272,10 +272,15 @@ topology, from the facts the last sync read:
 - **canaries**: each path, as its canaries found it at the last `sync`, and
   `BURNT` before them; for a canary, how old its last reading is.
 
+Below the table come notes: a machine whose facts task failed, and a relay
+whose device list, by the digest its facts carry, isn't the one the manager
+sent it, which a hand edit on the relay does.
+
 It reads each machine's own fleet row and the newest document on the target,
 two morzer calls, and the rest from the state, so it prints no key, path or
 id. It exits 1 when a document is refused, a machine doesn't follow the
-manager, a row is stale or a service is down. After a `sync`,
+manager, a row is stale, a service is down or a relay's device list differs.
+After a `sync`,
 `status --wait` asks again every 30 seconds until every machine has applied
 or refused its newest document, for up to 20 minutes (`--timeout`), and exits
 1 if one is still pending. A timer's `sync` waits for it meanwhile.

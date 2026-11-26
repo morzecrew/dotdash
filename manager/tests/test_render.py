@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from dotdash_manager import Refused, state
-from dotdash_manager.render import relay_line, render
+from dotdash_manager.render import clients_digest, relay_line, render
 from dotdash_manager.roster import loads
 
 ROSTER = """
@@ -307,3 +307,9 @@ def test_a_burnt_relays_origin_names_leave_the_pools_without_their_paths(st, fac
     assert "origin=o.example.ru,alt.example.ru/e/t/s/" in docs["a"]["parameters"]["relays"]
     docs, _ = render(net, st, {**facts, "r1": r1}, burnt={"r1"})
     assert docs["a"]["parameters"]["pools"] == "a laptop"
+
+
+def test_the_device_digest_is_the_relays_and_relay_configs():
+    # As tasks/entry.sh's and relay-config.sh's awk, sort and sha256sum give it, busybox's too.
+    text = "# devices\nbbbb-2 laptop desktop\n\naaaa-1 phone\n  cccc-3\n#dddd-4 gone\n"
+    assert clients_digest(text) == "8cb1dc12" and clients_digest("") == "e3b0c442"

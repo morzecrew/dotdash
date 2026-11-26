@@ -53,6 +53,14 @@ def via_line(f: dict, link: str) -> str:
     return line + (f" own-site {f['own_site']['xhttp_path']}" if link == "xhttp" else "")
 
 
+def clients_digest(vless_clients: str) -> str:
+    """The digest of a device list, as a relay's facts and the server's
+    relay-config take it: the first 8 hex characters of the sha256 of its
+    ids, sorted, one per line."""
+    ids = sorted(f[0] for f in map(str.split, vless_clients.splitlines()) if f and not f[0].startswith("#"))
+    return hashlib.sha256("".join(f"{i}\n" for i in ids).encode()).hexdigest()[:8]
+
+
 def applied_keys(net: Network, state: dict, facts: dict) -> list:
     """The servers whose facts carry the manager's public key: those that
     applied its document, and so its keys."""
