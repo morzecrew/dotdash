@@ -2304,7 +2304,7 @@ with <code>sudo morzer config edit &lt;name&gt;</code>.</p>
 <tr>
 <td><code>dns_listen</code></td>
 <td><code>none</code></td>
-<td>under <code>tun</code>, the address and port that answers the LAN's DNS, such as <code>192.168.1.10:53</code></td>
+<td>under <code>tun</code>, the address and port that answers the LAN's DNS, such as <code>192.168.1.10:53</code>, or this machine's, such as <code>127.0.0.153:53</code> for <a href="../tun/#systemd-resolved">systemd-resolved</a></td>
 </tr>
 <tr>
 <td><code>dns_server</code></td>
@@ -2313,7 +2313,8 @@ with <code>sudo morzer config edit &lt;name&gt;</code>.</p>
 </tr>
 </tbody>
 </table>
-<p>Profiles (<code>installation.profile</code>): <code>tun</code>, the <a href="../tun/">whole machine</a>.</p>
+<p>Profiles (<code>installation.profile</code>): <code>tun</code>, the <a href="../tun/">whole machine</a>;
+<code>openflux</code>, the <a href="../openflux/">OpenFlux fallback</a>.</p>
 <h2 id="secrets">Secrets<a class="headerlink" href="#secrets" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2334,6 +2335,11 @@ with <code>sudo morzer config edit &lt;name&gt;</code>.</p>
 <td>yes</td>
 <td>the password devices give beyond <code>127.0.0.1</code></td>
 </tr>
+<tr>
+<td><code>openflux_link</code></td>
+<td>no</td>
+<td>under the <code>openflux</code> profile, this device's OpenFlux link, as the server's <code>openflux-link</code> task prints it (<a href="../openflux/">OpenFlux</a>)</td>
+</tr>
 </tbody>
 </table>
 <h2 id="tasks">Tasks<a class="headerlink" href="#tasks" title="Permanent link">&para;</a></h2>
@@ -2352,8 +2358,10 @@ with <code>sudo morzer config edit &lt;name&gt;</code>.</p>
 </tbody>
 </table>
 <h2 id="health">Health<a class="headerlink" href="#health" title="Permanent link">&para;</a></h2>
-<p><code>doctor</code> and each <code>apply</code> fetch <code>probe_url</code> through dotdash, and with
-<code>gateway=true</code> check that the host forwards the LAN into TUN.</p>
+<p><code>doctor</code> and each <code>apply</code> fetch <code>probe_url</code> through dotdash; under <code>tun</code>,
+check that the <a href="../tun/#the-kill-switch">kill switch</a>'s rules are in place,
+IPv6's too; and with <code>gateway=true</code>, check that the host forwards the LAN
+into TUN.</p>
 
 
 

@@ -4099,6 +4099,18 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>
 <p>A relay's site names no server anywhere: port 80's redirect and the <code>http-origin</code> door dropped <code>Server: Caddy</code>, as port 443 already did, and every port drops the <code>Via: 1.1 Caddy</code> Caddy adds to what it passes back from a cover app, a server or Xray.</p>
 </li>
+<li>
+<p>A client under <code>tun</code> with no link that answers, as on a fresh install or with kept links whose server is gone, now gets its subscription: while no link answers, the fetch goes directly from Xray, outside TUN. Before, it entered TUN, found no link and was refused for good. No other process can take that way out.</p>
+</li>
+<li>
+<p>The client's kill switch keeps its rules while dotdash-client is updated, restarted or stopped, so the machine never gets out around dotdash then; leaving <code>tun</code> still takes them out, even after a stop. <code>doctor</code> now checks IPv6's rules too. The client's tun page shows a unit that closes the gap at boot.</p>
+</li>
+<li>
+<p>Under <code>tun</code>, DNS to a resolver on the LAN, such as the router DHCP named, goes into TUN and gets fake addresses like the rest, and goes nowhere while Xray is down. systemd-resolved's own queries can't be redirected so: <code>doctor</code> says so, and the tun page shows the fix.</p>
+</li>
+<li>
+<p>A client's <code>DOMAIN-REGEX</code> rule keeps its commas, as in <code>^a{2,3}</code>. It was cut at the first one, which Xray refused, so the change rolled back.</p>
+</li>
 </ul>
 <h3 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h3>
 <ul>
