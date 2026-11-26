@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A canary checks each CDN in front of the relay it watches, through the CDN as a device's CDN link goes, and gives each under `cdn` in its facts. The manager hands it the names and CDN path; by hand, set `dotdash_cdn_hosts`, `dotdash_origin_host` and the `dotdash_cdn_xhttp_path` secret.
 
+- The manager's `status` prints a line per machine: its release, whether it applied, refused (naming what) or still waits for its newest document, its health, its facts' age and its canaries' verdicts, then the topology. `status --wait` waits until every machine applied or refused it.
+
+- The manager's `link <device>` prints a device's subscription URLs as the servers serve them, its server's and through each own-site relay its pools give it, as QR codes too with `--qr`. `renew <device>` gives a device whose link leaked a new id, and prints its new URLs: no ssh to a server for either.
+
+- The relay's `entry-check` task tries each of its entries end to end as a device would, REALITY, XHTTP through its site, mKCP and Hysteria2, and says why one fails. The `http-origin` door keeps each request's address and status in memory, so the check can tell a firewall from docker-proxy hiding the CDN's addresses.
+
+- A machine's roster entry can name its own `credentials`, which `join` hands it in place of the network's, so a relay's credential reaches only its own prefixes on the target. The manager's docs list what each credential needs, and why machines should get no delete.
+
+- The server's `relay-config` ends with the count and digest of the devices it hands a relay, and the relay's `relay-entry` and facts give the same of its own copy, so a stale copy that rejects new devices or still lets in deleted ones shows. The manager's `status` says when a relay's list isn't the one it sent.
+
 - The manager's `sync` and `report` warn when a server's or relay's site certificate has under 14 days left, from the `cert_days` in its facts. An expired certificate breaks XHTTP, Hysteria2 and the CDN links while REALITY works, which canaries read as a block.
 
 - The manager's `sync` says when servers differ in `https_port` or in the ports, mKCP header and opener, or presence of XHTTP with REALITY, mKCP and Hysteria2. Each server's subscriptions name the others with its own, so a difference gives devices dead links.

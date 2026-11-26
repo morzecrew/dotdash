@@ -137,4 +137,5 @@ starts Xray if it is down.
 | Task | |
 | --- | --- |
 | `relay-entry --output -- <address>` | the relay's line for the server's `relays`, and how a canary checks the relay; with no address, at `entry_host` |
-| `facts --output` | the same line as JSON, which the relay publishes to an authority it [follows](../server/operations.md#managed-from-elsewhere); under `own-site` also `cert_days`, the whole days left on the site's certificate |
+| `entry-check --output` | each of the relay's entries checked end to end as a device reaches it, and the `http-origin` door by its log, a line each with why it fails ([Check each entry](operations.md#check-each-entry)) |
+| `facts --output` | the same line as JSON, which the relay publishes to an authority it [follows](../server/operations.md#managed-from-elsewhere); under `own-site` also `cert_days`, the whole days left on the site's certificate; and `clients`, how many devices it lets in and their [digest](operations.md#devices) |

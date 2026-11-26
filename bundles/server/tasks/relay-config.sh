@@ -48,10 +48,16 @@ END
 sudo morzer secret set vless_clients <<'END'
 EOF
 # Every device but the relay's own client, which it uses itself.
-while read -r line_id name rest || [ -n "${line_id:-}" ]; do
+copy=$(while read -r line_id name rest || [ -n "${line_id:-}" ]; do
   [ "${name:-}" = "$want" ] && continue
   echo "${line_id}${name:+ $name}${rest:+ $rest}"
-done </run/secrets/vless_clients
+done </run/secrets/vless_clients)
+printf '%s\n' "$copy"
+# How many devices that copy lets in, and the first 8 hex characters of the
+# sha256 of their ids, sorted, one per line: the relay's relay-entry and
+# facts say the same of its own copy, and differ while it is stale.
+ids=$(printf '%s\n' "$copy" | awk '$1 !~ /^#/ && NF { print $1 }' | LC_ALL=C sort)
+digest=$(printf '%s' "$ids" | awk 'NF' | sha256sum | cut -c1-8)
 cat <<EOF
 END
 sudo morzer apply
@@ -61,6 +67,8 @@ Add the line relay-entry prints to this server's relays parameter (sudo
 morzer config edit relays), then send devices their links again; subscriptions
 pick it up by themselves. A device added to or deleted from vless_clients here has to
 change in the relay's copy too: set it there again from this output.
+The devices this copy lets in: $(printf '%s' "$ids" | awk 'NF' | wc -l | tr -d ' '), digest ${digest}. relay-entry on
+the relay prints the same of its own copy once it is this one.
 EOF
 # Set under the xhttp-reality profiles only, as for client-config.
 [ -n "${XHTTP_REALITY_PORT:-}" ] || exit 0

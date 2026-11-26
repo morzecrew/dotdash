@@ -68,7 +68,7 @@ services:
     profiles: [tasks]
     network_mode: none
     pids_limit: 64
-    environment:
+    environment: &entry-env
       SITE: ${DOTDASH_RELAY_PARAM_SITE:-}
       # Here rather than under own-site, so relay-entry can say it needs it.
       CDN_HOSTS: ${DOTDASH_RELAY_PARAM_CDN_HOSTS:-none}
@@ -82,7 +82,40 @@ services:
         target: /opt/xray
         image:
           subpath: usr/local/bin
-    secrets: [vless_seed, reality_key, reality_short_id, xhttp_path, cdn_xhttp_path, kcp_seed]
+    # vless_clients for the count and digest of the devices it lets in.
+    secrets: &entry-secrets [vless_clients, vless_seed, reality_key, reality_short_id, xhttp_path, cdn_xhttp_path, kcp_seed]
+
+  # One-shot behind a profile, started only by `morzer task run entry-check`:
+  # an Xray client of each of this relay's entries, as a device's, in Xray's
+  # own namespace, which reaches its inbounds on loopback (tasks/entry-check.sh).
+  # Like relay-entry under device-traffic, it starts Xray if it is down.
+  entry-check:
+    <<: *hardened
+    image: ${DOTDASH_RELAY_IMAGE_BUSYBOX:?set by morzer}
+    restart: "no"
+    profiles: [tasks]
+    network_mode: service:xray
+    pids_limit: 64
+    environment:
+      <<: *entry-env
+      PROBE_URL: ${DOTDASH_RELAY_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
+    volumes:
+      - ${DOTDASH_RELAY_RELEASE_DIR:?set by morzer}/tasks:/task:ro
+      - type: image
+        source: ${DOTDASH_RELAY_IMAGE_XRAY:?set by morzer}
+        target: /opt/xray
+        image:
+          subpath: usr/local/bin
+      # busybox has no CA certificates; fetching an https probe_url needs them.
+      - type: image
+        source: ${DOTDASH_RELAY_IMAGE_XRAY:?set by morzer}
+        target: /etc/ssl/certs
+        image:
+          subpath: etc/ssl/certs
+    # The client's config, which holds the relay's keys and a device's id.
+    tmpfs:
+      - /tmp:uid=65532,gid=65532,mode=0700,size=1m
+    secrets: *entry-secrets
 
 secrets:
   vless_clients: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/vless_clients"}

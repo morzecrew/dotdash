@@ -9,7 +9,11 @@ services:
   # Set under this profile only: with it, relay-entry ends the line with the
   # relay's mKCP port, header and seed.
   relay-entry:
-    environment:
+    environment: &kcp-env
       KCP_PORT: ${DOTDASH_RELAY_PARAM_KCP_PORT:-8447}
       KCP_HEADER: ${DOTDASH_RELAY_PARAM_KCP_HEADER:-dtls}
       KCP_OPEN: ${DOTDASH_RELAY_PARAM_KCP_OPEN:-none}
+
+  # And with it, entry-check checks mKCP.
+  entry-check:
+    environment: *kcp-env

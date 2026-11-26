@@ -294,6 +294,11 @@ tasks:
     service: relay-entry
     command: ["sh", "/task/facts.sh"]
     timeout: 1m
+  entry-check:
+    description: "Check each entry end to end as a device reaches it, and the http-origin door by its log of the last hour: a line each, with why it fails"
+    service: entry-check
+    command: ["sh", "/task/entry-check.sh"]
+    timeout: 3m
 
 health:
   checks:

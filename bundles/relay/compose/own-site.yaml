@@ -43,6 +43,8 @@ services:
       # The ACME account and certificates. The image's /data/caddy is mode
       # 1777, and a fresh volume copies it, so uid 65532 can write there.
       - caddy_data:/data
+      # The http-origin door's address-and-status log (caddy/Caddyfile).
+      - door_log:/door-log
     tmpfs:
       - /config:uid=65532,gid=65532,mode=0700,size=8m
     ports:
@@ -65,15 +67,28 @@ services:
   # the relay as serving it, subscriptions included. The facts task reads
   # the site's certificate from Caddy's data, for the days it has left.
   relay-entry:
-    environment:
+    environment: &own-env
       SITE: ${DOTDASH_RELAY_DOMAIN:?the own-site profile needs a domain}
       OWN_SITE: "true"
       CERT_ISSUER: ${DOTDASH_RELAY_PARAM_CERT_ISSUER:-acme}
     volumes:
       - caddy_data:/caddy-data:ro
 
+  # The same, and the certificate pins the check's TLS to the site's own;
+  # the door's log says what reached it.
+  entry-check:
+    environment: *own-env
+    volumes:
+      - caddy_data:/caddy-data:ro
+      - door_log:/door-log:ro
+
 volumes:
   caddy_data: {}
+  # The door's address-and-status log, which Caddy writes and entry-check
+  # reads: in memory, never on disk. A backup stops Caddy first (the volume
+  # is cold), which unmounts it, so it captures it empty.
+  door_log:
+    driver_opts: {type: tmpfs, device: tmpfs, o: "size=4m,uid=65532,gid=65532,mode=0700"}
 
 networks:
   edge: {}

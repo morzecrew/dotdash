@@ -1,0 +1,78 @@
+{
+  "ok": false,
+  "command": "fleet ls",
+  "manager_version": "0.19.1",
+  "data": {
+    "targets": ["file:///t"],
+    "rows": [
+      {
+        "target": "file:///t", "key": "fleet/dotdash/inst_A/status.json", "product": "dotdash", "installation_id": "inst_A",
+        "row": {
+          "schema": 3, "bound": "This row is what one installation said about itself when it published.",
+          "product": "dotdash", "installation_id": "inst_A", "version": "0.17.0", "manager_version": "0.19.1",
+          "health": {"services": 5, "running": 5}, "drift": {"targets": 0},
+          "last_operation": {"id": "op_1", "kind": "apply", "outcome": "succeeded", "at": "2026-11-26T09:58:00Z"},
+          "signing_key": "RWa", "age_recipient": "age1a",
+          "sync": {"enabled": true, "authority_key_id": "ABCD", "applied": {"serial": 7, "at": "2026-11-26T09:58:00Z",
+                   "expires_at": "2026-12-03T09:00:00Z"}, "last_fetch": {"at": "2026-11-26T09:58:00Z", "result": "ok"}},
+          "facts_digest": "sha256:aa", "published_at": "2026-11-26T09:58:01Z"
+        },
+        "signature": "verified", "expected": true, "age": "12m0s ago"
+      },
+      {
+        "target": "file:///t", "key": "fleet/dotdash-relay/inst_R1/status.json", "product": "dotdash-relay", "installation_id": "inst_R1",
+        "row": {
+          "schema": 3, "product": "dotdash-relay", "installation_id": "inst_R1", "version": "0.17.0", "staged": "0.18.0",
+          "health": {"services": 4, "running": 4}, "drift": {"targets": 0},
+          "sync": {"enabled": true, "applied": {"serial": 3, "at": "2026-11-25T10:00:00Z"},
+                   "refused": {"serial": 4, "at": "2026-11-26T09:30:00Z", "step": "check", "class": "unmanageable",
+                               "names": ["via_link", "bad\u001b[2Jname"]},
+                   "last_fetch": {"at": "2026-11-26T09:30:00Z", "result": "refused"}},
+          "facts_problem": "exit-status", "published_at": "2026-11-26T09:30:01Z"
+        },
+        "signature": "verified", "expected": true, "age": "40m0s ago"
+      },
+      {
+        "target": "file:///t", "key": "fleet/dotdash-relay/inst_R2/status.json", "product": "dotdash-relay", "installation_id": "inst_R2",
+        "row": {
+          "schema": 3, "product": "dotdash-relay", "installation_id": "inst_R2", "version": "0.16.1",
+          "health": {"services": 4, "running": 3}, "drift": {"targets": 0},
+          "sync": {"enabled": true, "applied": {"serial": 1, "at": "2026-11-26T06:00:00Z"},
+                   "last_fetch": {"at": "2026-11-26T06:00:00Z", "result": "unreachable"}},
+          "published_at": "2026-11-26T06:00:01Z"
+        },
+        "signature": "verified", "expected": true, "age": "4h10m0s ago", "stale": true
+      },
+      {
+        "target": "file:///t", "key": "fleet/dotdash-canary/inst_C1/status.json", "product": "dotdash-canary", "installation_id": "inst_C1",
+        "row": {
+          "schema": 3, "product": "dotdash-canary", "installation_id": "inst_C1", "version": "0.17.0",
+          "health": {"services": null, "running": null, "problem": "the runtime did not answer"},
+          "sync": {"enabled": false, "applied": {"serial": 2, "at": "2026-11-26T09:00:00Z"}},
+          "published_at": "2026-11-26T09:50:00Z"
+        },
+        "signature": "verified", "expected": true, "age": "20m0s ago"
+      },
+      {
+        "target": "file:///t", "key": "fleet/dotdash-client/inst_H/status.json", "product": "dotdash-client", "installation_id": "inst_H",
+        "row": {
+          "schema": 3, "product": "dotdash-client", "installation_id": "inst_H", "version": "0.17.0",
+          "health": {"services": 2, "running": 2},
+          "sync": {"enabled": true, "applied": {"serial": 1, "at": "2026-11-26T08:00:00Z"},
+                   "last_fetch": {"at": "2026-11-26T10:00:00Z", "result": "unreachable"}},
+          "published_at": "2026-11-26T10:00:01Z"
+        },
+        "signature": "verified", "expected": true, "age": "10m0s ago"
+      },
+      {
+        "target": "file:///t", "key": "fleet/dotdash/inst_X/status.json", "product": "dotdash", "installation_id": "inst_X",
+        "row": {"schema": 3, "product": "dotdash", "installation_id": "inst_X", "version": "9.9.9", "health": {}},
+        "signature": "signed-by-another-key", "age": "1m0s ago"
+      }
+    ],
+    "stale_after": "3h0m0s",
+    "expected": 5,
+    "limitations": []
+  },
+  "exit_code": 1
+}

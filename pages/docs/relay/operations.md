@@ -18,6 +18,21 @@ sudo morzer secret set vless_clients <<'END'
 END
 ```
 
+A relay copy you forget rejects a device added on the server, and still lets
+in one deleted there. To check, compare the digests: `relay-config` ends with
+the devices its copy lets in and their digest, and the relay's `relay-entry`
+prints the same of its own copy:
+
+```
+The devices this copy lets in: 14, digest 3f9a1c2b.     # relay-config, on the server
+The devices it lets in: 14, digest 3f9a1c2b.            # relay-entry, on the relay
+```
+
+The same digest means the same devices. The relay's facts carry it too, and
+under the [manager](../manager.md#status), `status` says when a relay's list
+isn't the one the manager sent. It is taken over the devices' ids alone, and
+reveals none of them.
+
 ## Keys
 
 | What changed | What to do |
@@ -25,6 +40,15 @@ END
 | The server's `reality_key`, `vless_seed` or `reality_short_id` | Run `relay-config` again, and on the relay set `dotdash_public_key`, `dotdash_encryption` and `dotdash_short_id` from it. Until then the relay can't reach the server. |
 | The relay's own keys (`secret rotate` on the relay) | Run `relay-entry` again, replace the relay's line in the server's `relays`, and send devices their links again (subscriptions pick them up). |
 | The relay's address | The same: `relay-entry -- <new address>`, then replace the line. |
+
+## Undo a change
+
+morzer's journal names each change but not the value it replaced, so note
+the old value before a change (`sudo morzer config get <name>`). To undo it,
+set that value again. If the parameter goes into the relay's line
+([which do](reference.md#what-changes-the-relays-line)), run `relay-entry`
+and replace the line on every server too. Under the
+[manager](../manager.md#a-relays-transports), the next `sync` does that.
 
 ## A site of its own, later
 
@@ -163,6 +187,8 @@ Point the relay's domain at the new address, and open 443, and 80 under
 `own-site`. Shut the old machine down: two live relays with one installation
 id confuse each other's backups. A relay whose links name its IP needs a new
 line from `relay-entry` in the server's `relays`, and new links for devices.
+Under the manager, the imported relay has a new signing key and age
+identity: [join it again](../manager.md#a-rebuilt-machine).
 
 ## Watching it
 
@@ -176,6 +202,45 @@ sudo morzer notify target add https://hooks.example/morzer
 What the relay can't see is whether devices reach it: only a machine on the
 networks devices use can. A [canary on a mobile line](../canary/index.md#on-a-mobile-line)
 checks the relay as it checks a server, with the commands `relay-entry` prints.
+
+## Check each entry
+
+`entry-check` tries each of the relay's entries as a device would, end to
+end, and says why one fails:
+
+```sh
+sudo morzer task run entry-check --output
+```
+
+```
+servers  ok: the relay reaches the servers, or the relays in via
+reality  ok: a device's REALITY link under relay.example.net gets through
+xhttp    ok: the site passes the XHTTP path on to Xray, under its own certificate
+mkcp     ok: mKCP answers on UDP 8447
+hy2      ok: Hysteria2 answers on UDP 443, under the site's certificate
+cdn      not checked here: a CDN's half takes a fetch through it, which cdn-check on a server makes
+door     FAIL: all 41 requests in the last hour refused, all from 172.19.0.1, Docker's own address: docker-proxy hides the CDN's (over IPv6, or with its userland proxy). Set http_origin_from=any, or listen=0.0.0.0 to publish the door on IPv4 alone
+```
+
+- **The entries.** An Xray client inside the relay dials each of its
+  inbounds with the relay's own keys and the first device's id, and fetches
+  `probe_url` through it, on to the servers. `servers` goes straight to the
+  servers first: when it fails, every entry fails with it, and `doctor`
+  says more. The site's TLS is pinned to the certificate Caddy holds, so a
+  failure there names what Xray saw.
+- **The door.** Under `http-origin`, Caddy logs each request to the door,
+  its address and status alone, never its path or headers, in memory, the
+  newest megabyte or two. The check reads the last hour of it. No request at
+  all is a firewall, or the CDN fetching another port. Every request refused
+  from one private address is docker-proxy, which Docker puts in front of a
+  port reached over IPv6: the door sees Docker's address instead of the
+  CDN's, so only `http_origin_from=any` matches, or `listen=0.0.0.0` keeps
+  the door to IPv4. Every request refused from other addresses is
+  `http_origin_from` missing the CDN's ranges, or the CDN asking for
+  another path. Only the CDN's gateways and scanners reach the door, never
+  a device. The log empties whenever Caddy restarts, and no backup holds it.
+- **What it can't see** is the way from devices' networks to the relay: its
+  address, its ports and its firewall. A canary on such a network sees that.
 
 ## Metrics
 
