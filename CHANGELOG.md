@@ -43,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The cover app behind a server sees each visitor's own address in `X-Forwarded-For`, not Xray's, so its per-address limits and lockouts hold per visitor. The gate and Xray hand the address on in PROXY headers, which Caddy takes from Xray alone. HTTP/3 visitors still show as Xray.
 
+- The server's OpenVPN upstream runs OpenVPN 2.6.23, as the client's kill switch does.
+
 ### Fixed
 
 - The canary's freeze checks and `measure`'s downloads go through the transport they check. They went out over the canary's own network, so where that network froze the test site directly, every path read `blocked_by: freeze` and the manager took healthy relays out of devices' links.
