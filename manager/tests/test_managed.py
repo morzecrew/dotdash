@@ -9,9 +9,6 @@ from dotdash_manager.render import render
 from dotdash_manager.roster import loads
 
 BUNDLES = Path(__file__).resolve().parents[2] / "bundles"
-# Sent today, not yet in their manifest's managed lists: the server bundle
-# adds it. Delete each once its manifest has it.
-PENDING = {("server", "parameters", "hello_split")}
 ROSTER = """
 target = "t"
 key = "k"
@@ -83,5 +80,5 @@ def test_every_name_a_document_carries_is_managed_by_its_bundle():
     assert {(k, s) for k, s, _ in sent} >= {("server", "parameters"), ("server", "secrets"), ("relay", "parameters"),
                                             ("relay", "secrets"), ("canary", "parameters"), ("canary", "secrets"),
                                             ("client", "secrets")}
-    unmanaged = sorted((k, s, n) for k, s, n in sent - PENDING if n not in managed(k).get(s, set()))
+    unmanaged = sorted((k, s, n) for k, s, n in sent if n not in managed(k).get(s, set()))
     assert unmanaged == [], f"a machine refuses a document naming these, which its manifest's managed lacks: {unmanaged}"

@@ -21,14 +21,14 @@
 | `kcp_port` | `8447` | UDP port for [mKCP](mkcp.md); not 53 with the DNS tunnel |
 | `kcp_header` | `dtls` | what mKCP's packets start with: `dtls`, `srtp`, `utp`, `wechat`, `wireguard` or `none` |
 | `kcp_open` | `none` | an opener before mKCP's flow: `quic` sends a QUIC-Initial-shaped packet first, `none` nothing ([mKCP](mkcp.md)) |
-| `hysteria2_port` | `443` | UDP port for [Hysteria2](hysteria2.md); not `kcp_port` |
+| `hysteria2_port` | `443` | UDP port for [Hysteria2](hysteria2.md); not `kcp_port`, nor 53 with the DNS tunnel |
 | `hysteria2_up` | `0` | Mbit/s Hysteria2's Brutal sends each device at, for one that asks; `0` keeps BBR |
 | `tcp_congestion` | `bbr` | TCP congestion control toward devices, in the gate's own namespace: `bbr` keeps its pace through a lossy last mile; `cubic` for a kernel without `tcp_bbr`. The gate also probes each connection's path MTU, so a link that drops large packets slows a download rather than stalling it, and holds at most 128 KiB unsent per connection |
 | `log_level` | `error` | Xray error log; `warning` and below name failed destinations |
 | `probe_url` | `https://www.gstatic.com/generate_204` | fetched through the upstreams, and through each line every 10 s; an answer slower than 1.5 s counts as none |
 | `probe_expect` | `.*` | regex the response must match, such as the exit IP |
 | `probe6_url` | `http://api6.ipify.org` | IPv6-only URL fetched through the IPv6 lines, with `ipv6=separate` |
-| `resolve` | `gateway` | `gateway`: this server resolves over `dns_resolver`; `upstream`: the upstream proxies see hostnames (no WireGuard or OpenVPN line then) |
+| `resolve` | `gateway` | `gateway`: this server resolves over `dns_resolver`; `upstream`: the upstream proxies see hostnames (no WireGuard, OpenVPN or `direct` line then) |
 | `ipv6` | `allow` | `allow`: IPv6 leaves like the rest; `separate`: through the [`group=ipv6` lines](upstreams.md#ipv6) alone; `block`: no IPv6 destination leaves, names resolve to IPv4 only, so dual-stack sites still work (with `resolve=upstream`, the upstream resolves names itself) |
 | `dns_resolver` | `https://1.1.1.1/dns-query` | DoH server for `resolve=gateway`; `https://` only |
 | `subscription` | `false` | a subscription URL per device |

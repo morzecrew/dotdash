@@ -23,7 +23,7 @@ IP-CIDR,192.168.0.0/16
 | `DOMAIN,<name>` | that name alone |
 | `DOMAIN-SUFFIX,<name>` | the name and every name under it |
 | `DOMAIN-KEYWORD,<word>` | names that contain the word |
-| `DOMAIN-REGEX,<expression>` | names the regular expression matches |
+| `DOMAIN-REGEX,<expression>` | names the regular expression matches: the rest of the line, commas included |
 | `GEOSITE,<list>` | names on a list of Xray's geosite data, such as `category-ads-all` |
 | `IP-CIDR,<range>`, `IP-CIDR6,<range>` | addresses in the range |
 | `GEOIP,<list>` | addresses on a list of Xray's geoip data, such as `private` |

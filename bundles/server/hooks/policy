@@ -7,11 +7,13 @@
 #     with ipv6=separate a third, upstream6, the same hop to the gate's IPv6
 #     egress; no freedom anywhere, and the upstream the explicit last rule;
 #   - names are resolved either by the upstream (no DNS in Xray, names passed
-#     on), or here over DoH routed through the upstream, with the upstream
-#     handed addresses only (ForceIP, never UseIP's fallback to the name);
+#     on, and no direct line, which would resolve them on this machine), or
+#     here over DoH routed through the upstream, with the upstream handed
+#     addresses only (ForceIP, never UseIP's fallback to the name);
 #   - every VLESS inbound demands a listed client and VLESS decryption, no
 #     XHTTP inbound sets a flow, the Hysteria2 inbound demands a listed user,
-#     and anything else listens on loopback only;
+#     and anything else listens on loopback only, but exit-title's forwards
+#     and the OpenFlux exits' SOCKS hop, on Xray's internal networks;
 #   - the gate forwards its public inbounds to Xray only, carries Xray's hops
 #     to the upstreams lines alone, through balancers that pick among those
 #     lines and nothing else, and blocks everything else; its upstreams file
@@ -21,7 +23,8 @@
 #     publishes nothing; the hops beside the gate (vpn, warm), which reach
 #     the tunnels and proxies, and the OpenFlux exits (openflux), which reach
 #     their carriers, are not on inside, where Xray would reach them past the
-#     gate's routing; the gate publishes only https_port and, where it
+#     gate's routing (openflux reaches Xray's hop on flux, theirs alone); the
+#     gate publishes only https_port and, where it
 #     forwards them, 53 for the DNS tunnel, xhttp_reality_port, kcp_port and
 #     hysteria2_port,
 #     and Caddy only http_port;
@@ -63,7 +66,7 @@ jq() { # <filter> <file>: the filter's output, or why the file does not parse
 violations=$(jq '
   [.outbounds[]?.tag] as $tags
   | ([.inbounds[]?.tag] - ["reality", "xhttp", "xhttp-reality", "kcp", "hysteria2", "xdns", "probe",
-      "reality-second", "xhttp-reality-second", "title-ip", "title-info"]) as $extra
+      "reality-second", "xhttp-reality-second", "title-ip", "title-info", "openflux"]) as $extra
   | check($tags == ["upstream", "block"] or $tags == ["upstream", "block", "upstream6"];
       "the outbounds are \($tags), not upstream and block (and upstream6)"),
     (.outbounds[2]? // empty |
@@ -107,7 +110,10 @@ violations=$(jq '
       check(.protocol == "dokodemo-door" and (.settings.address | type) == "string" and .settings.address != ""
         and (.settings.followRedirect // false) == false and .settings.network == "tcp";
         "inbound \(.tag) is not a forward to one fixed host")),
-    (.inbounds[]? | select(.protocol != "vless" and .protocol != "hysteria" and (.tag | IN("title-ip", "title-info") | not)) |
+    # For the OpenFlux exits: a SOCKS hop into this routing, never a forward.
+    (.inbounds[]? | select(.tag == "openflux") |
+      check(.protocol == "socks"; "inbound openflux is not a SOCKS hop into Xray'"'"'s routing")),
+    (.inbounds[]? | select(.protocol != "vless" and .protocol != "hysteria" and (.tag | IN("title-ip", "title-info", "openflux") | not)) |
       check(.listen == "127.0.0.1"; "inbound \(.tag) (\(.protocol)) listens beyond loopback")),
     (.inbounds[]? | select(.tag | endswith("-second")) |
       check(.listen == "127.0.0.1"; "inbound \(.tag), the second key'"'"'s, listens beyond loopback"))
@@ -116,16 +122,17 @@ violations+=$'\n'$(jq '
   ["public-tls", "public-dns", "public-xhttp-reality", "public-kcp", "public-hysteria2"] as $public
   | ["egress", "egress6", "backups", "backups6"] as $hops
   | ([.inbounds[]?.tag] - $public - $hops) as $extra
-  | [.routing.rules[]? | select(.outboundTag == "inside") | .inboundTag // ["(any)"] | .[]] as $inward
+  | [.routing.rules[]? | select(.outboundTag | IN("inside", "inside-udp")) | .inboundTag // ["(any)"] | .[]] as $inward
   | check($extra == []; "the gate has unexpected inbounds: \($extra)"),
     (.inbounds[]? | select(.protocol == "dokodemo-door") |
       check(.settings.address == "xray"; "the gate forwards \(.tag) to \(.settings.address), not Xray")),
     (.inbounds[]? | select(.tag | IN("backups", "backups6")) |
       check(.listen == "127.0.0.1"; "the gate'"'"'s \(.tag) hop listens beyond loopback")),
-    # Its own outbounds: block, inside, and the hops into its backups balancers.
+    # Its own outbounds: block, inside (TCP) and inside-udp, and the hops into
+    # its backups balancers.
     # The upstreams lines come from the upstreams file, which the image turns
     # into socks, http and wireguard outbounds only (noKernelTun always).
-    check([.outbounds[]?.tag] | .[0:2] == ["block", "inside"] and IN(.[2:]; [], ["to-backups"], ["to-backups", "to-backups6"]);
+    check([.outbounds[]?.tag] | .[0:3] == ["block", "inside", "inside-udp"] and IN(.[3:]; [], ["to-backups"], ["to-backups", "to-backups6"]);
       "the gate'"'"'s outbounds are \([.outbounds[]?.tag])"),
     check(.outbounds[0].protocol == "blackhole"; "the gate'"'"'s block outbound is not a blackhole"),
     (.outbounds[]? | select(.tag | IN("to-backups", "to-backups6")) |
@@ -141,8 +148,8 @@ violations+=$'\n'$(jq '
     (.routing.rules[]? | select(.balancerTag != null) |
       check(.inboundTag != null and (.inboundTag - $hops) == [];
         "the gate sends \(.inboundTag // ["(any)"]) through a balancer")),
-    check([.routing.rules[]? | .outboundTag // empty] - ["inside", "block"] == [];
-      "the gate routes straight to \([.routing.rules[]? | .outboundTag // empty] - ["inside", "block"])"),
+    check([.routing.rules[]? | .outboundTag // empty] - ["inside", "inside-udp", "block"] == [];
+      "the gate routes straight to \([.routing.rules[]? | .outboundTag // empty] - ["inside", "inside-udp", "block"])"),
     check(($inward - $public) == []; "the gate sends \($inward - $public) out directly"),
     check(.routing.rules[-1] == {network: "tcp,udp", outboundTag: "block"}; "the gate does not block what its rules leave"),
     check(has("dns") | not; "the gate has a DNS section of its own")
@@ -155,7 +162,7 @@ want='{"outbounds": {"$upstreams": "/run/secrets/upstreams"}}'
 # URL, goes into a message: the file holds credentials.
 upstreams=${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstreams
 if [ -r "${upstreams}" ]; then
-  tunnels=0 openvpn=0 http=0 v4=0 v6=0
+  tunnels=0 openvpn=0 http=0 direct=0 v4=0 v6=0
   # A line is its URL with name= and group= before it (then a |) or after it.
   while read -r -a words || [ "${#words[@]}" -gt 0 ]; do
     case ${words[0]:-} in '' | '#'*) continue ;; esac
@@ -165,7 +172,7 @@ if [ -r "${upstreams}" ]; then
     done
     case ${url} in wireguard://* | openvpn | openvpn://*) tunnels=$((tunnels + 1)) ;; esac
     case ${url} in openvpn | openvpn://*) openvpn=$((openvpn + 1)) ;; esac
-    case ${url} in http://* | https://*) http=$((http + 1)) ;; esac
+    case ${url} in http://* | https://*) http=$((http + 1)) ;; direct) direct=$((direct + 1)) ;; esac
     case ",${groups}," in *,upstream,*) v4=$((v4 + 1)) ;; esac
     case ",${groups}," in *,ipv6,*) v6=$((v6 + 1)) ;; esac
   done <"${upstreams}"
@@ -174,6 +181,12 @@ if [ -r "${upstreams}" ]; then
   [ "${openvpn}" -le 8 ] || violations+=$'\n'"upstreams has ${openvpn} OpenVPN lines, and the tunnels' SOCKS hop carries 8"
   if [ "${DOTDASH_PARAM_RESOLVE:-gateway}" = upstream ] && [ "${tunnels}" -gt 0 ]; then
     violations+=$'\n'"resolve=upstream, but ${tunnels} upstreams line(s) are a WireGuard or OpenVPN tunnel, which resolves no names"
+  fi
+  # A direct line would resolve devices' names in the gate, on this machine,
+  # where xray, gate and the like name its containers, past Xray's block of
+  # private addresses; resolve=gateway resolves them over DoH and blocks those.
+  if [ "${DOTDASH_PARAM_RESOLVE:-gateway}" = upstream ] && [ "${direct}" -gt 0 ]; then
+    violations+=$'\n'"resolve=upstream, but an upstreams line is direct, which would resolve devices' names on this machine, its containers' included: use resolve=gateway"
   fi
   if [ "${DOTDASH_PARAM_UPSTREAM_UDP:-false}" = true ] && [ "${http}" -gt 0 ]; then
     violations+=$'\n'"upstream_udp=true, but ${http} upstreams line(s) are an HTTP proxy, which drops UDP"

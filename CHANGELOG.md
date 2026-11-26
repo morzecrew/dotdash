@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - An own-site relay's facts carry `cert_days`, the whole days left on the certificate its site serves, so an authority can warn before it runs out: when it does, XHTTP, Hysteria2 and the CDN links through the relay stop while REALITY goes on. It is left out while Caddy has no certificate.
 
+- A server's facts carry `cert_days`, the whole days left on the certificate Caddy serves for its domain, so the authority can warn before a failed renewal breaks XHTTP, Hysteria2 and the CDN paths while REALITY keeps working. Left out while there is no certificate yet.
+
 ### Changed
 
 - The canary's `freeze_url`, `freeze_up_url` and `download_url` take `http://` as well as `https://`, and an `https://` one's certificate is now checked. A 64 KB freeze download not done in 40 seconds counts as stopped partway.
@@ -24,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A `relays` line with a field the server doesn't know, such as a mistyped `cdn_path=`, gets a warning naming the field and the line, where the relay used to lose that transport unsaid.
 
 - A relay's cover app sees each visitor's own address in `X-Forwarded-For`, where every visitor showed Xray's, so its per-address limits and lockouts no longer hit everyone at once. REALITY hands Caddy each connection behind a PROXY header that only Xray's network may send; the Hysteria2 masquerade still shows Xray's.
+
+- The cover app behind a server sees each visitor's own address in `X-Forwarded-For`, not Xray's, so its per-address limits and lockouts hold per visitor. The gate and Xray hand the address on in PROXY headers, which Caddy takes from Xray alone. HTTP/3 visitors still show as Xray.
 
 ### Fixed
 
@@ -75,6 +79,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A relay's site names no server anywhere: port 80's redirect and the `http-origin` door dropped `Server: Caddy`, as port 443 already did, and every port drops the `Via: 1.1 Caddy` Caddy adds to what it passes back from a cover app, a server or Xray.
 
+- A server takes `hello_split` from the manager's desired state. The server didn't list it as managed, so once the manager's canaries found a server's name blocked by SNI, morzer refused that server's whole document, keys and devices included, until the split was off again.
+
+- `hysteria2_port=53` beside the DNS tunnel is refused when the change is made, as `kcp_port=53` is, rather than failing when the gate publishes both on UDP 53.
+
+- Under the `hysteria2` profile, a visitor over HTTP/3 reaches the cover site with the domain as its Host, as over TCP. Hysteria2's masquerade sent `caddy:443` in its place, so an app's redirects and cookies over HTTP/3 named `caddy`.
+
+- The server's redirect to HTTPS on port 80 no longer sends `Server: Caddy`, which the site's own answers on 443 already left out. It is otherwise the redirect Caddy makes itself.
+
+- With `cover` naming an app, the site's answers no longer carry `Via: 1.1 Caddy`, which Caddy adds to whatever it proxies and which named it as `Server` would.
+
+- A client under `tun` with no link that answers, as on a fresh install or with kept links whose server is gone, now gets its subscription: while no link answers, the fetch goes directly from Xray, outside TUN. Before, it entered TUN, found no link and was refused for good. No other process can take that way out.
+
+- The client's kill switch keeps its rules while dotdash-client is updated, restarted or stopped, so the machine never gets out around dotdash then; leaving `tun` still takes them out, even after a stop. `doctor` now checks IPv6's rules too. The client's tun page shows a unit that closes the gap at boot.
+
+- Under `tun`, DNS to a resolver on the LAN, such as the router DHCP named, goes into TUN and gets fake addresses like the rest, and goes nowhere while Xray is down. systemd-resolved's own queries can't be redirected so: `doctor` says so, and the tun page shows the fix.
+
+- A client's `DOMAIN-REGEX` rule keeps its commas, as in `^a{2,3}`. It was cut at the first one, which Xray refused, so the change rolled back.
+
 ### Security
 
 - The manager refuses facts no bundle prints: whitespace, quotes, backslashes, braces or control characters in a value, or a field missing or of the wrong type. A tampered relay can no longer add lines to the servers' `relays`, crash every sync or write to the terminal, nor take another relay's address out of the pools.
@@ -94,6 +116,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A relay refuses a quote, backslash, brace or whitespace in `site`, `dotdash_servers`, `dotdash_address`, `dotdash_public_key` and each `via` line, set by hand or by an authority. Such a value could add keys to its Xray config or lines to its Caddyfile; the apply now fails and the relay stays as it was.
 
 - **acme-dns takes no new registrations by default**, as anyone reaching its port 443 could register. To register a parent, `sudo morzer config set registration=true`, run `register`, then set it back to `false`; `register` says so. Existing registrations keep working.
+
+- Under the server's `openflux` profile, the exits' connections go through Xray, so the rules devices get apply to them: BitTorrent and trackers, mail on port 25, private addresses and the server's networks are blocked, and `resolve` and `ipv6` hold. They went to the gate, past all of it.
+
+- `resolve=upstream` beside a `direct` upstreams line is refused: the apply rolls back and `doctor` names it. The gate resolved devices' names on the server, so a device reached its containers by name, `xray` and `gate` among them, past Xray's rules. Use `resolve=gateway`.
 
 ## [0.17.0] - 2026-11-25
 

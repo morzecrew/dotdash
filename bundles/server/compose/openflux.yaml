@@ -2,15 +2,18 @@
 # lets through only some services. An OpenFlux exit per device listed in
 # openflux_channels (openflux/openflux.sh) meets that device's OpenFlux app on
 # a carrier, a room or call on such a service, and opens the
-# device's connections through the gate's egress hop, so they leave through
-# the upstreams like the rest. Its UDP goes the same way, or, with
+# device's connections through Xray's openflux hop (xray.json.tmpl), so they
+# take the routing devices' connections take, blocks included, and leave
+# through the upstreams like the rest. Its UDP goes the same way, or, with
 # upstream_udp off, nowhere (platform-images, images/openflux).
 #
-# On egress alone, beside the gate: the carriers need a route out, and on
-# inside Xray would reach the container past the gate's routing (hooks/policy).
-# It listens on nothing a device dials; a carrier's connections are its own,
-# outward.
+# On egress, beside the gate, for the carriers' route out, and on flux, an
+# internal network it shares with Xray alone, for the hop. It listens on
+# nothing a device dials; a carrier's connections are its own, outward.
 services:
+  xray:
+    networks: [flux]
+
   openflux:
     image: ${DOTDASH_IMAGE_OPENFLUX:?set by morzer}
     restart: unless-stopped
@@ -33,7 +36,7 @@ services:
       - openflux:/var/lib/openflux
     # A room carrier's gate file, and the like.
     tmpfs: ["/tmp:size=8m"]
-    networks: [egress]
+    networks: [egress, flux]
     # Measured on one channel in dotdash-lab#68: about 45 MiB and a third of
     # a core while it carries traffic, about 20 MiB idle. Several devices
     # fit; a call carrier costs more.
@@ -42,3 +45,8 @@ services:
     logging:
       driver: local
       options: {max-size: 10m, max-file: "3"}
+
+networks:
+  # Xray and openflux to each other only; no route out.
+  flux:
+    internal: true

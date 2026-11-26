@@ -48,11 +48,12 @@ The link holds the channel's key. Hand it over as you would any link
 
 ## What it does
 
-- **Device traffic leaves through the upstreams**, as it does from Xray: each
-  exit opens its connections through the gate. UDP goes the same way where
-  `upstream_udp` is on, and is dropped where it is off. Only the connections
-  to the carrier, the service the rooms or calls are on, leave the server
-  directly.
+- **Device traffic takes the way the other links' does**: each exit opens
+  its connections through Xray, under the same rules (BitTorrent, mail on
+  port 25 and private addresses blocked, `resolve` and `ipv6` as set), and
+  out through the upstreams. UDP goes the same way where `upstream_udp` is
+  on, and is dropped where it is off. Only the connections to the carrier,
+  the service the rooms or calls are on, leave the server directly.
 - **The link stays good** across restarts and releases. Each device's key,
   rooms and link are kept on the `dotdash_openflux` volume.
 - **A leaked link shows itself.** A second app on the same link takes the
@@ -61,8 +62,8 @@ The link holds the channel's key. Hand it over as you would any link
   UUID: it loses its old key and rooms, and gets new ones and a new link.
   Leaving a device out of `openflux_channels` stops its channel but keeps its
   link for its return.
-- **Not counted by device.** OpenFlux traffic passes the gate but not Xray, so
-  the `device-traffic` profile doesn't see it.
+- **Not counted by device.** OpenFlux traffic reaches Xray as the exits'
+  one hop, not as the device, so the `device-traffic` profile doesn't see it.
 
 ## Calls made for you
 

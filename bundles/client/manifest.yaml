@@ -150,9 +150,10 @@ parameters:
     services: [xray]
 
 images:
-  # The tun profile's kill switch (killswitch/killswitch.sh): iproute2's ip
-  # in an Alpine shell, which the OpenVPN image dotdash's server pins already
-  # carries; busybox's ip has no suppress_prefixlength and no oif rules.
+  # The tun profile's kill switch, and its cleanup under the base files
+  # (killswitch/killswitch.sh): iproute2's ip in an Alpine shell, which the
+  # OpenVPN image dotdash's server pins already carries; busybox's ip has no
+  # suppress_prefixlength and no oif rules.
   killswitch: ghcr.io/morzecrew/openvpn:2.6.20@sha256:0892a6b6dfd2ce4369eb69c0d2701c24ced35ef9a2f4eee6ef5fa4d6f3684943
   # The proxy-config task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec

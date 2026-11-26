@@ -7,7 +7,8 @@
 # random path, over HTTP/2 and HTTP/1.1; plain HTTP on 443; TLS naming the
 # site, another name or none; and bytes that are no ClientHello. Every HTTPS
 # answer must also carry the site's headers and name no server, version or
-# stack. Before 50-quiet-logs.sh, which then reads the logs the probes left.
+# stack, and port 80's redirect no server either. Before 50-quiet-logs.sh,
+# which then reads the logs the probes left.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -82,6 +83,12 @@ https public --http2 "${url}${path}" | grep -q '^HTTP/2 404' || die "a random pa
 [ "$(grep -c '^HTTP/' "${tmp}/answers")" = "$(grep -ci '^strict-transport-security:' "${tmp}/answers")" ] \
   || die "an HTTPS answer lacks the site's headers"
 ! grep -qiE '^(server|x-powered-by|via):' "${tmp}/answers" || die "an HTTPS answer names the server"
+# Port 80, which Caddy publishes itself: the redirect to HTTPS, naming no server either.
+redirect=$(curl --noproxy '*' -sS --max-time 10 -D - -o /dev/null -H "Host: ${domain}" "http://127.0.0.1/p?q=1" | tr -d '\r')
+if ! grep -qx 'HTTP/1.1 308 Permanent Redirect' <<<"${redirect}" || ! grep -qix "location: https://${domain}/p?q=1" <<<"${redirect}"; then
+  die "port 80 does not redirect to HTTPS: ${redirect}"
+fi
+! grep -qi '^server:' <<<"${redirect}" || die "port 80's redirect names the server"
 
 same "plain HTTP on 443" https --http1.1 "http://${domain}:443/"
 same "TLS naming the site" tls -servername "${domain}"

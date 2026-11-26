@@ -63,7 +63,9 @@ name=home | direct
   `ipv6=separate`), not `warm=`. It carries UDP, so `upstream_udp` works
   with it.
 - `resolve=gateway` keeps resolving names over `dns_resolver`, now from this
-  address; `resolve=upstream` leaves them to this machine's resolver.
+  address. `resolve=upstream` is refused with a `direct` line: this machine
+  would resolve devices' names, its own containers' among them, which
+  devices would then reach.
 - When nothing gets out, `doctor` fetches `probe_url` from this machine
   directly for that line.
 
