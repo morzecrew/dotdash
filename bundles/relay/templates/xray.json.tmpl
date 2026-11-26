@@ -100,7 +100,10 @@ REALITY connection with Vision for each. */ -}}
         "network": "raw",
         "security": "reality",
         "realitySettings": {
-          "target": "{{ if $own }}caddy{{ else }}{{ $site }}{{ end }}:443",
+          {{- /* The own site's Caddy takes a PROXY header with each
+          connection handed to it, naming the visitor (caddy/Caddyfile); a
+          borrowed site is someone else's, which would take it as garbage. */}}
+          "target": "{{ if $own }}caddy{{ else }}{{ $site }}{{ end }}:443",{{ if $own }} "xver": 1,{{ end }}
           "serverNames": ["{{ $site }}"],
           "privateKey": {"$file": "/run/secrets/reality_key"},
           "shortIds": [{"$file": "/run/secrets/reality_short_id"}]

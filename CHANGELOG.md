@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- A relay's cover app sees each visitor's own address in `X-Forwarded-For`, where every visitor showed Xray's, so its per-address limits and lockouts no longer hit everyone at once. REALITY hands Caddy each connection behind a PROXY header that only Xray's network may send; the Hysteria2 masquerade still shows Xray's.
+
 ### Security
 
 - A relay refuses a quote, backslash, brace or whitespace in `site`, `dotdash_servers`, `dotdash_address`, `dotdash_public_key` and each `via` line, set by hand or by an authority. Such a value could add keys to its Xray config or lines to its Caddyfile; the apply now fails and the relay stays as it was.

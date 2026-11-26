@@ -48,6 +48,22 @@
 	# Port 80's redirect is the http:// site below, as Caddy's own but
 	# without its Server header.
 	auto_https disable_redirects
+	# 443, which REALITY hands every connection without the relay's key,
+	# each behind a PROXY header naming the visitor (xver), so the site and a
+	# cover app see the visitor's address rather than Xray's. A header counts
+	# only from the private ranges Docker numbers its networks from, where
+	# Xray is; a connection without one, as the Hysteria2 masquerade's or a
+	# cover app's, is taken as before. First: Caddy applies the first
+	# servers block that matches.
+	servers :443 {
+		listener_wrappers {
+			proxy_protocol {
+				allow 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+			}
+			tls
+		}
+		protocols h1 h2
+	}
 	servers {
 		protocols h1 h2
 	}

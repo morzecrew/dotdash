@@ -217,15 +217,21 @@ if sudo jq -e '[.inbounds[].tag] | index("devices-xhttp")' /etc/dotdash-relay/xr
 fi
 
 # An app behind the site (cover): Caddy's own image answering "cover
-# app", on Caddy's network as cover-app, serves the site, and doctor passes.
+# app" and the X-Forwarded-For it got, on Caddy's network as cover-app,
+# serves the site, sees the visitor's address rather than Xray's (REALITY's
+# PROXY header), and doctor passes.
 if sudo grep -qx '  cover:' /opt/dotdash-relay/current/manifest.yaml; then
   caddy=$(service_container caddy)
   network=$(sudo docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{println $k}}{{end}}' "${caddy}" | sed -n 1p)
   sudo docker run -d --name relay-rig-cover-app --network "${network}" --network-alias cover-app \
-    "$(sudo docker inspect -f '{{.Config.Image}}' "${caddy}")" caddy respond --listen :8080 --body "cover app" >/dev/null
+    "$(sudo docker inspect -f '{{.Config.Image}}' "${caddy}")" caddy respond --listen :8080 \
+    --body 'cover app {http.request.header.X-Forwarded-For}' >/dev/null
   set_config cover=http://cover-app:8080
   page=$(curl -sk --max-time 10 --resolve "${domain}:443:127.0.0.1" "https://${domain}/" || true)
-  [ "${page}" = "cover app" ] || die "the relay's site is not the app's: $(head -c 200 <<<"${page}")"
+  [[ ${page} == "cover app "?* ]] || die "the relay's site is not the app's: $(head -c 200 <<<"${page}")"
+  xray_ips=" $(sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' "$(service_container xray)")"
+  [[ ${xray_ips} != *" ${page#cover app } "* ]] || die "the app sees Xray's address, ${page#cover app }, not the visitor's"
+  echo "${0##*/}: the app behind the site sees the visitor's address, ${page#cover app }, not Xray's"
   sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the app up: $(sudo morzer doctor 2>&1 | tail -5)"
   # The check looked at the own site, not past it as for a borrowed one.
   status=$(sudo morzer status 2>&1 || true)
