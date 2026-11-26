@@ -9,6 +9,9 @@ on:
       - bundles/server/**
       - .github/smoke.d/**
       - .github/tests/**
+      # The client smoke's stand-in, which tests/client-config.sh holds to
+      # client-config's output.
+      - .github/client-smoke.d/pre-apply/server.txt
       - .github/workflows/pr.yml
       - .github/workflows/main.yml
       - .github/workflows/release.yml

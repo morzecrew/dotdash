@@ -45,7 +45,8 @@ jq --arg eth0 "${eth0}" '.outbounds[0].settings.address = $eth0 | .outbounds[0].
   /rig/client/www/sub.json | sudo tee "${dir}/www/sub.json" >/dev/null
 sed 's/^:8080 {/:8089 {/' /rig/client/caddy/Caddyfile | sudo tee "${dir}/caddy/Caddyfile" >/dev/null
 sudo chmod -R a+rX "${dir}"
-sudo docker run -d --name client-rig-tun-server --network host -v "${dir}/server:/etc/xray:ro" "${xray}" >/dev/null
+sudo docker run -d --name client-rig-tun-server --network host -v "${dir}/server:/etc/xray:ro" \
+  -v /rig/client/secrets:/run/secrets:ro "${xray}" >/dev/null
 sudo docker run -d --name client-rig-tun-sub --network host -v "${dir}/caddy:/etc/caddy:ro" -v "${dir}/www:/www:ro" \
   "${caddy}" >/dev/null
 

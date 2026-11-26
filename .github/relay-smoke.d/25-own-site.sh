@@ -175,15 +175,16 @@ sudo docker run -d --name relay-rig-xhttp --network host -v /rig/relay/xhttp:/et
 gets_out 18084 || die "a device under a CDN's own name did not get out behind the relay's site: $(sudo docker logs relay-rig-xhttp 2>&1 | tail -2)"
 sudo docker rm -f relay-rig-xhttp >/dev/null
 echo "${0##*/}: a CDN sending its own name as SNI and Host gets through the relay's site"
-# The CDNs' own path (cdnpath=), to the CDN inbound: a device shaped as
-# the server's CDN links through it are, disguised (client-config.sh),
-# gets out by it.
+# The CDNs' own path (cdnpath=), to the CDN inbound: a device disguised as
+# that inbound expects, which the server's CDN links through it are too
+# (client-config.sh; lint.yml holds the two equal), gets out by it.
 cp=$(entry | grep -o 'cdnpath=[0-9a-f]*' | cut -d= -f2)
 [ "${#cp}" = 24 ] || die "relay-entry gives no cdnpath= of 24 hex characters with cdn_hosts set: $(entry | grep -o 'cdnpath=[^ ]*' || true)"
-jq --arg p "/${cp}" '.outbounds[0].streamSettings.xhttpSettings += {path: $p, uplinkDataKey: "X-Part",
-    xPaddingBytes: "64-256", xPaddingObfsMode: true, xPaddingMethod: "tokenish", xPaddingPlacement: "cookie",
-    xPaddingKey: "csrftoken", sessionIDPlacement: "cookie", sessionIDKey: "sessionid",
-    seqPlacement: "cookie", seqKey: "seq"}' /rig/relay/xhttp/config.json >/rig/relay/xhttp/cdn.json
+disguise=$(sudo jq -c '.inbounds[] | select(.tag == "devices-cdn").streamSettings.xhttpSettings
+  | del(.path, .mode, .noSSEHeader)' /etc/dotdash-relay/xray.json)
+[ "$(jq length <<<"${disguise}")" -gt 0 ] || die "the relay's config has no disguised CDN inbound"
+jq --arg p "/${cp}" --argjson d "${disguise}" '.outbounds[0].streamSettings.xhttpSettings += $d + {path: $p}' \
+  /rig/relay/xhttp/config.json >/rig/relay/xhttp/cdn.json
 mv /rig/relay/xhttp/cdn.json /rig/relay/xhttp/config.json
 chmod -R a+rX /rig/relay/xhttp
 sudo docker run -d --name relay-rig-xhttp --network host -v /rig/relay/xhttp:/etc/xray:ro \

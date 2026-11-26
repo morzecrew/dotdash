@@ -206,5 +206,15 @@ grep -qF 'servers names no server: this one alone' "$work/err" || fail "servers 
 echo "== subscriptions on: the URL alone without --full, one per device"
 [ "$(cc SUBSCRIPTION=true -- | grep -cE '^https://s\.example\.com/[0-9a-f]{32}$')" = 3 ] || fail "subscription: not one URL per device"
 
+echo "== the client smoke's stand-in: this REALITY link and these outbounds, its values left out"
+out=$(cc SUBSCRIPTION=false DOMAIN=www.gstatic.com ENTRY_PORT=9443 -- --full phone)
+obs=$(printf '%s\n' "$out" | config | jq -c '[.outbounds[] | select(.tag == "dotdash-1-reality" or .protocol == "dns")]')
+blank=$(jq -r '.[0] | "s/\(.settings.id)/{id}/g; s/\(.settings.encryption)/{enc}/g; s/\(.streamSettings.realitySettings.password)/{pbk}/g"' <<<"$obs")
+got=$(printf '%s\n%s\n' "$(printf '%s\n' "$out" | links | grep '#server%20%C2%B7%20reality$')" "$obs" | sed "$blank
+  s/@www\.gstatic\.com:/@{host}:/; s/\"address\":\"www\.gstatic\.com\"/\"address\":\"{host}\"/; s/sid=ab12&/sid={sid}\&/; s/\"shortId\":\"ab12\"/\"shortId\":\"{sid}\"/")
+[ "$got" = "$(cat .github/client-smoke.d/pre-apply/server.txt)" ] ||
+  fail "the client smoke's stand-in is not client-config's; .github/client-smoke.d/pre-apply/server.txt should read:
+$got"
+
 [ "$failed" = 0 ] && echo "client-config: all cases pass"
 exit "$failed"
