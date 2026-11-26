@@ -102,8 +102,9 @@ jq -e '.paths.reality == true and .cdn == {"cdn.test": true, "door.test": true, 
   die "facts with the CDN stand-in up: ${got}"
 # The disguise, as a CDN's log shows it: one path, the session in a cookie,
 # the upload in X-Part headers.
-sudo docker logs canary-rig-cdn 2>&1 | grep '"host":"cdn.test"' | grep -F "\"uri\":\"/${path}\"" | grep -qF '"X-Part-0"' ||
-  die "no request to cdn.test on the bare CDN path carried an X-Part upload: $(sudo docker logs canary-rig-cdn 2>&1 | tail -n 2)"
+log=$(sudo docker logs canary-rig-cdn 2>&1)
+grep -qE "\"host\":\"cdn\\.test\",\"uri\":\"/${path}\",.*\"X-Part-0\"" <<<"${log}" ||
+  die "no request to cdn.test on the bare CDN path carried an X-Part upload: $(grep -F '"host":"cdn.test"' <<<"${log}" | tail -n 1 | cut -c1-600)"
 echo "${0##*/}: each CDN name gets through the stand-in: $(jq -c .cdn <<<"${got}")"
 
 sudo docker stop canary-rig-cdn >/dev/null
