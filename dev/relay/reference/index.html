@@ -381,6 +381,22 @@
   
   
     <li class="md-tabs__item">
+      <a href="../../acme-dns/" class="md-tabs__link">
+        
+  
+  acme-dns
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../../manager/" class="md-tabs__link">
         
   
@@ -1870,6 +1886,32 @@
   
   
     <li class="md-nav__item">
+      <a href="../../acme-dns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  acme-dns
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../manager/" class="md-nav__link">
         
   
@@ -1915,10 +1957,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
         
           
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
             
   
   
@@ -1936,8 +1978,8 @@
           </label>
         
         
-          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
-            <label class="md-nav__title" for="__nav_8">
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_9">
               <span class="md-nav__icon md-icon"></span>
               
   
@@ -2227,7 +2269,7 @@
 <tr>
 <td><code>http_origin_from</code></td>
 <td><code>none</code></td>
-<td>with <code>http-origin</code>, the addresses the door answers, comma-separated IPs or CIDR ranges: the CDN's gateways; <code>any</code> answers every address, <code>none</code> no one</td>
+<td>with <code>http-origin</code>, the addresses the door answers, comma-separated IPs or CIDR ranges: the CDN's gateways; <code>any</code> answers every address, <code>none</code> no one. The door sees the address that connects to it: over IPv6, which Docker forwards from an address of its own, or behind a proxy of yours in front of the port, only <code>any</code> works</td>
 </tr>
 <tr>
 <td><code>http_origin_host</code></td>
@@ -2335,6 +2377,11 @@
 <td>with <code>mkcp</code>, what its packets start with, as the server's <a href="../../server/mkcp/"><code>kcp_header</code></a></td>
 </tr>
 <tr>
+<td><code>kcp_open</code></td>
+<td><code>none</code></td>
+<td>with <code>mkcp</code>, an opener in front of the flow, as the server's <code>kcp_open</code>: <code>quic</code> sends a packet shaped like a QUIC Initial first. <code>relay-entry</code> adds it to the relay's line, so devices' links through the relay match</td>
+</tr>
+<tr>
 <td><code>hysteria2_port</code></td>
 <td><code>443</code></td>
 <td>with <code>hysteria2</code>, the UDP port devices reach the relay's Hysteria2 on</td>
@@ -2354,6 +2401,11 @@ of the CDNs' own (<code>cdn_xhttp_path</code>, generated too) that a CDN reading
 requests never learns the other from
 (<a href="../../server/cdn/#in-front-of-a-relay">CDN in front of a relay</a>). See
 <a href="../install/#1-pick-the-site">Set up a relay</a>.</p>
+<p>REALITY hands the site each connection with the visitor's address (a PROXY
+header), so a cover app sees each visitor's own address in
+<code>X-Forwarded-For</code>, not Xray's, and its per-address limits work. Visitors
+over the Hysteria2 port's HTTP/3 still show Xray's. A subscription token
+the servers don't have gets the site's own answer, as any other path does.</p>
 <p><code>installation.profile=own-site,hysteria2</code>: the relay serves
 <a href="../../server/hysteria2/">Hysteria2</a> on UDP <code>hysteria2_port</code> too, under its own
 site's certificate, each device's UUID its login, and carries it on to the
@@ -2367,7 +2419,8 @@ in plain HTTP on <code>http_origin_port</code>, a door for a
 <a href="../../server/cdn/#a-cdn-that-fetches-in-plain-http">CDN that fetches in plain HTTP</a>.
 It answers the addresses in <code>http_origin_from</code> alone, on the CDNs' path
 alone, which it passes on to Xray's XHTTP inbound; everyone else gets a 404.
-<code>relay-entry</code> then ends the relay's line with <code>cdnpath=&lt;path&gt;</code> and
+It needs <code>own-site</code>, whose Caddy is the door: without it the profile is
+refused. <code>relay-entry</code> then ends the relay's line with <code>cdnpath=&lt;path&gt;</code> and
 <code>origin=&lt;http_origin_host&gt;</code>, from which the server gives each device a
 <code>relay · cdn</code> link through that name. Where the CDN gives several names,
 set them all, comma-separated: each gets a link of its own, <code>cdn 1</code>,
@@ -2439,6 +2492,26 @@ starts Xray if it is down.</p>
 <td>yes</td>
 <td>the key the relay's mKCP packets are encrypted under, with <code>mkcp</code></td>
 </tr>
+<tr>
+<td><code>xhttp_path</code></td>
+<td>yes</td>
+<td>with <code>own-site</code>, the secret path the site routes to Xray's XHTTP inbound</td>
+</tr>
+<tr>
+<td><code>cdn_xhttp_path</code></td>
+<td>yes</td>
+<td>with <code>own-site</code>, the secret path CDNs in front fetch XHTTP by, apart from <code>xhttp_path</code></td>
+</tr>
+<tr>
+<td><code>dotdash_xhttp_path</code></td>
+<td>no</td>
+<td>with <code>dotdash_link=xhttp-reality</code>, the <code>path=</code> of the servers' XHTTP links, from <code>relay-config</code></td>
+</tr>
+<tr>
+<td><code>acme_dns</code></td>
+<td>no</td>
+<td>with <code>cert_issuer=acme-dns</code>, the <a href="../../acme-dns/">acme-dns</a> registration as JSON</td>
+</tr>
 </tbody>
 </table>
 <h2 id="tasks">Tasks<a class="headerlink" href="#tasks" title="Permanent link">&para;</a></h2>
@@ -2456,7 +2529,7 @@ starts Xray if it is down.</p>
 </tr>
 <tr>
 <td><code>facts --output</code></td>
-<td>the same line as JSON, which the relay publishes to an authority it <a href="../../server/operations/#managed-from-elsewhere">follows</a></td>
+<td>the same line as JSON, which the relay publishes to an authority it <a href="../../server/operations/#managed-from-elsewhere">follows</a>; under <code>own-site</code> also <code>cert_days</code>, the whole days left on the site's certificate</td>
 </tr>
 </tbody>
 </table>
