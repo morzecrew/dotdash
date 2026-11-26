@@ -49,8 +49,10 @@ hosts() { # <parameter> <list>: the list's host names, one per line, "none" asid
     /^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*$/ { print; next } { print p ": " $0 " is not a host name; left out" > "/dev/stderr" }'
 }
 # The servers carrying these clients with the same secrets, in order (the
-# servers parameter); self is this one.
+# servers parameter); self is this one. A list naming none, such as " , ", is
+# this one alone, as an empty one is.
 servers=$(hosts servers "${SERVERS:-self}" | sed "s/^self\$/${DOMAIN}/")
+[ -n "$servers" ] || { echo "servers names no server: this one alone" >&2; servers=$DOMAIN; }
 count=$(printf '%s\n' "$servers" | grep -c .)
 # direct=false: no server's address in anything printed here, so a leaked
 # device gives away relays and CDN hosts, never a server. No links or outbounds

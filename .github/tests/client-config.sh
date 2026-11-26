@@ -49,6 +49,7 @@ out=$(cc SUBSCRIPTION=false -- --full phone)
 printf '%s\n' "$out" | config | jq -e '.inbounds | length == 2 and .[0].port == 10808 and .[1].port == 10809' >/dev/null ||
   fail "plain: the config does not parse, or its inbounds are not SOCKS 10808 and HTTP 10809"
 plain=$(printf '%s\n' "$out" | config)
+out_self=$out
 
 echo "== --local-auth: one inbound with a password, the same each run, the rest unchanged"
 a=$(cc SUBSCRIPTION=false -- --local-auth phone | config)
@@ -197,6 +198,10 @@ echo "== an unknown key= in a relays line: said, and ignored"
 out=$(cc SUBSCRIPTION=false "RELAYS=$relay cdn_path=cccc3333" -- --full phone)
 grep -qF 'relays: line 1: no field is named cdn_path=; ignored' "$work/err" || fail "an unknown key= not said"
 [ "$out" = "$(cc SUBSCRIPTION=false "RELAYS=$relay" -- --full phone)" ] || fail "an unknown key= changed the output"
+
+echo "== servers naming none: this server alone, and said"
+[ "$(cc SUBSCRIPTION=false 'SERVERS= , ' -- --full phone)" = "$out_self" ] || fail "servers naming none: not this server alone"
+grep -qF 'servers names no server: this one alone' "$work/err" || fail "servers naming none: not said"
 
 echo "== subscriptions on: the URL alone without --full, one per device"
 [ "$(cc SUBSCRIPTION=true -- | grep -cE '^https://s\.example\.com/[0-9a-f]{32}$')" = 3 ] || fail "subscription: not one URL per device"
