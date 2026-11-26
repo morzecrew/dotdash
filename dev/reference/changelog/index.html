@@ -4186,6 +4186,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>
 <p>A client's <code>DOMAIN-REGEX</code> rule keeps its commas, as in <code>^a{2,3}</code>. It was cut at the first one, which Xray refused, so the change rolled back.</p>
 </li>
+<li>
+<p><code>dotdash-manager status --wait</code> no longer holds the manager's lock while it waits. A timer's sync goes ahead meanwhile and status reads what it left; before, the sync waited behind it for up to 20 minutes.</p>
+</li>
 </ul>
 <h3 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h3>
 <ul>
