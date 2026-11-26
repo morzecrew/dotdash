@@ -19,5 +19,9 @@ services:
   # Set under this profile only: with it, relay-entry ends the line with the
   # relay's Hysteria2 port.
   relay-entry:
-    environment:
+    environment: &hy2-env
       HYSTERIA2_PORT: ${DOTDASH_RELAY_PARAM_HYSTERIA2_PORT:-443}
+
+  # And with it, entry-check checks Hysteria2.
+  entry-check:
+    environment: *hy2-env

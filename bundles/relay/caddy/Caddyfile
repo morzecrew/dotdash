@@ -111,6 +111,35 @@ http://127.0.0.1:8081 {
 # path, so the CDN, which reads every request here, never learns that one,
 # and VLESS Encryption keeps what the requests carry unreadable to it.
 http://:8091 {
+	# Each request's address and status alone, for the entry-check task to
+	# tell a door that refuses everyone, or that no request reaches, from one
+	# that works: never its path, which holds the CDN path, its headers or
+	# its host. The CDN's gateways and scanners reach the door, never a
+	# device. In memory (compose/own-site.yaml), the newest megabyte or two.
+	log door {
+		output file /door-log/door.log {
+			roll_size 1MiB
+			roll_keep 1
+		}
+		format filter {
+			wrap json
+			fields {
+				request>remote_port delete
+				request>client_ip delete
+				request>proto delete
+				request>method delete
+				request>host delete
+				request>uri delete
+				request>headers delete
+				request>tls delete
+				resp_headers delete
+				user_id delete
+				bytes_read delete
+				size delete
+				duration delete
+			}
+		}
+	}
 	# No word of Caddy, as on the site: neither its Server header nor the
 	# Via it adds to what it passes back.
 	header {

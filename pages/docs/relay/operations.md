@@ -192,6 +192,45 @@ What the relay can't see is whether devices reach it: only a machine on the
 networks devices use can. A [canary on a mobile line](../canary/index.md#on-a-mobile-line)
 checks the relay as it checks a server, with the commands `relay-entry` prints.
 
+## Check each entry
+
+`entry-check` tries each of the relay's entries as a device would, end to
+end, and says why one fails:
+
+```sh
+sudo morzer task run entry-check --output
+```
+
+```
+servers  ok: the relay reaches the servers, or the relays in via
+reality  ok: a device's REALITY link under relay.example.net gets through
+xhttp    ok: the site passes the XHTTP path on to Xray, under its own certificate
+mkcp     ok: mKCP answers on UDP 8447
+hy2      ok: Hysteria2 answers on UDP 443, under the site's certificate
+cdn      not checked here: a CDN's half takes a fetch through it, which cdn-check on a server makes
+door     FAIL: all 41 requests in the last hour refused, all from 172.19.0.1, Docker's own address: docker-proxy hides the CDN's (over IPv6, or with its userland proxy). Set http_origin_from=any, or listen=0.0.0.0 to publish the door on IPv4 alone
+```
+
+- **The entries.** An Xray client inside the relay dials each of its
+  inbounds with the relay's own keys and the first device's id, and fetches
+  `probe_url` through it, on to the servers. `servers` goes straight to the
+  servers first: when it fails, every entry fails with it, and `doctor`
+  says more. The site's TLS is pinned to the certificate Caddy holds, so a
+  failure there names what Xray saw.
+- **The door.** Under `http-origin`, Caddy logs each request to the door,
+  its address and status alone, never its path or headers, in memory, the
+  newest megabyte or two. The check reads the last hour of it. No request at
+  all is a firewall, or the CDN fetching another port. Every request refused
+  from one private address is docker-proxy, which Docker puts in front of a
+  port reached over IPv6: the door sees Docker's address instead of the
+  CDN's, so only `http_origin_from=any` matches, or `listen=0.0.0.0` keeps
+  the door to IPv4. Every request refused from other addresses is
+  `http_origin_from` missing the CDN's ranges, or the CDN asking for
+  another path. Only the CDN's gateways and scanners reach the door, never
+  a device. The log empties whenever Caddy restarts, and no backup holds it.
+- **What it can't see** is the way from devices' networks to the relay: its
+  address, its ports and its firewall. A canary on such a network sees that.
+
 ## Metrics
 
 With morzer's own metrics in the node exporter's textfile directory

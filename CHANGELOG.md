@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The manager's `link <device>` prints a device's subscription URLs as the servers serve them, its server's and through each own-site relay its pools give it, as QR codes too with `--qr`. `renew <device>` gives a device whose link leaked a new id, and prints its new URLs: no ssh to a server for either.
 
+- The relay's `entry-check` task tries each of its entries end to end as a device would, REALITY, XHTTP through its site, mKCP and Hysteria2, and says why one fails. The `http-origin` door keeps each request's address and status in memory, so the check can tell a firewall from docker-proxy hiding the CDN's addresses.
+
 - The server's `relay-config` ends with the count and digest of the devices it hands a relay, and the relay's `relay-entry` and facts give the same of its own copy, so a stale copy that rejects new devices or still lets in deleted ones shows. The manager's `status` says when a relay's list isn't the one it sent.
 
 - The manager's `sync` and `report` warn when a server's or relay's site certificate has under 14 days left, from the `cert_days` in its facts. An expired certificate breaks XHTTP, Hysteria2 and the CDN links while REALITY works, which canaries read as a block.

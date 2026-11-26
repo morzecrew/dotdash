@@ -12,6 +12,13 @@ services:
   # port and the settings for the CDN's form, and ends the line with the name
   # devices reach the rented CDN at.
   relay-entry:
-    environment:
+    environment: &door-env
       HTTP_ORIGIN_PORT: ${DOTDASH_RELAY_PARAM_HTTP_ORIGIN_PORT:-8880}
       HTTP_ORIGIN_HOST: ${DOTDASH_RELAY_PARAM_HTTP_ORIGIN_HOST:-none}
+
+  # And with them, entry-check reads the door's log, and says when
+  # http_origin_from lets no one in.
+  entry-check:
+    environment:
+      <<: *door-env
+      HTTP_ORIGIN_FROM: ${DOTDASH_RELAY_PARAM_HTTP_ORIGIN_FROM:-none}

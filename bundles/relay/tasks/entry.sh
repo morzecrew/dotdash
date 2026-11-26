@@ -26,9 +26,17 @@ clients_digest=$(printf '%s' "$ids" | awk 'NF' | sha256sum | cut -c1-8)
 
 # own-site: this relay serves its own site under SITE, which fetches devices'
 # subscriptions from the server and routes the XHTTP path to Xray, so
-# client-config gives each device that URL and an XHTTP link through it.
-path=
-[ "${OWN_SITE:-}" != true ] || path=$(cat /run/secrets/xhttp_path)
+# client-config gives each device that URL and an XHTTP link through it. Its
+# certificate is in Caddy's data, where xray.json.tmpl finds it for
+# Hysteria2 (mounted at /caddy-data for facts and entry-check).
+path= cert_file=
+if [ "${OWN_SITE:-}" = true ]; then
+  path=$(cat /run/secrets/xhttp_path)
+  case ${CERT_ISSUER:-acme} in internal) dir=local ;; *) dir=acme-v02.api.letsencrypt.org-directory ;; esac
+  cert=$SITE
+  case ${CERT_ISSUER:-acme}:$SITE in acme-dns:*.*.*) cert=wildcard_.${SITE#*.} ;; esac
+  cert_file=/caddy-data/caddy/certificates/$dir/$cert/$cert.crt
+fi
 # mkcp: this relay serves mKCP too, so client-config gives each device an mKCP
 # link through it. With kcp_open=quic the device's link carries the matching
 # finalmask noise mask.
