@@ -28,6 +28,8 @@ FRESH = 90 * 60
 # further on is dropped: it would make every honest one look old (FRESH), and
 # until real time caught up, keep the verdict it gave (a reading counts once).
 AHEAD = 600
+# A site's certificate with fewer days left than this is said (certs).
+CERT_DAYS = 14
 
 
 def _watched(f: dict, kind: str) -> tuple[str, str]:
@@ -220,6 +222,23 @@ def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[d
     say += [f"blocked: server {s.name}: {', '.join(sorted(gone))} in {BURN_AFTER} readings; reported only"
             for s in net.server if s.name not in burnt and (gone := out(s.name))]
     return off, say
+
+
+def certs(net: Network, facts: dict) -> list[str]:
+    """A line for each server and relay whose site's certificate runs out in
+    under CERT_DAYS, by its facts' cert_days (absent: unknown, nothing said).
+    Renewal starts well before (a month ahead, for a 90-day certificate), so
+    this is renewal failing; once it runs out, XHTTP on the site, Hysteria2
+    and the CDN paths break while REALITY works, which canaries read as
+    censorship."""
+    out = []
+    for m in [*net.server, *net.relay]:
+        days = facts.get(m.name, {}).get("cert_days")
+        if isinstance(days, int) and days < CERT_DAYS:
+            left = f"ran out {-days} day(s) ago" if days < 0 else f"runs out in {days} day(s)"
+            out.append(f"certificate: {m.kind} {m.name}: its site's certificate {left}: renewal is failing, check its "
+                       "ACME (for acme-dns, that it runs and answers)")
+    return out
 
 
 def splits(net: Network, health: dict, burnt: set[str] | frozenset[str] = frozenset()) -> tuple[set[str], list[str]]:

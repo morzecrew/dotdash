@@ -383,6 +383,22 @@ deleting the device. Only counts reach the manager, never an address. They
 are an hour behind at most, as the facts refresh hourly. A server or relay
 that restarts loses only what it counted since the last refresh.
 
+## Certificates
+
+The facts of servers and relays carry how many days their site's certificate
+has left (`cert_days`). Under 14, `sync` says so, and `report` too from the
+facts the last `sync` kept:
+
+```
+certificate: relay r1: its site's certificate runs out in 9 day(s): renewal is failing, check its ACME (for acme-dns, that it runs and answers)
+```
+
+Renewal starts well before that, so it has been failing. Once the
+certificate runs out, XHTTP on the site, Hysteria2 and the CDN links stop
+while REALITY keeps working, and canaries take those paths off as if they
+were blocked. A machine whose facts don't say, such as one on an earlier
+release, gets no warning.
+
 ## Rotating the REALITY key
 
 `rotate` changes the servers' REALITY key with no device cut off, over their

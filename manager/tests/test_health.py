@@ -448,6 +448,34 @@ watches = "r1"
     assert "page opens several connections" in CAUSES["burst"]
 
 
+def test_a_certificate_running_out_is_said_and_one_unknown_is_not():
+    from dotdash_manager.health import CERT_DAYS, certs
+
+    net = loads(ROSTER)
+    server = {"domain": "s.example.net", "https_port": 443, "public_key": "P", "encryption": "E", "cert_days": 3}
+    facts = {"s": server, "r1": {**R1, "cert_days": -2}, "r2": {**R2, "cert_days": CERT_DAYS}}
+    assert certs(net, facts) == [
+        "certificate: server s: its site's certificate runs out in 3 day(s): renewal is failing, check its ACME "
+        "(for acme-dns, that it runs and answers)",
+        "certificate: relay r1: its site's certificate ran out 2 day(s) ago: renewal is failing, check its ACME "
+        "(for acme-dns, that it runs and answers)"]
+    assert certs(net, {"s": {**server, "cert_days": None}, "r1": R1}) == []
+
+
+def test_report_says_the_certificates_running_out_from_the_kept_facts(tmp_path, monkeypatch):
+    from dotdash_manager import cli
+    from typer.testing import CliRunner
+
+    (tmp_path / "network.toml").write_text(ROSTER)
+    st = state.load(Path("/nonexistent"), loads(ROSTER))
+    st["facts"] = {"r1": {"id": "inst_R1", "at": 0, "facts": {**R1, "cert_days": 5}}}
+    state.save(tmp_path / "dotdash-state.json", st)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(state, "lock", lambda path: 0)
+    r = CliRunner().invoke(cli.app, ["report"])
+    assert r.exit_code == 0 and r.output.splitlines()[-1].startswith("certificate: relay r1: its site's certificate runs out in 5")
+
+
 def sync_with(tmp_path, monkeypatch, roster: str, st: dict, facts: dict):
     """sync in tmp_path against a stand-in morzer: run(code) answers every
     publish with code, and returns sync's exit code, the documents it

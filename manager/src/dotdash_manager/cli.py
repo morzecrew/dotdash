@@ -105,6 +105,7 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     traffic.record(st.setdefault("traffic", {}), facts, now)
     # Yesterday's whole day and today's so far.
     verdicts += traffic.unusual(st["traffic"], since=traffic.day(now - 86400))
+    verdicts += health.certs(net, facts)
     for v in verdicts:
         print(v)
     docs, waiting = render(net, st, facts, burnt | held, off, stands, split)
@@ -168,7 +169,8 @@ def report(ctx: typer.Context) -> None:
     how long it was burnt, which paths went off, how long each path lasted,
     lifetimes per provider, and each path's latency against the canaries' own
     network; from what sync logged. With device-traffic, the devices that
-    moved far more than usual on a day."""
+    moved far more than usual on a day. Then the certificates running out, by
+    the facts the last sync kept."""
     o: Options = ctx.obj
     net, st = o.open()
     labels(net, st)
@@ -179,6 +181,8 @@ def report(ctx: typer.Context) -> None:
         print(f"\ndevices far above their usual day, the last {len(st['traffic']['days'])} days (device-traffic):")
         for line in traffic.unusual(st["traffic"]) or ["none"]:
             print(f"  {line}")
+    if lines := health.certs(net, {n: k["facts"] for n, k in st.get("facts", {}).items()}):
+        print("", *lines, sep="\n")
 
 
 @app.command(name="rotate")

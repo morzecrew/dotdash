@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The manager's `sync` and `report` warn when a server's or relay's site certificate has under 14 days left, from the `cert_days` in its facts. An expired certificate breaks XHTTP, Hysteria2 and the CDN links while REALITY works, which canaries read as a block.
+
 ### Fixed
 
 - When the manager can't read a machine's facts, its last good facts stand in for up to a day, and `sync` prints the read's error. A passing outage of the target, or a wrong `identity` file, no longer takes every relay off every device in one sync.
