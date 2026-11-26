@@ -248,8 +248,13 @@ replace it. A row that doesn't verify says nothing either way.
   one out would cut them off.
 - **A relay no canary watches is never judged.** Run canaries where devices
   are: [on a mobile line](canary/index.md#on-a-mobile-line).
-- **Neither is a [CDN-only relay](server/cdn.md#the-cdns-origin-only).** Its
-  canaries check its own address, which no device gets.
+- **A [CDN-only relay](server/cdn.md#the-cdns-origin-only) is judged by its
+  CDNs alone.** Devices reach it through those, so its canaries'
+  [checks of each](canary/index.md#a-relays-cdns) are its paths, and its own
+  address, which no device gets, counts for nothing. It burns when none of its
+  CDNs gets through, and a spare stands in as for any relay. While none of its
+  canaries checks a CDN of it (a release from before CDN checks, or every name
+  with a `cdn_extra`), it isn't judged, and `sync` says why.
 
 ## Spare relays
 
@@ -291,8 +296,9 @@ knowing when you pick where the next one goes.
 
 Every `sync` logs what changed: a server or relay its canaries start
 watching, one that burns or comes back, one that leaves the roster, a relay
-turning CDN-only (no longer judged, so a burn ends there), a path going off or
-on, a spare standing in or waiting again. `report` reads that
+turning CDN-only while no canary checks its CDNs (no longer judged, so a burn
+ends there), a path going off or on (a CDN as `cdn:<name>`), a spare standing
+in or waiting again. `report` reads that
 log:
 
 ```sh
@@ -440,14 +446,19 @@ that path on the relay's line as `off=`:
 blocked: relay r1: reality got through for none of its canaries in 3 readings; devices get its other paths until one gets through again
 ```
 
-Devices then get only its other links through it (and its CDN links, which
-canaries don't check), at their next subscription refresh. A reading where the
-path gets through again takes it off.
+Devices then get only its other links through it, its CDN links included, at
+their next subscription refresh. A reading where the path gets through again
+takes it off. The relay's [CDNs](canary/index.md#a-relays-cdns) count as its
+paths too: one that gets through keeps the relay from burning while its own
+address is blocked.
 
 - **A path blocked on every relay that has it is kept.** That's likelier the
   canaries' network refusing the transport than every relay losing it at
   once, so the manager says to check that network instead.
 - **A server's blocked paths are only reported**, as a burnt server is.
+- **So is a CDN blocked while the relay's other paths get through.** `off=`
+  takes no CDN, so devices keep its links; check the CDN's settings and the
+  relay's site.
 - **A server released before `off=` ignores the field** and gives devices
   every link through the relay, as before.
 

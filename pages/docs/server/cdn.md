@@ -144,8 +144,9 @@ sudo morzer task run relay-entry --output -- <address>   # now ends in cdn-only
 ```
 
 Replace the relay's line here again. The relay then gives devices no link or
-subscription URL of its own. The [manager](../manager.md#burnt-relays) also
-stops judging it by its canaries, which check its own address. `relay-entry`
+subscription URL of its own. The [manager](../manager.md#burnt-relays) then
+judges it by its CDNs alone, which its canaries
+[check](../canary/index.md#a-relays-cdns), not by its own address. `relay-entry`
 refuses `cdn_only` without `cdn_hosts`, because devices would get nothing
 through the relay.
 
