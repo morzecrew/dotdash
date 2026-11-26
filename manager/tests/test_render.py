@@ -179,6 +179,30 @@ def test_a_canary_on_a_relay_gets_its_hysteria2_port(net, st, facts):
     assert docs["c1"]["parameters"]["dotdash_server"] == "www.example.net"
 
 
+def test_a_canary_checks_a_relays_cdns_once_its_release_does(net, st, facts):
+    r1 = {**RELAY, "own_site": {"xhttp_path": "x"}, "cdn_path": "y", "origin_host": "o.example.ru,alt.example.ru/e/t/s/"}
+    # No facts yet: it installs a release that checks them.
+    docs, _ = render(net, st, {**facts, "r1": r1})
+    assert docs["c1"]["parameters"]["dotdash_cdn_hosts"] == "c.example.net"
+    assert docs["c1"]["parameters"]["dotdash_origin_host"] == "o.example.ru,alt.example.ru/e/t/s/"
+    assert docs["c1"]["secrets"]["dotdash_cdn_xhttp_path"] == "y"
+    # A release from before them would refuse the document: none, and said.
+    old = {"server": "www.example.net", "address": "203.0.113.5", "checked_at": 1, "paths": {"reality": True}}
+    docs, waiting = render(net, st, {**facts, "r1": r1, "c1": old})
+    assert "dotdash_cdn_hosts" not in docs["c1"]["parameters"] and "dotdash_cdn_xhttp_path" not in docs["c1"]["secrets"]
+    assert "c1: its release predates CDN checks: update it to check r1's CDNs" in waiting
+    # One that checks them, on a relay without a CDN path: none to check.
+    docs, _ = render(net, st, {**facts, "c1": {**old, "cdn": {}}})
+    assert docs["c1"]["parameters"]["dotdash_cdn_hosts"] == docs["c1"]["parameters"]["dotdash_origin_host"] == "none"
+    # A CDN the roster gives a cdn_extra is left out, and said.
+    net = loads(ROSTER.replace("subscription = true",
+                               'subscription = true\ncdn_extra = { "alt.example.ru" = { uplinkHTTPMethod = "GET" } }'))
+    docs, waiting = render(net, st, {**facts, "r1": r1})
+    assert docs["c1"]["parameters"]["dotdash_origin_host"] == "o.example.ru"
+    assert any(w.startswith("c1: checks none of r1's CDNs with a cdn_extra in the roster (alt.example.ru/e/t/s/)")
+               for w in waiting)
+
+
 def test_a_standby_relay_ends_its_line_with_standby(st, facts):
     net = loads(ROSTER.replace('key = "RWr"\n', 'key = "RWr"\nstandby = true\n'))
     docs, _ = render(net, st, facts)

@@ -133,6 +133,29 @@ phone on that network would. A relay with Hysteria2 of its own prints the
 relay's own site's certificate. A canary that follows the
 [manager](../manager.md) gets that port from it.
 
+### A relay's CDNs
+
+A canary that follows the manager also checks each CDN in front of the relay
+it watches: its [`cdn_hosts`](../server/cdn.md#in-front-of-a-relay) and the
+names of a [CDN at its door](../server/cdn.md#a-cdn-that-fetches-in-plain-http),
+which the manager hands it with the relay's CDN path. Each goes out through
+the CDN as a device's CDN link does, with the same settings, and gets the
+checks a transport gets, freeze downloads included. `facts` gives each under
+`cdn`, by name, and the manager judges a [CDN-only relay](../server/cdn.md#the-cdns-origin-only)
+by these alone. A CDN that the roster gives a `cdn_extra` is not checked: the
+canary doesn't carry those settings.
+
+A canary set up by hand checks them once given the same values:
+
+```sh
+sudo morzer config set dotdash_cdn_hosts=<cdn= of the relay's line> dotdash_origin_host=<its origin=, or none>
+sudo morzer secret set dotdash_cdn_xhttp_path   # the cdnpath= of the relay's line
+```
+
+A canary seized on the censored network gives away what a seized phone
+behind the same relay does: the CDN names and the CDN path, beside the
+relay's address and keys it already holds.
+
 ## On a mobile line
 
 Mobile networks can be restricted where wired lines are not, so a canary on
@@ -156,6 +179,8 @@ relay's address no longer gets through for devices.
 | `dotdash_hysteria2_port` | `443` | the server's `hysteria2_port`, or a relay's |
 | `dotdash_hysteria2_pin` | `none` | the SHA-256 of a certificate Hysteria2 trusts in place of the public CAs, as `openssl x509 -fingerprint -sha256` prints it, for a server whose certificate no public CA signed; `none` checks it as devices do |
 | `dotdash_public_key` | none, given at `init` | the REALITY public key, the `pbk` of a link |
+| `dotdash_cdn_hosts` | `none` | a relay's `cdn=` names, comma-separated, each checked [through its CDN](#a-relays-cdns) |
+| `dotdash_origin_host` | `none` | a relay's `origin=` names, comma-separated `<name>[/<path>]`, each checked through its CDN at the relay's door |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what each check fetches through dotdash; any 2xx is healthy |
 | `download_url` | `https://speed.cloudflare.com/__down?bytes=1000000` | what `measure` downloads for its Mbit/s, `http://` or `https://`; `none` skips the downloads |
 | `control_url` | `none` | a site this canary's network reaches without dotdash, which `facts` fetches directly; `none` for no such check |
@@ -172,8 +197,9 @@ relay's address no longer gets through for devices.
 | `dotdash_short_id` | the `sid=` value of a REALITY link |
 | `dotdash_kcp_seed` | the `seed=` value of an mKCP link, for `--profile mkcp` |
 | `dotdash_xhttp_path` | the `path=` value of an XHTTP link, without the leading `%2F` |
+| `dotdash_cdn_xhttp_path` | the `cdnpath=` value of a relay's line, for its [CDNs](#a-relays-cdns) |
 
 | Task | |
 | --- | --- |
 | `measure --output -- [count] [url] [timeout]` | each transport `count` times (20 by default), as JSON |
-| `facts --output` | what it watches, whether each transport gets through (`freeze_url` included), the bytes a stopped download got, and whether `control_url` answers, as JSON; what the manager reads |
+| `facts --output` | what it watches, whether each transport and each CDN in front of a relay gets through (`freeze_url` included), the bytes a stopped download got, and whether `control_url` answers, as JSON; what the manager reads |
