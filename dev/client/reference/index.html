@@ -2304,7 +2304,7 @@ with <code>sudo morzer config edit &lt;name&gt;</code>.</p>
 <tr>
 <td><code>dns_listen</code></td>
 <td><code>none</code></td>
-<td>under <code>tun</code>, the address and port that answers the LAN's DNS, such as <code>192.168.1.10:53</code>, or this machine's, such as <code>127.0.0.153:53</code> for <a href="../tun/#systemd-resolved">systemd-resolved</a></td>
+<td>under <code>tun</code>, the address and port that answers the LAN's DNS, such as <code>192.168.1.10:53</code> (<a href="../tun/#a-gateway-for-the-lan">gateway</a>)</td>
 </tr>
 <tr>
 <td><code>dns_server</code></td>
@@ -2360,8 +2360,8 @@ with <code>sudo morzer config edit &lt;name&gt;</code>.</p>
 <h2 id="health">Health<a class="headerlink" href="#health" title="Permanent link">&para;</a></h2>
 <p><code>doctor</code> and each <code>apply</code> fetch <code>probe_url</code> through dotdash; under <code>tun</code>,
 check that the <a href="../tun/#the-kill-switch">kill switch</a>'s rules are in place,
-IPv6's too; and with <code>gateway=true</code>, check that the host forwards the LAN
-into TUN.</p>
+IPv6's too, and its DNS table; and with <code>gateway=true</code>, check that the host
+forwards the LAN into TUN.</p>
 
 
 
