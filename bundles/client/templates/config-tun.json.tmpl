@@ -22,7 +22,9 @@ back. */ -}}
 {{- if eq $t "DOMAIN" }}"domain": [{{ quote (print "full:" $v) }}]
 {{- else if eq $t "DOMAIN-SUFFIX" }}"domain": [{{ quote (print "domain:" $v) }}]
 {{- else if eq $t "DOMAIN-KEYWORD" }}"domain": [{{ quote (print "keyword:" $v) }}]
-{{- else if eq $t "DOMAIN-REGEX" }}"domain": [{{ quote (print "regexp:" $v) }}]
+{{- /* The whole rest of the line, commas included, as in {2,3}; another
+type's later fields, such as no-resolve, are dropped. */}}
+{{- else if eq $t "DOMAIN-REGEX" }}"domain": [{{ quote (print "regexp:" (trim (slice (trim (slice . (len (index $f 0)))) 1))) }}]
 {{- else if eq $t "GEOSITE" }}"domain": [{{ quote (print "geosite:" (lower $v)) }}]
 {{- else if or (eq $t "IP-CIDR") (eq $t "IP-CIDR6") }}"ip": [{{ quote $v }}]
 {{- else if eq $t "GEOIP" }}"ip": [{{ quote (print "geoip:" (lower $v)) }}]
