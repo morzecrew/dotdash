@@ -148,13 +148,13 @@ parameters:
 
 images:
   # The tun profile's kill switch, and its cleanup under the base files
-  # (killswitch/killswitch.sh): iproute2's ip in an Alpine shell, which the
-  # OpenVPN image dotdash's server pins already carries; busybox's ip has no
+  # (killswitch/killswitch.sh): iproute2's ip and nft in an Alpine shell,
+  # which the OpenVPN image carries; busybox's ip has no
   # suppress_prefixlength and no oif rules.
-  killswitch: ghcr.io/morzecrew/openvpn:2.6.20@sha256:0892a6b6dfd2ce4369eb69c0d2701c24ced35ef9a2f4eee6ef5fa4d6f3684943
+  killswitch: ghcr.io/morzecrew/openvpn:2.6.23@sha256:01935c02f0e33ea184938553965ed45eff2eaca13c0fb05a16525d20f9cca1e7
   # The proxy-config task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
-  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:c9cbe1fc19310f136c3dd19fd7316378e8ea2bb8c9b45d48e53fa2a1571ce48d
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:f9651c4e3bb6732824dacead53936dccf26ec6a59b0db763bda175b9ebe359a3
   # The openflux profile's client (platform-images, images/openflux).
   openflux: ghcr.io/morzecrew/openflux:0.17.1@sha256:eb83da74d8a647f969407d4301f451cd4136c52a772e3c3b746365eb044c247d
 
