@@ -15,9 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The release and dev keys' public halves, in the README and the docs' Releases section: `morzer init --signing-key` checks even the first release against them, with no access to the repository's variables.
 
+- An own-site relay's facts carry `cert_days`, the whole days left on the certificate its site serves, so an authority can warn before it runs out: when it does, XHTTP, Hysteria2 and the CDN links through the relay stop while REALITY goes on. It is left out while Caddy has no certificate.
+
 ### Changed
 
 - A `relays` line with a field the server doesn't know, such as a mistyped `cdn_path=`, gets a warning naming the field and the line, where the relay used to lose that transport unsaid.
+
+- A relay's cover app sees each visitor's own address in `X-Forwarded-For`, where every visitor showed Xray's, so its per-address limits and lockouts no longer hit everyone at once. REALITY hands Caddy each connection behind a PROXY header that only Xray's network may send; the Hysteria2 masquerade still shows Xray's.
 
 ### Fixed
 
@@ -53,6 +57,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Under `direct = false`, a client machine fetches its subscription through the first own-site relay its device's `pools` give it, as the servers choose. The manager took the first own-site relay of all, which could be one the device's pools keep from it.
 
+- A relay run by the manager takes `via`, `via_link` and `via_fingerprint` from it. The relay never declared them managed, so morzer refused the whole document that set or unset them, and such a relay took no change from the manager after `join`.
+
+- A relay's `http-origin` profile without `own-site` is refused with a message that says to add `own-site`, in place of a Compose error about a service with no image.
+
+- A relay's Hysteria2 hands a visitor without a login to its site with the Host the visitor sent, as over TCP. It sent `caddy:443`, so a cover app's redirects and cookies over HTTP/3 named another host than over TCP.
+
+- A subscription token the servers don't have gets the relay's own site, as any other path does, where it got the server's 404 page through the tunnel. One request could tell an own-site relay apart, and might name its server.
+
+- A relay's site names no server anywhere: port 80's redirect and the `http-origin` door dropped `Server: Caddy`, as port 443 already did, and every port drops the `Via: 1.1 Caddy` Caddy adds to what it passes back from a cover app, a server or Xray.
+
 ### Security
 
 - A server takes a `relays` line only when its host, site, public key, short id, VLESS encryption and XHTTP path each have their shape, and gives no mKCP link through a `kcp=` field that isn't whole. A bad line is left out and named by its line number, so a tampered one can't rewrite or break every device's config.
@@ -68,6 +82,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - After `rotate finish`, the manager's next sync removes the retired REALITY key and its short id from every server's secret store, so later backups no longer hold them. Before, the old key was only turned off.
 
 - `bootstrap.sh` runs morzer's installer from a pinned commit, checked by sha256, where it piped whatever a movable tag served into `sh`. It also trusts Docker's apt key only when the file holds that one key, by its fingerprint.
+
+- A relay refuses a quote, backslash, brace or whitespace in `site`, `dotdash_servers`, `dotdash_address`, `dotdash_public_key` and each `via` line, set by hand or by an authority. Such a value could add keys to its Xray config or lines to its Caddyfile; the apply now fails and the relay stays as it was.
+
+- **acme-dns takes no new registrations by default**, as anyone reaching its port 443 could register. To register a parent, `sudo morzer config set registration=true`, run `register`, then set it back to `false`; `register` says so. Existing registrations keep working.
 
 ## [0.17.0] - 2026-11-25
 

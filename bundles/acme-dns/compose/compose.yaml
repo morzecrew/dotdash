@@ -71,7 +71,10 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     pids_limit: 64
-    environment: *env
+    environment:
+      <<: *env
+      # Whether the API takes registrations now, so the task can say so.
+      REGISTRATION: ${DOTDASH_ACME_DNS_PARAM_REGISTRATION:-false}
     volumes:
       - ${DOTDASH_ACME_DNS_RELEASE_DIR:?set by morzer}/tasks:/task:ro
 

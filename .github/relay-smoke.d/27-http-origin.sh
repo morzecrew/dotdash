@@ -6,9 +6,10 @@
 # - with http_origin_host set to two names, one with a gateway's path, the
 #   line ends in origin= with both, and the settings' path is the line's
 #   cdnpath;
+# - http-origin without own-site is refused;
 # - the door passes the CDNs' path on to Xray for an address in
-#   http_origin_from, answers any other path with a 404, and answers nobody
-#   with http_origin_from=none.
+#   http_origin_from, answers any other path with a 404, names no server,
+#   and answers nobody with http_origin_from=none.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -35,6 +36,10 @@ xray() { case $1 in 200 | 400) return 0 ;; *) return 1 ;; esac; }
 # Settings and parameters go in separate calls: morzer refuses them mixed.
 set_config installation.domains=relay.test
 set_config cert_issuer=internal http_origin_from=any
+# Without own-site there is no Caddy to be the door: refused. On the rig
+# morzer's port preflight refuses it before the render's own message.
+! sudo morzer config set installation.profile=http-origin >/dev/null 2>&1 ||
+  die "the http-origin profile was taken without own-site"
 set_config installation.profile=own-site,http-origin
 out=$(entry)
 grep -q '^8880 (http_origin_port)' <<<"${out}" || die "relay-entry did not print the door's port: ${out}"
@@ -57,6 +62,11 @@ for _ in $(seq 15); do xray "$(code "/${path}/${session}")" && break; sleep 2; d
 status=$(code "/${path}/${session}")
 xray "${status}" || die "the door did not pass the CDNs' path on to Xray: ${status}"
 [ "$(code /elsewhere)" = 404 ] || die "the door answered a path other than the CDNs': $(code /elsewhere)"
+# Neither its own 404 nor what it passes back from Xray names Caddy.
+for p in /elsewhere "/${path}/${session}"; do
+  head=$(curl -s -D - -o /dev/null --max-time 5 "http://127.0.0.1:8880${p}" || true)
+  ! grep -qiE '^(server|via):' <<<"${head}" || die "the door names Caddy on ${p}: ${head}"
+done
 set_config http_origin_from=none
 [ "$(code "/${path}/${session}")" = 404 ] || die "with http_origin_from=none, the door still answered"
 echo "${0##*/}: the door passes the CDNs' path alone, to the addresses in http_origin_from alone"
