@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The server's `cdn_hosts` links go by a path of their own (a new `cdn_xhttp_path` secret), disguised as a relay's CDN links are, so a CDN's logs show neither the direct XHTTP path nor its padding. Devices take them at their next subscription refresh; links imported by hand still work, as the plain path stays.
+
 - The manager judges a CDN-only relay by its canaries' CDN checks and leaves it out of devices' links once none of its CDNs gets through, where it left it unwatched. Any relay whose CDN gets through is no longer burnt; a CDN failing alone is only reported.
 
 - The canary's `freeze_url`, `freeze_up_url` and `download_url` take `http://` as well as `https://`, and an `https://` one's certificate is now checked. A 64 KB freeze download not done in 40 seconds counts as stopped partway.

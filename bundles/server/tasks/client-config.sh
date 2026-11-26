@@ -251,8 +251,12 @@ done)
   END { for (n = 1; n <= NR; n++) { $0 = r[n]; if ($17 == "-") $17 = (NR > 1 ? "relay%20" at[$1] : "relay"); print } }')
 
 # The local CDNs in front of this server (the cdn_hosts parameter), each
-# fronting https://${DOMAIN}.
+# fronting https://${DOMAIN}, and the path they fetch XHTTP by, to its CDN
+# inbound, disguised as a relay's CDN path is: a CDN, which reads every
+# request, never learns xhttp_path.
 all_cdns=$(hosts cdn_hosts "${CDN_HOSTS:-none}")
+cdn_path=
+[ -z "$all_cdns" ] || cdn_path=$(cat /run/secrets/cdn_xhttp_path)
 
 # The pools parameter: one "<pool> <member>..." line per pool, the members
 # device names, relay hosts and CDN hosts, a relay's own included. A device in
@@ -492,7 +496,7 @@ relay_links() { # <id> <device> <normal|standby>: per relay of that group, "<rou
 
 cdn_links() { # <id> <device>: one per CDN, named "server · cdn[ <n>]"
   for h in $cdns; do
-    link_cdn "$1" "$h" "$enc" "$path" - server "$(cdn_no "$h")" ''
+    link_cdn "$1" "$h" "$enc" "$cdn_path" disguised server "$(cdn_no "$h")" ''
   done
 }
 
@@ -527,7 +531,7 @@ cdn_outbounds() { # <id>
   n=0
   for h in $cdns; do
     n=$((n + 1))
-    cdn_outbound "dotdash-cdn-$n" "$1" "$h" "${enc}" "${path}" -
+    cdn_outbound "dotdash-cdn-$n" "$1" "$h" "${enc}" "${cdn_path}" disguised
   done
 }
 

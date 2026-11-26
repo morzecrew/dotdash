@@ -29,6 +29,7 @@ printf ab12 >"$work/secrets/reality_short_id"
 printf 'aaaa1111bbbb2222' >"$work/secrets/xhttp_path"
 printf seedkcp >"$work/secrets/kcp_seed"
 printf subkey >"$work/secrets/subscription_key"
+printf 0011223344556677889900aa >"$work/secrets/cdn_xhttp_path"
 printf '0593b52c-b345-41cb-96b8-134724f6ca65 phone\n1b2c3d4e-5f60-4718-8a9b-0c1d2e3f4a5b laptop mobile\n# a comment\n2c3d4e5f-6071-4829-9bac-1d2e3f4a5b6c desk desktop\n' >"$work/secrets/vless_clients"
 chmod 644 "$work"/secrets/*
 # A relay's public key and encryption, in the shapes relay-entry prints.
@@ -163,11 +164,14 @@ jq -e '.outbounds[0].tag | startswith("standby")' <<<"$cfg" >/dev/null || fail "
 jq -e '[.outbounds[].tag | select(startswith("dotdash-relay"))] | length >= 1' <<<"$cfg" >/dev/null ||
   fail "standby: the normal relay's outbound is missing"
 
-echo "== the server's CDN hosts: an 8 KiB GET link and outbound each"
+echo "== the server's CDN hosts: an 8 KiB GET link and outbound each, disguised on the CDN path"
 out=$(cc SUBSCRIPTION=false CDN_HOSTS=cdn1.example.net,cdn2.example.net -- --full phone)
 [ "$(printf '%s\n' "$out" | config | jq '[.outbounds[] | select(.tag | startswith("dotdash-cdn-")) | .streamSettings.xhttpSettings |
-  select(.scMaxEachPostBytes == 8192 and .uplinkHTTPMethod == "GET")] | length')" = 2 ] ||
-  fail "cdn_hosts: not two 8 KiB GET outbounds"
+  select(.scMaxEachPostBytes == 8192 and .uplinkHTTPMethod == "GET" and .path == "/0011223344556677889900aa"
+    and .xPaddingObfsMode == true and .sessionIDPlacement == "cookie")] | length')" = 2 ] ||
+  fail "cdn_hosts: not two 8 KiB GET outbounds, disguised on the CDN path"
+[ "$(printf '%s\n' "$out" | links | grep -c '^vless://[^@]*@cdn[12]\.example\.net:443?.*&path=%2F0011223344556677889900aa&.*xPaddingObfsMode%22%3Atrue.*#server%20%C2%B7%20cdn%20[12]$')" = 2 ] ||
+  fail "cdn_hosts: not two links on the CDN path, disguised"
 out=$(cc SUBSCRIPTION=false 'CDN_HOSTS=cdn1.example.net,c"x' -- --full phone)
 grep -qF 'cdn_hosts: c"x is not a host name; left out' "$work/err" || fail "cdn_hosts: a malformed name not said"
 grep -qF 'c"x' <<<"$out" && fail "cdn_hosts: a malformed name not left out"
