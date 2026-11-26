@@ -104,6 +104,8 @@ class CanaryFacts(Facts):
     address: Word
     checked_at: int
     paths: dict[PathName, bool]
+    # Each CDN in front of a relay, by its name, which _clean checks as a host.
+    cdn: dict[Word, bool] | None = None
     internet: bool | None = None
 
 

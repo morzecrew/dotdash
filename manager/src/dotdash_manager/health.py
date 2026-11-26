@@ -37,6 +37,22 @@ def _watched(f: dict, kind: str) -> tuple[str, str]:
     return (f["domain"], f["domain"]) if kind == "server" else (f["site"], f["entry_host"])
 
 
+def fronts(f: dict) -> list[str]:
+    """The CDN names in front of a relay, by its facts: its cdn_hosts, then its
+    door's (origin_host), each without the path a gateway gives."""
+    return [*f.get("cdn_hosts", []), *(o.split("/")[0] for o in f.get("origin_host", "").split(",") if o)]
+
+
+def got(f: dict, target: dict) -> dict:
+    """What a canary's facts say got through to a target, by the target's
+    facts: the paths, and each CDN in front that the relay names now, as
+    cdn:<name>. A cdn-only relay's canaries check its own address too, which
+    no device gets: its CDNs alone count."""
+    mine = fronts(target)
+    cdn = {f"cdn:{h}": ok for h, ok in (f.get("cdn") or {}).items() if h in mine}
+    return cdn if target.get("cdn_only") else {**f["paths"], **cdn}
+
+
 def alive(row: dict | None) -> tuple[str, str]:
     """What a machine's own fleet row says of it, when one verifies, as
     (blocked | down | "", why): running while its canaries get nothing through
@@ -90,17 +106,20 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None,
     for t in targets:
         if t.name not in facts:
             continue
-        # A cdn-only relay's canaries check its own address, which no device gets.
-        if facts[t.name].get("cdn_only"):
-            health.pop(t.name, None)
-            continue
+        only = facts[t.name].get("cdn_only")
         expect = _watched(facts[t.name], t.kind)
         # Facts about another target are from before the canary was pointed
-        # here; a canary offline itself says nothing about its target.
-        seen = [f for c in net.canary if c.watches == t.name and (f := facts.get(c.name))
-                and (f.get("server"), f.get("address")) == expect and f.get("internet") is not False
-                and isinstance(f.get("checked_at"), int) and f["checked_at"] <= now + AHEAD
-                and isinstance(f.get("paths"), dict)]
+        # here.
+        watching = [f for c in net.canary if c.watches == t.name and (f := facts.get(c.name))
+                    and (f.get("server"), f.get("address")) == expect and isinstance(f.get("paths"), dict)
+                    and got(f, facts[t.name])]
+        # A cdn-only relay none of whose canaries checks its CDNs is not judged.
+        if only and not watching:
+            health.pop(t.name, None)
+            continue
+        # A canary offline itself says nothing about its target.
+        seen = [f for f in watching if f.get("internet") is not False
+                and isinstance(f.get("checked_at"), int) and f["checked_at"] <= now + AHEAD]
         if not seen:
             continue
         at = max(f["checked_at"] for f in seen)
@@ -109,20 +128,25 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None,
         if at <= h["at"]:
             continue
         h["at"] = at
-        # Per path too: up when any canary got through it this reading.
-        ups = {p for f in seen for p, ok in f["paths"].items() if ok}
-        record(h, seen)
-        h["paths"] = {p: 0 if p in ups else h.get("paths", {}).get(p, 0) + 1 for f in seen for p in f["paths"]}
+        # Per path too, a CDN in front as one: up when any canary got through
+        # it this reading.
+        ups = {p for f in seen for p, ok in got(f, facts[t.name]).items() if ok}
+        # What the canaries found of the relay's own address, REALITY's
+        # included, which says nothing of a cdn-only relay.
+        own = [] if only else seen
+        record(h, own)
+        h["paths"] = {p: 0 if p in ups else h.get("paths", {}).get(p, 0) + 1
+                      for f in seen for p in got(f, facts[t.name])}
         # REALITY with its hello split (a canary's reality_split): up this
         # reading when any canary got through so, else readings in a row it hasn't.
         # What the canaries' network finds stopping REALITY (a canary's
         # blocked_by: ip, sni, tls or freeze), the commonest this reading.
-        causes = [f["blocked_by"] for f in seen if f.get("blocked_by") in CAUSES]
+        causes = [f["blocked_by"] for f in own if f.get("blocked_by") in CAUSES]
         if causes:
             h["cause"] = max(set(causes), key=causes.count)
         else:
             h.pop("cause", None)
-        said = [f["reality_split"] for f in seen if isinstance(f.get("reality_split"), bool)]
+        said = [f["reality_split"] for f in own if isinstance(f.get("reality_split"), bool)]
         if said:
             h["split"] = 0 if any(said) else h.get("split", 0) + 1
         else:
@@ -147,7 +171,7 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None,
 
     say = [f"burnt: server {s.name}: its canaries got through none of its paths in {health[s.name]['fails']} readings; "
            f"reported only, as relays reach the servers{note(s.name)}" for s in net.server if s.name in burnt]
-    relays = {r.name for r in net.relay if r.name in facts and not facts[r.name].get("cdn_only")}
+    relays = {r.name for r in net.relay if r.name in facts and (not facts[r.name].get("cdn_only") or r.name in health)}
     out = {r.name for r in net.relay if r.name in burnt}
     if out and out >= relays:
         # Every relay down at once is likelier the canaries' own network than
@@ -197,7 +221,8 @@ def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[d
     stop getting those through it, and keep the rest. A path blocked on every
     relay that has it is likelier the canaries' network refusing that transport
     than every relay losing it in the same hour: kept everywhere, and said.
-    A server's are reported only, as for a burnt server."""
+    A server's are reported only, as for a burnt server. So is a CDN in front
+    of a relay (cdn:<name>): off= takes no CDN, and devices keep its links."""
     def out(name: str) -> set[str]:
         h = health.get(name, {})
         paths = h.get("paths", {})
@@ -207,9 +232,13 @@ def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[d
         # REALITY in devices' Xray configs.
         return gone if gone != set(paths) or h.get("split") == 0 else set()
 
-    judged = [r.name for r in net.relay if r.name not in burnt and r.name in facts and not facts[r.name].get("cdn_only")]
+    judged = [r.name for r in net.relay if r.name not in burnt and r.name in facts]
     off = {r: gone for r in judged if (gone := out(r))}
-    say = []
+    cdns = {r: sorted(p.removeprefix("cdn:") for p in gone if p.startswith("cdn:")) for r, gone in off.items()}
+    off = {r: {p for p in gone if not p.startswith("cdn:")} for r, gone in off.items()}
+    say = [f"blocked: relay {r}: its CDN {', '.join(names)} got through for none of its canaries in {BURN_AFTER} "
+           "readings; reported only, as off= takes no CDN: check the CDN's settings and the relay's site"
+           for r, names in sorted(cdns.items()) if names]
     for p in sorted({p for gone in off.values() for p in gone}):
         having = [r for r in judged if p in health.get(r, {}).get("paths", {})]
         if all(p in off.get(r, set()) for r in having):
@@ -268,8 +297,9 @@ def events(before: dict, after: dict, stood: dict, stands: dict, now: int,
     """What changed between two health records (judge's, before and after a
     sync), as [at, machine, what], for report: watched (its canaries' first
     reading), burnt, back, gone (out of the roster), unwatched (in the roster,
-    its servers' and relays' names, but judged no more: turned cdn-only),
-    off:<path> and on:<path>; and for a spare, stands-in:<relay> and waits,
+    its servers' and relays' names, but judged no more: turned cdn-only with
+    no canary checking its CDNs), off:<path> and on:<path>, a CDN in front as
+    cdn:<name>; and for a spare, stands-in:<relay> and waits,
     from health.spares' stands before (stood) and now. at is the reading's
     checked_at, else now."""
     out = []

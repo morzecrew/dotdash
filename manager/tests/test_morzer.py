@@ -12,7 +12,8 @@ RELAY = {"entry_host": "203.0.113.5", "site": "www.example.net", "public_key": "
          "traffic": {"started": 1, "devices": {"phone": 10}}, "via": True}
 SERVER = {"domain": "a.example.net", "https_port": 443, "public_key": "P", "encryption": "mlkem768x25519plus.native.0rtt.x"}
 CANARY = {"server": "www.example.net", "address": "203.0.113.5", "public_key": "", "checked_at": 1, "internet": None,
-          "paths": {"reality": True, "xhttp-reality": False}, "reality_split": None, "blocked_by": None,
+          "paths": {"reality": True, "xhttp-reality": False}, "cdn": {"c.example.net": True}, "reality_split": None,
+          "blocked_by": None,
           "latency_ms": {"reality": 120}, "direct_ms": None}
 
 
@@ -43,6 +44,8 @@ def test_facts_as_the_bundles_print_them_pass_their_nulls_left_out():
     ("canary", {**CANARY, "paths": {"Reality,xhttp": False}}, "paths.Reality,xhttp.[key]"),
     ("canary", {**CANARY, "paths": {"reality": "true"}}, "paths.reality: Input should be a valid boolean"),
     ("canary", {**CANARY, "internet": "false"}, "internet: Input should be a valid boolean"),
+    ("canary", {**CANARY, "cdn": {'c.example.net"}': True}}, "facts.cdn holds"),
+    ("canary", {**CANARY, "cdn": {"c.example.net": "true"}}, "cdn.c.example.net: Input should be a valid boolean"),
 ])
 def test_facts_that_would_crash_a_sync_or_reach_devices_are_refused(kind, doc, says):
     f, why = check(kind, doc)

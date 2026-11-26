@@ -145,12 +145,66 @@ def test_a_burnt_or_held_relay_claiming_anothers_host_moves_it_in_no_pool():
     assert docs["s"]["parameters"]["pools"] == "a phone 203.0.113.5 c.example.net\nb 203.0.113.5"
 
 
-def test_a_cdn_only_relay_carries_the_flag_is_never_judged_and_serves_no_subscription():
+def test_a_cdn_only_relay_carries_the_flag_and_is_not_judged_until_a_canary_checks_its_cdns():
     net, health = loads(ROSTER), {"r1": {"fails": BURN_AFTER, "at": 1}}
     only = {**R1, "cdn_only": True, "own_site": {"xhttp_path": "p"}}
     facts = {"r1": only, "r2": R2, "c1": canary(R1, 5, False), "c2": canary(R2, 5, True)}
     assert judge(net, facts, health)[0] == set() and "r1" not in health
+    # A canary's release that checks CDNs, given none of r1's yet.
+    facts["c1"] = {**canary(R1, 6, False), "cdn": {}}
+    assert judge(net, facts, health)[0] == set() and "r1" not in health
     assert relay_line(only).endswith(" cdn=c.example.net cdn-only")
+
+
+def test_a_cdn_only_relay_is_judged_by_its_cdns_alone():
+    net, health = loads(ROSTER), {}
+    only = {**R1, "cdn_only": True, "cdn_path": "y", "origin_host": "o.example.ru/g"}
+
+    def run_cdn(at: int, cdn: dict, c2_up: bool = True):
+        # Its own address, which no device gets: REALITY down but split, an
+        # address block, a latency. None of it counts.
+        c1 = {**canary(R1, at, False), "cdn": cdn, "reality_split": True, "blocked_by": "ip", "latency_ms": {"xhttp": 50}}
+        facts = {"r1": only, "r2": R2, "c1": c1, "c2": canary(R2, at, c2_up)}
+        burnt, say = judge(net, facts, health)
+        return burnt, say, blocked(net, facts, health, burnt)
+
+    # A name r1 no longer gives counts for nothing.
+    for at in range(1, BURN_AFTER + 1):
+        burnt, say, _ = run_cdn(at, {"c.example.net": False, "o.example.ru": False, "gone.example.net": True})
+    assert burnt == {"r1"} and any(line.startswith("burnt: relay r1:") for line in say)
+    assert health["r1"]["paths"] == {"cdn:c.example.net": BURN_AFTER, "cdn:o.example.ru": BURN_AFTER}
+    assert not {"cause", "split", "latency"} & set(health["r1"])
+    # One CDN through, and it is back; the other, still out, is said, and on no line.
+    for at in range(BURN_AFTER + 1, 2 * BURN_AFTER + 1):
+        burnt, _, (off, say) = run_cdn(at, {"c.example.net": True, "o.example.ru": False})
+    assert burnt == set() and off == {} and health["r1"]["fails"] == 0
+    assert any(line.startswith("blocked: relay r1: its CDN o.example.ru got through") for line in say)
+    # Every relay at once, a cdn-only one among them, is kept.
+    for at in range(2 * BURN_AFTER + 1, 3 * BURN_AFTER + 1):
+        burnt, say, _ = run_cdn(at, {"c.example.net": False, "o.example.ru": False}, c2_up=False)
+    assert burnt == set() and "check the canaries' network" in say[-1]
+
+
+def test_a_relays_cdn_holds_it_up_and_is_said_but_never_taken_off():
+    net, health = loads(ROSTER), {}
+
+    def run_cdn(at: int, paths: dict, cdn: dict):
+        c = lambda relay, p: {"server": relay["site"], "address": relay["entry_host"], "checked_at": at,
+                              "internet": True, "paths": p}
+        facts = {"r1": {**R1, "cdn_path": "y"}, "r2": R2, "c1": {**c(R1, paths), "cdn": cdn},
+                 "c2": c(R2, {"reality": True, "xhttp": True})}
+        burnt, _ = judge(net, facts, health)
+        return burnt, blocked(net, facts, health, burnt)
+
+    # Its own address blocked, its CDN through: devices keep the CDN links.
+    for at in range(1, BURN_AFTER + 1):
+        burnt, (off, _) = run_cdn(at, {"reality": False, "xhttp": False}, {"c.example.net": True})
+    assert burnt == set() and off == {"r1": {"reality", "xhttp"}}
+    health = {}
+    for at in range(1, BURN_AFTER + 1):
+        burnt, (off, say) = run_cdn(at, {"reality": True, "xhttp": True}, {"c.example.net": False})
+    assert burnt == set() and off == {}
+    assert any(line.startswith("blocked: relay r1: its CDN c.example.net got through for none") for line in say)
 
 
 def paths_run(net, health, at, r1: dict, r2: dict):

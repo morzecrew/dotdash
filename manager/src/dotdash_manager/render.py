@@ -223,6 +223,25 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
                 params["dotdash_hysteria2_port"] = str(f["hysteria2"]["port"])
         if "kcp" in f:
             params.update(dotdash_kcp_port=str(f["kcp"]["port"]), dotdash_kcp_header=f["kcp"]["header"], dotdash_kcp_open=f["kcp"].get("open", "none"))
+        # A relay's CDNs, each checked as devices' links through it go, on its
+        # CDN path: its cdn_hosts and its door's (origin_host), none on a server.
+        # Not one the roster gives a cdn_extra, whose settings the canary
+        # doesn't carry. Only to a release that checks them, whose facts say
+        # cdn, or one with no facts yet: an earlier one refuses the whole
+        # document over them.
+        path, extra = f.get("cdn_path"), net.cdn_extra or {}
+        cdn = {"dotdash_cdn_hosts": f.get("cdn_hosts", []) if path else [],
+               "dotdash_origin_host": [o for o in f.get("origin_host", "").split(",") if o] if path else []}
+        if skipped := [h for hs in cdn.values() for h in hs if h.split("/")[0] in extra]:
+            waiting.append(f"{c.name}: checks none of {target.name}'s CDNs with a cdn_extra in the roster "
+                           f"({', '.join(skipped)}): it doesn't carry their settings")
+        cdn = {k: [h for h in hs if h not in skipped] for k, hs in cdn.items()}
+        if "cdn" in facts.get(c.name, {}) or (c.name not in facts and any(cdn.values())):
+            params.update({k: ",".join(hs) or "none" for k, hs in cdn.items()})
+            if any(cdn.values()):
+                sec["dotdash_cdn_xhttp_path"] = path
+        elif any(cdn.values()):
+            waiting.append(f"{c.name}: its release predates CDN checks: update it to check {target.name}'s CDNs")
         docs[c.name] = {"parameters": params, "secrets": {"dotdash_id": ids[f"canary-{c.name}"], **sec}}
 
     # direct = false keeps the servers' domains out of what devices hold, so a
