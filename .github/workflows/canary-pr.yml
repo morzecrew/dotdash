@@ -29,7 +29,9 @@ jobs:
       signing: ephemeral
       # The key that signs, shipped as minisign.pub: init trusts it on first use.
       ship-pubkey: true
-      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+      # GitHub-hosted, never vars.RUNS_ON: a fork's pull request must not reach
+      # a self-hosted runner or its image cache.
+      runs-on: ubuntu-24.04
       bundle-dir: bundles/canary
       version-paths: bundles/canary
       package: dotdash-canary

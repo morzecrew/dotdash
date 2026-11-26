@@ -7,29 +7,48 @@
     {
       "description": "Images pinned as repo:tag@sha256: in the bundle manifests and smoke hooks",
       "customType": "regex",
-      "managerFilePatterns": ["/^bundles/(server|canary|relay|client)/manifest\\.yaml$/", "/^\\.github/(client-)?smoke\\.d/.+\\.sh$/"],
+      "managerFilePatterns": ["/^bundles/(server|canary|relay|client|acme-dns)/manifest\\.yaml$/", "/^\\.github/(client-)?smoke\\.d/.+\\.sh$/"],
       "matchStrings": [
         "(?<depName>[a-z0-9.-]+\\.[a-z]+/[a-z0-9._/-]+):(?<currentValue>[A-Za-z0-9._-]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
       ],
       "datasourceTemplate": "docker"
     },
     {
-      "description": "The morzer release bootstrap.sh installs. No check runs the script, so its bumps wait for a person.",
+      "description": "The morzer release bootstrap.sh installs and the workflows build and rehearse with. No check runs bootstrap.sh, so its bumps wait for a person. min_manager_version is not a pin: it is the oldest morzer a bundle works with, raised by hand when a bundle needs something newer.",
       "customType": "regex",
-      "managerFilePatterns": ["/^scripts/bootstrap\\.sh$/"],
-      "matchStrings": ["MORZER_VERSION=(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "managerFilePatterns": ["/^scripts/bootstrap\\.sh$/", "/^\\.github/workflows/.+\\.yml$/"],
+      "matchStrings": [
+        "MORZER_VERSION=(?<currentValue>\\d+\\.\\d+\\.\\d+)",
+        "(?:morzer-version|REHEARSE_MORZER_VERSION): \"(?<currentValue>\\d+\\.\\d+\\.\\d+)\""
+      ],
       "depNameTemplate": "morzecrew/morzer",
       "datasourceTemplate": "github-releases",
       "extractVersionTemplate": "^v(?<version>.+)$"
+    },
+    {
+      "description": "bundle-ci's scripts, checked out by commit beside its workflows. The github-actions manager bumps the `uses:` pins.",
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.yml$/"],
+      "matchStrings": [
+        "repository: morzecrew/bundle-ci\\s+ref: (?<currentDigest>[a-f0-9]{40}) # (?<currentValue>v\\d+\\.\\d+\\.\\d+)"
+      ],
+      "depNameTemplate": "morzecrew/bundle-ci",
+      "datasourceTemplate": "github-tags"
     }
   ],
   "packageRules": [
     {
-      "description": "An image bump merges itself once its checks pass, and :main publishes it; :stable still waits for a tag, majors for a person. Renovate merges rather than GitHub (platformAutomerge off): main requires no checks, so GitHub's auto-merge would not wait for them.",
+      "description": "A morzecrew image bump merges itself once its checks pass, and :main publishes it; :stable still waits for a tag, majors for a person. Third-party images wait for a person: the smoke test is their only gate. Renovate merges rather than GitHub (platformAutomerge off): main requires no checks, so GitHub's auto-merge would not wait for them.",
       "matchManagers": ["custom.regex"],
       "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/morzecrew/**"],
       "matchUpdateTypes": ["digest", "patch", "minor"],
       "automerge": true
+    },
+    {
+      "description": "bundle-ci's workflows and the scripts beside them move together.",
+      "matchPackageNames": ["morzecrew/bundle-ci"],
+      "groupName": "bundle-ci"
     },
     {
       "description": "Titles follow gitmoji-conventional: `⬆️ build(deps): update ...`",

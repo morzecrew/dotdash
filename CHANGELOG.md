@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The manager's `sync` says when servers differ in `https_port` or in the ports, mKCP header and opener, or presence of XHTTP with REALITY, mKCP and Hysteria2. Each server's subscriptions name the others with its own, so a difference gives devices dead links.
 
+- The release and dev keys' public halves, in the README and the docs' Releases section: `morzer init --signing-key` checks even the first release against them, with no access to the repository's variables.
+
 ### Fixed
 
 - When the manager can't read a machine's facts, its last good facts stand in for up to a day, and `sync` prints the read's error. A passing outage of the target, or a wrong `identity` file, no longer takes every relay off every device in one sync.
@@ -46,6 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A device taken out of the manager's roster loses its id at the next sync, so added back it gets new links and a new subscription URL, and its leaked ones let no one in. Before, it got the same id and token back. Relays' and canaries' own ids and client machines' passwords are dropped the same way.
 
 - After `rotate finish`, the manager's next sync removes the retired REALITY key and its short id from every server's secret store, so later backups no longer hold them. Before, the old key was only turned off.
+
+- `bootstrap.sh` runs morzer's installer from a pinned commit, checked by sha256, where it piped whatever a movable tag served into `sh`. It also trusts Docker's apt key only when the file holds that one key, by its fingerprint.
 
 ## [0.17.0] - 2026-11-25
 

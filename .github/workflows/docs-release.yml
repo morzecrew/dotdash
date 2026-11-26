@@ -16,9 +16,12 @@ jobs:
   deploy:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    # Shared with docs-dev.yml: every mike deploy pushes to gh-pages.
+    # One group per tag, not docs-dev.yml's: GitHub keeps one waiting run per
+    # group, so a deploy queued behind this one would cancel it. Both push to
+    # gh-pages, so a push another deploy beat starts again from the branch as
+    # it is now.
     concurrency:
-      group: docs-deploy
+      group: docs-release-${{ github.ref }}
       cancel-in-progress: false
     permissions:
       contents: write # mike pushes the built site to gh-pages
@@ -47,11 +50,12 @@ jobs:
           newest=$(echo "${newest#v}" | cut -d. -f1,2)
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          retry() { for _ in 1 2 3; do git fetch -q origin gh-pages && git branch -f gh-pages origin/gh-pages && "$@" && return; sleep 10; done; return 1; }
           if [ "$minor" = "$newest" ]; then
-            uv run --locked mike deploy --push --update-aliases --branch gh-pages "$minor" latest
-            uv run --locked mike set-default --push --branch gh-pages latest
-            ../.github/scripts/publish-bootstrap.sh
+            retry uv run --locked mike deploy --push --update-aliases --branch gh-pages "$minor" latest
+            retry uv run --locked mike set-default --push --branch gh-pages latest
+            retry ../.github/scripts/publish-bootstrap.sh
           else
-            uv run --locked mike deploy --push --branch gh-pages "$minor"
+            retry uv run --locked mike deploy --push --branch gh-pages "$minor"
           fi
           echo "published $minor (newest minor: $newest)"

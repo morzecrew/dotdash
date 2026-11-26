@@ -34,8 +34,13 @@ sudo morzer task run client-config --output -- phone
 
 Every bundle is `ghcr.io/morzecrew/<bundle>`: `:stable` and `:X.Y.Z` are
 releases, signed with the release key; `:main` follows `main`, signed with the
-dev key. `init` trusts the key a release ships; `--signing-key` checks even
-the first against the repository's `MINISIGN_RELEASE_PUBKEY` variable.
+dev key. `init` trusts the key a release ships; `--signing-key <key>` checks
+even the first against one of these minisign public keys:
+
+| Key | Public key |
+| --- | --- |
+| release | `RWSodSvG4wmCA2FCL20MQ43y0Tw+/bcMnej3bzmFYr/yXmSKUx3YdF/B` |
+| dev | `RWQAQKYQdRbOZq2c9JoqAoq1mSvGmnVih04GY8vLgxd3cg5eXlgvDlcg` |
 
 ## Development
 
