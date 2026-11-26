@@ -3,6 +3,7 @@
 import copy
 import hashlib
 import json
+import os
 import shlex
 import shutil
 import subprocess
@@ -42,7 +43,7 @@ class Options:
     roster: Path
     morzer: str
     new_state: bool = False
-    locked: bool = False
+    lock: int | None = None
 
     @property
     def state(self) -> Path:
@@ -60,9 +61,8 @@ class Options:
         a checkout the state wasn't copied to than a new network: a new state
         would give every server new keys, cutting every device off."""
         net = roster.load(self.roster)
-        if not self.locked:
-            state.lock(self.state)
-            self.locked = True
+        if self.lock is None:
+            self.lock = state.lock(self.state)
         joined = [m.name for m in net.machines if m.joined]
         if joined and not self.new_state and not self.state.exists():
             raise Refused(f"no {self.state} beside the roster, which names {', '.join(joined)} joined: a new state "
@@ -74,6 +74,12 @@ class Options:
         net = roster.with_joined(net, st.get("joined", {}))
         write_roster(self.morzer_roster, net)
         return net, st
+
+    def release(self) -> None:
+        """Let the state's lock go, for a run that from here on only reads."""
+        if self.lock is not None:
+            os.close(self.lock)
+            self.lock = None
 
 
 @app.callback()
@@ -240,9 +246,12 @@ def status(
     the one sent, or --wait ran out."""
     o: Options = ctx.obj
     # As sync opens them: who joined is in the state, and roster.yaml is
-    # written under the lock, never beside a sync writing it. The lock is
-    # held while it waits, so no sync publishes meanwhile.
+    # written under the lock, never beside a sync writing it. Then the lock
+    # goes: a timer's sync waiting behind --wait would hold back the very
+    # document it waits for. Each look reads the state the last sync left;
+    # a document published meanwhile is the newest, the one to wait for.
     net, st = o.open(dry_run=True)
+    o.release()
     mz = Morzer(net, o.morzer_roster, o.morzer)
     end = time.monotonic() + timeout
     while True:
@@ -250,6 +259,7 @@ def status(
         if not (wait and pending) or time.monotonic() >= end:
             break
         time.sleep(POLL)
+        st = state.load(o.state, net)
     print(*lines, *overview.topology(net, st), sep="\n")
     raise typer.Exit(1 if bad or (wait and pending) else 0)
 
