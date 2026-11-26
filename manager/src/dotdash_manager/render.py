@@ -99,7 +99,8 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
                 kept += [h for h in own(s) if h not in kept]
         return kept
 
-    pools = "\n".join(f"{p} {' '.join(kept)}" for p, ms in net.pools.items() if (kept := members(ms)))
+    pools_kept = {p: kept for p, ms in net.pools.items() if (kept := members(ms))}
+    pools = "\n".join(f"{p} {' '.join(kept)}" for p, kept in pools_kept.items())
     for s in net.server:
         others = [facts[o.name]["domain"] for o in known if o is not s]
         doc = {
@@ -216,9 +217,16 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
         docs[c.name] = {"parameters": params, "secrets": {"dotdash_id": ids[f"canary-{c.name}"], **sec}}
 
     # direct = false keeps the servers' domains out of what devices hold, so a
-    # client machine fetches through an own-site relay, as a phone does.
-    own_site = [facts[r.name]["site"] for r in net.relay if "own_site" in facts.get(r.name, {})
-                and r.name not in burnt and not facts[r.name].get("cdn_only")]
+    # client machine fetches through an own-site relay, as a phone does: the
+    # first its device sees, as client-config's pick has it. A device in a
+    # pool sees its pools' relays and those in none; one in none sees all.
+    listed = {h for kept in pools_kept.values() for h in kept}
+
+    def own_site(device: str) -> list[str]:
+        mine = {h for kept in pools_kept.values() if device in kept for h in kept}
+        return [f["site"] for r in net.relay if "own_site" in (f := facts.get(r.name, {})) and r.name not in burnt
+                and not f.get("cdn_only") and (not mine or f["entry_host"] in mine or f["entry_host"] not in listed)]
+
     for c in net.client:
         if not lead:
             waiting.append(f"{c.name}: waits for a server that applied the keys")
@@ -227,9 +235,11 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
         port = "" if lead["https_port"] == 443 else f":{lead['https_port']}"
         url = f"https://{lead['domain']}{port}/{token}"
         if net.direct is False:
-            if not own_site:
-                waiting.append(f"{c.name}: waits for an own-site relay: direct = false keeps the servers' URL out")
+            sites = own_site(c.device)
+            if not sites:
+                waiting.append(f"{c.name}: waits for an own-site relay that {c.device}'s pools give it: "
+                               "direct = false keeps the servers' URL out")
                 continue
-            url = f"https://{own_site[0]}/{token}"
+            url = f"https://{sites[0]}/{token}"
         docs[c.name] = {"secrets": {"subscription_url": url, "proxy_password": state["passwords"][c.name]}}
     return docs, waiting

@@ -81,7 +81,9 @@ device = "phone"                            # the device whose subscription it f
 With `direct = false` the servers keep their addresses out of devices'
 links ([direct](server/devices.md#keeping-the-servers-out-of-devices-links)),
 and client machines fetch their subscription through an own-site relay,
-waiting for one. Left out, each server keeps its own setting.
+waiting for one: the first that their device's `pools` give it, as the
+servers choose a device's relays. Left out, each server keeps its own
+setting.
 
 A relay with `via` goes through those relays instead of the servers
 ([Through another relay](relay/operations.md#through-another-relay)): they
