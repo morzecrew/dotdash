@@ -3,6 +3,10 @@
 # image's shell, the Xray image's binaries, the secrets as files) against a
 # matrix of parameters, its links and Xray config checked with jq: what the
 # rig's smoke would catch only after an install, in seconds and without one.
+# Last, a wider matrix's whole output (--full, stdout and stderr) against
+# client-config.golden beside this file, so a refactor proves it changes
+# nothing; a change meant to show runs it with UPDATE_GOLDEN=1, and the
+# golden's diff is the change.
 # Run from the repository's root: bash .github/tests/client-config.sh
 set -euo pipefail
 
@@ -18,13 +22,14 @@ mkdir -p "$work/secrets" "$work/xray"
 c=$(docker create "$xray" x)
 docker cp "$c:/usr/local/bin/." "$work/xray/" >/dev/null
 docker rm "$c" >/dev/null
-docker run --rm --entrypoint /usr/local/bin/xray "$xray" x25519 | sed -n 's/^Private[^:]*: *//p' >"$work/secrets/reality_key"
-head -c 64 /dev/urandom | od -An -tx1 | tr -d ' \n' >"$work/secrets/vless_seed"
+# Fixed keys, made for this test alone, so the output is the same on every run.
+printf eGYJEdI0OAKHLQTuQH5x2-pr38aFxQxjeZZVz_1552g >"$work/secrets/reality_key"
+printf 92b7ec15e80f0b2d47ed1493fb8945880044e6601341069a4bd1567027e73aac7c8a956ee2296c3769a88e4c195a5c92fc0e2267cf8a647a3ce43d4a8efb1a0c >"$work/secrets/vless_seed"
 printf ab12 >"$work/secrets/reality_short_id"
 printf 'aaaa1111bbbb2222' >"$work/secrets/xhttp_path"
 printf seedkcp >"$work/secrets/kcp_seed"
 printf subkey >"$work/secrets/subscription_key"
-printf '0593b52c-b345-41cb-96b8-134724f6ca65 phone\n1b2c3d4e-5f60-4718-8a9b-0c1d2e3f4a5b laptop\n2c3d4e5f-6071-4829-9bac-1d2e3f4a5b6c desk desktop\n' >"$work/secrets/vless_clients"
+printf '0593b52c-b345-41cb-96b8-134724f6ca65 phone\n1b2c3d4e-5f60-4718-8a9b-0c1d2e3f4a5b laptop mobile\n# a comment\n2c3d4e5f-6071-4829-9bac-1d2e3f4a5b6c desk desktop\n' >"$work/secrets/vless_clients"
 chmod 644 "$work"/secrets/*
 # A relay's public key and encryption, in the shapes relay-entry prints.
 pbk=_nYApZTt3dznuqLOlXzr0UR_BxEvKRLTLv9dL3qt3Ww
@@ -205,6 +210,91 @@ grep -qF 'servers names no server: this one alone' "$work/err" || fail "servers 
 
 echo "== subscriptions on: the URL alone without --full, one per device"
 [ "$(cc SUBSCRIPTION=true -- | grep -cE '^https://s\.example\.com/[0-9a-f]{32}$')" = 3 ] || fail "subscription: not one URL per device"
+
+echo "== the golden: every transport, profile and relays field, pools, cdn_extra, kinds, direct=false, several servers"
+gold() { # <case> <env assignments...> -- <client-config arguments...>: the case's exit code, stdout and stderr, appended to $work/golden
+  local name=$1 rc=0
+  shift
+  cc "$@" >"$work/out" || rc=$?
+  { printf '=== %s\n--- exit %s\n' "$name" "$rc"; cat "$work/out"; echo "--- stderr"; cat "$work/err"; } >>"$work/golden"
+}
+: >"$work/golden"
+own="own-site aaaa1111bbbb2222"
+relays="# relays: every field
+203.0.113.1 a.example.com ${pbk} 0123456789abcdef ${enc}
+203.0.113.2 r.example.com ${pbk} ab12 ${enc} ${own} kcp=9447,dtls,00112233445566778899aabbccddeeff hy2=8443 cdn=cdn-r1.example.net,cdn-r2.example.net cdnpath=cccc3333dddd4444eeee5555 origin=o1.example.org,o2.example.org/e/tok/s/ name=edge
+
+203.0.113.3 q.example.com ${pbk} 01 none kcp=9448,wireguard,abcdef,quic
+203.0.113.4 p.example.com ${pbk} 02 ${enc} own-site 0123abcd cdn=cdn-p.example.net kcp=9449,none,ff00
+203.0.113.5 c.example.com ${pbk} 03 ${enc} own-site 0a0b cdn=cdn-c.example.net cdn-only name=hidden
+203.0.113.6 x.example.com ${pbk} 04 ${enc} own-site 0c0d kcp=9450,srtp,aa hy2=9443 off=reality,xhttp
+203.0.113.7 y.example.com ${pbk} 05 ${enc} own-site 0e0f kcp=9451,utp,bb hy2=9444 off=mkcp,hysteria2 split
+203.0.113.8 z.example.com ${pbk} 06 ${enc} off=reality split
+203.0.113.9 s.example.com ${pbk} 07 ${enc} own-site 1a1b cdn=cdn-s.example.net cdnpath=abab hy2=443 kcp=9452,wechat,cc standby name=spare
+2001:db8::9 t.example.com ${pbk} 08 ${enc} standby"
+# Each said, and left out or cut down to what holds.
+bad="203.0.113.10 d.example.com ${pbk} 09 ${enc} name=twin
+203.0.113.11 e.example.com ${pbk} 0a ${enc} name=twin
+203.0.113.12 f.example.com ${pbk} 0b ${enc} kcp=9453,dtls name=bad/name
+203.0.113.13 g.example.com ${pbk} 0c ${enc} hy2=99999
+203.0.113.14 h.example.com ${pbk} 0d ${enc} hy2=8443
+203.0.113.15 i.example.com ${pbk} 0e ${enc} cdn=bad_name!
+203.0.113.16 j.example.com ${pbk} 0f ${enc} cdn=cdn-j.example.net
+203.0.113.17 k.example.com ${pbk} 10 ${enc} own-site 2a2b cdn=cdn-k.example.net cdnpath=not/hex
+203.0.113.18 l.example.com ${pbk} 11 ${enc} own-site 3a3b origin=o3.example.org
+203.0.113.19 m.example.com ${pbk} 12 ${enc} own-site 4a4b cdnpath=5a5b origin=,bad
+203.0.113.20 n.example.com ${pbk} 13 ${enc} off=Bad!
+203.0.113.21 o.example.com ${pbk} 14 ${enc} off=reality,foo
+203.0.113.22 p2.example.com ${pbk} 15 ${enc} cdn-only
+203.0.113.23 q2.example.com ${pbk} 16 ${enc} cdn_path=abc
+203.0.113.24 bad\"site ${pbk} 17 ${enc}
+203.0.113.25 short.example.com"
+pools="p1 phone 203.0.113.2 cdn-r1.example.net o2.example.org scdn1.example.net
+p2 laptop 203.0.113.3 cdn-r2.example.net # a comment
+# a pool of nothing
+p3 nobody.example.net"
+extra='scdn2.example.net {"uplinkHTTPMethod": "GET", "uplinkChunkSize": 2048}
+o2.example.org {
+  "mode": "packet-up",
+  "xPaddingKey": "_t"
+}
+cdn-r2.example.net {"mode": broken}
+bad"host {"a": 1}
+cdn-p.example.net notjson'
+fleet=("RELAYS=$relays" "POOLS=$pools" "CDN_HOSTS=scdn1.example.net, scdn2.example.net,bad_x" "CDN_EXTRA=$extra")
+profiles=(XHTTP_REALITY_PORT=8443 KCP_PORT=8447 HYSTERIA2_PORT=443 XDNS_DOMAIN=t)
+gold "plain" SUBSCRIPTION=false -- --full phone
+gold "--local-auth" SUBSCRIPTION=false -- --local-auth phone
+gold "subscriptions, the URLs" SUBSCRIPTION=true --
+gold "subscriptions, --full, entry_port 8443" SUBSCRIPTION=true ENTRY_PORT=8443 -- --full phone
+gold "every profile" "${profiles[@]}" XDNS_TTI=100 "XDNS_RESOLVERS=udp://1.1.1.1:53,https://dns.example/dns-query" -- --full phone
+gold "mkcp quic, header none" KCP_PORT=8447 KCP_HEADER=none KCP_OPEN=quic -- --full laptop
+gold "several servers, hello split" "SERVERS=self, s2.example.com" HELLO_SPLIT=true \
+  XHTTP_REALITY_PORT=8443 KCP_PORT=8447 KCP_OPEN=quic HYSTERIA2_PORT=8448 -- --full phone
+gold "the fleet, every device" SUBSCRIPTION=true KCP_PORT=8447 HYSTERIA2_PORT=443 "${fleet[@]}" -- --full
+gold "the fleet, several servers and every profile, by uuid" SUBSCRIPTION=true "SERVERS=self,s2.example.com" \
+  "${profiles[@]}" "${fleet[@]}" -- --full 2c3d4e5f-6071-4829-9bac-1d2e3f4a5b6c
+gold "the fleet, the URLs" SUBSCRIPTION=true "${fleet[@]}" --
+gold "the fleet, direct=false" SUBSCRIPTION=true DIRECT=false "${profiles[@]}" "${fleet[@]}" -- --full phone
+gold "relays lines said, then left out or cut down" "RELAYS=$bad" -- --full phone
+gold "direct=false, nothing else" SUBSCRIPTION=true DIRECT=false -- --full phone
+gold "direct=false, no subscriptions" SUBSCRIPTION=false DIRECT=false "CDN_HOSTS=scdn1.example.net" -- --full
+gold "the DNS tunnel with a standby relay" XDNS_DOMAIN=tun.example.org \
+  "RELAYS=203.0.113.1 a.example.com ${pbk} 01 ${enc}
+2001:db8::9 t.example.com ${pbk} 08 ${enc} standby" -- --full phone
+gold "servers naming none" "SERVERS= , " -- --full phone
+gold "no such client" -- --full nobody
+gold "xdns_tti out of range" XDNS_DOMAIN=t XDNS_TTI=5 -- --full phone
+gold "a bad xdns_resolvers" XDNS_DOMAIN=t XDNS_RESOLVERS=dns.example -- --full phone
+gold "entry_port not a port" ENTRY_PORT=x -- --full phone
+golden=.github/tests/client-config.golden
+if [ "${UPDATE_GOLDEN:-}" = 1 ]; then
+  cp "$work/golden" "$golden"
+  echo "client-config: the golden written to $golden"
+elif ! diff -u "$golden" "$work/golden" >"$work/golden.diff"; then
+  head -n 200 "$work/golden.diff" >&2
+  fail "the golden: the output changed (above); if meant, run again with UPDATE_GOLDEN=1 and commit its diff"
+fi
 
 [ "$failed" = 0 ] && echo "client-config: all cases pass"
 exit "$failed"
