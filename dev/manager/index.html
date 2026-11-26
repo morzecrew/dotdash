@@ -2581,8 +2581,13 @@ replace it. A row that doesn't verify says nothing either way.</p>
   one out would cut them off.</li>
 <li><strong>A relay no canary watches is never judged.</strong> Run canaries where devices
   are: <a href="../canary/#on-a-mobile-line">on a mobile line</a>.</li>
-<li><strong>Neither is a <a href="../server/cdn/#the-cdns-origin-only">CDN-only relay</a>.</strong> Its
-  canaries check its own address, which no device gets.</li>
+<li><strong>A <a href="../server/cdn/#the-cdns-origin-only">CDN-only relay</a> is judged by its
+  CDNs alone.</strong> Devices reach it through those, so its canaries'
+  <a href="../canary/#a-relays-cdns">checks of each</a> are its paths, and its own
+  address, which no device gets, counts for nothing. It burns when none of its
+  CDNs gets through, and a spare stands in as for any relay. While none of its
+  canaries checks a CDN of it (a release from before CDN checks, or every name
+  with a <code>cdn_extra</code>), it isn't judged, and <code>sync</code> says why.</li>
 </ul>
 <h2 id="spare-relays">Spare relays<a class="headerlink" href="#spare-relays" title="Permanent link">&para;</a></h2>
 <p>A burnt relay waits for you to replace it. A spare takes its place at the
@@ -2614,8 +2619,9 @@ knowing when you pick where the next one goes.</p>
 <h2 id="how-long-relays-last">How long relays last<a class="headerlink" href="#how-long-relays-last" title="Permanent link">&para;</a></h2>
 <p>Every <code>sync</code> logs what changed: a server or relay its canaries start
 watching, one that burns or comes back, one that leaves the roster, a relay
-turning CDN-only (no longer judged, so a burn ends there), a path going off or
-on, a spare standing in or waiting again. <code>report</code> reads that
+turning CDN-only while no canary checks its CDNs (no longer judged, so a burn
+ends there), a path going off or on (a CDN as <code>cdn:&lt;name&gt;</code>), a spare standing
+in or waiting again. <code>report</code> reads that
 log:</p>
 <div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>report
 </code></pre></div>
@@ -2729,14 +2735,19 @@ on one path three times in a row, and another path got through, <code>sync</code
 that path on the relay's line as <code>off=</code>:</p>
 <div class="highlight"><pre><span></span><code>blocked: relay r1: reality got through for none of its canaries in 3 readings; devices get its other paths until one gets through again
 </code></pre></div>
-<p>Devices then get only its other links through it (and its CDN links, which
-canaries don't check), at their next subscription refresh. A reading where the
-path gets through again takes it off.</p>
+<p>Devices then get only its other links through it, its CDN links included, at
+their next subscription refresh. A reading where the path gets through again
+takes it off. The relay's <a href="../canary/#a-relays-cdns">CDNs</a> count as its
+paths too: one that gets through keeps the relay from burning while its own
+address is blocked.</p>
 <ul>
 <li><strong>A path blocked on every relay that has it is kept.</strong> That's likelier the
   canaries' network refusing the transport than every relay losing it at
   once, so the manager says to check that network instead.</li>
 <li><strong>A server's blocked paths are only reported</strong>, as a burnt server is.</li>
+<li><strong>So is a CDN blocked while the relay's other paths get through.</strong> <code>off=</code>
+  takes no CDN, so devices keep its links; check the CDN's settings and the
+  relay's site.</li>
 <li><strong>A server released before <code>off=</code> ignores the field</strong> and gives devices
   every link through the relay, as before.</li>
 </ul>

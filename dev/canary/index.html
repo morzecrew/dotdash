@@ -2030,6 +2030,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Several servers, and relays">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-relays-cdns" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A relay's CDNs
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2286,6 +2303,23 @@ phone on that network would. A relay with Hysteria2 of its own prints the
 <code>hysteria2</code> profile and its port too, and the canary checks it under the
 relay's own site's certificate. A canary that follows the
 <a href="../manager/">manager</a> gets that port from it.</p>
+<h3 id="a-relays-cdns">A relay's CDNs<a class="headerlink" href="#a-relays-cdns" title="Permanent link">&para;</a></h3>
+<p>A canary that follows the manager also checks each CDN in front of the relay
+it watches: its <a href="../server/cdn/#in-front-of-a-relay"><code>cdn_hosts</code></a> and the
+names of a <a href="../server/cdn/#a-cdn-that-fetches-in-plain-http">CDN at its door</a>,
+which the manager hands it with the relay's CDN path. Each goes out through
+the CDN as a device's CDN link does, with the same settings, and gets the
+checks a transport gets, freeze downloads included. <code>facts</code> gives each under
+<code>cdn</code>, by name, and the manager judges a <a href="../server/cdn/#the-cdns-origin-only">CDN-only relay</a>
+by these alone. A CDN that the roster gives a <code>cdn_extra</code> is not checked: the
+canary doesn't carry those settings.</p>
+<p>A canary set up by hand checks them once given the same values:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">dotdash_cdn_hosts</span><span class="o">=</span>&lt;<span class="nv">cdn</span><span class="o">=</span><span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>relay<span class="s1">'s line&gt; dotdash_origin_host=&lt;its origin=, or none&gt;</span>
+<span class="s1">sudo morzer secret set dotdash_cdn_xhttp_path   # the cdnpath= of the relay'</span>s<span class="w"> </span>line
+</code></pre></div>
+<p>A canary seized on the censored network gives away what a seized phone
+behind the same relay does: the CDN names and the CDN path, beside the
+relay's address and keys it already holds.</p>
 <h2 id="on-a-mobile-line">On a mobile line<a class="headerlink" href="#on-a-mobile-line" title="Permanent link">&para;</a></h2>
 <p>Mobile networks can be restricted where wired lines are not, so a canary on
 a wired line can't see what phones see. Run one on a small machine with a USB
@@ -2352,6 +2386,16 @@ relay's address no longer gets through for devices.</p>
 <td><code>dotdash_public_key</code></td>
 <td>none, given at <code>init</code></td>
 <td>the REALITY public key, the <code>pbk</code> of a link</td>
+</tr>
+<tr>
+<td><code>dotdash_cdn_hosts</code></td>
+<td><code>none</code></td>
+<td>a relay's <code>cdn=</code> names, comma-separated, each checked <a href="#a-relays-cdns">through its CDN</a></td>
+</tr>
+<tr>
+<td><code>dotdash_origin_host</code></td>
+<td><code>none</code></td>
+<td>a relay's <code>origin=</code> names, comma-separated <code>&lt;name&gt;[/&lt;path&gt;]</code>, each checked through its CDN at the relay's door</td>
 </tr>
 <tr>
 <td><code>probe_url</code></td>
@@ -2423,6 +2467,10 @@ relay's address no longer gets through for devices.</p>
 <td><code>dotdash_xhttp_path</code></td>
 <td>the <code>path=</code> value of an XHTTP link, without the leading <code>%2F</code></td>
 </tr>
+<tr>
+<td><code>dotdash_cdn_xhttp_path</code></td>
+<td>the <code>cdnpath=</code> value of a relay's line, for its <a href="#a-relays-cdns">CDNs</a></td>
+</tr>
 </tbody>
 </table>
 <table>
@@ -2439,7 +2487,7 @@ relay's address no longer gets through for devices.</p>
 </tr>
 <tr>
 <td><code>facts --output</code></td>
-<td>what it watches, whether each transport gets through (<code>freeze_url</code> included), the bytes a stopped download got, and whether <code>control_url</code> answers, as JSON; what the manager reads</td>
+<td>what it watches, whether each transport and each CDN in front of a relay gets through (<code>freeze_url</code> included), the bytes a stopped download got, and whether <code>control_url</code> answers, as JSON; what the manager reads</td>
 </tr>
 </tbody>
 </table>

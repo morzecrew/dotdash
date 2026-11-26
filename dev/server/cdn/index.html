@@ -2496,8 +2496,9 @@ REALITY, XHTTP and mKCP links to its own address, which exposes it. With
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>&lt;address&gt;<span class="w">   </span><span class="c1"># now ends in cdn-only</span>
 </code></pre></div>
 <p>Replace the relay's line here again. The relay then gives devices no link or
-subscription URL of its own. The <a href="../../manager/#burnt-relays">manager</a> also
-stops judging it by its canaries, which check its own address. <code>relay-entry</code>
+subscription URL of its own. The <a href="../../manager/#burnt-relays">manager</a> then
+judges it by its CDNs alone, which its canaries
+<a href="../../canary/#a-relays-cdns">check</a>, not by its own address. <code>relay-entry</code>
 refuses <code>cdn_only</code> without <code>cdn_hosts</code>, because devices would get nothing
 through the relay.</p>
 <p>A network then needs one or two CDNs in all, not one per relay. Each CDN

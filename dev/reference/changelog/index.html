@@ -4013,6 +4013,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>A canary checks each CDN in front of the relay it watches, through the CDN as a device's CDN link goes, and gives each under <code>cdn</code> in its facts. The manager hands it the names and CDN path; by hand, set <code>dotdash_cdn_hosts</code>, <code>dotdash_origin_host</code> and the <code>dotdash_cdn_xhttp_path</code> secret.</p>
+</li>
+<li>
 <p>The manager's <code>sync</code> and <code>report</code> warn when a server's or relay's site certificate has under 14 days left, from the <code>cert_days</code> in its facts. An expired certificate breaks XHTTP, Hysteria2 and the CDN links while REALITY works, which canaries read as a block.</p>
 </li>
 <li>
@@ -4030,6 +4033,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
+<li>
+<p>The manager judges a CDN-only relay by its canaries' CDN checks and leaves it out of devices' links once none of its CDNs gets through, where it left it unwatched. Any relay whose CDN gets through is no longer burnt; a CDN failing alone is only reported.</p>
+</li>
 <li>
 <p>The canary's <code>freeze_url</code>, <code>freeze_up_url</code> and <code>download_url</code> take <code>http://</code> as well as <code>https://</code>, and an <code>https://</code> one's certificate is now checked. A 64 KB freeze download not done in 40 seconds counts as stopped partway.</p>
 </li>
