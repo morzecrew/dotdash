@@ -22,20 +22,15 @@ services:
     devices: ["/dev/net/tun:/dev/net/tun"]
     network_mode: host
     environment:
-      # The sub port (config-tun.json): through dotdash where a link answers,
+      # The sub port (config.json): through dotdash where a link answers,
       # and directly from Xray, outside TUN, while none does, the one way out
       # a fresh install has.
       XRAY_SUBSCRIPTION_PROXY: socks5h://127.0.0.1:7892
-    # On the host's network the port is the listener's own (config-tun.json).
+    # On the host's network the port is the listener's own (config.json).
     ports: !reset []
     volumes:
-      - type: bind
-        source: /etc/dotdash-client/config-tun.json
-        target: /etc/xray/10-client.json
-        read_only: true
-        bind: {create_host_path: false}
       # Xray's own lookups go to its resolver inbound, not the host's
-      # resolver, whose questions TUN takes back (config-tun.json.tmpl).
+      # resolver, whose questions TUN takes back (config.json.tmpl).
       - type: bind
         source: /etc/dotdash-client/resolv.conf
         target: /etc/resolv.conf

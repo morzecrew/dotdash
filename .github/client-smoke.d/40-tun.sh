@@ -5,8 +5,7 @@
 # resolver goes into TUN; with dotdash gone,
 # with Xray itself gone, and with the kill switch stopped too, nothing gets out
 # directly instead; and back on the base files, the machine's own routes are
-# as before. First, the two
-# configs differ only where TUN needs them to.
+# as before.
 #
 # TUN binds Xray's own sockets to the main interface, so this stand-in sits on
 # the rig's own network, reached over eth0, with a subscription of its link
@@ -20,15 +19,6 @@
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
-
-# Beyond the inbounds, DNS, the dns outbound, the sub balancer and the rules
-# naming a TUN-only inbound or the DNS module's tag, the two are the same.
-same='del(.inbounds, .dns, .fakedns) | .outbounds |= map(select(.tag != "dns"))
-  | .routing.balancers |= map(select(.tag != "sub"))
-  | .routing.rules |= map(select((.inboundTag // []) | any(. == "tun" or . == "dns-in" or . == "resolver" or . == "sub" or . == "dns-internal") | not))'
-a=$(sudo jq -S "${same}" /etc/dotdash-client/config.json)
-b=$(sudo jq -S "${same}" /etc/dotdash-client/config-tun.json)
-[ "${a}" = "${b}" ] || die "config-tun.json differs from config.json beyond what TUN needs: $(diff <(echo "${a}") <(echo "${b}") | head -20)"
 
 xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)
 caddy=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/caddy-acmedns | sed -n 1p)

@@ -38,10 +38,7 @@ configuration:
     target: /etc/dotdash-client/subscription.json
     mode: "0644"
   # Rendered under every profile, as the base files are; only the tun
-  # profile mounts them.
-  - template: templates/config-tun.json.tmpl
-    target: /etc/dotdash-client/config-tun.json
-    mode: "0644"
+  # profile mounts it.
   - template: templates/resolv.conf.tmpl
     target: /etc/dotdash-client/resolv.conf
     mode: "0644"
