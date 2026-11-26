@@ -11,15 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - An own-site relay's facts carry `cert_days`, the whole days left on the certificate its site serves, so an authority can warn before it runs out: when it does, XHTTP, Hysteria2 and the CDN links through the relay stop while REALITY goes on. It is left out while Caddy has no certificate.
 
+- The manager's `sync` and `report` warn when a server's or relay's site certificate has under 14 days left, from the `cert_days` in its facts. An expired certificate breaks XHTTP, Hysteria2 and the CDN links while REALITY works, which canaries read as a block.
+
+- The manager's `sync` says when servers differ in `https_port` or in the ports, mKCP header and opener, or presence of XHTTP with REALITY, mKCP and Hysteria2. Each server's subscriptions name the others with its own, so a difference gives devices dead links.
+
+- The release and dev keys' public halves, in the README and the docs' Releases section: `morzer init --signing-key` checks even the first release against them, with no access to the repository's variables.
+
 ### Changed
 
 - A relay's cover app sees each visitor's own address in `X-Forwarded-For`, where every visitor showed Xray's, so its per-address limits and lockouts no longer hit everyone at once. REALITY hands Caddy each connection behind a PROXY header that only Xray's network may send; the Hysteria2 masquerade still shows Xray's.
-
-### Security
-
-- A relay refuses a quote, backslash, brace or whitespace in `site`, `dotdash_servers`, `dotdash_address`, `dotdash_public_key` and each `via` line, set by hand or by an authority. Such a value could add keys to its Xray config or lines to its Caddyfile; the apply now fails and the relay stays as it was.
-
-- **acme-dns takes no new registrations by default**, as anyone reaching its port 443 could register. To register a parent, `sudo morzer config set registration=true`, run `register`, then set it back to `false`; `register` says so. Existing registrations keep working.
 
 ### Fixed
 
@@ -32,6 +32,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A subscription token the servers don't have gets the relay's own site, as any other path does, where it got the server's 404 page through the tunnel. One request could tell an own-site relay apart, and might name its server.
 
 - A relay's site names no server anywhere: port 80's redirect and the `http-origin` door dropped `Server: Caddy`, as port 443 already did, and every port drops the `Via: 1.1 Caddy` Caddy adds to what it passes back from a cover app, a server or Xray.
+
+- When the manager can't read a machine's facts, its last good facts stand in for up to a day, and `sync` prints the read's error. A passing outage of the target, or a wrong `identity` file, no longer takes every relay off every device in one sync.
+
+- A canary reading stamped more than ten minutes ahead of the manager's clock no longer counts. One canary whose clock ran ahead could burn a relay alone, and its reading outweighed every honest one until real time caught up.
+
+- The manager refuses to run with no state file beside a roster that names a joined machine, unless given `--new-state`. A sync on a checkout the state wasn't copied to made new keys for every server, cutting every device off. `adopt` still makes the state, as it takes the server's keys.
+
+- The manager's `status` shows machines joined with `joined` as joined, and writes `roster.yaml` under the state's lock, as `sync` does. It listed them as not joined, and could rewrite `roster.yaml` under a timer's sync.
+
+- A server whose document failed to publish is told again at the next sync to turn `hello_split` off. The manager forgot it had split a server before publishing, so one failed publish left that server's devices splitting their REALITY hello for good.
+
+- The manager unsets a relay's `via` only where an earlier document set it. Every relay whose release takes `via` was sent the unset, which a relay whose manifest doesn't let a document manage `via` refuses along with the whole document, so it took no change after `join`.
+
+- Each call the manager makes to morzer fails after two minutes without an answer, saying so, and the run goes on as for any failed read or publish. A target that hung held the state's lock, and every timer's sync behind it, for good.
+
+- The manager's `adopt` names the devices a server lists as `desktop` that the roster's `desktops` lacks. It dropped the kind silently, so after the first sync former desktops got CDN links, some paid by the gigabyte.
+
+- The manager refuses two machines on one installation id, in the roster or from `joined` run on the wrong machine. Each then got the other's document on every sync.
+
+- A relay with REALITY as its only path, whose name is blocked by SNI, is no longer burnt while its canaries get through with the hello split: it gets `off=reality` and `split`, so devices' Xray configs keep reaching it, split.
+
+- A relay that turns CDN-only no longer shows as `gone` in the manager's `report` for as long as the log keeps it, nor as burnt for good if it was burnt then. `report` calls a machine gone only once it leaves the roster.
+
+- Under `direct = false`, a client machine fetches its subscription through the first own-site relay its device's `pools` give it, as the servers choose. The manager took the first own-site relay of all, which could be one the device's pools keep from it.
+
+### Security
+
+- A relay refuses a quote, backslash, brace or whitespace in `site`, `dotdash_servers`, `dotdash_address`, `dotdash_public_key` and each `via` line, set by hand or by an authority. Such a value could add keys to its Xray config or lines to its Caddyfile; the apply now fails and the relay stays as it was.
+
+- **acme-dns takes no new registrations by default**, as anyone reaching its port 443 could register. To register a parent, `sudo morzer config set registration=true`, run `register`, then set it back to `false`; `register` says so. Existing registrations keep working.
+
+- The manager refuses facts no bundle prints: whitespace, quotes, backslashes, braces or control characters in a value, or a field missing or of the wrong type. A tampered relay can no longer add lines to the servers' `relays`, crash every sync or write to the terminal, nor take another relay's address out of the pools.
+
+- A device taken out of the manager's roster loses its id at the next sync, so added back it gets new links and a new subscription URL, and its leaked ones let no one in. Before, it got the same id and token back. Relays' and canaries' own ids and client machines' passwords are dropped the same way.
+
+- After `rotate finish`, the manager's next sync removes the retired REALITY key and its short id from every server's secret store, so later backups no longer hold them. Before, the old key was only turned off.
+
+- `bootstrap.sh` runs morzer's installer from a pinned commit, checked by sha256, where it piped whatever a movable tag served into `sh`. It also trusts Docker's apt key only when the file holds that one key, by its fingerprint.
 
 ## [0.17.0] - 2026-11-25
 

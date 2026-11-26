@@ -13,9 +13,16 @@
 # firewalld anyway, and an SSH port guessed wrong would lock you out.
 set -euo pipefail
 
-# Renovate bumps MORZER_VERSION (renovate.json); SOPS_VERSION, MINISIGN_VERSION
-# and their sums by hand.
+# Renovate bumps MORZER_VERSION (renovate.json); SOPS_VERSION, MINISIGN_VERSION,
+# the installer's commit and their sums by hand.
 MORZER_VERSION=0.18.0
+# morzer's install.sh at the v0.18.0 tag's commit. It installs any version, and
+# checks that release's archive against morzer's minisign key, which it carries.
+MORZER_INSTALL_COMMIT=ab214a0fb9514af8e9853d7eb0f739ffbf9eaa7f
+MORZER_INSTALL_SHA256=e282c8dbe1137a6cd6bdfdf9c68f457d532223d3df1b0b0634da48e58756ab7e
+# Docker's apt key, as download.docker.com documents it. apt trusts every key in
+# the file, so it must hold this one alone.
+DOCKER_KEY_FINGERPRINT=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
 SOPS_VERSION=3.13.3
 declare -A SOPS_SHA256=(
 	[amd64]=e5bec3346a873ae91d871550f3e698c1aad962aff462a080e40f25fde17fef6b
@@ -46,7 +53,7 @@ trap 'rm -rf "${tmp}"' EXIT
 export DEBIAN_FRONTEND=noninteractive
 say "packages"
 apt-get update -qq
-apt-get install -y -qq ca-certificates curl zstd age qrencode unattended-upgrades >/dev/null
+apt-get install -y -qq ca-certificates curl gnupg zstd age qrencode unattended-upgrades >/dev/null
 if command -v minisign >/dev/null; then
 	:
 elif apt-cache show minisign >/dev/null 2>&1; then
@@ -64,9 +71,12 @@ fi
 # dotdash requires.
 if ! docker compose version >/dev/null 2>&1; then
 	say "Docker, from download.docker.com"
+	curl -fsSL "https://download.docker.com/linux/${ID}/gpg" -o "${tmp}/docker.asc"
+	# The fingerprint of each primary key in the file, one per line.
+	fprs=$(GNUPGHOME=${tmp} gpg --quiet --show-keys --with-colons "${tmp}/docker.asc" | awk -F: '$1 == "pub" {p = 1} $1 == "fpr" && p {print $10; p = 0}')
+	[ "${fprs}" = "${DOCKER_KEY_FINGERPRINT}" ] || die "download.docker.com's key is not ${DOCKER_KEY_FINGERPRINT}"
 	install -m 0755 -d /etc/apt/keyrings
-	curl -fsSL "https://download.docker.com/linux/${ID}/gpg" -o /etc/apt/keyrings/docker.asc
-	chmod a+r /etc/apt/keyrings/docker.asc
+	install -m 0644 "${tmp}/docker.asc" /etc/apt/keyrings/docker.asc
 	echo "deb [arch=${arch} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable" \
 		>/etc/apt/sources.list.d/docker.list
 	apt-get update -qq
@@ -86,10 +96,10 @@ fi
 have=$(morzer --version 2>/dev/null | awk '{print $NF}')
 if [ "$(printf '%s\n' "${MORZER_VERSION}" "${have:-0}" | sort -V | head -1)" != "${MORZER_VERSION}" ]; then
 	say "morzer ${MORZER_VERSION}"
-	# The installer of that release checks the archive's minisign signature.
-	curl -fsSL "https://raw.githubusercontent.com/morzecrew/morzer/v${MORZER_VERSION}/install.sh" |
-		sh -s -- --version "${MORZER_VERSION}" --dir /usr/local/bin --require-signature \
-			--no-modify-path --no-completions >/dev/null
+	curl -fsSL -o "${tmp}/install.sh" "https://raw.githubusercontent.com/morzecrew/morzer/${MORZER_INSTALL_COMMIT}/install.sh"
+	echo "${MORZER_INSTALL_SHA256}  ${tmp}/install.sh" | sha256sum -c --quiet
+	sh "${tmp}/install.sh" --version "${MORZER_VERSION}" --dir /usr/local/bin --require-signature \
+		--no-modify-path --no-completions >/dev/null
 fi
 
 cat >/etc/apt/apt.conf.d/20auto-upgrades <<'EOF'
