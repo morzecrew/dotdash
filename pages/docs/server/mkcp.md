@@ -22,6 +22,11 @@ Each device gets a `server · kcp` link and an outbound in the Xray config.
   doesn't start as real RTP does; `none` sends bare encrypted packets. No
   header is known to pass everywhere: if one is blocked, try another, then
   let devices refresh their subscription or send them new links.
+- **`kcp_open`:** `none` by default. `quic` sends a QUIC-Initial-shaped
+  packet before the flow, so a network that lets QUIC out sees the start as
+  QUIC. Both ends must match: devices take it from new links (as `fm=`) or
+  their subscription. The packet is one fixed shape, so measure it on a
+  [canary](../canary/index.md) (`dotdash_kcp_open`) before relying on it.
 - **Bandwidth:** mKCP resends lost packets eagerly, so on a lossy line it
   uses more than TCP would. The Xray config picks it, as any other link,
   whenever it answers fastest.

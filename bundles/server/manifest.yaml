@@ -262,8 +262,8 @@ parameters:
   direct:
     type: bool
     default: true
-    description: "Give devices links straight to the servers. false keeps every server's address out of devices' links, configs and subscriptions: devices reach the servers only through relays and CDN hosts, fetch subscriptions only through own-site relays, and get no DNS tunnel, whose zone points at a server. A device that knew an address keeps reaching it: false hides the servers, it does not lock devices out"
-    services: [subscription]
+    description: "Give devices links straight to the servers. false keeps every server's address out of devices' links, configs and subscriptions: devices reach the servers only through relays and CDN hosts, fetch subscriptions only through own-site relays, and get no DNS tunnel, whose zone points at a server, nor the subscriptions' title, which names the exit. A device that knew an address keeps reaching it: false hides the servers, it does not lock devices out"
+    services: [subscription, exit-title]
   subscription:
     type: bool
     default: false

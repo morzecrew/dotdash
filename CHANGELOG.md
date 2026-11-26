@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A relay's cover app sees each visitor's own address in `X-Forwarded-For`, where every visitor showed Xray's, so its per-address limits and lockouts no longer hit everyone at once. REALITY hands Caddy each connection behind a PROXY header that only Xray's network may send; the Hysteria2 masquerade still shows Xray's.
 
+- A `relays` line with a field the server doesn't know, such as a mistyped `cdn_path=`, gets a warning naming the field and the line, where the relay used to lose that transport unsaid.
+
 ### Fixed
 
 - A relay run by the manager takes `via`, `via_link` and `via_fingerprint` from it. The relay never declared them managed, so morzer refused the whole document that set or unset them, and such a relay took no change from the manager after `join`.
@@ -71,6 +73,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - With `cover` naming an app, the site's answers no longer carry `Via: 1.1 Caddy`, which Caddy adds to whatever it proxies and which named it as `Server` would.
 
+- A `servers` that names no server, such as ` , `, stopped `client-config` and the subscriptions with no message. It now means this server alone, as an empty `servers` does, with a warning.
+
+- Subscriptions fit about 1000 devices, up from about 10 to 30, on a new 512 MiB in-memory volume that takes only what the files fill. The 4 MiB `dotdash_subscription` before it is left behind, empty, for `sudo docker volume rm dotdash_subscription` after the update.
+
+- A device's subscription URL no longer answers 404 while the service writes the files again after a change: the files of deleted devices or a rotated key go first, and each live one is replaced in place. A full volume now leaves the last files served, where every URL used to go.
+
+- The docs' recipe for several servers copies `kcp_seed` and `subscription_key` too, and says they need the same profiles and transport parameters. Servers set up by the old one gave dead mKCP links to each other, and a 404 to a subscription a relay fetched from the other.
+
 ### Security
 
 - A relay refuses a quote, backslash, brace or whitespace in `site`, `dotdash_servers`, `dotdash_address`, `dotdash_public_key` and each `via` line, set by hand or by an authority. Such a value could add keys to its Xray config or lines to its Caddyfile; the apply now fails and the relay stays as it was.
@@ -88,6 +98,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Under the server's `openflux` profile, the exits' connections go through Xray, so the rules devices get apply to them: BitTorrent and trackers, mail on port 25, private addresses and the server's networks are blocked, and `resolve` and `ipv6` hold. They went to the gate, past all of it.
 
 - `resolve=upstream` beside a `direct` upstreams line is refused: the apply rolls back and `doctor` names it. The gate resolved devices' names on the server, so a device reached its containers by name, `xray` and `gate` among them, past Xray's rules. Use `resolve=gateway`.
+
+- A server takes a `relays` line only when its host, site, public key, short id, VLESS encryption and XHTTP path each have their shape, and gives no mKCP link through a `kcp=` field that isn't whole. A bad line is left out and named by its line number, so a tampered one can't rewrite or break every device's config.
+
+- `servers` and `cdn_hosts` entries that aren't host names are left out with a warning, and an `xdns_domain` that isn't one stops `client-config`, instead of reaching every device's links and Xray config.
+
+- With `direct=false`, subscriptions carry no title (`Profile-Title`), which names the exit in Happ and Hiddify: with a `direct` line in `upstreams` it was the server's own address, shown to every device that `direct=false` keeps it from.
 
 ## [0.17.0] - 2026-11-25
 

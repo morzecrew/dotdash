@@ -20,6 +20,7 @@
 | `xhttp_reality_port` | `8443` | port for XHTTP with REALITY; not `https_port` or `http_port` |
 | `kcp_port` | `8447` | UDP port for [mKCP](mkcp.md); not 53 with the DNS tunnel |
 | `kcp_header` | `dtls` | what mKCP's packets start with: `dtls`, `srtp`, `utp`, `wechat`, `wireguard` or `none` |
+| `kcp_open` | `none` | an opener before mKCP's flow: `quic` sends a QUIC-Initial-shaped packet first, `none` nothing ([mKCP](mkcp.md)) |
 | `hysteria2_port` | `443` | UDP port for [Hysteria2](hysteria2.md); not `kcp_port`, nor 53 with the DNS tunnel |
 | `hysteria2_up` | `0` | Mbit/s Hysteria2's Brutal sends each device at, for one that asks; `0` keeps BBR |
 | `tcp_congestion` | `bbr` | TCP congestion control toward devices, in the gate's own namespace: `bbr` keeps its pace through a lossy last mile; `cubic` for a kernel without `tcp_bbr`. The gate also probes each connection's path MTU, so a link that drops large packets slows a download rather than stalling it, and holds at most 128 KiB unsent per connection |
@@ -31,6 +32,7 @@
 | `ipv6` | `allow` | `allow`: IPv6 leaves like the rest; `separate`: through the [`group=ipv6` lines](upstreams.md#ipv6) alone; `block`: no IPv6 destination leaves, names resolve to IPv4 only, so dual-stack sites still work (with `resolve=upstream`, the upstream resolves names itself) |
 | `dns_resolver` | `https://1.1.1.1/dns-query` | DoH server for `resolve=gateway`; `https://` only |
 | `subscription` | `false` | a subscription URL per device |
+| `happ_routing` | `none` | with `subscription`, a routing profile in Happ's own JSON, sent with every subscription ([Happ's routing](devices.md#subscriptions)) |
 | `exit_ipv4_url` | `http://api4.ipify.org` | with `subscription`, what the subscription's name asks, through the upstreams every ten minutes, for the exit's IPv4 address: plain HTTP answering with the caller's address alone |
 | `exit_info_url` | `http://ipinfo.io` | with `subscription`, where the name asks `<url>/<address>/country` for the exit's country, whose flag goes before the address |
 | `cert_issuer` | `acme` | `acme` (Let's Encrypt), `acme-dns` (Let's Encrypt over a DNS-01 check handed to acme-dns, for a [wildcard](certificates.md) that keeps the name out of certificate logs) or `internal` (offline machines) |
@@ -41,10 +43,12 @@
 | `relays` | a comment | one `<host> <site> <public key> <short id> <encryption>` line per [relay](../relay/install.md), as its `relay-entry` prints it, with `own-site <path>`, `kcp=<port>,<header>,<seed>`, `hy2=<port>`, `cdn=<name>[,<name>]` and `name=<label>` after it where the relay has them; `off=<path>[,<path>]` (`reality`, `xhttp`, `mkcp`, `hysteria2`) leaves out paths its canaries find [blocked](../manager.md#blocked-paths), and `standby` makes it the [last resort](../relay/install.md#5-on-the-server-add-the-line-to-relays), unchecked |
 | `pools` | a comment | one `<pool> <member>...` line per [pool](devices.md#pools), the members device names, relay hosts and CDN hosts |
 | `direct` | `true` | `false`: no server's address in devices' links, configs or subscriptions, only [relays and CDN hosts](devices.md#keeping-the-servers-out-of-devices-links) |
+| `openflux_channels` | a comment | with the `openflux` profile, one `<device> <kind>[=<link>] ...` line per device that gets an [OpenFlux](openflux.md) channel |
+| `call_provider` | `none` | with the `openflux` profile, `tm`: a bare `tm` in `openflux_channels` gets a call made through the provider's API with `call_token` ([Calls made for you](openflux.md#calls-made-for-you)) |
 
 Set one with `sudo morzer config set <name>=<value>`, unset it with
-`sudo morzer config unset <name>`, edit `relays`, `pools` or `cdn_extra` with
-`sudo morzer config edit <name>`. Profiles (`installation.profile`): `xdns`,
+`sudo morzer config unset <name>`, edit `relays`, `pools`, `cdn_extra`, `happ_routing` or `openflux_channels`
+with `sudo morzer config edit <name>`. Profiles (`installation.profile`): `xdns`,
 `xhttp-reality`, `mkcp`, `hysteria2`, `openvpn` (for an [OpenVPN line](upstreams.md#openvpn)),
 `warm` (for [warm connections](upstreams.md#warm-connections)),
 `openflux` (for [OpenFlux](openflux.md), with `openflux_channels`),
