@@ -18,7 +18,7 @@ jobs:
         package: [dotdash-server, dotdash-canary, dotdash-relay, dotdash-client, dotdash-acme-dns]
     # The package API is reached with GH_PAT, not GITHUB_TOKEN.
     permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@6360c44fecddb64b29d176ea2f935b7e8a8f6916 # v0.12.2
+    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@26526964fefb8d0b1d5dc71ba46eb411b8e47e01 # v0.13.0
     with:
       package: ${{ matrix.package }}
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
