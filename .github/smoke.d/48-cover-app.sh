@@ -2,7 +2,8 @@
 # An app behind the cover site (cover). With a stand-in app, Caddy's own image
 # answering "cover app", on Caddy's network as cover-app:
 # - the site's pages are the app's, and a subscription's path stays Caddy's
-#   (a guessed one gets the app's answer, as any other path does);
+#   (a guessed one gets the app's answer, as any other path does), with no
+#   Via naming Caddy;
 # - doctor passes, and with the app stopped fails, naming it;
 # - another, published on a host port only, is reached as host.docker.internal;
 # - with cover back to pages, the bundled page is back.
@@ -33,7 +34,9 @@ sudo docker run -d --name dotdash-rig-cover-app --network "${network}" --network
 sudo morzer config set cover=http://cover-app:8080 >/dev/null || die "could not set cover"
 [ "$(page /)" = "cover app" ] || die "the site is not the app's: $(page / | head -c 200)"
 [ "$(page "/$(openssl rand -hex 16)")" = "cover app" ] || die "a guessed subscription path is not passed to the app"
-echo "${0##*/}: the site is the app's, a guessed subscription path included"
+! curl --noproxy '*' -sk --max-time 10 -D - -o /dev/null --resolve "${domain}:443:127.0.0.1" "https://${domain}/" | grep -qi '^via:' ||
+  die "an answer from the app names Caddy in Via"
+echo "${0##*/}: the site is the app's, a guessed subscription path included, and no Via names Caddy"
 
 sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the app up: $(sudo morzer doctor 2>&1 | tail -5)"
 sudo docker stop -t 1 dotdash-rig-cover-app >/dev/null

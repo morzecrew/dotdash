@@ -61,6 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The server's redirect to HTTPS on port 80 no longer sends `Server: Caddy`, which the site's own answers on 443 already left out. It is otherwise the redirect Caddy makes itself.
 
+- With `cover` naming an app, the site's answers no longer carry `Via: 1.1 Caddy`, which Caddy adds to whatever it proxies and which named it as `Server` would.
+
 ## [0.17.0] - 2026-11-25
 
 ### Added

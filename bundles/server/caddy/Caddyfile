@@ -59,10 +59,13 @@ http://127.0.0.1:8081 {
 }
 
 # On every answer, errors too: those skip the site's own routes, so without
-# handle_errors a 404 or 405 would name the server and drop the rest.
+# handle_errors a 404 or 405 would name the server and drop the rest. The
+# Via that reverse_proxy adds to an app's answers names Caddy as Server
+# would; a deletion waits until the answer is written, so it goes too.
 (headers) {
 	header {
 		-Server
+		-Via
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer
