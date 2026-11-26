@@ -9,7 +9,7 @@ bundle.
 | --- | --- |
 | Update by hand | `sudo morzer update --stage && sudo morzer update --to <version>` |
 | New morzer | `sudo morzer self-update` |
-| Backups off the machine | `sudo morzer backup target add s3://bucket/dotdash --credentials backup_s3` |
+| Backups off the machine | `sudo morzer backup target add s3://bucket/dotdash/<name> --credentials backup_s3`, a prefix per machine: morzer prunes every backup at a target's root |
 | Alerts | `sudo morzer notify target add https://hooks.example/morzer` |
 | Health and faults | `sudo morzer doctor` |
 | Which exit sites see | `sudo morzer task run exit-check --output` |

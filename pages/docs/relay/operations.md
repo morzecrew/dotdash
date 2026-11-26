@@ -170,7 +170,7 @@ machine, add a backup target, and set the `A` record's TTL to 300 s or less.
 
 ```sh
 sudo morzer secret set backup_s3 < ./bucket.yaml   # the bucket's credentials
-sudo morzer backup target add s3://bucket/dotdash-relay --credentials backup_s3
+sudo morzer backup target add s3://bucket/dotdash-relay/<name> --credentials backup_s3   # a prefix of its own
 sudo morzer backup                                  # one now; each update takes another
 ```
 

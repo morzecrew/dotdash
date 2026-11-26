@@ -29,7 +29,7 @@ def test_a_relay_script_is_sh_and_ends_in_its_id_and_key():
     assert "--set dotdash_servers=a.example" in s and "--recovery-recipient age1me" in s
     assert "morzer secret set vless_clients <<'DOTDASH_END'\nid1 phone\nid2 laptop\nDOTDASH_END" in s
     assert "morzer secret set sync_target <<'DOTDASH_END'\nkind: s3\nsecret: x\nDOTDASH_END" in s
-    assert "backup target add s3://b/net --credentials sync_target" in s
+    assert "backup target add s3://b/net/backups/r1 --credentials sync_target" in s
     assert "recipients list --json | grep -qF age1me || morzer secret recipients add age1me --kind recovery" in s
     assert "sync.target=s3://b/net sync.authority=RWauth sync.recipient=age1me sync.enabled=true" in s
     assert s.index("sync.enabled=true") < s.index("morzer apply") < s.index("printf 'dotdash-joined")
@@ -62,6 +62,33 @@ def test_an_installed_machine_only_starts_following(tmp_path):
     assert "secret recipients add age1me --kind recovery" in calls
     assert calls[0].startswith("config set sync.target=s3://b/net") and calls[-2:] == ["fleet publish", "fleet publish --dry-run --json"]
     assert "installed here already" in out and join.marker(out.splitlines()[-1], "r1") == ("inst_7", "RW7=")
+
+
+def test_backups_go_under_the_machines_own_prefix_and_the_root_target_goes(tmp_path):
+    """morzer prunes every backup one level under a target's root, so machines
+    sharing the root pruned each other's: each keeps its own prefix, and the
+    root target an earlier join added is removed, its backups left in place."""
+    log = tmp_path / "calls"
+    listing = tmp_path / "targets"
+    (tmp_path / "morzer").write_text(
+        f'#!/bin/sh\necho "$*" >>{log}\n'
+        f'[ "$1 $2 $3" != "backup target list" ] || cat {listing}\n'
+        f'[ "$1 $2" != "fleet publish" ] || [ "${{3:-}}" != --dry-run ] || '
+        'echo \'{"data": {"row": {"installation_id": "inst_7", "signing_key": "RW7="}}}\'\n')
+    (tmp_path / "morzer").chmod(0o755)
+    s = make(site="site.example", entry_host="203.0.113.7").replace("/etc/dotdash-relay", str(tmp_path))
+    run = lambda: subprocess.run(["sh"], input=s, capture_output=True, text=True,
+                                 env={"PATH": f"{tmp_path}:/usr/bin:/bin"}, check=True)
+    targets = lambda: [c for c in log.read_text().splitlines() if c.startswith("backup target ") and "list" not in c]
+
+    listing.write_text(json.dumps({"data": [{"url": "s3://b/net", "reachable": True}]}, indent=2))
+    run()
+    assert targets() == ["backup target add s3://b/net/backups/r1", "backup target remove s3://b/net"]
+
+    log.unlink()
+    listing.write_text(json.dumps({"data": [{"url": "s3://b/net/backups/r1", "reachable": True}]}, indent=2))
+    run()
+    assert targets() == [], "run again, it adds nor removes anything"
 
 
 def test_the_script_prints_the_row_it_published(tmp_path):

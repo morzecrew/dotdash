@@ -129,9 +129,10 @@ What each kind needs to be installed:
   address devices reach it at), or `--domain` for one of its own site.
 - **A canary or a client:** nothing more.
 
-Backups go to the manager's target, encrypted to the identity's age
-recipient or to `--recovery`. A machine installed before it joined gets both
-too, so its backups outlive it.
+Backups go to the manager's target under `backups/<name>/`, a prefix of the
+machine's own, encrypted to the identity's age recipient or to `--recovery`.
+A machine installed before it joined gets both too, so its backups outlive
+it.
 The script holds the machine's credentials: send it to that machine only. A
 roster entry's own `id` and `key`, as earlier releases had you write them,
 still win over what `joined` kept.
@@ -148,24 +149,22 @@ its own prefixes on the target, bounds that:
 | Whose | List | Read | Write | Delete |
 | --- | --- | --- | --- | --- |
 | the manager's (`credentials` at the top) | the target | `fleet/`, `state/` | `state/` | `state/`, to prune old documents |
-| a machine's (its `credentials`) | the target | `state/<product>/<installation-id>/`, and each backup's manifest | `fleet/<product>/<installation-id>/` (its row and facts), and its backups | none |
+| a machine's (its `credentials`) | the target | `state/<product>/<installation-id>/`, `backups/<name>/` | `fleet/<product>/<installation-id>/` (its row and facts), `backups/<name>/` | `backups/<name>/`, for retention |
 
 The product is `dotdash`, `dotdash-relay`, `dotdash-canary` or
 `dotdash-client`; the installation id is the one `joined` kept, which
-`morzer installation describe` on the machine prints.
+`morzer installation describe` on the machine prints. The name is the
+machine's in the roster.
 
-Backups are the gap. morzer keeps every machine's backups at the target's
-root, one directory per backup named by the second it was taken, so a
-machine needs write there, beside the others' backups. Its retention lists
-every backup at the root and prunes by count, whichever machine took them.
-So:
-
-- **Give machines no delete.** Retention then fails with a warning, and
-  the bucket's own lifecycle rules expire old backups instead. With delete,
-  a relay's retention prunes the servers' backups too, the shared
-  credential included.
-- **Turn on versioning or Object Lock** where the bucket has them, so a
-  machine overwriting another's backup leaves the old version.
+morzer prunes every backup it finds one level under a target's root, so
+machines that keep backups at one root prune each other's, and two that back
+up in the same second overwrite each other's. Each joined machine therefore
+backs up under `backups/<name>/`. A machine joined before kept its backups
+at the root: run its `join` again, and the script moves it to its prefix and
+drops the root target. The backups already at the root stay there; nothing
+prunes them now, so delete them once each machine has a backup under its
+prefix. Versioning or Object Lock, where the bucket has them, still guards
+against a seized machine deleting its own.
 
 To move a joined machine to its own credential, name it in the roster and
 run its `join` again: the script replaces the credential it holds.
