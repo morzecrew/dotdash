@@ -45,6 +45,8 @@
 	# certificate rather than none. A CDN that checks the origin's certificate
 	# against its own name still fails; tell it to send this domain.
 	fallback_sni {$DOMAIN}
+	# The redirect to HTTPS is the http:// site's, for every name.
+	auto_https disable_redirects
 	servers {
 		protocols h1 h2
 	}
@@ -207,4 +209,15 @@ http://127.0.0.1:8081 {
 # CDN works on its defaults. The secret path, not the name, lets a device in.
 https:// {
 	import site
+}
+
+# Port 80 (http_port): the redirect to HTTPS Caddy makes of its own, the same
+# 308, Location and closed connection, but naming no server. The ACME check
+# is answered before any site, as it was.
+http:// {
+	header -Server
+	header Location https://{host}{uri}
+	respond 308 {
+		close
+	}
 }

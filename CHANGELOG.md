@@ -53,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Under the `hysteria2` profile, a visitor over HTTP/3 reaches the cover site with the domain as its Host, as over TCP. Hysteria2's masquerade sent `caddy:443` in its place, so an app's redirects and cookies over HTTP/3 named `caddy`.
 
+- The server's redirect to HTTPS on port 80 no longer sends `Server: Caddy`, which the site's own answers on 443 already left out. It is otherwise the redirect Caddy makes itself.
+
 ## [0.17.0] - 2026-11-25
 
 ### Added
