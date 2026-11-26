@@ -40,5 +40,7 @@ Profiles (`installation.profile`): `tun`, the [whole machine](tun.md).
 
 ## Health
 
-`doctor` and each `apply` fetch `probe_url` through dotdash, and with
-`gateway=true` check that the host forwards the LAN into TUN.
+`doctor` and each `apply` fetch `probe_url` through dotdash; under `tun`,
+check that the [kill switch](tun.md#the-kill-switch)'s rules are in place,
+IPv6's too; and with `gateway=true`, check that the host forwards the LAN
+into TUN.

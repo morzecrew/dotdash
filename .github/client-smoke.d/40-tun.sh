@@ -2,7 +2,7 @@
 # The tun profile: a plain request on the machine, with no proxy settings,
 # goes through dotdash, and so does a LAN device's with this machine as its
 # gateway; a start with no links gets its subscription; with dotdash gone,
-# and with Xray itself gone, nothing gets out
+# with Xray itself gone, and with the kill switch stopped too, nothing gets out
 # directly instead; and back on the base files, the machine's own routes are
 # as before. First, the two
 # configs differ only where TUN needs them to.
@@ -181,6 +181,20 @@ for _ in 1 2 3; do
 done
 sudo docker start "${client}" >/dev/null
 through 15 || { routes; die "with Xray back, a plain request did not go through TUN and dotdash again ($(plain http://tun-target.test:8080/sub))"; }
+
+# An update or a restart stops the kill switch too: its rules stay, so with
+# Xray gone as well nothing gets out, and its next start adds none twice.
+ks=$(service_container killswitch)
+sudo docker stop "${ks}" "${client}" >/dev/null
+for pref in 9001 9002; do
+  ip rule show pref "${pref}" | grep -q . || { routes; die "with the kill switch stopped, its rule ${pref} went"; }
+done
+code=$(plain https://example.com/)
+[ "${code}" != 200 ] || { routes; die "with the kill switch and Xray stopped, a plain request got out directly"; }
+sudo docker start "${ks}" "${client}" >/dev/null
+sleep 2
+[ "$(ip rule show pref 9001 | grep -c .)" = 1 ] || { routes; die "the kill switch's start added its rules twice"; }
+through 15 || { routes; die "with the kill switch and Xray back, a plain request did not go through TUN and dotdash"; }
 
 sudo morzer config unset installation.profile >/dev/null
 ip -o link show Meta >/dev/null 2>&1 && die "back on the base files, the TUN interface is still there"

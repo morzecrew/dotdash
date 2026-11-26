@@ -69,6 +69,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A client under `tun` with no link that answers, as on a fresh install or with kept links whose server is gone, now gets its subscription: while no link answers, the fetch goes directly from Xray, outside TUN. Before, it entered TUN, found no link and was refused for good. No other process can take that way out.
 
+- The client's kill switch keeps its rules while dotdash-client is updated, restarted or stopped, so the machine never gets out around dotdash then; leaving `tun` still takes them out, even after a stop. `doctor` now checks IPv6's rules too. The client's tun page shows a unit that closes the gap at boot.
+
 ### Security
 
 - A server takes a `relays` line only when its host, site, public key, short id, VLESS encryption and XHTTP path each have their shape, and gives no mKCP link through a `kcp=` field that isn't whole. A bad line is left out and named by its line number, so a tampered one can't rewrite or break every device's config.

@@ -11,12 +11,14 @@
 #         machine is on, but never the default route;
 #   9002  and what that leaves is unreachable.
 #
-# A LAN device's traffic, with gateway on, takes the same path. The interface
-# rules follow the default routes as they change (another network, a
-# reconnect). Stopping the service, or leaving the tun profile, takes the
-# rules out; after a kill they stay, and nothing but the LAN is reachable
-# until they go: sudo ip rule del pref 9001; sudo ip rule del pref 9002 (and
-# the same with ip -6).
+# A LAN device's traffic, with gateway on, takes the same path. `run` puts
+# back what is missing every 5 s, and the interface rules follow the default
+# routes as they change (another network, a reconnect). The rules stay when
+# the service stops, so an update, a restart or `morzer stop` never opens the
+# machine: `clean`, which the base files run as this service
+# (compose/compose.yaml), takes them out once the tun profile is left. By
+# hand, as root: ip rule del pref 9001; ip rule del pref 9002 (and the same
+# with ip -6).
 set -eu
 
 # IPv6's rules too where the kernel has IPv6.
@@ -45,27 +47,32 @@ sync() { # the interface rules, one per interface that holds a default route
 	done
 }
 
-on() { # in the order that leaves Xray's own connections working throughout
-	off
+on() { # what is missing, in the order that leaves Xray's own connections working
 	sync
 	for fam in $fams; do
-		ip "$fam" rule add pref 9001 lookup main suppress_prefixlength 0
-		ip "$fam" route add unreachable default table 9002
-		ip "$fam" rule add pref 9002 lookup 9002
+		ip "$fam" rule show pref 9001 | grep -q . || ip "$fam" rule add pref 9001 lookup main suppress_prefixlength 0
+		ip "$fam" route replace unreachable default table 9002
+		ip "$fam" rule show pref 9002 | grep -q . || ip "$fam" rule add pref 9002 lookup 9002
 	done
 }
 
+trap 'exit 0' TERM INT
 case ${1:-run} in
-off) off ;;
-run)
-	on
-	trap 'off; exit 0' TERM INT
-	echo "killswitch: on; nothing leaves around TUN but Xray's own connections"
+clean)
+	off
+	echo "killswitch: off; not under the tun profile"
 	while :; do
-		sleep 5 &
+		sleep 3600 &
 		wait $! || true
-		sync
 	done
 	;;
-*) echo "killswitch.sh [run|off]" >&2; exit 2 ;;
+run)
+	echo "killswitch: on; nothing leaves around TUN but Xray's own connections"
+	while :; do
+		on
+		sleep 5 &
+		wait $! || true
+	done
+	;;
+*) echo "killswitch.sh [run|clean]" >&2; exit 2 ;;
 esac

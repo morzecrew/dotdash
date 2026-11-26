@@ -20,9 +20,11 @@ sudo morzer config unset installation.profile     # back to the proxy port alone
     ```
 
 - With dotdash out of reach, nothing gets out around it. Nor while Xray
-  itself is down, after a crash or on the restart for a new subscription:
-  a kill switch keeps routing rules that let only Xray's own connections and
-  the LAN out then. `sudo morzer doctor` checks they are in place.
+  itself is down, after a crash or on the restart for a new subscription,
+  nor while dotdash-client is updated or stopped: a
+  [kill switch](#the-kill-switch) keeps routing rules that let only Xray's
+  own connections and the LAN out then. `sudo morzer doctor` checks they are
+  in place, IPv6's too.
 - Networks the machine is directly on, such as its LAN, stay reachable
   directly.
 - The subscription and the dotdash server must be reachable over the
@@ -33,13 +35,61 @@ sudo morzer config unset installation.profile     # back to the proxy port alone
 Xray then runs as root with `NET_ADMIN`, `DAC_OVERRIDE` and
 `NET_BIND_SERVICE`, on the host's network, with `/dev/net/tun`: a TUN
 interface takes nothing less. Its root filesystem stays read-only.
-The kill switch runs beside it as root with `NET_ADMIN` alone. Leaving the
-profile, or stopping dotdash-client, takes its rules out. If it was killed
-instead and the machine reaches nothing but its LAN, take them out by hand:
+
+## The kill switch
+
+The kill switch runs beside Xray as root with `NET_ADMIN` alone, on the
+host's network. Its rules stay when it stops, so an update, a restart or
+`sudo morzer stop` never opens the machine: stopped, it reaches nothing but
+its LAN until dotdash-client starts again. Leaving the profile takes them
+out: the base files run the same service, which removes them and then idles.
+
+They live in the kernel alone, so a reboot takes them out too. If the machine
+reaches nothing but its LAN with dotdash-client gone, removed or with Docker
+down, take them out by hand:
 
 ```sh
 sudo ip rule del pref 9001; sudo ip rule del pref 9002
 sudo ip -6 rule del pref 9001; sudo ip -6 rule del pref 9002
+```
+
+Remove dotdash-client only after leaving the profile, or run those after.
+
+### From boot
+
+At boot the rules come back with dotdash-client, once Docker starts it, and
+until then the machine gets out directly. A unit that puts them in before the
+network comes up closes that gap:
+
+```ini title="/etc/systemd/system/dotdash-killswitch.service"
+[Unit]
+Description=dotdash kill switch rules, before the network
+DefaultDependencies=no
+Wants=network-pre.target
+Before=network-pre.target shutdown.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+# The kill switch's rules, IPv4's and IPv6's ($$ is systemd's $).
+ExecStart=-/bin/sh -c 'for f in -4 -6; do ip $$f rule add pref 9001 lookup main suppress_prefixlength 0; ip $$f route replace unreachable default table 9002; ip $$f rule add pref 9002 lookup 9002; done'
+
+[Install]
+WantedBy=sysinit.target
+```
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl enable dotdash-killswitch.service
+```
+
+Xray's own connections get out seconds after Docker starts dotdash-client,
+once the kill switch adds the rule that lets them (pref 9000). Off the
+profile, the base files' service takes the unit's rules out at each boot;
+disable the unit before removing dotdash-client:
+
+```sh
+sudo systemctl disable dotdash-killswitch.service
 ```
 
 ## A gateway for the LAN
