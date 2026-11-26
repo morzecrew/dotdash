@@ -1,0 +1,4 @@
+# GitHub's ubuntu-26.04 runner, which actionlint (1.7.12) doesn't list among
+# the hosted labels yet. Drop this once it does.
+self-hosted-runner:
+  labels: [ubuntu-26.04]
