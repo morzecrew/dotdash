@@ -126,6 +126,9 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
             doc["secrets"].update({f"{k}_second": v for k, v in two.items()})
         elif rotate.phase(state) == "done":
             doc["parameters"]["reality_second_key"] = "false"
+            # The retired key out of the server's secret store, and so out of
+            # its backups from then on, not only unused.
+            doc.setdefault("unset", {})["secrets"] = [f"{k}_second" for k in rotate.KEYS]
         if s.name in split:
             doc["parameters"]["hello_split"] = "true"
         elif s.name in state.get("split", []):

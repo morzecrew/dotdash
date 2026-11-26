@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A device taken out of the manager's roster loses its id at the next sync, so added back it gets new links and a new subscription URL, and its leaked ones let no one in. Before, it got the same id and token back. Relays' and canaries' own ids and client machines' passwords are dropped the same way.
 
+- After `rotate finish`, the manager's next sync removes the retired REALITY key and its short id from every server's secret store, so later backups no longer hold them. Before, the old key was only turned off.
+
 ## [0.17.0] - 2026-11-25
 
 ### Added

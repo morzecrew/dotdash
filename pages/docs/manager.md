@@ -403,7 +403,9 @@ dotdash-manager sync
   keeps the old one second. Subscriptions, client machines and relays move to
   the new key, and devices still on the old one keep getting in.
 - **`finish`** refuses for a week after `swap`, the devices' time to fetch
-  their subscriptions or get new links. It then turns the old key off.
+  their subscriptions or get new links. It then turns the old key off, and
+  removes it from the servers' secret stores, so their later backups no longer
+  hold it.
 - `rotate` alone says where it stands. `--force` skips the canary check or
   the week, when you know better.
 
