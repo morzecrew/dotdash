@@ -174,12 +174,15 @@ def test_a_relay_goes_via_another_which_lets_it_in(st, facts):
     # A release from before via says nothing of it: x waits rather than going to the servers.
     docs, waiting = render(net, st, {**facts, "x": {**RELAY, "entry_host": "198.51.100.9"}})
     assert "x" not in docs and "x: its release predates via: update it" in waiting
-    # Off via again, a release that takes it has it unset; one that doesn't is left alone.
+    # Off via again, one an earlier document gave via (the state's via) has it
+    # unset; any other is never told of via, which its release may refuse.
     plain = loads(ROSTER + '[[relay]]\nname = "x"\n')
-    docs, _ = render(plain, st, {**facts, "x": {**RELAY, "via": True}})
+    docs, _ = render(plain, {**st, "via": ["x"]}, {**facts, "x": {**RELAY, "via": True}})
     assert docs["x"]["unset"] == {"parameters": ["via", "via_link", "via_fingerprint"]} and "via" not in docs["x"]["parameters"]
-    docs, _ = render(plain, st, {**facts, "x": RELAY})
-    assert "unset" not in docs["x"] and "via" not in docs["x"]["parameters"]
+    for f in {**RELAY, "via": True}, RELAY:
+        docs, _ = render(plain, st, {**facts, "x": f})
+        assert "unset" not in docs["x"] and "via" not in docs["x"]["parameters"]
+        assert "unset" not in docs["r1"]
 
 
 def test_a_relay_waits_for_the_facts_of_the_relay_it_goes_via(st, facts):

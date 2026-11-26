@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A server whose document failed to publish is told again at the next sync to turn `hello_split` off. The manager forgot it had split a server before publishing, so one failed publish left that server's devices splitting their REALITY hello for good.
 
+- The manager unsets a relay's `via` only where an earlier document set it. Every relay whose release takes `via` was sent the unset, which a relay whose manifest doesn't let a document manage `via` refuses along with the whole document, so it took no change after `join`.
+
 ### Security
 
 - The manager refuses facts no bundle prints: whitespace, quotes, backslashes, braces or control characters in a value, or a field missing or of the wrong type. A tampered relay can no longer add lines to the servers' `relays`, crash every sync or write to the terminal, nor take another relay's address out of the pools.

@@ -174,7 +174,10 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
             doc["parameters"]["via_link"] = r.via_link
             if r.via_link == "xhttp":
                 doc["parameters"]["via_fingerprint"] = r.via_fingerprint
-        elif takes_via and r.name in facts:
+        elif r.name in state.get("via", []):
+            # Off via again: unset only where an earlier document set it (the
+            # state's via). A relay whose release doesn't let a document manage
+            # via refuses any naming it, and so would take no change at all.
             doc["unset"] = {"parameters": ["via", "via_link", "via_fingerprint"]}
 
     for c in net.canary:

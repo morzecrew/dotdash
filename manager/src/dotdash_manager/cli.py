@@ -107,7 +107,7 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     for v in verdicts:
         print(v)
     docs, waiting = render(net, st, facts, burnt | held, off, stands, split)
-    failed = []
+    failed, holds = [], set()
     for m in net.machines:
         doc = docs.get(m.name)
         if doc is None:
@@ -119,6 +119,7 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
         last = st["published"].get(m.id, {})
         if last.get("digest") == digest and time.time() - last.get("at", 0) < RENEW_AFTER:
             print(f"{m.name}: unchanged")
+            holds.add(m.name)
             continue
         r = mz.publish(m, doc, dry_run)
         if r.returncode != 0:
@@ -126,10 +127,13 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
             print(f"{m.name}: publish failed: {(r.stderr or r.stdout).strip()}", file=sys.stderr)
             continue
         print(f"{m.name}: {'would publish' if dry_run else 'published'}")
+        holds.add(m.name)
         st["published"][m.id] = {"digest": digest, "at": int(time.time())}
-    # The servers split as of now, for the next render to turn hello_split
-    # off where it no longer holds: one whose publish failed still has it.
-    st["split"] = sorted(split | (set(st.get("split", [])) & set(failed)))
+    # Who was sent hello_split and via, for the next render to take them off
+    # where they no longer hold, and to name them nowhere else.
+    names = {m.name for m in net.machines}
+    for key, has in (("split", split), ("via", {n for n, d in docs.items() if "via" in d.get("parameters", {})})):
+        st[key] = sorted(sent(set(st.get(key, [])), holds, has) & names)
     # Once, at the end: the keys were kept before anything went out (open),
     # and the rest a sync that stops short reads again from the same facts.
     if not dry_run:
@@ -137,6 +141,13 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     for w in waiting:
         print(f"waiting: {w}")
     raise typer.Exit(1 if failed else 0)
+
+
+def sent(had: set[str], holds: set[str], has: set[str]) -> set[str]:
+    """The machines holding something after a sync: those it went to in a
+    document that is now theirs (holds: published, or unchanged), and the
+    rest as they were (had)."""
+    return (had - holds) | (has & holds)
 
 
 def labels(net: Network, st: dict) -> None:

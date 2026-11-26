@@ -427,42 +427,75 @@ watches = "r1"
     assert "page opens several connections" in CAUSES["burst"]
 
 
-def test_a_server_whose_publish_failed_stays_split_for_the_next_sync(tmp_path, monkeypatch):
+def sync_with(tmp_path, monkeypatch, roster: str, st: dict, facts: dict):
+    """sync in tmp_path against a stand-in morzer: run(code) answers every
+    publish with code, and returns sync's exit code, the documents it
+    published by name and the state it kept."""
     import json
     import subprocess
 
     from dotdash_manager import cli
     from typer.testing import CliRunner
 
-    roster = 'target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[server]]\nname = "a"\nid = "inst_A"\nkey = "RWa"\n'
     (tmp_path / "network.toml").write_text(roster)
-    st = state.load(Path("/nonexistent"), loads(roster))
-    st["split"] = ["a"]
     state.save(tmp_path / "dotdash-state.json", st)
-    sent, answer = [], {"code": 1}
+    sent, answer = {}, {"code": 0}
 
     class Stand:
         def __init__(self, *_):
             pass
 
         def gather(self, *_):
-            return {}
+            return facts
 
         def rows(self):
             return {}
 
         def publish(self, m, doc, dry_run):
-            sent.append(doc["parameters"].get("hello_split"))
+            sent[m.name] = doc
             return subprocess.CompletedProcess([], answer["code"], "", "target down")
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(state, "lock", lambda path: 0)
     monkeypatch.setattr(cli, "Morzer", Stand)
-    run = lambda: CliRunner().invoke(cli.app, ["sync"])
-    kept = lambda: json.loads((tmp_path / "dotdash-state.json").read_text())
+
+    def run(code: int = 0):
+        answer["code"] = code
+        sent.clear()
+        r = CliRunner().invoke(cli.app, ["sync"])
+        return r.exit_code, dict(sent), json.loads((tmp_path / "dotdash-state.json").read_text())
+    return run
+
+
+def test_a_server_whose_publish_failed_stays_split_for_the_next_sync(tmp_path, monkeypatch):
+    roster = 'target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[server]]\nname = "a"\nid = "inst_A"\nkey = "RWa"\n'
+    st = {**state.load(Path("/nonexistent"), loads(roster)), "split": ["a"]}
+    run = sync_with(tmp_path, monkeypatch, roster, st, {})
     # No longer split: hello_split off, which a failed publish never delivered.
-    assert run().exit_code == 1 and sent == ["false"] and kept()["split"] == ["a"]
-    assert "inst_A" not in kept()["published"]
-    answer["code"] = 0
-    assert run().exit_code == 0 and sent == ["false", "false"] and kept()["split"] == []
-    assert "inst_A" in kept()["published"]
+    code, sent, kept = run(1)
+    assert code == 1 and sent["a"]["parameters"]["hello_split"] == "false" and kept["split"] == ["a"]
+    assert "inst_A" not in kept["published"]
+    code, sent, kept = run(0)
+    assert code == 0 and sent["a"]["parameters"]["hello_split"] == "false" and kept["split"] == []
+    assert "inst_A" in kept["published"]
+    assert "hello_split" not in run(0)[1]["a"]["parameters"]
+
+
+def test_via_is_unset_only_on_a_relay_a_document_gave_it(tmp_path, monkeypatch):
+    roster = ('target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[server]]\nname = "s"\nid = "inst_S"\nkey = "RWs"\n'
+              '[[relay]]\nname = "r1"\nid = "inst_R1"\nkey = "RW1"\n[[relay]]\nname = "r2"\nid = "inst_R2"\nkey = "RW2"\n')
+    via = roster + 'via = ["r1"]\n'
+    st = state.load(Path("/nonexistent"), loads(roster))
+    server = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
+              "encryption": "E"}
+    run = sync_with(tmp_path, monkeypatch, via, st, {"s": server, "r1": {**R1, "via": True}, "r2": {**R2, "via": True}})
+    code, sent, kept = run(0)
+    assert "via" in sent["r2"]["parameters"] and kept["via"] == ["r2"]
+    assert "unset" not in sent["r1"], "r1 never had via: a release that doesn't manage it would refuse the document"
+    (tmp_path / "network.toml").write_text(roster)
+    code, sent, kept = run(1)
+    assert sent["r2"]["unset"] == {"parameters": ["via", "via_link", "via_fingerprint"]} and kept["via"] == ["r2"]
+    code, sent, kept = run(0)
+    assert "unset" in sent["r2"] and kept["via"] == []
+    assert "unset" not in run(0)[1]["r2"]
+
