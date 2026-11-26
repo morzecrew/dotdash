@@ -10,6 +10,7 @@ on:
       - manager/**
       - bundles/server/**
       - .github/manager/**
+      - .github/smoke.d/pre-apply/**
       - .github/workflows/manager.yml
   push:
     branches: [main]
@@ -17,6 +18,7 @@ on:
       - manager/**
       - bundles/server/**
       - .github/manager/**
+      - .github/smoke.d/pre-apply/**
       - .github/workflows/manager.yml
   workflow_dispatch:
 
