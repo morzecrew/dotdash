@@ -236,7 +236,8 @@ def status(
     """One line per machine: its release, what it did with its newest document,
     its health, how old its facts are and what its canaries found; then the
     topology. Exits 1 when a document is refused, a machine isn't following,
-    its row is stale or its services are down, or --wait ran out."""
+    its row is stale, its services are down or a relay's device list isn't
+    the one sent, or --wait ran out."""
     o: Options = ctx.obj
     # As sync opens them: who joined is in the state, and roster.yaml is
     # written under the lock, never beside a sync writing it. The lock is
