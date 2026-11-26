@@ -68,6 +68,7 @@ address_since = 2026-11-01                  # optional: since when it has this a
 standby = true                              # optional: devices use it only once every other link fails
 via = ["r0"]                                # optional: relays it goes through instead of the servers
 via_link = "xhttp"                          # optional, with via: reality (the default) or xhttp through their own sites
+credentials = "./r1-credential.yaml"        # optional, on any machine: its own credential document (Bucket credentials)
 
 [[canary]]
 name = "c1"
@@ -135,6 +136,40 @@ The script holds the machine's credentials: send it to that machine only. A
 roster entry's own `id` and `key`, as earlier releases had you write them,
 still win over what `joined` kept.
 
+## Bucket credentials
+
+`join` hands each machine the network's `credentials`, the same document the
+manager uses, unless the machine's roster entry names one of its own. With
+one credential for all, a seized relay can delete or overwrite every
+server's documents, fleet rows, facts and backups. Signatures keep it from
+forging them, not from destroying them. A credential per machine, scoped to
+its own prefixes on the target, bounds that:
+
+| Whose | List | Read | Write | Delete |
+| --- | --- | --- | --- | --- |
+| the manager's (`credentials` at the top) | the target | `fleet/`, `state/` | `state/` | `state/`, to prune old documents |
+| a machine's (its `credentials`) | the target | `state/<product>/<installation-id>/`, and each backup's manifest | `fleet/<product>/<installation-id>/` (its row and facts), and its backups | none |
+
+The product is `dotdash`, `dotdash-relay`, `dotdash-canary` or
+`dotdash-client`; the installation id is the one `joined` kept, which
+`morzer installation describe` on the machine prints.
+
+Backups are the gap. morzer keeps every machine's backups at the target's
+root, one directory per backup named by the second it was taken, so a
+machine needs write there, beside the others' backups. Its retention lists
+every backup at the root and prunes by count, whichever machine took them.
+So:
+
+- **Give machines no delete.** Retention then fails with a warning, and
+  the bucket's own lifecycle rules expire old backups instead. With delete,
+  a relay's retention prunes the servers' backups too, the shared
+  credential included.
+- **Turn on versioning or Object Lock** where the bucket has them, so a
+  machine overwriting another's backup leaves the old version.
+
+To move a joined machine to its own credential, name it in the roster and
+run its `join` again: the script replaces the credential it holds.
+
 ## Moving a running network
 
 A network set up by hand moves to the manager without devices noticing: the
@@ -166,7 +201,7 @@ manager. Relays keep their own keys, so devices keep their relay links too.
 ```sh
 dotdash-manager sync --dry-run   # what would change
 dotdash-manager sync
-dotdash-manager status           # what each machine applied and refused
+dotdash-manager status --wait    # until every machine applied it
 ```
 
 `sync` publishes only documents that changed, and renews the rest every three
@@ -176,8 +211,38 @@ sync; one removed loses its access everywhere, each machine within its next
 cycle. The manager forgets its id at that sync, so a device added back later
 gets a new one: new links and a new subscription URL, and its old ones let no
 one in. The same goes for a relay's or canary's own id and a client machine's
-proxy password. That's how to revoke a device whose link leaked: take it out,
-`sync`, then add it back.
+proxy password.
+
+## A device's link
+
+Add the device's name to `devices`, then:
+
+```sh
+dotdash-manager sync
+dotdash-manager status --wait     # every server and relay has it
+dotdash-manager link phone --qr
+```
+
+`link` prints the device's subscription URLs, as the servers' `client-config`
+does: the server's, unless `direct = false`, then the same through each
+own-site relay its `pools` give it, which a device inside the restricted
+network fetches from. A burnt relay or a waiting spare is left out, as at the
+last `sync`. `--qr` adds a QR code for each, by `qrencode` if it is
+installed. The URLs are the device's credentials: `link` prints them and
+keeps them nowhere. With `subscription = false`, run `client-config` on a
+server for the device's links.
+
+When a device's link leaks, give it a new id:
+
+```sh
+dotdash-manager renew phone
+dotdash-manager sync
+dotdash-manager status --wait
+```
+
+`renew` prints the device's new URLs, which work once the servers applied
+the `sync`. Its old links and URL stop once every server and relay has. The
+device fetches its new links from the new URL, so send it that.
 
 Before it uses a machine's facts, `sync` checks them. Facts no release
 prints are refused: a value holding whitespace, a quote, a backslash, a brace
@@ -194,8 +259,8 @@ document until a read succeeds, and `sync` says so in capitals.
 The manager keeps what it made in `dotdash-state.json` beside the roster: the
 shared keys, every device's id, the client machines' proxy passwords and each
 machine's last good facts. It is
-written with mode 0600 and holds every credential in the network: back it up
-like `authority.key`. One run at a time changes it: a run holds
+written with mode 0600 and holds every credential in the network:
+[back it up](#back-up-the-state) like `authority.key`. One run at a time changes it: a run holds
 `dotdash-state.lock` beside it, and another started meanwhile, such as a timer's
 `sync` during a `rotate`, waits for it. `sync --dry-run` leaves it as it was.
 
@@ -207,6 +272,53 @@ To start over on new keys anyway, put `--new-state` before the command:
 ```sh
 dotdash-manager --new-state sync
 ```
+
+## Status
+
+`status` prints a line per machine, then the topology:
+
+```
+machine  kind    release  document                           health                facts  canaries
+a        server  0.18.0   applied 12                         5/5 up, row 12m ago   10m    reality ok, xhttp ok
+r1       relay   0.18.0   REFUSED 9 unmanageable: via_link   4/4 up, row 40m ago   20m    reality off, xhttp ok
+r2       relay   0.17.0   pending 4, last fetch unreachable  STALE, row 4h10m ago  5h 0m  unwatched
+c1       canary  0.18.0   applied 3                          2/2 up, row 20m ago   20m    read 30m ago
+r3       relay   -        not joined: run join r3            -                     -      -
+
+topology, from the facts the last sync read:
+  server a: a.example.net:443: reality, xhttp, mkcp 8447
+  relay r1: 203.0.113.5, site r1.example.net: reality, xhttp, hy2 443, cdn c.example.net; name edge-1; off=reality
+  relay r2: 198.51.100.9, site www.example.org: reality; via r1 (reality); spare
+  pool p: phone, 203.0.113.5
+  canary c1 watches r1
+```
+
+- **release**: what the machine runs, and the release its channel staged, if
+  one waits.
+- **document**: what it did with the newest document published for it:
+  `applied`, `REFUSED` with morzer's class and the names it refused, or
+  `pending` until its next pull, every 15 minutes, with the last fetch's
+  result when that failed. `sync off` or `not following the manager` is a
+  machine that won't take one.
+- **health**: how many of its services run, and how old its fleet row is.
+  `STALE` is a row older than three hours.
+- **facts**: how old the facts the last `sync` read are. Past a day, `sync`
+  leaves the machine out of every document.
+- **canaries**: each path, as its canaries found it at the last `sync`, and
+  `BURNT` before them; for a canary, how old its last reading is.
+
+Below the table come notes: a machine whose facts task failed, and a relay
+whose device list, by the digest its facts carry, isn't the one the manager
+sent it, which a hand edit on the relay does.
+
+It reads each machine's own fleet row and the newest document on the target,
+two morzer calls, and the rest from the state, so it prints no key, path or
+id. It exits 1 when a document is refused, a machine doesn't follow the
+manager, a row is stale, a service is down or a relay's device list differs.
+After a `sync`,
+`status --wait` asks again every 30 seconds until every machine has applied
+or refused its newest document, for up to 20 minutes (`--timeout`), and exits
+1 if one is still pending. A timer's `sync` waits for it meanwhile.
 
 ## Burnt relays
 
@@ -379,13 +491,13 @@ It names a device whose day reached five times its median day and at least
 2 GB, once it has 7 days to judge by:
 
 ```
-phone-2: 14.2 GB on 2026-12-03, against 0.4 GB on its usual day: if its link may have leaked, take the device out, sync, and add it back
+phone-2: 14.2 GB on 2026-12-03, against 0.4 GB on its usual day: if its link may have leaked, renew phone-2 and sync
 ```
 
 `sync` prints yesterday's and today's; `report` ends with the last 30 days'.
 A link passed around shows this way: its device suddenly moves far more than
 it ever did. A long video call or a big download can too, so ask before
-deleting the device. Only counts reach the manager, never an address. They
+renewing it. Only counts reach the manager, never an address. They
 are an hour behind at most, as the facts refresh hourly. A server or relay
 that restarts loses only what it counted since the last refresh.
 
@@ -499,3 +611,85 @@ Give every server the same profiles and transport ports, though: each server's
 links and configs name the others with its own `https_port`, XHTTP with
 REALITY, mKCP (port, header and opener) and Hysteria2 ports. `sync` says when
 the servers that applied the keys differ in any of those.
+
+## A relay's transports
+
+Change them on the relay itself: a profile, a port, `cdn_hosts`, `name`, and
+its firewall to match. Its facts carry its new line after the apply, and the
+next `sync` puts that line in every server's `relays`; devices get the new
+links at their next refresh. Nothing is edited on the servers. Which
+parameters go into the line is in the
+[relay reference](relay/reference.md#what-changes-the-relays-line);
+`http_origin_from` doesn't, so a change to it needs nothing more. Then
+`entry-check` on the relay says whether each entry works.
+
+To undo a change, set the previous value again on the relay, and the next
+`sync` does the rest. morzer's journal names a change but not the value it
+replaced, so note it first:
+
+```sh
+sudo morzer config get cdn_hosts      # on the relay, before the change
+```
+
+## Back up the state
+
+`dotdash-state.json` holds the keys the servers share and every device's id.
+Lost, the next `sync` with `--new-state` gives every server new keys, and
+every device new links and a new subscription URL. Keep a copy off the
+operator's box after each change to the roster, encrypted to an age
+recipient whose identity is kept elsewhere, such as the machines' recovery
+key:
+
+```sh
+age -r age1… -o "dotdash-state-$(date +%F).json.age" dotdash-state.json
+```
+
+Keep `authority.key`, `authority.age` and `network.toml` with it: the first
+two can't be made again, as every machine pins the key and encrypts its facts
+to the identity. To restore, decrypt the copy beside `network.toml`. A state
+a few changes old still has the shared keys; devices added since get new ids
+at the next `sync`. A key rotated since, though, would go back to the old
+key on every server, so take a copy after each `rotate` step too.
+
+## A rebuilt machine
+
+A machine installed afresh, at the same address or not, has a new
+installation id, signing key and age identity. One brought back from its
+backup (`installation import`) keeps its id, but has a new signing key and
+age identity too. Either way the manager's documents don't decrypt there,
+and `status` finds no verified row for it. [Join](#add-a-machine) it again
+under the same name: on a machine installed already the script only points
+it at the manager, `joined` replaces the id and key it kept, and the next
+`sync` sends it its document. Take a roster entry's own `id` and `key` out
+first, as they win.
+
+- **A server** comes back with the manager's keys and devices, from its
+  first document, so devices keep their links and subscription URLs.
+- **A relay installed afresh** comes back with new keys of its own, so its
+  line changes. The next `sync` puts it in the servers' `relays`, and
+  devices' subscriptions pick up its new links; links sent by hand have to
+  be sent again. One [moved from its backup](relay/operations.md#move-a-relay)
+  keeps its keys and its line.
+
+## A lost server
+
+With the state, a server lost with no backup comes back with the same keys,
+and devices keep their links and subscription URLs:
+
+1. Bring up a new machine, and point the server's domain at it.
+2. Join it under the server's name in the roster, with its domain and
+   upstreams:
+
+    ```sh
+    dotdash-manager join a --domain a.example.net --upstreams ./upstreams \
+      | ssh root@198.51.100.4 sh | dotdash-manager joined a
+    ```
+
+3. `dotdash-manager sync`, then `status --wait`. The server applies the
+   manager's keys and devices; once its facts show them, the relays,
+   canaries and client machines follow at the next `sync`.
+
+Relays reach the server by its domain, so they reconnect once its DNS
+points at the new address. Under a new domain, the next `sync` gives every
+server and relay the new one, and devices that fetch their subscription
+through a relay get links to it at their next refresh.

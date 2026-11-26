@@ -69,11 +69,7 @@ while the URL is out of reach starts on them. Relays in the subscription are
 outbounds like the others: while only a relay gets through, the client goes
 through it.
 
-Under `tun`, where a start can't fetch directly, kept links whose server is
-gone for good give way to the new ones at the next fetch, within
-`subscription_interval`. To fetch at once, drop them and restart:
-
-```sh
-sudo rm "$(sudo docker volume inspect -f '{{.Mountpoint}}' dotdash-client_home)/subscription_url.json"
-sudo morzer restart
-```
+A start on kept links, its own fetch having failed, fetches again every 30
+seconds until one gets through, then every `subscription_interval`. So kept
+links whose server is gone for good, under `tun` too, give way to the new
+ones within a minute of the URL answering.

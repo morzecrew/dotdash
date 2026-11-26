@@ -22,6 +22,9 @@ On the dotdash server, add this line to the relays parameter (sudo morzer
 config edit relays):
 ${host} ${SITE} ${pbk} ${sid} ${enc}${own}${kcp}${hy2_port:+ hy2=$hy2_port}${cdn:+ cdn=$cdn}${cdn_path:+ cdnpath=$cdn_path}${origin:+ origin=$origin}${only}${name:+ name=$name}
 
+The devices it lets in: ${clients}, digest ${clients_digest}. relay-config on the
+server prints the same of the copy it hands out; a different one is stale.
+
 A dotdash-canary checks this relay as it checks the server, without the xhttp
 profiles, with the dotdash_id of any device on the relay:
 sudo morzer config set dotdash_server=${SITE} dotdash_address=${host} dotdash_port=443 dotdash_public_key=${pbk}

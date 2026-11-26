@@ -7,11 +7,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -q '^  facts:$' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
-
 facts=$(sudo morzer task run facts --output) || die "the facts task failed"
 jq -e . >/dev/null <<<"${facts}" || die "the facts are not JSON: ${facts}"
 domain=$(jq -r .domain <<<"${facts}")

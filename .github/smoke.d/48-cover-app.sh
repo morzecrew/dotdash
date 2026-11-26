@@ -13,11 +13,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qx '  cover:' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates cover"
-  exit 0
-fi
-
 caddy=$(service_container caddy)
 domain=$(sudo docker exec "${caddy}" printenv DOMAIN)
 image=$(sudo docker inspect -f '{{.Config.Image}}' "${caddy}")

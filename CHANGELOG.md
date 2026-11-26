@@ -13,6 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A canary checks each CDN in front of the relay it watches, through the CDN as a device's CDN link goes, and gives each under `cdn` in its facts. The manager hands it the names and CDN path; by hand, set `dotdash_cdn_hosts`, `dotdash_origin_host` and the `dotdash_cdn_xhttp_path` secret.
 
+- The manager's `status` prints a line per machine: its release, whether it applied, refused (naming what) or still waits for its newest document, its health, its facts' age and its canaries' verdicts, then the topology. `status --wait` waits until every machine applied or refused it.
+
+- The manager's `link <device>` prints a device's subscription URLs as the servers serve them, its server's and through each own-site relay its pools give it, as QR codes too with `--qr`. `renew <device>` gives a device whose link leaked a new id, and prints its new URLs: no ssh to a server for either.
+
+- The relay's `entry-check` task tries each of its entries end to end as a device would, REALITY, XHTTP through its site, mKCP and Hysteria2, and says why one fails. The `http-origin` door keeps each request's address and status in memory, so the check can tell a firewall from docker-proxy hiding the CDN's addresses.
+
+- A machine's roster entry can name its own `credentials`, which `join` hands it in place of the network's, so a relay's credential reaches only its own prefixes on the target. The manager's docs list what each credential needs, and why machines should get no delete.
+
+- The server's `relay-config` ends with the count and digest of the devices it hands a relay, and the relay's `relay-entry` and facts give the same of its own copy, so a stale copy that rejects new devices or still lets in deleted ones shows. The manager's `status` says when a relay's list isn't the one it sent.
+
 - The manager's `sync` and `report` warn when a server's or relay's site certificate has under 14 days left, from the `cert_days` in its facts. An expired certificate breaks XHTTP, Hysteria2 and the CDN links while REALITY works, which canaries read as a block.
 
 - The manager's `sync` says when servers differ in `https_port` or in the ports, mKCP header and opener, or presence of XHTTP with REALITY, mKCP and Hysteria2. Each server's subscriptions name the others with its own, so a difference gives devices dead links.
@@ -103,9 +113,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A client under `tun` with no link that answers, as on a fresh install or with kept links whose server is gone, now gets its subscription: while no link answers, the fetch goes directly from Xray, outside TUN. Before, it entered TUN, found no link and was refused for good. No other process can take that way out.
 
+- A client that starts on its kept links, because the subscription can't be fetched, fetches again every 30 seconds until it gets through, not a whole `subscription_interval` later. Kept links whose server is gone give way to the new ones within a minute.
+
 - The client's kill switch keeps its rules while dotdash-client is updated, restarted or stopped, so the machine never gets out around dotdash then; leaving `tun` still takes them out, even after a stop. `doctor` now checks IPv6's rules too. The client's tun page shows a unit that closes the gap at boot.
 
-- Under `tun`, DNS to a resolver on the LAN, such as the router DHCP named, goes into TUN and gets fake addresses like the rest, and goes nowhere while Xray is down. systemd-resolved's own queries can't be redirected so: `doctor` says so, and the tun page shows the fix.
+- Under `tun`, DNS to any resolver not on the machine, such as the router DHCP named, gets fake addresses like the rest, whoever asks: any user, systemd-resolved, a container. It goes nowhere while Xray is down. The kill switch redirects it with nftables.
 
 - A client's `DOMAIN-REGEX` rule keeps its commas, as in `^a{2,3}`. It was cut at the first one, which Xray refused, so the change rolled back.
 

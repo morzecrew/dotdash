@@ -85,6 +85,23 @@ http://127.0.0.1:8081 {
 	respond /healthz 200
 }
 
+# On to one of Xray's XHTTP inbounds ({args[0]}): h2c, so stream-up and
+# stream-one survive, and no buffering either way. The address a device or a
+# CDN in front passes on in its own headers stays here.
+(to-xray) {
+	reverse_proxy {args[0]} {
+		header_up -X-Forwarded-For
+		header_up -X-Forwarded-Host
+		header_up -X-Forwarded-Proto
+		header_up -X-Real-IP
+		header_up -CF-Connecting-IP
+		transport http {
+			versions h2c
+		}
+		flush_interval -1
+	}
+}
+
 # The http-origin profile's door: plain HTTP on 8091, which that profile
 # alone publishes (http_origin_port), for a rented CDN that ends TLS at its
 # own edge and fetches from here unencrypted. It answers only the addresses
@@ -94,6 +111,35 @@ http://127.0.0.1:8081 {
 # path, so the CDN, which reads every request here, never learns that one,
 # and VLESS Encryption keeps what the requests carry unreadable to it.
 http://:8091 {
+	# Each request's address and status alone, for the entry-check task to
+	# tell a door that refuses everyone, or that no request reaches, from one
+	# that works: never its path, which holds the CDN path, its headers or
+	# its host. The CDN's gateways and scanners reach the door, never a
+	# device. In memory (compose/own-site.yaml), the newest megabyte or two.
+	log door {
+		output file /door-log/door.log {
+			roll_size 1MiB
+			roll_keep 1
+		}
+		format filter {
+			wrap json
+			fields {
+				request>remote_port delete
+				request>client_ip delete
+				request>proto delete
+				request>method delete
+				request>host delete
+				request>uri delete
+				request>headers delete
+				request>tls delete
+				resp_headers delete
+				user_id delete
+				bytes_read delete
+				size delete
+				duration delete
+			}
+		}
+	}
 	# No word of Caddy, as on the site: neither its Server header nor the
 	# Via it adds to what it passes back.
 	header {
@@ -111,17 +157,7 @@ http://:8091 {
 	}
 	handle @door {
 		rewrite * /{file./run/secrets/xhttp_path}{re.door.1}?{query}
-		reverse_proxy xray:8080 {
-			header_up -X-Forwarded-For
-			header_up -X-Forwarded-Host
-			header_up -X-Forwarded-Proto
-			header_up -X-Real-IP
-			header_up -CF-Connecting-IP
-			transport http {
-				versions h2c
-			}
-			flush_interval -1
-		}
+		import to-xray xray:8080
 	}
 	respond 404
 }
@@ -195,22 +231,10 @@ http://:8090 {
 	}
 
 	# XHTTP: the secret path to Xray's XHTTP inbound, as the server's site
-	# routes its own. h2c, so stream-up and stream-one survive, and no
-	# buffering either way. The device's address stays here, as does the one
-	# a CDN in front passes on in its own headers.
+	# routes its own.
 	@xhttp path /{file./run/secrets/xhttp_path}/*
 	handle @xhttp {
-		reverse_proxy xray:8080 {
-			header_up -X-Forwarded-For
-			header_up -X-Forwarded-Host
-			header_up -X-Forwarded-Proto
-			header_up -X-Real-IP
-			header_up -CF-Connecting-IP
-			transport http {
-				versions h2c
-			}
-			flush_interval -1
-		}
+		import to-xray xray:8080
 	}
 
 	# XHTTP through a CDN in front (cdn_hosts): a path of its own, so the
@@ -218,17 +242,7 @@ http://:8090 {
 	# session and sequence in cookies and so asks by this one path alone.
 	@cdn path /{file./run/secrets/cdn_xhttp_path}
 	handle @cdn {
-		reverse_proxy xray:8082 {
-			header_up -X-Forwarded-For
-			header_up -X-Forwarded-Host
-			header_up -X-Forwarded-Proto
-			header_up -X-Real-IP
-			header_up -CF-Connecting-IP
-			transport http {
-				versions h2c
-			}
-			flush_interval -1
-		}
+		import to-xray xray:8082
 	}
 
 	# A device's subscription, 32 hex characters as the server names it (and

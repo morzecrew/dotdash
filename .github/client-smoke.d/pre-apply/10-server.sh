@@ -15,7 +15,7 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-xray=ghcr.io/morzecrew/xray:26.11.9@sha256:c9cbe1fc19310f136c3dd19fd7316378e8ea2bb8c9b45d48e53fa2a1571ce48d
+xray=ghcr.io/morzecrew/xray:26.11.9@sha256:f9651c4e3bb6732824dacead53936dccf26ec6a59b0db763bda175b9ebe359a3
 caddy=ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:93c19f705c2218d5fca7f7dcb694cae1ed3889588678aabb7af34c8892e2f2bb
 sudo docker pull -q "${xray}" >/dev/null || die "pulling ${xray} failed"
 sudo docker pull -q "${caddy}" >/dev/null || die "pulling ${caddy} failed"
@@ -28,24 +28,29 @@ public=$(sed -n 's/^Password (PublicKey): //p' <<<"${keys}")
 id=$(cat /proc/sys/kernel/random/uuid)
 sid=$(openssl rand -hex 8)
 
-mkdir -p /rig/client/server /rig/client/www /rig/client/caddy
+# VLESS Encryption from a seed, as dotdash's REALITY inbound has it: the
+# image derives the server's key from the file, and prints the client's.
+mkdir -p /rig/client/server /rig/client/secrets /rig/client/www /rig/client/caddy
+openssl rand -hex 64 >/rig/client/secrets/vless_seed
+chmod -R a+rX /rig/client/secrets
+enc=$(sudo docker run --rm --entrypoint /usr/local/bin/xray-entrypoint -v /rig/client/secrets:/run/secrets:ro \
+  "${xray}" vless-encryption /run/secrets/vless_seed)
 jq -n --arg id "${id}" --arg key "${private}" --arg sid "${sid}" '
   {log: {loglevel: "warning", access: ""},
    inbounds: [{listen: "0.0.0.0", port: 9443, protocol: "vless",
-     settings: {clients: [{id: $id, flow: "xtls-rprx-vision"}], decryption: "none"},
+     settings: {clients: [{id: $id, flow: "xtls-rprx-vision"}], decryption: {"$vlessDecryption": "/run/secrets/vless_seed"}},
      streamSettings: {network: "raw", security: "reality", realitySettings:
        {target: "www.gstatic.com:443", serverNames: ["www.gstatic.com"], privateKey: $key, shortIds: [$sid]}}}],
    outbounds: [{protocol: "freedom", settings: {finalRules: [{action: "allow", ip: ["172.16.0.0/12", "192.168.0.0/16"]}]}}]}' \
   >/rig/client/server/config.json
-# As dotdash's client-config prints a REALITY link, and its outbound.
-printf 'vless://%s@%s:9443?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.gstatic.com&fp=chrome&pbk=%s&sid=%s&support-x25519mlkem768=true&type=tcp#stand-in%%20%%5Breality%%5D\n' \
-  "${id}" "${host}" "${public}" "${sid}" | base64 -w0 >/rig/client/www/sub
-jq -n --arg id "${id}" --arg host "${host}" --arg key "${public}" --arg sid "${sid}" '
-  {outbounds: [{tag: "dotdash-1-reality", protocol: "vless",
-     settings: {address: $host, port: 9443, id: $id, encryption: "none", flow: "xtls-rprx-vision"},
-     streamSettings: {network: "raw", security: "reality",
-       realitySettings: {serverName: "www.gstatic.com", fingerprint: "chrome", password: $key, shortId: $sid}}},
-   {tag: "dns-out", protocol: "dns"}]}' >/rig/client/www/sub.json
+# The link and outbounds are dotdash's own: server.txt is client-config's
+# output for a server on 9443 under www.gstatic.com, its values left out
+# (.github/tests/client-config.sh holds it to that), and these fill them in.
+fill() { sed "s|{id}|${id}|g; s|{host}|${host}|g; s|{enc}|${enc}|g; s|{pbk}|${public}|g; s|{sid}|${sid}|g" "${0%/*}/server.txt"; }
+fill | sed -n 1p | base64 -w0 >/rig/client/www/sub
+fill | sed -n 2p | jq '{outbounds: .}' >/rig/client/www/sub.json
+[ -s /rig/client/www/sub ] && jq -e '.outbounds[0].tag == "dotdash-1-reality"' /rig/client/www/sub.json >/dev/null ||
+  die "server.txt holds no REALITY link and outbounds"
 cat >/rig/client/caddy/Caddyfile <<'EOF'
 {
 	admin off
@@ -60,7 +65,8 @@ cat >/rig/client/caddy/Caddyfile <<'EOF'
 }
 EOF
 chmod -R a+rX /rig/client
-sudo docker run -d --name client-rig-server -p 9443:9443 -v /rig/client/server:/etc/xray:ro "${xray}" >/dev/null
+sudo docker run -d --name client-rig-server -p 9443:9443 -v /rig/client/server:/etc/xray:ro \
+  -v /rig/client/secrets:/run/secrets:ro "${xray}" >/dev/null
 sudo docker run -d --name client-rig-sub -p 8088:8080 -v /rig/client/caddy:/etc/caddy:ro -v /rig/client/www:/www:ro \
   "${caddy}" >/dev/null
 

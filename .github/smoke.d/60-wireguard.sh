@@ -14,11 +14,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -q '^  wireguard-line:$' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates WireGuard lines"
-  exit 0
-fi
-
 xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)
 host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
 target=http://11.99.0.10:8000/

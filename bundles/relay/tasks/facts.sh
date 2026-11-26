@@ -29,15 +29,13 @@ printf '{"entry_host": %s, "site": %s, "public_key": %s, "short_id": %s, "encryp
 [ -z "$origin" ] || printf ', "origin_host": %s' "$(str "$origin")"
 [ -z "$only" ] || printf ', "cdn_only": true'
 [ -z "$name" ] || printf ', "name": %s' "$(str "$name")"
-# Under own-site, the whole days left on the certificate the site serves,
-# from Caddy's data where xray.json.tmpl finds it for Hysteria2: the leaf's
-# notAfter, the second UTCTime (YYMMDDHHMMSSZ) in its DER. Left out while
-# Caddy has none, so the authority can warn before it runs out.
-if [ "${OWN_SITE:-}" = true ]; then
-  case ${CERT_ISSUER:-acme} in internal) dir=local ;; *) dir=acme-v02.api.letsencrypt.org-directory ;; esac
-  cert=$SITE
-  case ${CERT_ISSUER:-acme}:$SITE in acme-dns:*.*.*) cert=wildcard_.${SITE#*.} ;; esac
-  end=$(awk '/-----END/ { exit } f; /-----BEGIN/ { f = 1 }' "/caddy-data/caddy/certificates/$dir/$cert/$cert.crt" 2>/dev/null |
+printf ', "clients": {"count": %s, "digest": %s}' "$clients" "$(str "$clients_digest")"
+# Under own-site, the whole days left on the certificate the site serves
+# (entry.sh's cert_file): the leaf's notAfter, the second UTCTime
+# (YYMMDDHHMMSSZ) in its DER. Left out while Caddy has none, so the authority
+# can warn before it runs out.
+if [ -n "$cert_file" ]; then
+  end=$(awk '/-----END/ { exit } f; /-----BEGIN/ { f = 1 }' "$cert_file" 2>/dev/null |
     base64 -d 2>/dev/null | tr -c '0-9Z' '\n' | sed -n 's/^\([0-9]\{12\}\)Z.*/\1/p' | sed -n 2p)
   [ -z "$end" ] || end=$(date -u -D %y%m%d%H%M%S -d "$end" +%s 2>/dev/null) || end=
   [ -z "$end" ] || printf ', "cert_days": %s' $(((end - $(date +%s)) / 86400))

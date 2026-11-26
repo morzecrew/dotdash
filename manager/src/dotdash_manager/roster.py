@@ -41,6 +41,10 @@ class Machine(Strict):
     name: Name
     id: InstallationId | None = None
     key: SigningKey | None = None
+    # morzer's credential document for the target, this machine's own, which
+    # join hands it in place of the network's: one that reaches only its own
+    # prefixes, so a seized relay can't touch the servers' objects.
+    credentials: str | None = None
 
     @property
     def joined(self) -> bool:

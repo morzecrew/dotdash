@@ -15,10 +15,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -q '^      warm: \[compose/warm.yaml\]$' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release has no warm profile"
-  exit 0
-fi
 conn=$(cat /rig/upstream.conn)
 one="http://${conn} name=rig"
 list() { printf '%s\n' "$@" | sudo morzer secret set upstreams >/dev/null; }

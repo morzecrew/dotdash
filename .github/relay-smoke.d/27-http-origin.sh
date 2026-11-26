@@ -14,11 +14,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -q '^      http-origin:' /opt/dotdash-relay/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates the http-origin profile"
-  exit 0
-fi
-
 set_config() { sudo morzer config set "$@" >/dev/null || die "config set $* failed"; }
 restore() {
   sudo morzer config unset http_origin_host http_origin_from >/dev/null 2>&1 || true

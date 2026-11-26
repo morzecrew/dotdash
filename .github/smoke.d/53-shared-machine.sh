@@ -9,11 +9,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qF 'entry_port:' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
-
 defaults() { sudo morzer config unset listen https_port http_port entry_port >/dev/null; }
 trap 'defaults || true' EXIT
 mapping() { sudo docker port "$(service_container "$1")" "$2" 2>/dev/null | LC_ALL=C sort | paste -sd' '; }

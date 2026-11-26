@@ -184,7 +184,7 @@ parameters:
 images:
   # The measure task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
-  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:c9cbe1fc19310f136c3dd19fd7316378e8ea2bb8c9b45d48e53fa2a1571ce48d
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:f9651c4e3bb6732824dacead53936dccf26ec6a59b0db763bda175b9ebe359a3
 
 # What an authority's desired-state document may set here (morzer 0.16): the
 # server or relay this canary watches, from that machine's facts. None of

@@ -1,88 +1,86 @@
-# The dev channel: build, sign and smoke-test every change to the bundle on
-# main, then publish `:<version>` and move `:main`. The jobs are
-# bundle-ci's; this file says when they run and what they may do. dotdash
-# pins third-party images in its manifest, so nothing here pins components.
+# The dev channel: build, sign and smoke-test every change to a bundle on
+# main, then publish its `:<version>` and move `:main` (_main.yml, one run of
+# it per bundle changed). The jobs are bundle-ci's; this file says when they
+# run and what they may do.
 name: main
 
 on:
   push:
     branches: [main]
     paths:
-      - bundles/server/**
-      - .github/smoke.d/**
+      - bundles/**
+      - .github/*smoke.d/**
   workflow_dispatch:
+    inputs:
+      bundle:
+        description: The bundle to build and publish, or all of them
+        type: choice
+        options: [all, server, relay, client, canary, acme-dns]
+        default: all
 
 permissions: {}
 
-concurrency:
-  group: main-bundle
-  cancel-in-progress: false
-
 jobs:
-  bundle:
+  # The bundles the push touched, as each bundle's own workflow once chose
+  # them: bundles/<bundle>/ and its smoke hooks.
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     permissions:
       contents: read
-      packages: read
-    uses: morzecrew/bundle-ci/.github/workflows/bundle.yml@6360c44fecddb64b29d176ea2f935b7e8a8f6916 # v0.12.2
-    with:
-      morzer-version: "0.18.0"
-      bundle-dir: bundles/server
-      version-paths: bundles/server
-      package: dotdash-server
-      ref: ${{ github.sha }}
-      channel: main
-      signing: dev
-      # The key that signs, shipped as minisign.pub: init trusts it on first use.
-      ship-pubkey: true
-      # Nothing moved since the last run: the version is already published.
-      on-existing: skip
-      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
-      components: ""
-      probe-paths: ""
-      operator-secrets: upstreams
-      # What init refuses without; .github/smoke.d/pre-apply supplies the rest.
-      init-args: >-
-        --domain dotdash.test --set probe_url=http://11.99.0.10:8000/
-        --set cert_issuer=internal --profile xdns
-      dev-pubkey: ${{ vars.MINISIGN_DEV_PUBKEY }}
-    secrets:
-      minisign-key: ${{ secrets.MINISIGN_DEV_KEY }}
+    outputs:
+      bundles: ${{ steps.changes.outputs.bundles }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: changes
+        env:
+          BEFORE: ${{ github.event.before }}
+          WANT: ${{ inputs.bundle }}
+        run: |
+          set -euo pipefail
+          all="server relay client canary acme-dns"
+          if [ -n "${WANT}" ]; then
+            # A run by hand: what it names. A bundle nothing moved in is
+            # already published, and bundle-ci skips it.
+            if [ "${WANT}" = all ]; then names=${all}; else names=${WANT}; fi
+          elif files=$(git diff --name-only "${BEFORE}" "${GITHUB_SHA}" 2>/dev/null); then
+            names=$(while read -r f; do
+              case ${f} in
+              bundles/*/*) f=${f#bundles/} && echo "${f%%/*}" ;;
+              .github/smoke.d/*) echo server ;;
+              .github/*-smoke.d/*) f=${f#.github/} && echo "${f%%-smoke.d/*}" ;;
+              esac
+            done <<<"${files}")
+          else
+            # A push git cannot compare (a rewrite): every bundle.
+            names=${all}
+          fi
+          bundles=$(tr ' ' '\n' <<<"${names}" | jq -Rnc --arg all "${all}" '[inputs] | unique | map(select(IN($all | splits(" "))))')
+          echo "bundles=${bundles}" | tee -a "${GITHUB_OUTPUT}"
 
-  publish:
-    needs: bundle
-    if: needs.bundle.outputs.proceed == 'true'
+  bundle:
+    needs: changes
+    if: needs.changes.outputs.bundles != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        bundle: ${{ fromJSON(needs.changes.outputs.bundles) }}
+    # A group per bundle, never cancelled: a publish waits for the one before
+    # it, and one bundle's queue never holds or drops another's. The server's
+    # keeps the name its own workflow gave it.
+    concurrency:
+      group: main-${{ matrix.bundle == 'server' && 'bundle' || matrix.bundle }}
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: write
-      # The provenance publish.yml attests for the bundle.
       id-token: write
       attestations: write
-    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@6360c44fecddb64b29d176ea2f935b7e8a8f6916 # v0.12.2
+    uses: ./.github/workflows/_main.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses $/
     with:
-      version: ${{ needs.bundle.outputs.version }}
-      archive: ${{ needs.bundle.outputs.archive }}
-      channel: main
-      package: dotdash-server
-      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
-
-  # The command the docs give works on what was just published: the
-  # attestation is there, signed by bundle-ci's publish workflow for this
-  # commit.
-  provenance:
-    needs: [bundle, publish]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      attestations: read
-    steps:
-      - name: Verify the published bundle's provenance
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.bundle.outputs.version }}
-        run: |
-          set -euo pipefail
-          gh attestation verify "oci://ghcr.io/morzecrew/dotdash-server:${VERSION}" --owner morzecrew \
-            --signer-workflow morzecrew/bundle-ci/.github/workflows/publish.yml \
-            --source-digest "${GITHUB_SHA}" >/dev/null
-          echo "dotdash-server:${VERSION}: provenance verified"
+      bundle: ${{ matrix.bundle }}
+    secrets:
+      minisign-key: ${{ secrets.MINISIGN_DEV_KEY }}

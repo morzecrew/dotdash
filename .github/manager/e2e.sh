@@ -71,5 +71,14 @@ echo "e2e: the server applied it: the roster's device and the manager's keys, wh
 out=$(mgr sync) || die "the second sync failed: ${out}"
 ! grep -q '^waiting: a:' <<<"${out}" || die "the manager does not see the server's facts with its keys: ${out}"
 grep -q '^a: unchanged$' <<<"${out}" || die "the second sync changed the server's document: ${out}"
-mgr status >/dev/null || die "status failed"
 echo "e2e: the server's facts show the keys applied, and the second sync has nothing to change"
+
+out=$(mgr status) || die "status says something is wrong: ${out}"
+grep -Eq '^a +server +[^ ]+ +applied [0-9]+ +[0-9]+/[0-9]+ up' <<<"${out}" || die "status does not show the server's document applied: ${out}"
+grep -q '^  server a: dotdash\.test:443: reality, xhttp' <<<"${out}" || die "status's topology lacks the server: ${out}"
+echo "e2e: status shows the server applied its newest document, from its real fleet row"
+
+url=$(sudo morzer task run client-config --output -- phone | grep -m1 '^https://') || die "client-config printed no subscription URL"
+got=$(mgr link phone) || die "link failed: ${got}"
+[ "${got}" = "${url}" ] || die "link printed ${got}, client-config ${url}"
+echo "e2e: link prints the subscription URL client-config does"

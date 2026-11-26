@@ -1,12 +1,14 @@
-"""The dotdash-manager command: sync, status, report, rotate, adopt, join and joined."""
+"""The dotdash-manager command: sync, status, link, renew, report, rotate, adopt, join and joined."""
 
 import copy
 import hashlib
 import json
 import shlex
+import shutil
 import subprocess
 import sys
 import time
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
@@ -14,13 +16,18 @@ from typing import Annotated
 import typer
 
 from . import Refused, adopt, health, join as joining, roster, rotate, state, traffic
+from . import status as overview
 from .morzer import Morzer, write_roster
-from .render import render
+from .render import applied_keys, clients_digest, kept_pools, render, subscription_urls
 from .report import report as report_lines
 from .roster import Network
 
 # A document lives 168 h (morzer's default): renew an unchanged one well before.
 RENEW_AFTER = 3 * 86400
+# status --wait: machines pull every 15 minutes, then apply; and it asks again
+# this often, two morzer calls each time.
+WAIT = 20 * 60
+POLL = 30
 
 app = typer.Typer(
     help="A dotdash network from one roster, through morzer's desired state.",
@@ -102,6 +109,9 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     del log[:-health.EVENTS]
     labels(net, st)
     st["stands"] = stands
+    # The relays devices don't get, for link to give a device what the
+    # servers do.
+    st["out"] = sorted(burnt | held)
     traffic.record(st.setdefault("traffic", {}), facts, now)
     # Yesterday's whole day and today's so far.
     verdicts += traffic.unusual(st["traffic"], since=traffic.day(now - 86400))
@@ -131,6 +141,9 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
         print(f"{m.name}: {'would publish' if dry_run else 'published'}")
         holds.add(m.name)
         st["published"][m.id] = {"digest": digest, "at": int(time.time())}
+        # What a relay's facts say of the device list it has, status compares with this.
+        if "vless_clients" in doc.get("secrets", {}):
+            st["published"][m.id]["clients"] = clients_digest(doc["secrets"]["vless_clients"])
     # Who was sent hello_split and via, for the next render to take them off
     # where they no longer hold, and to name them nowhere else.
     names = {m.name for m in net.machines}
@@ -215,20 +228,96 @@ def rotate_key(
 
 
 @app.command()
-def status(ctx: typer.Context) -> None:
-    """What each machine applied and refused, and who has not joined."""
+def status(
+    ctx: typer.Context,
+    wait: Annotated[bool, typer.Option("--wait", help="until every machine applied or refused its newest document")] = False,
+    timeout: Annotated[int, typer.Option(help="how long --wait waits, in seconds")] = WAIT,
+) -> None:
+    """One line per machine: its release, what it did with its newest document,
+    its health, how old its facts are and what its canaries found; then the
+    topology. Exits 1 when a document is refused, a machine isn't following,
+    its row is stale, its services are down or a relay's device list isn't
+    the one sent, or --wait ran out."""
     o: Options = ctx.obj
     # As sync opens them: who joined is in the state, and roster.yaml is
-    # written under the lock, never beside a sync writing it.
-    net, _ = o.open(dry_run=True)
+    # written under the lock, never beside a sync writing it. The lock is
+    # held while it waits, so no sync publishes meanwhile.
+    net, st = o.open(dry_run=True)
     mz = Morzer(net, o.morzer_roster, o.morzer)
-    r = mz.run("state", "ls", *mz.common)
-    sys.stdout.write(r.stdout)
-    sys.stderr.write(r.stderr)
-    for m in net.machines:
-        if not m.joined:
-            print(f"{m.name} ({m.kind}): not joined; run join {m.name}")
-    raise typer.Exit(r.returncode)
+    end = time.monotonic() + timeout
+    while True:
+        lines, pending, bad = overview.machines(net, st, mz.rows(), mz.published(), int(time.time()))
+        if not (wait and pending) or time.monotonic() >= end:
+            break
+        time.sleep(POLL)
+    print(*lines, *overview.topology(net, st), sep="\n")
+    raise typer.Exit(1 if bad or (wait and pending) else 0)
+
+
+def device_urls(o: Options, net: Network, st: dict, device: str) -> list[str]:
+    """A device's subscription URLs as the servers serve them, from the facts,
+    the relays left out and the spares standing in at the last sync."""
+    if device not in net.devices:
+        raise Refused(f"{device} is not in {o.roster}'s devices")
+    if not net.subscription:
+        raise Refused("subscription = false: run `sudo morzer task run client-config --output -- "
+                      f"{device}` on a server for its links")
+    facts = {n: k["facts"] for n, k in st.get("facts", {}).items()}
+    lead = next((facts[s.name] for s in applied_keys(net, st, facts)), None)
+    if lead is None:
+        raise Refused("no server has applied the manager's keys yet: run sync, and status --wait")
+    out = set(st.get("out", []))
+    urls = subscription_urls(net, st, facts, device, lead, out, kept_pools(net, facts, out, st.get("stands", {}))[0])
+    if not urls:
+        raise Refused(f"direct = false keeps the servers' URL out, and {device}'s pools give it no own-site relay")
+    return urls
+
+
+def show(urls: list[str], through: bool, qr: bool) -> None:
+    """Each URL as client-config prints it, and with qr its QR code by
+    qrencode, the URL on its stdin rather than in the process list."""
+    if qr and not shutil.which("qrencode"):
+        print("qrencode is not installed here: no QR codes", file=sys.stderr)
+        qr = False
+    for i, url in enumerate(urls):
+        print(f"through the relay {url.split('/')[2]}: {url}" if through or i else url, flush=True)
+        if qr:
+            subprocess.run(["qrencode", "-t", "ANSIUTF8"], input=url, text=True, check=False)
+
+
+@app.command()
+def link(
+    ctx: typer.Context,
+    device: str,
+    qr: Annotated[bool, typer.Option("--qr", help="each as a QR code too, by qrencode")] = False,
+) -> None:
+    """A device's subscription URLs, as client-config prints them: the
+    server's unless direct = false, then through each own-site relay its pools
+    give it. They are its credentials: printed here, kept nowhere."""
+    o: Options = ctx.obj
+    net, st = o.open(dry_run=True)
+    # A device added since the last sync has an id only in this run's memory,
+    # which no server has.
+    if device in net.devices and device not in state.saved_ids(o.state):
+        raise Refused(f"{device} has no id yet: run sync, which makes it and gives it to every server and relay")
+    show(device_urls(o, net, st, device), net.direct is False, qr)
+
+
+@app.command()
+def renew(ctx: typer.Context, device: str) -> None:
+    """A new id for a device whose link leaked: new links and subscription URL
+    from the next sync, and its old ones let no one in once every server and
+    relay applied it. Prints the new URLs."""
+    o: Options = ctx.obj
+    net, st = o.open()
+    if device not in net.devices:
+        raise Refused(f"{device} is not in {o.roster}'s devices")
+    st["ids"][device] = str(uuid.uuid4())
+    state.save(o.state, st)
+    print(f"{device}: a new id. Run sync and status --wait; its old links and URL stop once every server and relay "
+          "applied it. Its new " + ("URLs:" if net.subscription else "links: client-config on a server, after the sync"))
+    if net.subscription:
+        show(device_urls(o, net, st, device), net.direct is False, False)
 
 
 @app.command(name="adopt")
@@ -283,10 +372,11 @@ def join(
         doc = docs.get(m.name)
         if doc is None:
             raise Refused(f"{m.name} can't come up yet: " + "; ".join(w for w in waiting if w.startswith(m.name + ":")))
+    # Its own credential where the roster gives one, else the network's.
+    creds = m.credentials or net.credentials
     sys.stdout.write(joining.script(
         m, net.target, net.authority, recipient, recovery or recipient, doc, domain, site, entry_host,
-        upstreams.read_text() if upstreams else None,
-        Path(net.credentials).read_text() if net.credentials else None))
+        upstreams.read_text() if upstreams else None, Path(creds).read_text() if creds else None))
     print(f"The script holds credentials: send it only to {m.name}, as root, and its output back here:\n"
           f"  dotdash-manager join {m.name} … | ssh <{m.name}> sudo sh | dotdash-manager joined {m.name}", file=sys.stderr)
 

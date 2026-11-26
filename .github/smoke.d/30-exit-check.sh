@@ -7,12 +7,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-# A release from before the exit-check task has nothing to check.
-if ! sudo grep -qF '  exit-check:' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
-
 exit_check() { sudo morzer task run exit-check --output -- "$@" 2>&1; }
 expect() { # <output> <line pattern> <what>
   grep -qE "$2" <<<"$1" || die "exit-check: $3: $1"

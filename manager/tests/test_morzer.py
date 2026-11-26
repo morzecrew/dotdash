@@ -9,7 +9,7 @@ from dotdash_manager.roster import loads
 HEAD = 'target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n'
 RELAY = {"entry_host": "203.0.113.5", "site": "www.example.net", "public_key": "P", "short_id": "S", "encryption": "E",
          "kcp": {"port": 8447, "header": "dtls", "open": "none", "seed": "K"}, "cdn_hosts": ["c.example.net"],
-         "traffic": {"started": 1, "devices": {"phone": 10}}, "via": True}
+         "traffic": {"started": 1, "devices": {"phone": 10}}, "via": True, "clients": {"count": 1, "digest": "0123abcd"}}
 SERVER = {"domain": "a.example.net", "https_port": 443, "public_key": "P", "encryption": "mlkem768x25519plus.native.0rtt.x"}
 CANARY = {"server": "www.example.net", "address": "203.0.113.5", "public_key": "", "checked_at": 1, "internet": None,
           "paths": {"reality": True, "xhttp-reality": False}, "cdn": {"c.example.net": True}, "reality_split": None,
@@ -37,6 +37,7 @@ def test_facts_as_the_bundles_print_them_pass_their_nulls_left_out():
     ("relay", {**RELAY, "cdn_hosts": "c.example.net"}, "cdn_hosts: Input should be a valid list"),
     ("relay", {**RELAY, "cdn_only": "false"}, "cdn_only: Input should be a valid boolean"),
     ("relay", {**RELAY, "traffic": {"started": 1, "devices": {"phone": "10"}}}, "traffic.devices.phone"),
+    ("relay", {**RELAY, "clients": {"count": 1, "digest": "evil"}}, "clients.digest"),
     ("server", {**SERVER, "https_port": "443"}, "https_port: Input should be a valid integer"),
     ("server", {**SERVER, "https_port": True}, "https_port: Input should be a valid integer"),
     ("server", {**SERVER, "hysteria2_port": 70000}, "hysteria2_port"),
@@ -123,7 +124,8 @@ def test_rows_keeps_verified_rows_of_joined_machines(tmp_path):
         {"installation_id": "inst_X", "signature": "verified", "row": {"health": {}}}]}}
     seen = []
     mz.run = lambda *args, stdin=None: seen.append(args) or subprocess.CompletedProcess(args, 0, json.dumps(out), "")
-    assert mz.rows() == {"r1": {"age": "40m", "stale": False, "services": 5, "running": 4, "problem": ""}}
+    assert mz.rows() == {"r1": {"age": "40m", "stale": False, "services": 5, "running": 4, "problem": "",
+                                "version": None, "staged": None, "facts_problem": None, "sync": None}}
     # A machine writes its own row: what is not a count says nothing.
     out["data"]["rows"][0]["row"]["health"] = {"services": "\x1b[2J5", "running": 4}
     assert mz.rows()["r1"]["services"] is None

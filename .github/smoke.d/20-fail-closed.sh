@@ -19,12 +19,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-# A release from before the egress check has nothing to check.
-if ! sudo grep -qF 'name: egress' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
-
 
 through() { # <socks port> <url>: fetch through a client
   curl -fsS -o /dev/null --max-time 15 --socks5-hostname "127.0.0.1:$1" "$2"
@@ -35,17 +29,14 @@ host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
 reaches() { # <service> <host> <port>
   sudo docker run --rm --network "container:$(service_container "$1")" "${caddy}" nc -z -w 3 "$2" "$3" 2>/dev/null
 }
-# A release from before the gate has Xray on a network with a route out.
-if sudo test -f /etc/dotdash/gate.json; then
-  reaches gate "${host}" 18080 || die "the control failed: the gate does not reach the upstream on ${host}:18080"
-  for dest in "${host} 18080" "1.1.1.1 443"; do
-    # shellcheck disable=SC2086 # host and port
-    if reaches xray ${dest}; then
-      die "Xray's network reaches ${dest% *}:${dest#* } directly; it should have no route out"
-    fi
-  done
-  echo "20-fail-closed.sh: Xray's network has no route out; only the gate reaches the upstream"
-fi
+reaches gate "${host}" 18080 || die "the control failed: the gate does not reach the upstream on ${host}:18080"
+for dest in "${host} 18080" "1.1.1.1 443"; do
+  # shellcheck disable=SC2086 # host and port
+  if reaches xray ${dest}; then
+    die "Xray's network reaches ${dest% *}:${dest#* } directly; it should have no route out"
+  fi
+done
+echo "20-fail-closed.sh: Xray's network has no route out; only the gate reaches the upstream"
 
 sudo docker run --rm --network "container:$(service_container xray)" "${caddy}" nc -z -w 3 caddy 80 \
   || die "the control failed: Xray's network does not reach caddy:80 directly"
@@ -89,21 +80,9 @@ recovers
 through 11080 http://11.99.0.10:8000/ || die "the client did not recover with the upstream"
 echo "20-fail-closed.sh: upstream stopped, clients get nothing and doctor names the upstream; both recover"
 
-# The rehearsal runs this against the published release too, which may
-# predate the upstream secret and take the password as a secret of its own.
-if sudo grep -q '^  - name: upstreams$' /opt/dotdash/current/secrets.schema.yaml; then
-  printf 'http://rig:wrong@%s name=rig\n' "$(sed 's/.*@//' /rig/upstream.conn)" | sudo morzer secret set upstreams >/dev/null
-  fails_naming "rig at"
-  fails_naming "refused the credentials"
-  printf 'http://%s name=rig\n' "$(cat /rig/upstream.conn)" | sudo morzer secret set upstreams >/dev/null
-elif sudo grep -q '^  - name: upstream$' /opt/dotdash/current/secrets.schema.yaml; then
-  printf 'rig:wrong@%s' "$(sed 's/.*@//' /rig/upstream.conn)" | sudo morzer secret set upstream >/dev/null
-  fails_naming "refused the credentials"
-  printf "%s" "$(cat /rig/upstream.conn)" | sudo morzer secret set upstream >/dev/null
-else
-  printf wrong | sudo morzer secret set upstream_password >/dev/null
-  fails_naming "refused the credentials"
-  printf "%s" "$(cat /rig/upstream.pass)" | sudo morzer secret set upstream_password >/dev/null
-fi
+printf 'http://rig:wrong@%s name=rig\n' "$(sed 's/.*@//' /rig/upstream.conn)" | sudo morzer secret set upstreams >/dev/null
+fails_naming "rig at"
+fails_naming "refused the credentials"
+printf 'http://%s name=rig\n' "$(cat /rig/upstream.conn)" | sudo morzer secret set upstreams >/dev/null
 recovers
 echo "20-fail-closed.sh: a wrong upstream password, and doctor names the credentials"

@@ -3,9 +3,21 @@
 probe port for the health check and the subscription's refresh. Traffic goes
 to whichever dotdash- outbound answers fastest, except what the rule
 parameters refuse or send directly. Published beyond this machine, the proxy
-asks for proxy_user and proxy_password. config-tun.json.tmpl repeats it, with
-TUN and DNS added: keep the outbounds, observatory, balancer and the rules
-both have the same, as the smoke test compares them.
+asks for proxy_user and proxy_password.
+
+The tun profile (compose/tun.yaml) adds TUN, which takes every connection on
+the machine, its containers' and IPv6 included, and DNS answered with fake
+addresses whose names go to dotdash. On the host's network, so the proxy port
+listens on the listen address itself. Its openflux fallback is the base
+files' alone: that profile doesn't run under tun, whose host network has no
+name for its client.
+
+Under tun, Xray's own lookups, of dotdash's server names and of what direct
+rules send around it, go through the system resolver, which /etc/resolv.conf
+(resolv.conf.tmpl) points at the resolver inbound on 127.53.0.1:53: that
+forwards them directly, from Xray's own socket outside TUN, to dns_server.
+The host's own resolver would send them into TUN and get fake addresses
+back.
 
 A rule line is a classical rule without its target ("DOMAIN-SUFFIX,
 example.com"), as the apps write them; "match" turns one into the fields of an
@@ -28,23 +40,62 @@ type's later fields, such as no-resolve, are dropped. */}}
 {{- else }}{{ required (print "a rule's type is none of DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, DOMAIN-REGEX, GEOSITE, IP-CIDR, IP-CIDR6, GEOIP, DST-PORT: " .) "" }}
 {{- end -}}
 {{- end -}}
+{{- $tun := has "tun" .Profiles -}}
 {{- $lan := ne (default "127.0.0.1" .Parameters.listen) "127.0.0.1" -}}
 {{- $probe := required "set probe_url" .Parameters.probe_url -}}
 {{- /* The openflux profile: when every link failed its last probe, the
 balancer hands traffic to the OpenFlux client (compose/openflux.yaml), not to
 the first link. Never probed: it is the way left, not one to pick. */ -}}
-{{- $openflux := has "openflux" .Profiles -}}
+{{- $openflux := and (has "openflux" .Profiles) (not $tun) -}}
 {{- /* cdn=skip: the balancer and its probes take every link but those
 through a CDN (dotdash-cdn-*): the servers' (dotdash-<n>-*) and the relays'
 (dotdash-relay-*). Xray picks outbounds by tag prefix alone. */ -}}
 {{- $links := `"dotdash-"` }}{{ if eq .Parameters.cdn "skip" }}{{ $links = `"dotdash-1", "dotdash-2", "dotdash-3", "dotdash-4", "dotdash-5", "dotdash-6", "dotdash-7", "dotdash-8", "dotdash-9", "dotdash-relay-"` }}{{ end -}}
+{{- $resolver := "" }}{{ if $tun }}{{ $resolver = required "set dns_server" .Parameters.dns_server }}{{ end -}}
 {
   "log": {"loglevel": "warning"},
+  {{- if $tun }}
+  {{- /* Names asked on port 53 through TUN, or on dns_listen, get a fake
+  address from 198.18.0.0/15; a connection to it goes to dotdash with the
+  name, which the server resolves. IPv4 only: AAAA questions get no answer,
+  so apps use IPv4. The LAN's own names are asked of dns_server, as is. */}}
+  "dns": {
+    "tag": "dns-internal",
+    "queryStrategy": "UseIPv4",
+    "servers": [
+      {"address": "{{ $resolver }}", "domains": ["domain:lan", "domain:local", "domain:home.arpa"], "skipFallback": true},
+      "fakedns"
+    ]
+  },
+  "fakedns": [{"ipPool": "198.18.0.0/15", "poolSize": 65535}],
+  {{- end }}
   "inbounds": [
-    {"tag": "proxy", "listen": "0.0.0.0", "port": 7890, "protocol": "socks",
+    {{- /* Under tun, on the host's network, the listen address itself;
+    otherwise the container's port, which compose publishes. */}}
+    {"tag": "proxy", "listen": "{{ if $tun }}{{ default "127.0.0.1" .Parameters.listen }}{{ else }}0.0.0.0{{ end }}", "port": {{ if $tun }}{{ .Parameters.port }}{{ else }}7890{{ end }}, "protocol": "socks",
      "settings": {"udp": true{{ if $lan }}, "auth": "password",
        "accounts": [{"user": "{{ required "set proxy_user" .Parameters.proxy_user }}", "pass": {"$file": "/run/secrets/proxy_password"}}]{{ end }}}},
     {"tag": "probe", "listen": "127.0.0.1", "port": 7891, "protocol": "socks", "settings": {"udp": true}}
+    {{- if $tun }},
+    {{- /* The subscription's and pinned geodata's fetches (tun.yaml). */}}
+    {"tag": "sub", "listen": "127.0.0.1", "port": 7892, "protocol": "socks"},
+    {{- /* Everything, IPv4 and IPv6, into the interface Meta (the gateway
+    check and its DOCKER-USER rules name it), as two halves of each family:
+    Xray adds its routes at metric 1, which a default route at metric 0
+    would beat, and a half is more specific than any default. Networks the
+    host is on are more specific still, and stay direct. Xray's own sockets
+    are bound to the main interface, outside TUN. */}}
+    {"tag": "tun", "protocol": "tun",
+     "settings": {"name": "Meta", "MTU": 1500, "autoSystemRoutingTable": ["0.0.0.0/1", "128.0.0.0/1", "::/1", "8000::/1"], "autoOutboundsInterface": "auto"},
+     "sniffing": {"enabled": true, "destOverride": ["fakedns", "http", "tls", "quic"]}},
+    {"tag": "resolver", "listen": "127.53.0.1", "port": 53, "protocol": "dokodemo-door",
+     "settings": {"address": "{{ $resolver }}", "port": 53, "network": "tcp,udp"}}
+    {{- /* morzer wants a default for every parameter, so "none" means none. */}}
+    {{- if ne .Parameters.dns_listen "none" }}{{ $d := split ":" .Parameters.dns_listen }},
+    {"tag": "dns-in", "listen": "{{ index $d 0 }}", "port": {{ index $d 1 }}, "protocol": "dokodemo-door",
+     "settings": {"address": "{{ $resolver }}", "port": 53, "network": "tcp,udp"}}
+    {{- end }}
+    {{- end }}
   ],
   {{- /* The subscription's outbounds go before these (compose.yaml), so what
   the balancer can't place, as when every link failed its last probe, takes
@@ -54,6 +105,9 @@ through a CDN (dotdash-cdn-*): the servers' (dotdash-<n>-*) and the relays'
   "outbounds": [
     {"tag": "block", "protocol": "blackhole"},
     {"tag": "direct", "protocol": "freedom"}
+    {{- if $tun }},
+    {"tag": "dns", "protocol": "dns"}
+    {{- end }}
     {{- if $openflux }},
     {"tag": "openflux", "protocol": "socks", "settings": {"address": "openflux", "port": 1080}}
     {{- end }}
@@ -65,8 +119,20 @@ through a CDN (dotdash-cdn-*): the servers' (dotdash-<n>-*) and the relays'
   "burstObservatory": {"subjectSelector": [{{ $links }}], "pingConfig": {"destination": "{{ $probe }}", "interval": "1m", "sampling": 1}},
   "routing": {
     "domainStrategy": "AsIs",
-    "balancers": [{"tag": "dotdash", "selector": [{{ $links }}], "strategy": {"type": "leastPing"}{{ if $openflux }}, "fallbackTag": "openflux"{{ end }}}],
+    {{- /* sub, under tun: a fresh install, or a cache whose server is gone,
+    has no link that answers, and the entrypoint's own direct fetch, its
+    fallback, enters TUN and goes where the dotdash balancer sends it.
+    Through the sub port, the fetch leaves directly from Xray's own socket
+    outside TUN, then and only then. */}}
+    "balancers": [{"tag": "dotdash", "selector": [{{ $links }}], "strategy": {"type": "leastPing"}{{ if $openflux }}, "fallbackTag": "openflux"{{ end }}}
+    {{- if $tun }},
+      {"tag": "sub", "selector": [{{ $links }}], "strategy": {"type": "leastPing"}, "fallbackTag": "direct"}
+    {{- end }}],
     "rules": [
+      {{- if $tun }}
+      {"type": "field", "inboundTag": ["resolver", "dns-internal"], "outboundTag": "direct"},
+      {"type": "field", "inboundTag": ["tun", "dns-in"], "port": "53", "outboundTag": "dns"},
+      {{- end }}
       {{- /* ipv6=block: every IPv6 address refused first, a direct rule's
       included. */}}
       {{- if eq .Parameters.ipv6 "block" }}
@@ -75,6 +141,13 @@ through a CDN (dotdash-cdn-*): the servers' (dotdash-<n>-*) and the relays'
       {{- /* The health check and the subscription's refresh go to dotdash
       whatever the rules say. */}}
       {"type": "field", "inboundTag": ["probe"], "balancerTag": "dotdash"},
+      {{- if $tun }}
+      {{- /* Only the image's entrypoint, which fetches, gets the sub
+      balancer. The port is on the host's network, and any other process
+      there goes to dotdash as through the probe port. */}}
+      {"type": "field", "inboundTag": ["sub"], "process": ["/usr/local/bin/xray-entrypoint"], "balancerTag": "sub"},
+      {"type": "field", "inboundTag": ["sub"], "balancerTag": "dotdash"},
+      {{- end }}
       {{- /* Each kept line of the rule parameters, blank and "#" lines
       skipped; backslashes doubled before quote, which escapes only quotes. */}}
       {{- range lines .Parameters.block_rules }}{{ $l := replace (trim .) "\\" "\\\\" }}{{ if and $l (ne (slice $l 0 1) "#") }}

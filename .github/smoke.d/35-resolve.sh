@@ -8,12 +8,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-# A release from before the parameter has nothing to check.
-if ! sudo morzer config list 2>/dev/null | grep -qw resolve; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
-
 log=/rig/upstream-log/access.log
 since() { tail -n "+$(($1 + 1))" "${log}"; }
 lines() { wc -l <"${log}"; }
