@@ -64,6 +64,20 @@ def test_one_run_at_a_time(tmp_path):
     os.close(other)
 
 
+def test_no_state_beside_a_joined_roster_is_refused_unless_new_state(tmp_path, monkeypatch):
+    from dotdash_manager import Refused
+
+    monkeypatch.setattr(state, "lock", lambda path: 0)
+    roster = tmp_path / "network.toml"
+    roster.write_text('target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[server]]\nname = "a"\nid = "inst_A"\nkey = "RWa"\n')
+    for dry_run in False, True:
+        with pytest.raises(Refused, match="names a joined: a new state gives every server new keys"):
+            Options(roster, "morzer").open(dry_run)
+    assert not (tmp_path / "dotdash-state.json").exists()
+    keys = Options(roster, "morzer", new_state=True).open()[1]["keys"]
+    assert Options(roster, "morzer").open()[1]["keys"] == keys, "once there, it is the state"
+
+
 def test_a_dry_run_keeps_no_state(tmp_path):
     roster = tmp_path / "network.toml"
     roster.write_text('target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\ndevices = ["phone"]\n')

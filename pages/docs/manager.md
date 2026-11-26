@@ -195,6 +195,15 @@ like `authority.key`. One run at a time changes it: a run holds
 `dotdash-state.lock` beside it, and another started meanwhile, such as a timer's
 `sync` during a `rotate`, waits for it. `sync --dry-run` leaves it as it was.
 
+With no state beside a roster that names a joined machine, every command but
+`adopt` refuses: a new state would give every server new keys and cut every
+device off. That's a checkout the state wasn't copied to, so copy it there.
+To start over on new keys anyway, put `--new-state` before the command:
+
+```sh
+dotdash-manager --new-state sync
+```
+
 ## Burnt relays
 
 Before every fleet publish, about hourly, each canary that follows the manager

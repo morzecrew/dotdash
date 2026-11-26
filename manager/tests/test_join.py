@@ -91,7 +91,8 @@ def test_joined_keeps_the_id_and_key_and_the_roster_wins(tmp_path, monkeypatch):
     r = run(app, ["joined", "r1"], input="bootstrap: done\nmorzer: applied\n")
     assert r.exit_code != 0 and "stopped before its last line" in str(r.exception)
     assert "bootstrap: done" in r.output
-    r = run(app, ["joined", "r1"], input="applied\ndotdash-joined r1 inst_01ab RWQabc=\n")
+    # r2 is joined in the roster, the way earlier releases had it: this state is new on purpose.
+    r = run(app, ["--new-state", "joined", "r1"], input="applied\ndotdash-joined r1 inst_01ab RWQabc=\n")
     assert r.exit_code == 0, r.output
     assert "applied" in r.output and "dotdash-joined" not in r.output
     st = json.loads((tmp_path / "dotdash-state.json").read_text())

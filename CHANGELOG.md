@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A canary reading stamped more than ten minutes ahead of the manager's clock no longer counts. One canary whose clock ran ahead could burn a relay alone, and its reading outweighed every honest one until real time caught up.
 
+- The manager refuses to run with no state file beside a roster that names a joined machine, unless given `--new-state`. A sync on a checkout the state wasn't copied to made new keys for every server, cutting every device off. `adopt` still makes the state, as it takes the server's keys.
+
 ### Security
 
 - The manager refuses facts no bundle prints: whitespace, quotes, backslashes, braces or control characters in a value, or a field missing or of the wrong type. A tampered relay can no longer add lines to the servers' `relays`, crash every sync or write to the terminal, nor take another relay's address out of the pools.

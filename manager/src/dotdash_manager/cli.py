@@ -34,6 +34,7 @@ app = typer.Typer(
 class Options:
     roster: Path
     morzer: str
+    new_state: bool = False
     locked: bool = False
 
     @property
@@ -48,11 +49,18 @@ class Options:
         """The roster and the state, under the state's lock for the rest of the
         run, the state kept before anything goes out: a key published and then
         lost is a network to redo. A dry run publishes nothing, and keeps
-        nothing."""
+        nothing. No state while the roster names a joined machine is likelier
+        a checkout the state wasn't copied to than a new network: a new state
+        would give every server new keys, cutting every device off."""
         net = roster.load(self.roster)
         if not self.locked:
             state.lock(self.state)
             self.locked = True
+        joined = [m.name for m in net.machines if m.joined]
+        if joined and not self.new_state and not self.state.exists():
+            raise Refused(f"no {self.state} beside the roster, which names {', '.join(joined)} joined: a new state "
+                          "gives every server new keys, cutting every device off. Copy the state here, or --new-state "
+                          "if new keys are meant")
         st = state.load(self.state, net)
         if not dry_run:
             state.save(self.state, st)
@@ -66,8 +74,10 @@ def options(
     ctx: typer.Context,
     roster_path: Annotated[Path, typer.Option("--roster", help="the roster")] = Path("network.toml"),
     morzer: Annotated[str, typer.Option(help="the morzer binary")] = "morzer",
+    new_state: Annotated[bool, typer.Option(
+        "--new-state", help="make a state though the roster names joined machines: new keys for every server")] = False,
 ) -> None:
-    ctx.obj = Options(roster_path, morzer)
+    ctx.obj = Options(roster_path, morzer, new_state)
 
 
 @app.command()
@@ -220,6 +230,8 @@ def adopt_server(
               f"  ssh <{name}> {shlex.quote('sudo sh -c ' + shlex.quote(adopt.COMMAND))} | dotdash-manager adopt {name}")
         return
     keys, ids, unnamed = adopt.parse(sys.stdin.read())
+    # A state made here is no hazard: the server's keys replace the new ones.
+    o.new_state = True
     net, st = o.open()
     if st["published"] and not force:
         raise Refused("the manager already published its own keys: adopting now changes them again on every machine; --force if that is meant")

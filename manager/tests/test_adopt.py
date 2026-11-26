@@ -81,6 +81,16 @@ def test_cli_adopts_once_and_not_after_a_publish(tmp_path, monkeypatch):
     assert json.loads((tmp_path / "dotdash-state.json").read_text())["ids"]["phone"] == OLD
 
 
+def test_adopt_makes_the_state_of_a_roster_naming_the_server_joined(tmp_path, monkeypatch):
+    (tmp_path / "network.toml").write_text(ROSTER.replace('name = "a"\n', 'name = "a"\nid = "inst_A"\nkey = "RWa"\n'))
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(state, "lock", lambda path: 0)
+    out = server_output(f"{PHONE} phone\n")
+    r = CliRunner().invoke(app, ["adopt", "a"], input=out)
+    assert r.exit_code == 0, r.output
+    assert json.loads((tmp_path / "dotdash-state.json").read_text())["keys"] == adopt.parse(out)[0]
+
+
 def test_parse_takes_the_first_word_of_a_key_file_and_no_newline():
     keys, _, _ = adopt.parse(server_output("", reality_short_id="0123456789abcdef\n"))
     assert keys["reality_short_id"] == "0123456789abcdef"
