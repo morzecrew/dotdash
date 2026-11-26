@@ -64,6 +64,7 @@ fails on its empty value with the message. */ -}}
 {{- end }}
 {{- if eq .Parameters.http_port .Parameters.https_port }}{{ required "http_port must differ from https_port" "" }}{{ end }}
 {{- if and $kcp $withXdns (eq .Parameters.kcp_port "53") }}{{ required "kcp_port must not be 53, which the DNS tunnel publishes" "" }}{{ end }}
+{{- if and $hy2 $withXdns (eq .Parameters.hysteria2_port "53") }}{{ required "hysteria2_port must not be 53, which the DNS tunnel publishes" "" }}{{ end }}
 {
   "log": {"loglevel": "{{ .Parameters.log_level }}", "access": "none", "dnsLog": false},
 {{- if has "metrics" .Profiles }}
