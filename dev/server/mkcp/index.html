@@ -2164,6 +2164,11 @@ provider's firewall, then:</p>
   doesn't start as real RTP does; <code>none</code> sends bare encrypted packets. No
   header is known to pass everywhere: if one is blocked, try another, then
   let devices refresh their subscription or send them new links.</li>
+<li><strong><code>kcp_open</code>:</strong> <code>none</code> by default. <code>quic</code> sends a QUIC-Initial-shaped
+  packet before the flow, so a network that lets QUIC out sees the start as
+  QUIC. Both ends must match: devices take it from new links (as <code>fm=</code>) or
+  their subscription. The packet is one fixed shape, so measure it on a
+  <a href="../../canary/">canary</a> (<code>dotdash_kcp_open</code>) before relying on it.</li>
 <li><strong>Bandwidth:</strong> mKCP resends lost packets eagerly, so on a lossy line it
   uses more than TCP would. The Xray config picks it, as any other link,
   whenever it answers fastest.</li>

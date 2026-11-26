@@ -2435,7 +2435,8 @@ it; a device keeps the profile it has until it is removed in the app.
   through the upstreams every ten minutes (<code>exit_ipv4_url</code>, <code>exit_info_url</code>),
   so after a line fails over, the next refresh shows the new exit. With
   <code>upstream_mode=balance</code> the exit changes between connections, and the name
-  shows one of them.
+  shows one of them. With <code>direct=false</code> there is no name
+  (<a href="#keeping-the-servers-out-of-devices-links">below</a>).
 - Hiddify reads XHTTP links with its own core, which takes <code>mode=auto</code> as
   <code>packet-up</code> and ignores a <code>mode</code> in the link: long uploads through them can
   hang there. In Hiddify, use the REALITY or Hysteria2 link.
@@ -2486,7 +2487,7 @@ friends anna boris relay2.example.net
 <h2 id="keeping-the-servers-out-of-devices-links">Keeping the servers out of devices' links<a class="headerlink" href="#keeping-the-servers-out-of-devices-links" title="Permanent link">&para;</a></h2>
 <p>Pools hide relays and CDN hosts, but every device still gets the servers'
 own links, so one leaked device gives away every server. With <code>direct=false</code>
-devices get no server's address at all:</p>
+nothing the servers hand devices holds a server's address:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">direct</span><span class="o">=</span><span class="nb">false</span>
 </code></pre></div>
 <ul>
@@ -2495,6 +2496,11 @@ devices get no server's address at all:</p>
   server's domain.</li>
 <li>The DNS tunnel goes: its zone is delegated to a server, so a lookup of it
   names the address.</li>
+<li>Subscriptions carry no name, which shows the exit: a
+  <a href="../upstreams/#no-upstream-this-servers-own-address"><code>direct</code> line</a> in
+  <code>upstreams</code> makes the exit the server's own address. A device whose
+  traffic leaves by that line still sees the address on any site that shows
+  a visitor's IP: only an exit elsewhere keeps it from devices.</li>
 <li>A device that gets no relay and no CDN host gets no links, and one with no
   own-site relay no subscription URL. <code>client-config</code> names each.</li>
 </ul>

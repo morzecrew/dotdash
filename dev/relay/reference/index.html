@@ -1554,6 +1554,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-changes-the-relays-line" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What changes the relay's line
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2099,6 +2116,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-changes-the-relays-line" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What changes the relay's line
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2388,6 +2422,19 @@
 </tr>
 </tbody>
 </table>
+<h3 id="what-changes-the-relays-line">What changes the relay's line<a class="headerlink" href="#what-changes-the-relays-line" title="Permanent link">&para;</a></h3>
+<p>The servers know the relay by its line in <code>relays</code>. After changing any of
+these, print it again with <code>relay-entry</code> and replace it on every server
+(under the <a href="../../manager/">manager</a>, its next sync does that from the
+relay's facts): <code>entry_host</code> (or the address after <code>--</code>), <code>site</code>, the relay's
+domain under <code>own-site</code>, the <code>own-site</code>, <code>mkcp</code>, <code>hysteria2</code> and
+<code>http-origin</code> profiles, <code>kcp_port</code>, <code>kcp_header</code>, <code>kcp_open</code>,
+<code>hysteria2_port</code>, <code>cdn_hosts</code>, <code>http_origin_host</code>, <code>cdn_only</code>, <code>name</code>, and a
+rotated <code>reality_key</code>, <code>reality_short_id</code>, <code>vless_seed</code>, <code>xhttp_path</code>,
+<code>cdn_xhttp_path</code> or <code>kcp_seed</code>. The rest change nothing on the servers:
+<code>http_origin_port</code> (the CDN needs it, the servers don't), <code>http_origin_from</code>,
+<code>cover</code>, <code>tunnel_host</code>, <code>cert_issuer</code>, <code>https_port</code>, <code>http_port</code>, <code>listen</code>,
+<code>via</code>, the <code>dotdash_*</code> parameters and the rest.</p>
 <h2 id="profiles">Profiles<a class="headerlink" href="#profiles" title="Permanent link">&para;</a></h2>
 <p><code>installation.profile=own-site</code>: the relay serves a site of its own under its
 domain (<code>--domain</code> at <code>init</code>, or <code>installation.domains</code>), and REALITY hands it
