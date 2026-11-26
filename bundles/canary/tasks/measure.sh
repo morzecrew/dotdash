@@ -17,10 +17,7 @@ url=${2:-${PROBE_URL:-https://www.gstatic.com/generate_204}}
 timeout=${3:-10s}
 download_url=${DOWNLOAD_URL:-https://speed.cloudflare.com/__down?bytes=1000000}
 [ "$download_url" != none ] || download_url=
-# wget goes through the probe inbound by https_proxy alone (with http_proxy
-# too, busybox sends an https URL to the proxy as a plain GET, which Xray
-# refuses), so a plain http URL would leave around dotdash: refused.
-case $download_url in '' | https://*) ;; *) echo "download_url must be https://, not '$download_url'" >&2; exit 2 ;; esac
+case $download_url in '' | http://* | https://*) ;; *) echo "download_url must be http:// or https://, not '$download_url'" >&2; exit 2 ;; esac
 downloads=3
 case $count in '' | *[!0-9]*) echo "count must be a number, not '$count'" >&2; exit 2 ;; esac
 
@@ -33,16 +30,11 @@ download() { # <service>: the downloads through it, as a JSON object
 	j=0
 	while [ "$j" -lt "$downloads" ]; do
 		j=$((j + 1))
-		start=$(now_ms)
-		# busybox wget, through the probe inbound, an HTTP proxy. It checks no
-		# certificate, which a speed test that runs inside the tunnel and
-		# carries nothing secret can do without. pipefail, so a transfer cut
-		# short is not counted as done.
-		# shellcheck disable=SC3040 # busybox ash has pipefail
-		if n=$(set -o pipefail; https_proxy="http://$1:10809" \
-			wget -q -T 60 -O - "$download_url" 2>/dev/null | wc -c); then
-			n=$(echo "$n" | tr -d ' ')
-			ms=$(($(now_ms) - start))
+		# The image's fetch, through the probe inbound: "<bytes> <ms>", and
+		# exit 0 only for a whole body, so a transfer cut short is not counted.
+		if out=$(/opt/xray/xray-entrypoint fetch -proxy "http://$1:10809" -read-timeout 60s -timeout 2m \
+			"$download_url" 2>/dev/null); then
+			n=${out% *} ms=${out#* }
 			if [ "$n" -gt 0 ] && [ "$ms" -gt 0 ]; then
 				got=$((got + 1))
 				rates="$rates $(awk -v b="$n" -v ms="$ms" 'BEGIN { printf "%.2f", b * 8 / ms / 1000 }')"

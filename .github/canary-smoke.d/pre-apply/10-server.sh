@@ -4,10 +4,10 @@
 # with REALITY on 8443 (30-xhttp-reality.sh), mKCP on 8447/udp
 # (31-mkcp.sh) and Hysteria2 on 443/udp (32-hysteria2.sh, under a self-signed
 # certificate it pins), with keys made here, borrowing
-# www.gstatic.com's handshake, and lets the probe straight out, to the rig's
-# own addresses too (25-facts.sh's stand-in freeze_url), which Xray's freedom
-# refuses unless a final rule allows them; the canary reaches it on the rig's
-# docker0 address. The workflows'
+# www.gstatic.com's handshake, and lets the probe straight out, to its own
+# loopback too, where lib/sites.sh's stand-in sites listen, which Xray's
+# freedom refuses unless a final rule allows it; the canary reaches the server
+# on the rig's docker0 address. The workflows'
 # init-args gave init placeholders and smoke.sh random secrets; this sets the
 # real ones. It needs the internet, which a GitHub-hosted runner has.
 # shellcheck source=/dev/null
@@ -52,7 +52,7 @@ jq -n --arg id "${id}" --arg key "${private}" --arg sid "${sid}" --arg path "/${
          tlsSettings: {alpn: ["h3"], certificates: [{certificateFile: "/tls/hy2.crt", keyFile: "/tls/hy2.key"}]},
          hysteriaSettings: {version: 2}}}],
     outbounds: [{protocol: "freedom",
-      settings: {finalRules: [{action: "allow", ip: ["172.16.0.0/12", "10.0.0.0/8", "192.168.0.0/16"]}]}}]}' \
+      settings: {finalRules: [{action: "allow", ip: ["127.0.0.0/8"]}]}}]}' \
   >/rig/server/config.json
 chmod -R a+rX /rig/server /rig/server-tls
 sudo docker run -d --name canary-rig-server -p 443:443 -p 8443:8443 -p 8447:8447/udp -p 443:8448/udp --sysctl net.ipv4.ip_unprivileged_port_start=0 \

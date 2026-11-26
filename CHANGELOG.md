@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The canary's `freeze_url`, `freeze_up_url` and `download_url` take `http://` as well as `https://`, and an `https://` one's certificate is now checked. A 64 KB freeze download not done in 40 seconds counts as stopped partway.
+
+### Fixed
+
+- The canary's freeze checks and `measure`'s downloads go through the transport they check. They went out over the canary's own network, so where that network froze the test site directly, every path read `blocked_by: freeze` and the manager took healthy relays out of devices' links.
+
+- A canary under the hysteria2 profile restarts Hysteria2 when `dotdash_id` changes, so a rotated id no longer leaves it logging in with the old one.
+
+- The canary refuses at render a `dotdash_server`, `dotdash_address` or `dotdash_public_key` holding a quote, a backslash, a brace or whitespace, so a value set by the manager can't reach into the canary's Xray config.
+
 ## [0.17.0] - 2026-11-25
 
 ### Added
