@@ -15,11 +15,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qF '  reality_second_key:' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
-
 target=http://11.99.0.10:8000/
 xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)
 secrets=/run/dotdash/secrets

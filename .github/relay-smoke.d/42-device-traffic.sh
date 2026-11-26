@@ -9,10 +9,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qF 'device-traffic: [compose/device-traffic.yaml]' /opt/dotdash-relay/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
 xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)
 restore() {
   sudo morzer config unset installation.profile >/dev/null 2>&1 || true

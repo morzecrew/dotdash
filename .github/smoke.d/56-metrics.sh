@@ -11,10 +11,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qF 'metrics: [compose/metrics.yaml]' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
 set_config() { sudo morzer config set "$@" >/dev/null || die "config set $* failed"; }
 
 dir=/rig/textfile

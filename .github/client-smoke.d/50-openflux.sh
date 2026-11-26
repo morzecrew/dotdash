@@ -14,10 +14,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -q '^      openflux: \[compose/openflux.yaml\]$' /opt/dotdash-client/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release has no openflux profile"
-  exit 0
-fi
 host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
 fetch() { # <URL>: its status through the proxy port, or 000
   curl -s -o /dev/null -w '%{http_code}' --max-time 8 --proxy http://127.0.0.1:7890 "$1" || true

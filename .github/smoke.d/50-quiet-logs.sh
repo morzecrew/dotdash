@@ -9,12 +9,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-# A release from before quiet logs has nothing to check.
-if ! sudo grep -qF 'request delete' /opt/dotdash/current/caddy/Caddyfile; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
-
 # Cut transfers short through both clients (10-clients.sh's, SOCKS on 11080
 # and 11081): an XHTTP session aborted mid-response is what made Caddy log
 # its URI, the secret path in it.

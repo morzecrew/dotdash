@@ -1,0 +1,74 @@
+# One bundle's dev channel, for main.yml: _bundle.yml builds, signs and
+# smoke-tests it, then bundle-ci publishes dotdash-<bundle>:<version> and
+# moves :main. dotdash pins third-party images in its manifests, so nothing
+# here pins components.
+name: dev channel
+
+on:
+  workflow_call:
+    inputs:
+      bundle:
+        description: "The bundle: server, relay, client, canary or acme-dns"
+        type: string
+        required: true
+    secrets:
+      minisign-key:
+        description: The dev signing key
+        required: true
+
+permissions: {}
+
+jobs:
+  bundle:
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/_bundle.yml # zizmor: ignore[self-repository] actionlint 1.7.12 refuses $/
+    with:
+      bundle: ${{ inputs.bundle }}
+      channel: main
+      signing: dev
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+    secrets:
+      minisign-key: ${{ secrets.minisign-key }}
+
+  publish:
+    needs: bundle
+    if: needs.bundle.outputs.proceed == 'true'
+    permissions:
+      contents: read
+      packages: write
+      # The provenance publish.yml attests for the bundle.
+      id-token: write
+      attestations: write
+    uses: morzecrew/bundle-ci/.github/workflows/publish.yml@6360c44fecddb64b29d176ea2f935b7e8a8f6916 # v0.12.2
+    with:
+      version: ${{ needs.bundle.outputs.version }}
+      archive: ${{ needs.bundle.outputs.archive }}
+      artifact: ${{ inputs.bundle }}
+      channel: main
+      package: dotdash-${{ inputs.bundle }}
+      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+
+  # The command the docs give works on what was just published: the
+  # attestation is there, signed by bundle-ci's publish workflow for this
+  # commit.
+  provenance:
+    needs: [bundle, publish]
+    if: inputs.bundle == 'server'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      attestations: read
+    steps:
+      - name: Verify the published bundle's provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.bundle.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh attestation verify "oci://ghcr.io/morzecrew/dotdash-server:${VERSION}" --owner morzecrew \
+            --signer-workflow morzecrew/bundle-ci/.github/workflows/publish.yml \
+            --source-digest "${GITHUB_SHA}" >/dev/null
+          echo "dotdash-server:${VERSION}: provenance verified"

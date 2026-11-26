@@ -12,11 +12,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qx '  pools:' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates pools"
-  exit 0
-fi
-
 secrets=/run/dotdash/secrets
 before=$(sudo cat "${secrets}/vless_clients")
 restore() {
@@ -75,17 +70,15 @@ echo "${0##*/}: with pools unset, every device gets everything"
 # A relay's own CDNs (cdn= on its line) are pool members too: with the relay in
 # no pool, pool a holding one of its CDNs and pool b another, pooled gets pool
 # a's and the one in no pool, unpooled all three, and neither is reported.
-if sudo grep -qE 'dotdash-(cdn-relay-\$n|relay-\$n-cdn)-' /opt/dotdash/current/tasks/client-config.sh; then
-  printf '%s\n' "relay-c.test site-c.test pbkC000000000000000000000000000000000000000 0123456789abcdef mlkem768x25519plus.native.0rtt.c own-site 00112233445566778899aabbccddeeff cdn=cdn-r1.test,cdn-r2.test,cdn-r3.test" |
-    sudo morzer config set --set-file relays=- >/dev/null || die "could not set relays"
-  printf '%s\n' "a pooled cdn-r1.test" "b cdn-r2.test" |
-    sudo morzer config set --set-file pools=- >/dev/null || die "could not set pools"
-  rcdns() { sed -nE 's/^vless:\/\/[^@]+@([^:]+):.*#relay%20%C2%B7%20cdn%20[0-9]+$/\1/p' <<<"$1" | sort -u | tr '\n' ' '; }
-  [ "$(rcdns "$(config pooled)")" = "cdn-r1.test cdn-r3.test " ] ||
-    die "the device in pool a gets other CDNs of the relay than pool a's and the one in no pool: $(rcdns "$(config pooled)")"
-  [ "$(rcdns "$(config unpooled)")" = "cdn-r1.test cdn-r2.test cdn-r3.test " ] ||
-    die "the device in no pool does not get every CDN of the relay"
-  ! grep -q 'cdn-r[12]\.test is no device name' <<<"$(config pooled 2>&1 >/dev/null)" ||
-    die "a relay's CDN in a pool is reported as naming nothing"
-  echo "${0##*/}: a relay's own CDNs are pooled like any CDN host"
-fi
+printf '%s\n' "relay-c.test site-c.test pbkC000000000000000000000000000000000000000 0123456789abcdef mlkem768x25519plus.native.0rtt.c own-site 00112233445566778899aabbccddeeff cdn=cdn-r1.test,cdn-r2.test,cdn-r3.test" |
+  sudo morzer config set --set-file relays=- >/dev/null || die "could not set relays"
+printf '%s\n' "a pooled cdn-r1.test" "b cdn-r2.test" |
+  sudo morzer config set --set-file pools=- >/dev/null || die "could not set pools"
+rcdns() { sed -nE 's/^vless:\/\/[^@]+@([^:]+):.*#relay%20%C2%B7%20cdn%20[0-9]+$/\1/p' <<<"$1" | sort -u | tr '\n' ' '; }
+[ "$(rcdns "$(config pooled)")" = "cdn-r1.test cdn-r3.test " ] ||
+  die "the device in pool a gets other CDNs of the relay than pool a's and the one in no pool: $(rcdns "$(config pooled)")"
+[ "$(rcdns "$(config unpooled)")" = "cdn-r1.test cdn-r2.test cdn-r3.test " ] ||
+  die "the device in no pool does not get every CDN of the relay"
+! grep -q 'cdn-r[12]\.test is no device name' <<<"$(config pooled 2>&1 >/dev/null)" ||
+  die "a relay's CDN in a pool is reported as naming nothing"
+echo "${0##*/}: a relay's own CDNs are pooled like any CDN host"

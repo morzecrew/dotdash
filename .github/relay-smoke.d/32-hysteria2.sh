@@ -14,11 +14,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qF 'hysteria2: [compose/hysteria2.yaml]' /opt/dotdash-relay/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates the hysteria2 profile"
-  exit 0
-fi
-
 domain=relay.test
 xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)
 set_config() { sudo morzer config set "$@" >/dev/null || die "config set $* failed"; }

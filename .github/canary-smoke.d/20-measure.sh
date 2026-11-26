@@ -12,12 +12,6 @@
 . "${0%/*}/lib/sites.sh"
 set -euo pipefail
 
-# A release from before the measure task has nothing to check.
-if ! sudo grep -qF '  measure:' /opt/dotdash-canary/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
-
 start_sites
 sudo morzer config set "download_url=${sites}/down" >/dev/null || die "could not set download_url"
 out=$(sudo morzer task run measure --output -- 5 2>&1) || die "measure failed: ${out}"

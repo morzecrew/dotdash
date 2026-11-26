@@ -22,11 +22,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-schema=/opt/dotdash/current/secrets.schema.yaml
-if ! sudo grep -q '^  - name: upstreams$' "${schema}" || sudo grep -q '^  - name: upstream_openvpn$' "${schema}"; then
-  echo "${0##*/}: skipped, the installed release keeps OpenVPN's config out of the upstreams list"
-  exit 0
-fi
 one="http://$(cat /rig/upstream.conn) name=rig"
 list() { printf '%s\n' "$@" | sudo morzer secret set upstreams >/dev/null; }
 

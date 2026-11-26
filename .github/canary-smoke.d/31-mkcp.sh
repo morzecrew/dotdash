@@ -7,11 +7,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qF 'mkcp: [compose/mkcp.yaml]' /opt/dotdash-canary/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
-
 transports() { # <count>: the measure task's transports, each with how many got through
   local out
   out=$(sudo morzer task run measure --output -- "$1" 2>&1) || die "measure failed: ${out}"

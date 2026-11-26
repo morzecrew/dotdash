@@ -18,10 +18,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -q '^      openflux: \[compose/openflux.yaml\]$' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release has no openflux profile"
-  exit 0
-fi
 log=/rig/upstream-log/access.log
 device=$(sudo awk '$1 !~ /^#/ && NF { print $1; exit }' /run/dotdash/secrets/vless_clients)
 channels() { printf '%s\n' "$@" | sudo morzer config set --set-file openflux_channels=- >/dev/null; }

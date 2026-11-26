@@ -16,11 +16,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -q '^  ipv6:$' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates ipv6"
-  exit 0
-fi
-
 config=/etc/dotdash/application.yaml
 log=/rig/upstream-log/access.log
 since() { tail -n "+$(($1 + 1))" "${log}"; }

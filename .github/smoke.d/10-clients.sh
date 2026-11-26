@@ -44,12 +44,8 @@ jq -n --arg id "$(id "${xhttp}")" --arg enc "$(param "${xhttp}" encryption)" \
 # matching "}" at the start of a line.
 full_config() { awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"$1"; }
 # The DNS tunnel's outbound, its resolver pointed at the server: the rig has no
-# delegation for the zone. A release before the full config printed it alone.
-if grep -q '^XDNS tunnel' <<<"${out}"; then
-  xdns=$(awk '/^XDNS tunnel/{on=1; next} on{print} on && /^}$/{exit}' <<<"${out}")
-else
-  xdns=$(full_config "${out}" | jq '.outbounds[] | select(.tag == "xdns")')
-fi
+# delegation for the zone.
+xdns=$(full_config "${out}" | jq '.outbounds[] | select(.tag == "xdns")')
 [ -n "${xdns}" ] || die "client-config printed no XDNS outbound"
 jq '{inbounds: [{listen: "127.0.0.1", port: 11082, protocol: "socks"}],
    outbounds: [.streamSettings.finalmask.udp[0].settings.resolvers = [{addrs: ["udp://127.0.0.1:53"]}]]}' \
@@ -111,36 +107,27 @@ config_check() { # <name> <socks port> <servers>: client-config's config with th
   check "$1" "$2"
 }
 
-# A release from before the servers parameter has nothing to check.
-if sudo morzer config list 2>/dev/null | grep -qw servers; then
-  # A server that does not answer first, then this one: the config uses the
-  # one that answers.
-  config_check failover 11083 gone.dotdash.test,self
-  # Before the full config, a release printed a config for several servers
-  # alone, and none with the DNS tunnel as its last resort.
-  if grep -q 'only when none answers' <<<"$(sudo morzer task run client-config --output)"; then
-    config_check config 11084 self
-    # No server answers, so the config falls back to the DNS tunnel.
-    config_check fallback 11085 gone.dotdash.test
-  fi
-fi
+# A server that does not answer first, then this one: the config uses the
+# one that answers.
+config_check failover 11083 gone.dotdash.test,self
+config_check config 11084 self
+# No server answers, so the config falls back to the DNS tunnel.
+config_check fallback 11085 gone.dotdash.test
 
 # hello_split: the servers' REALITY links split their ClientHello into TLS
 # records, nothing else does, and a device on the split REALITY link alone
 # (its balancer and other links taken out) still gets through.
-if sudo grep -qF '  hello_split:' /opt/dotdash/current/manifest.yaml; then
-  sudo morzer config set hello_split=true >/dev/null || die "could not set hello_split"
-  config=$(full_config "$(sudo morzer task run client-config --output)")
-  sudo morzer config unset hello_split >/dev/null || die "could not unset hello_split"
-  split='[{type: "fragment", settings: {packets: "tlshello", length: "100-200", delay: "10-20"}}]'
-  jq -e "[.outbounds[] | select(.tag | test(\"^dotdash-[0-9]+-reality\$\"))] as \$r | (\$r | length) > 0
-    and all(\$r[]; .streamSettings.finalmask.tcp == ${split})
-    and all(.outbounds[] | select(.tag | test(\"^dotdash-[0-9]+-reality\$\") | not); .streamSettings.finalmask.tcp == null)" \
-    <<<"${config}" >/dev/null || die "hello_split did not split the REALITY links alone: $(jq -c '[.outbounds[] | {tag, f: .streamSettings.finalmask}]' <<<"${config}")"
-  mkdir -p "${dir}/split"
-  rig_config 11089 <<<"${config}" | jq '.outbounds = [.outbounds[] | select(.tag == "dotdash-1-reality")] | del(.routing, .burstObservatory)' \
-    >"${dir}/split/client.json"
-  chmod -R a+rX "${dir}/split"
-  check split 11089
-  sudo docker rm -f dotdash-rig-split >/dev/null
-fi
+sudo morzer config set hello_split=true >/dev/null || die "could not set hello_split"
+config=$(full_config "$(sudo morzer task run client-config --output)")
+sudo morzer config unset hello_split >/dev/null || die "could not unset hello_split"
+split='[{type: "fragment", settings: {packets: "tlshello", length: "100-200", delay: "10-20"}}]'
+jq -e "[.outbounds[] | select(.tag | test(\"^dotdash-[0-9]+-reality\$\"))] as \$r | (\$r | length) > 0
+  and all(\$r[]; .streamSettings.finalmask.tcp == ${split})
+  and all(.outbounds[] | select(.tag | test(\"^dotdash-[0-9]+-reality\$\") | not); .streamSettings.finalmask.tcp == null)" \
+  <<<"${config}" >/dev/null || die "hello_split did not split the REALITY links alone: $(jq -c '[.outbounds[] | {tag, f: .streamSettings.finalmask}]' <<<"${config}")"
+mkdir -p "${dir}/split"
+rig_config 11089 <<<"${config}" | jq '.outbounds = [.outbounds[] | select(.tag == "dotdash-1-reality")] | del(.routing, .burstObservatory)' \
+  >"${dir}/split/client.json"
+chmod -R a+rX "${dir}/split"
+check split 11089
+sudo docker rm -f dotdash-rig-split >/dev/null

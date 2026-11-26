@@ -12,11 +12,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qF 'values: [acme, acme-dns, internal]' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates acme-dns"
-  exit 0
-fi
-
 image=$(sudo docker inspect -f '{{.Config.Image}}' "$(service_container caddy)")
 dir=$(mktemp -d)
 trap 'rm -rf "${dir}"' EXIT

@@ -8,11 +8,6 @@
 set -euo pipefail
 
 release=/opt/dotdash/current
-# A release from before the policy check has nothing to check.
-if ! sudo test -x "${release}/hooks/policy" || ! sudo test -f /etc/dotdash/gate.json; then
-  echo "${0##*/}: skipped, the installed release predates it (or the gate)"
-  exit 0
-fi
 config=/etc/dotdash/application.yaml
 gate=/etc/dotdash/gate.json
 policy() { # [config] [gate config]: hooks/policy's output; its status
@@ -39,45 +34,36 @@ caught() { # <jq edit> <phrase the violation must carry> [gate]: edit Xray's con
 caught '.outbounds += [{tag: "direct", protocol: "freedom"}]' "a freedom outbound"
 caught '.outbounds[0].protocol = "freedom"' "a freedom outbound"
 # The rig runs resolve=gateway, the default: DoH through the upstream, which
-# is handed addresses only. Each edit breaks that one way. A release from
-# before the parameter has no DNS of its own to break.
-if sudo morzer config list 2>/dev/null | grep -qw resolve; then
-  caught '.dns.servers = ["1.1.1.1"]' "DNS other than DoH"
-  caught '.dns.servers = ["https+local://1.1.1.1/dns-query"]' "DNS other than DoH"
-  caught 'del(.outbounds[0].targetStrategy)' "can still hand it a name"
-  caught '.outbounds[0].targetStrategy = "UseIPv4"' "can still hand it a name"
-  caught 'del(.dns)' "resolves names with no DNS"
-  caught 'del(.dns) | del(.outbounds[0].targetStrategy) | .routing.domainStrategy = "IPIfNonMatch"' "resolves names with no DNS"
-fi
+# is handed addresses only. Each edit breaks that one way.
+caught '.dns.servers = ["1.1.1.1"]' "DNS other than DoH"
+caught '.dns.servers = ["https+local://1.1.1.1/dns-query"]' "DNS other than DoH"
+caught 'del(.outbounds[0].targetStrategy)' "can still hand it a name"
+caught '.outbounds[0].targetStrategy = "UseIPv4"' "can still hand it a name"
+caught 'del(.dns)' "resolves names with no DNS"
+caught 'del(.dns) | del(.outbounds[0].targetStrategy) | .routing.domainStrategy = "IPIfNonMatch"' "resolves names with no DNS"
 caught '.routing.rules += [{network: "tcp", outboundTag: "block"}]' "last routing rule"
 caught '(.inbounds[] | select(.tag == "probe")).listen = "0.0.0.0"' "listens beyond loopback"
 caught '(.inbounds[] | select(.tag == "reality")).settings.decryption = "none"' "no VLESS decryption"
 caught '(.inbounds[] | select(.tag == "xhttp")).settings.flow = "xtls-rprx-vision"' "sets a flow on XHTTP"
 caught '.inbounds += [{tag: "debug", listen: "127.0.0.1", port: 9999, protocol: "http"}]' "unexpected inbounds"
-if sudo grep -q '"title-ip"' "${config}"; then
-  caught '(.inbounds[] | select(.tag == "title-ip")).settings.followRedirect = true' "is not a forward to one fixed host"
-fi
+caught '(.inbounds[] | select(.tag == "title-ip")).settings.followRedirect = true' "is not a forward to one fixed host"
 caught '.outbounds[0].settings.address = "proxy.example"' "not a SOCKS hop to the gate"
 caught '(.inbounds[] | select(.tag == "public-tls")).settings.address = "1.1.1.1"' "forwards public-tls to 1.1.1.1" gate
 caught '.routing.rules = [{network: "tcp,udp", outboundTag: "inside"}] + .routing.rules' "out directly" gate
 caught '.inbounds += [{tag: "debug", listen: "0.0.0.0", port: 9999, protocol: "http"}]' "unexpected inbounds" gate
 caught '.routing.rules |= .[:-1]' "does not block what its rules leave" gate
-if sudo grep -q '^  upstream_mode:$' "${release}/manifest.yaml"; then
-  caught '.routing.balancers[0].selector = ["inside"]' "not upstreams lines" gate
-  caught '.routing.balancers[0].fallbackTag = "inside"' "falls back to inside" gate
-  caught '.routing.rules = [{network: "tcp,udp", balancerTag: "egress"}] + .routing.rules' "through a balancer" gate
-fi
+caught '.routing.balancers[0].selector = ["inside"]' "not upstreams lines" gate
+caught '.routing.balancers[0].fallbackTag = "inside"' "falls back to inside" gate
+caught '.routing.rules = [{network: "tcp,udp", balancerTag: "egress"}] + .routing.rules' "through a balancer" gate
 echo "25-policy.sh: each injected violation is named"
 
 # The rig's upstreams line is an HTTP proxy, which drops UDP: upstream_udp=true
 # with it is a violation.
-if sudo grep -qF 'which drops UDP' "${release}/hooks/policy"; then
-  out=$(sudo env DOTDASH_RELEASE_DIR="${release}" DOTDASH_PARAM_HTTPS_PORT=443 DOTDASH_COMPOSE_PROJECT=dotdash \
-    DOTDASH_PARAM_UPSTREAM_UDP=true "${release}/hooks/policy" 2>&1) && die "policy passes upstream_udp=true with an HTTP proxy line"
-  grep -qF "are an HTTP proxy, which drops UDP" <<<"${out}" ||
-    die "policy failed on upstream_udp=true, but not on the HTTP proxy line: ${out}"
-  echo "25-policy.sh: upstream_udp=true with an HTTP proxy line is named"
-fi
+out=$(sudo env DOTDASH_RELEASE_DIR="${release}" DOTDASH_PARAM_HTTPS_PORT=443 DOTDASH_COMPOSE_PROJECT=dotdash \
+  DOTDASH_PARAM_UPSTREAM_UDP=true "${release}/hooks/policy" 2>&1) && die "policy passes upstream_udp=true with an HTTP proxy line"
+grep -qF "are an HTTP proxy, which drops UDP" <<<"${out}" ||
+  die "policy failed on upstream_udp=true, but not on the HTTP proxy line: ${out}"
+echo "25-policy.sh: upstream_udp=true with an HTTP proxy line is named"
 
 # A direct line would resolve devices' names in the gate, where xray, gate
 # and the like name this machine's containers: resolve=upstream with one is a

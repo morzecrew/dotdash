@@ -10,11 +10,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -q "or direct for this machine" /opt/dotdash/current/secrets.schema.yaml; then
-  echo "${0##*/}: skipped, the installed release predates direct lines"
-  exit 0
-fi
-
 log=/rig/upstream-log/access.log
 carried() { sudo sh -c "cat ${log} 2>/dev/null | wc -l"; }
 

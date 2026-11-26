@@ -12,47 +12,15 @@ permissions: {}
 
 jobs:
   retention:
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [dotdash-server, dotdash-canary, dotdash-relay, dotdash-client, dotdash-acme-dns]
     # The package API is reached with GH_PAT, not GITHUB_TOKEN.
     permissions: {}
     uses: morzecrew/bundle-ci/.github/workflows/retention.yml@6360c44fecddb64b29d176ea2f935b7e8a8f6916 # v0.12.2
     with:
-      package: dotdash-server
-      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
-    secrets:
-      token: ${{ secrets.GH_PAT }}
-
-  canary:
-    permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@6360c44fecddb64b29d176ea2f935b7e8a8f6916 # v0.12.2
-    with:
-      package: dotdash-canary
-      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
-    secrets:
-      token: ${{ secrets.GH_PAT }}
-
-  relay:
-    permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@6360c44fecddb64b29d176ea2f935b7e8a8f6916 # v0.12.2
-    with:
-      package: dotdash-relay
-      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
-    secrets:
-      token: ${{ secrets.GH_PAT }}
-
-  client:
-    permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@6360c44fecddb64b29d176ea2f935b7e8a8f6916 # v0.12.2
-    with:
-      package: dotdash-client
-      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
-    secrets:
-      token: ${{ secrets.GH_PAT }}
-
-  acme-dns:
-    permissions: {}
-    uses: morzecrew/bundle-ci/.github/workflows/retention.yml@6360c44fecddb64b29d176ea2f935b7e8a8f6916 # v0.12.2
-    with:
-      package: dotdash-acme-dns
+      package: ${{ matrix.package }}
       runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
     secrets:
       token: ${{ secrets.GH_PAT }}
