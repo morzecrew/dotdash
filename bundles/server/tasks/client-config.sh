@@ -94,10 +94,13 @@ kcp_masks() { # <seed> <header> [open]: an mKCP outbound's finalmask list
   [ "$2" = none ] || printf ', {"type": "mkcp-legacy", "settings": {"header": "%s"}}' "$2"
   [ "${3:-none}" != quic ] || printf ', %s' "$kcp_noise"
 }
-fm_enc() { # <seed> <header> <open>: the finalmask object, url-encoded for a link's fm=
-  printf '{"udp": [%s]}' "$(kcp_masks "$1" "$2" "$3")" | sed \
+pct() { # <JSON of dotdash's own>: url-encoded for a link, what JSON holds and a URL may not
+  printf '%s' "$1" | sed \
     -e 's/%/%25/g' -e 's/{/%7B/g' -e 's/}/%7D/g' -e 's/"/%22/g' \
     -e 's/:/%3A/g' -e 's/,/%2C/g' -e 's/\[/%5B/g' -e 's/\]/%5D/g' -e 's/ /%20/g'
+}
+fm_enc() { # <seed> <header> <open>: the finalmask object, url-encoded for a link's fm=
+  pct "$(printf '{"udp": [%s]}' "$(kcp_masks "$1" "$2" "$3")")"
 }
 enc=$(/opt/xray/xray-entrypoint vless-encryption /run/secrets/vless_seed)
 path=$(cat /run/secrets/xhttp_path)
@@ -137,10 +140,13 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # on the CDN path: more of its CDN hosts, whose links upload in 4 KiB GETs.
 # A name may carry a path, which its links take in place of the CDN path: a
 # gateway's own, which it turns back into the relay's on the way.
-# Each becomes "<host> <site> <key> <sid> <enc> <own-site|-> <path|-> <kcp|->
-# <cdn hosts, comma-separated, the origin's among them|-> <cdn-only|-> <off
-# paths, comma-separated|-> <split|-> <hy2 port|-> <name|-> <cdn path|->
-# <standby|-> <origin hosts, comma-separated|->".
+# Each becomes a row of the columns in cols, "-" for a field it lacks: kp, kh,
+# ks and ko kcp='s port, header, seed and opener; d its CDN hosts, the
+# origin's among them, comma-separated, which pick then cuts down to a
+# device's, and dall all of them; rn its route, which its links are named by;
+# or its origin hosts. awk reads $2 the site, $6 own-site, $12 the CDN hosts,
+# $13 cdn-only and $19 standby.
+cols='h s k i e o p kp kh ks ko d only off sp hy rn cp sb or dall'
 # fronts_ok <list>: whether it is "<host>[/<path>]", comma-separated.
 fronts_ok() {
   case $1 in '' | ,* | *, | *,,*) return 1 ;; esac
@@ -150,6 +156,7 @@ fronts_ok() {
     case ${fe#"$fh"} in *[!A-Za-z0-9._~/-]*) return 1 ;; esac
   done
 }
+# shellcheck disable=SC2030 # its columns, which the readers of the rows name too
 all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   n=$((n + 1))
   case $line in '' | '#'*) continue ;; esac
@@ -183,15 +190,17 @@ all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
     echo "relays: line $n: its $why is malformed; left out" >&2
     continue
   fi
-  # kcp=<port>,<header>,<seed>[,quic], whole.
+  # kcp=<port>,<header>,<seed>[,quic], whole, in its parts.
+  kp=- kh=- ks=- ko=-
   case $c in -) ;; *)
-    kh=${c#*,} ks=${c#*,*,} ok=true
-    port_ok "${c%%,*}" || ok=false
-    case ${kh%%,*} in none | dtls | srtp | utp | wechat | wireguard) ;; *) ok=false ;; esac
-    case ${ks%,quic} in '' | *[!0-9a-f]*) ok=false ;; esac
+    kp=${c%%,*}; kh=${c#*,}; ks=${kh#*,}; kh=${kh%%,*}; ko=none ok=true
+    case $ks in *,quic) ks=${ks%,quic} ko=quic ;; esac
+    port_ok "$kp" || ok=false
+    case $kh in none | dtls | srtp | utp | wechat | wireguard) ;; *) ok=false ;; esac
+    case $ks in '' | *[!0-9a-f]*) ok=false ;; esac
     $ok || {
       echo "relays: the kcp= field of $1 is not <port>,<header>,<seed>[,<open>]; no mKCP link through it" >&2
-      c=-; } ;;
+      kp=-; } ;;
   esac
   o=${6:-} p=${7:-}
   if [ "$o" != own-site ]; then o='' p=''; fi
@@ -224,7 +233,7 @@ all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   esac
   case $x in *[!a-z0-9,-]*) echo "relays: the off= field of $1 is not <path>[,<path>]; ignored" >&2; x=- ;; esac
   case ,$x, in ,-, | ,,) x=- ;; esac
-  case ,$x, in *,mkcp,*) c=- ;; esac
+  case ,$x, in *,mkcp,*) kp=- ;; esac
   case ,$x, in *,hysteria2,*) hy=- ;; esac
   for y in $(printf '%s' "$x" | tr ',' ' '); do
     case $y in - | reality | xhttp | mkcp | hysteria2) ;; *) echo "relays: the off= field of $1 names $y, not reality, xhttp, mkcp or hysteria2; ignored" >&2 ;; esac
@@ -244,8 +253,12 @@ all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
     esac ;;
   esac
   taken="${taken:-} $nm"
-  echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $c $d $only $x $sp $hy $nm $cp $sb $or"
+  echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $kp $kh $ks $ko $d $only $x $sp $hy $nm $cp $sb $or $d"
 done)
+# A relay's route, unnamed: "relay", numbered where there are several by its
+# place among the lines (a host's first), the same on every device.
+[ -z "$all_relays" ] || all_relays=$(printf '%s\n' "$all_relays" | awk '{ r[NR] = $0; if (!($1 in at)) at[$1] = NR }
+  END { for (n = 1; n <= NR; n++) { $0 = r[n]; if ($17 == "-") $17 = (NR > 1 ? "relay%20" at[$1] : "relay"); print } }')
 
 # The local CDNs in front of this server (the cdn_hosts parameter), each
 # fronting https://${DOMAIN}.
@@ -266,10 +279,11 @@ sees() { [ -z "$mine" ] || has "$1" "$mine" || ! has "$1" "$pools"; }
 # a desktop moves the most. So no cdn_hosts, no relay's cdn= or origin=, and
 # no cdn-only relay, which would give it nothing. Any other kind, or none,
 # gets them all.
+# shellcheck disable=SC2030,SC2031,SC2086,SC2154,SC2229 # read -r $cols sets each column
 pick() { # <device name> [<kind>]: the relays, CDN hosts and subscription relays it gets
   mine=
   [ -z "$1" ] || mine=$(printf '%s\n' "$pools" | awk -v m="$1" '{ for (i = 2; i <= NF; i++) if ($i == m) { print; next } }')
-  relays=$(printf '%s\n' "$all_relays" | while read -r h s k i e o p c d only off sp hy nm cp sb or; do
+  relays=$(printf '%s\n' "$all_relays" | while read -r $cols; do
     if [ -z "$h" ] || ! sees "$h"; then continue; fi
     if [ "${2:-}" = desktop ]; then
       [ "$only" != cdn-only ] || continue
@@ -279,18 +293,18 @@ pick() { # <device name> [<kind>]: the relays, CDN hosts and subscription relays
       d=$(for x in $(printf '%s' "$d" | tr ',' ' '); do if sees "${x%%/*}"; then printf '%s,' "$x"; fi; done)
       d=${d%,}
     fi
-    echo "$h $s $k $i $e $o $p $c ${d:--} $only $off $sp $hy $nm $cp $sb $or"
+    echo "$h $s $k $i $e $o $p $kp $kh $ks $ko ${d:--} $only $off $sp $hy $rn $cp $sb $or $dall"
   done)
   cdns=
   [ "${2:-}" = desktop ] || cdns=$(for h in $all_cdns; do if sees "$h"; then echo "$h"; fi; done)
   # The own-site relays' domains, where a device inside the restricted network
   # fetches its subscription; not a cdn-only one's, whose address stays out.
-  sub_relays=$(printf '%s\n' "$relays" | awk '$6 == "own-site" && $10 != "cdn-only" { print $2 }')
+  sub_relays=$(printf '%s\n' "$relays" | awk '$6 == "own-site" && $13 != "cdn-only" { print $2 }')
 }
 # A member that names nothing would leave its device in no pool, or its relay
 # or CDN host in none, and so seen by every device: say so.
 names=$(awk '$1 !~ /^#/ && NF > 1 { print $2 }' /run/secrets/vless_clients)
-relay_names=$(printf '%s\n' "$all_relays" | awk '{ print $1; if ($9 != "-") { gsub(",", "\n", $9); gsub("/[^\n]*", "", $9); print $9 } }')
+relay_names=$(printf '%s\n' "$all_relays" | awk '{ print $1; if ($12 != "-") { gsub(",", "\n", $12); gsub("/[^\n]*", "", $12); print $12 } }')
 for m in $(printf '%s\n' "$pools" | awk '{ $1 = ""; print }'); do
   printf '%s\n%s\n%s\n' "$names" "$all_cdns" "$relay_names" | grep -qxF -- "$m" ||
     echo "pools: $m is no device name, relay host or CDN host" >&2
@@ -301,18 +315,22 @@ done
 # headers at about 20 KB (431 past it), so a GET carries 8 KiB at most: some
 # 11 KB once base64-encoded, in one header, with room for the rest. The
 # link's extra is the five keys a phone's importer was seen to take, with
-# uplinkChunkSize a string; this is it percent-encoded.
-cdn_extra='%7B%22scMaxEachPostBytes%22%3A8192%2C%22scMinPostsIntervalMs%22%3A10%2C%22uplinkChunkSize%22%3A%2216384%22%2C%22uplinkDataPlacement%22%3A%22header%22%2C%22uplinkHTTPMethod%22%3A%22GET%22%7D'
+# uplinkChunkSize a string, percent-encoded; cdn_outbound sets the same.
+link_extra() { # <chunk> <post> [<disguise>]: a CDN link's extra
+  pct "{\"scMaxEachPostBytes\":$2,\"scMinPostsIntervalMs\":10,\"uplinkChunkSize\":\"$1\",\"uplinkDataPlacement\":\"header\",\"uplinkHTTPMethod\":\"GET\"${3:+,$(printf '%s' "$3" | sed 's/": /":/g; s/, "/,"/g')}}"
+}
+cdn_extra=$(link_extra 16384 8192)
 # Through a relay's CDN path (cdnpath=), the same, disguised as its CDN
 # inbound expects (the relay's xray.json.tmpl; a mismatch is a 400): the
 # session, sequence and padding in cookies, the padding a random token, the
 # upload under X-Part, so a CDN's logs show one path and no X-Padding, no
 # Referer full of X and no X-Data.
 cdn_disguise='"uplinkDataKey": "X-Part", "xPaddingBytes": "64-256", "xPaddingObfsMode": true, "xPaddingMethod": "tokenish", "xPaddingPlacement": "cookie", "xPaddingKey": "csrftoken", "sessionIDPlacement": "cookie", "sessionIDKey": "sessionid", "seqPlacement": "cookie", "seqKey": "seq"'
+cdn_disguised_extra=$(link_extra 16384 8192 "$cdn_disguise")
 # Through a rented CDN at a relay's door (origin=): plain, as its edges
 # forward headers past which 8 KiB uploads fail, so 4 KiB each, in 4 KiB
-# chunks; percent-encoded as above.
-origin_extra='%7B%22scMaxEachPostBytes%22%3A4096%2C%22scMinPostsIntervalMs%22%3A10%2C%22uplinkChunkSize%22%3A%224096%22%2C%22uplinkDataPlacement%22%3A%22header%22%2C%22uplinkHTTPMethod%22%3A%22GET%22%7D'
+# chunks.
+origin_extra=$(link_extra 4096 4096)
 # cdn_extra: "<host> <JSON object>", the object across lines if need be: the
 # XHTTP extra a CDN or a gateway in front asks for, as it gives it. Links and
 # outbounds through that host carry it whole in place of dotdash's own, which
@@ -335,10 +353,27 @@ cdn_extras=$(printf '%s\n' "${CDN_EXTRA:-none}" | awk '
     { echo "cdn_extra: Xray refuses the extra for $h; dotdash's own through it" >&2; continue; }
   echo "$h $j"
 done)
-extra_of() { printf '%s\n' "$cdn_extras" | awk -v h="$1" '$1 == h { sub(/^[^ ]+ /, ""); print; exit }'; }
 # Percent-encoded whole, for a link.
 uri() { printf '%s' "$1" | od -An -v -tx1 | tr -d ' \n' | sed 's/../%&/g'; }
-cdn_disguised_extra='%7B%22scMaxEachPostBytes%22%3A8192%2C%22scMinPostsIntervalMs%22%3A10%2C%22uplinkChunkSize%22%3A%2216384%22%2C%22uplinkDataPlacement%22%3A%22header%22%2C%22uplinkHTTPMethod%22%3A%22GET%22%2C%22uplinkDataKey%22%3A%22X-Part%22%2C%22xPaddingBytes%22%3A%2264-256%22%2C%22xPaddingObfsMode%22%3Atrue%2C%22xPaddingMethod%22%3A%22tokenish%22%2C%22xPaddingPlacement%22%3A%22cookie%22%2C%22xPaddingKey%22%3A%22csrftoken%22%2C%22sessionIDPlacement%22%3A%22cookie%22%2C%22sessionIDKey%22%3A%22sessionid%22%2C%22seqPlacement%22%3A%22cookie%22%2C%22seqKey%22%3A%22seq%22%7D'
+# Each host's object (extra_<n>) and the same for a link (extra_uri_<n>),
+# made once here, not for every device.
+xn=0 extra_hosts=
+while read -r h j; do
+  [ -n "$h" ] || continue
+  xn=$((xn + 1)) extra_hosts="$extra_hosts $h"
+  eval "extra_$xn=\$j extra_uri_$xn=\$(uri \"\$j\")"
+done <<EOF
+$cdn_extras
+EOF
+extra_of() { # <host>: its cdn_extra object in ex, for a link in exu; empty for a host it names not
+  ex= exu= xn=0
+  for eh in $extra_hosts; do
+    xn=$((xn + 1))
+    [ "$eh" = "$1" ] || continue
+    eval "ex=\$extra_$xn exu=\$extra_uri_$xn"
+    return 0
+  done
+}
 
 # support-x25519mlkem768: mihomo strips the X25519MLKEM768 key share unless a
 # link asks for it, and Xray's REALITY refuses a client without it. Other
@@ -360,117 +395,114 @@ cdn_disguised_extra='%7B%22scMaxEachPostBytes%22%3A8192%2C%22scMinPostsIntervalM
 # the same on every device, whichever of them its pools give it, and no host
 # name shows in the app.
 sep='%20%C2%B7%20'
-# Each prints " <n>", percent-encoded, or nothing when its list holds one.
-relay_no() { printf '%s\n' "$all_relays" | awk -v h="$1" '$1 == h && !n { n = NR } END { if (NR > 1) printf "%%20%d", n }'; }
 # is_origin <origin hosts|-> <cdn host>: whether that CDN host is one of the
 # relay's door's (origin=), whose links upload in 4 KiB GETs.
 is_origin() { case ,$1, in *,"$2",*) return 0 ;; esac; return 1; }
-relay_cdn_no() { # <relay host> <cdn host>
-  printf '%s\n' "$all_relays" | awk -v h="$1" -v c="$2" '$1 == h { n = split($9, a, ","); if (n > 1) for (i = 1; i <= n; i++) if (a[i] == c) printf "%%20%d", i; exit }'
-}
+# " <n>", percent-encoded, or nothing when cdn_hosts holds one.
 cdn_no() { printf '%s\n' "$all_cdns" | awk -v h="$1" '$0 == h && !n { n = NR } END { if (NR > 1) printf "%%20%d", n }'; }
 
-links() { # <id> <device> <server> <route>: each named "<route> · <transport>"
+# One link printer per transport, for the servers and the relays alike: <id>
+# <address> <port> <encryption> and the transport's own, then the route the
+# link is named by and where it goes, as its description says it.
+link_xhttp() { # <id> <address> <port> <encryption> <name> <path> <route> <where>
   cat <<EOF
-XHTTP over TLS via $3 (for a CDN in front: replace the address with the CDN's name):
-vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&security=tls&sni=$3&host=$3&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=auto#$4${sep}xhttp
+XHTTP over TLS $8:
+vless://$1@$2:$3?encryption=$4&security=tls&sni=$5&host=$5&alpn=h2&fp=chrome&type=xhttp&path=%2F$6&mode=auto#$7${sep}xhttp
 
 EOF
+}
+link_reality() { # <id> <address> <port> <encryption> <name> <public key> <short id> <route> <where>
+  cat <<EOF
+REALITY $9 (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
+vless://$1@$2:$3?encryption=$4&flow=xtls-rprx-vision&security=reality&sni=$5&fp=chrome&pbk=$6&sid=$7&support-x25519mlkem768=true&type=tcp#$8${sep}reality
+
+EOF
+}
+link_kcp() { # <id> <address> <port> <encryption> <header> <seed> <open> <route> <where>
+  if [ "$7" = quic ]; then ko_say=', QUIC-shaped opening' kq="fm=$(fm_enc "$6" "$5" quic)"
+  else ko_say= kq="headerType=$5&seed=$6"; fi
+  cat <<EOF
+mKCP $9, on UDP port $3${ko_say} (v2rayN, v2rayNG):
+vless://$1@$2:$3?encryption=$4&type=kcp&${kq}#$8${sep}kcp
+
+EOF
+}
+link_hy2() { # <id> <address> <port> <name> <route> <where>
+  cat <<EOF
+Hysteria2 $6, on UDP port $3 (Happ, v2rayN, v2rayNG, Hiddify, Streisand, mihomo, sing-box):
+hysteria2://$1@$2:$3/?sni=$4#$5${sep}hy2
+
+EOF
+}
+link_cdn() { # <id> <cdn> <encryption> <path> <origin|disguised|-> <route> <number> <in front of>: XHTTP through a CDN, as cdn_outbound
+  extra_of "$2"
+  case $5 in origin) le=$origin_extra ;; disguised) le=$cdn_disguised_extra ;; *) le=$cdn_extra ;; esac
+  [ -z "$ex" ] || le=$exu
+  case $4 in */*) lp=$(printf '%s' "$4" | sed 's#/#%2F#g') ;; *) lp=$4 ;; esac
+  cat <<EOF
+XHTTP through the CDN $2$8 (v2rayN, v2rayNG, Happ):
+vless://$1@$2:443?encryption=$3&security=tls&sni=$2&host=$2&alpn=h2&fp=chrome&type=xhttp&path=%2F${lp}&mode=packet-up&extra=${le}#$6${sep}cdn$7
+
+EOF
+}
+
+links() { # <id> <device> <server> <route>: each named "<route> · <transport>"
+  link_xhttp "$1" "$3" "$HTTPS_PORT" "$enc" "$3" "$path" "$4" "via $3 (for a CDN in front: replace the address with the CDN's name)"
   [ -z "$xr_port" ] || cat <<EOF
 XHTTP with REALITY via $3, on port ${xr_port} (v2rayN, v2rayNG, mihomo):
 vless://$1@$3:${xr_port}?encryption=${enc}&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=xhttp&path=%2F${path}&mode=auto#$4${sep}xhttp%2Breality
 
 EOF
-  cat <<EOF
-REALITY via $3 (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
-vless://$1@$3:${HTTPS_PORT}?encryption=${enc}&flow=xtls-rprx-vision&security=reality&sni=$3&fp=chrome&pbk=${pbk}&sid=${sid}&support-x25519mlkem768=true&type=tcp#$4${sep}reality
-
-EOF
-  if [ -n "$kcp_port" ] && [ "$kcp_open" = quic ]; then cat <<EOF
-mKCP via $3, on UDP port ${kcp_port}, QUIC-shaped opening (v2rayN, v2rayNG):
-vless://$1@$3:${kcp_port}?encryption=${enc}&type=kcp&fm=$(fm_enc "$kcp_seed" "$kcp_header" quic)#$4${sep}kcp
-
-EOF
-  elif [ -n "$kcp_port" ]; then cat <<EOF
-mKCP via $3, on UDP port ${kcp_port} (v2rayN, v2rayNG):
-vless://$1@$3:${kcp_port}?encryption=${enc}&type=kcp&headerType=${kcp_header}&seed=${kcp_seed}#$4${sep}kcp
-
-EOF
-  fi
-  [ -z "$hy2_port" ] || cat <<EOF
-Hysteria2 via $3, on UDP port ${hy2_port} (Happ, v2rayN, v2rayNG, Hiddify, Streisand, mihomo, sing-box):
-hysteria2://$1@$3:${hy2_port}/?sni=$3#$4${sep}hy2
-
-EOF
+  link_reality "$1" "$3" "$HTTPS_PORT" "$enc" "$3" "$pbk" "$sid" "$4" "via $3"
+  [ -z "$kcp_port" ] || link_kcp "$1" "$3" "$kcp_port" "$enc" "$kcp_header" "$kcp_seed" "$kcp_open" "$4" "via $3"
+  [ -z "$hy2_port" ] || link_hy2 "$1" "$3" "$hy2_port" "$3" "$4" "via $3"
 }
 
 # blocked <off field> <path>: whether a relay's off= field names the path.
 blocked() { case ,$1, in *,"$2",*) ;; *) return 1 ;; esac; }
 
+# relay_cdn <cdn host[/path]>: a relay row's CDN host's address (xh), path
+# (xp) and shape (kind): through its door (origin=) plain in 4 KiB, by a path
+# of the name's own where it has one; else by its CDN path, disguised, where it
+# names one (cdnpath=); else by its XHTTP path, plain.
+# shellcheck disable=SC2031 # the row its caller read
+relay_cdn() {
+  xh=${1%%/*} xp=$p kind=-
+  if is_origin "$or" "$1"; then
+    kind=origin xp=$cp
+    [ "$xh" = "$1" ] || xp=${1#*/}
+  elif [ "$cp" != - ]; then kind=disguised xp=$cp; fi
+}
+
 # A relay takes REALITY on 443 under its neighbour site's name, with keys of its
 # own, and carries the device on to this server as its own client.
+# shellcheck disable=SC2031,SC2086,SC2154,SC2229 # read -r $cols sets each column
 relay_links() { # <id> <device> <normal|standby>: per relay of that group, "<route> · reality", with "xhttp" and each CDN's "cdn[ <m>]" before it through an own-site one, "hy2" and "kcp" after it with Hysteria2 and mKCP
-  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off _ hy nm cp sb or; do
+  printf '%s\n' "$relays" | while read -r $cols; do
     [ -n "$h" ] || continue
     if [ "$sb" = standby ]; then [ "$3" = standby ] || continue; else [ "$3" = normal ] || continue; fi
-    if [ "$nm" != - ]; then rn=$nm; else rn="relay$(relay_no "$h")"; fi
-    # Its CDNs by their own path, disguised, where it names one.
-    xp=$p xe=$cdn_extra
-    [ "${cp:--}" = - ] || { xp=$cp xe=$cdn_disguised_extra; }
-    [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp || cat <<EOF
-XHTTP over TLS through the relay $h, behind its own site (v2rayN, v2rayNG, Happ):
-vless://$1@$h:443?encryption=$e&security=tls&sni=$s&host=$s&alpn=h2&fp=chrome&type=xhttp&path=%2F$p&mode=auto#${rn}${sep}xhttp
-
-EOF
-    [ "$d" = - ] || for x in $(printf '%s' "$d" | tr ',' ' '); do
-      xh=${x%%/*} lp=$xp le=$xe
-      ! is_origin "$or" "$x" || lp=$cp le=$origin_extra
-      [ "$xh" = "$x" ] || lp=$(printf '%s' "${x#*/}" | sed 's#/#%2F#g')
-      ex=$(extra_of "$xh")
-      [ -z "$ex" ] || le=$(uri "$ex")
-      cat <<EOF
-XHTTP through the CDN $xh, in front of the relay $h (v2rayN, v2rayNG, Happ):
-vless://$1@$xh:443?encryption=$e&security=tls&sni=$xh&host=$xh&alpn=h2&fp=chrome&type=xhttp&path=%2F$lp&mode=packet-up&extra=${le}#${rn}${sep}cdn$(relay_cdn_no "$h" "$x")
-
-EOF
+    [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp ||
+      link_xhttp "$1" "$h" 443 "$e" "$s" "$p" "$rn" "through the relay $h, behind its own site (v2rayN, v2rayNG, Happ)"
+    # The device's CDNs, each numbered by its place among all the relay's.
+    m=0
+    [ "$d" = - ] || for x in $(printf '%s' "$dall" | tr ',' ' '); do
+      m=$((m + 1))
+      case ,$d, in *,"$x",*) ;; *) continue ;; esac
+      no=
+      case $dall in *,*) no="%20$m" ;; esac
+      relay_cdn "$x"
+      link_cdn "$1" "$xh" "$e" "$xp" "$kind" "$rn" "$no" ", in front of the relay $h"
     done
     [ "$only" != cdn-only ] || continue
-    blocked "$off" reality || cat <<EOF
-REALITY through the relay $h (v2rayN, v2rayNG, Hiddify, Happ, Streisand, mihomo):
-vless://$1@$h:443?encryption=$e&flow=xtls-rprx-vision&security=reality&sni=$s&fp=chrome&pbk=$k&sid=$i&support-x25519mlkem768=true&type=tcp#${rn}${sep}reality
-
-EOF
-    [ "$hy" = - ] || cat <<EOF
-Hysteria2 through the relay $h, on UDP port $hy (Happ, v2rayN, v2rayNG, Hiddify, Streisand, mihomo, sing-box):
-hysteria2://$1@$h:$hy/?sni=$s#${rn}${sep}hy2
-
-EOF
-    [ "$c" != - ] || continue
-    kport=${c%%,*}; r=${c#*,}; kheader=${r%%,*}; r2=${r#*,}; kseed=${r2%%,*}
-    kopen=none; case $r2 in *,*) kopen=${r2#*,} ;; esac
-    if [ "$kopen" = quic ]; then cat <<EOF
-mKCP through the relay $h, on UDP port ${kport}, QUIC-shaped opening (v2rayN, v2rayNG):
-vless://$1@$h:${kport}?encryption=$e&type=kcp&fm=$(fm_enc "$kseed" "$kheader" quic)#${rn}${sep}kcp
-
-EOF
-    else cat <<EOF
-mKCP through the relay $h, on UDP port ${kport} (v2rayN, v2rayNG):
-vless://$1@$h:${kport}?encryption=$e&type=kcp&headerType=${kheader}&seed=${kseed}#${rn}${sep}kcp
-
-EOF
-    fi
+    blocked "$off" reality || link_reality "$1" "$h" 443 "$e" "$s" "$k" "$i" "$rn" "through the relay $h"
+    [ "$hy" = - ] || link_hy2 "$1" "$h" "$hy" "$s" "$rn" "through the relay $h"
+    [ "$kp" = - ] || link_kcp "$1" "$h" "$kp" "$e" "$kh" "$ks" "$ko" "$rn" "through the relay $h"
   done
 }
 
 cdn_links() { # <id> <device>: one per CDN, named "server · cdn[ <n>]"
   for h in $cdns; do
-    le=$cdn_extra ex=$(extra_of "$h")
-    [ -z "$ex" ] || le=$(uri "$ex")
-    cat <<EOF
-XHTTP through the CDN $h (v2rayN, v2rayNG, Happ):
-vless://$1@$h:443?encryption=${enc}&security=tls&sni=$h&host=$h&alpn=h2&fp=chrome&type=xhttp&path=%2F${path}&mode=packet-up&extra=${le}#server${sep}cdn$(cdn_no "$h")
-
-EOF
+    link_cdn "$1" "$h" "$enc" "$path" - server "$(cdn_no "$h")" ''
   done
 }
 
@@ -481,13 +513,16 @@ EOF
 # lossy link never trips it (dotdash-lab #57).
 uto=', "sockopt": {"tcpUserTimeout": 15000}'
 
-cdn_outbound() { # <tag> <id> <cdn> <encryption> <path> [disguised|origin|-] [<cdn_extra's JSON>]: XHTTP through a CDN, uploading by GET with the data in headers
+# One outbound printer per transport, as the link printers: <tag> <id>
+# <address> <port> <encryption> and the transport's own.
+cdn_outbound() { # <tag> <id> <cdn> <encryption> <path> [disguised|origin|-]: XHTTP through a CDN, uploading by GET with the data in headers, or as cdn_extra has it
   more='' chunk=16384 post=8192
   [ "${6:-}" != disguised ] || more=", ${cdn_disguise}"
   [ "${6:-}" != origin ] || chunk=4096 post=4096
   xs="\"uplinkHTTPMethod\": \"GET\", \"uplinkDataPlacement\": \"header\", \"uplinkChunkSize\": ${chunk},
          \"scMaxEachPostBytes\": ${post}, \"scMinPostsIntervalMs\": 10${more}"
-  [ -z "${7:-}" ] || xs="\"extra\": $7"
+  extra_of "$3"
+  [ -z "$ex" ] || xs="\"extra\": $ex"
   cat <<EOF
     {"tag": "$1", "protocol": "vless",
      "settings": {"address": "$3", "port": 443, "id": "$2", "encryption": "$4"},
@@ -502,7 +537,7 @@ cdn_outbounds() { # <id>
   n=0
   for h in $cdns; do
     n=$((n + 1))
-    cdn_outbound "dotdash-cdn-$n" "$1" "$h" "${enc}" "${path}" - "$(extra_of "$h")"
+    cdn_outbound "dotdash-cdn-$n" "$1" "$h" "${enc}" "${path}" -
   done
 }
 
@@ -513,9 +548,47 @@ cdn_outbounds() { # <id>
 # so a browser goes over TCP inside the tunnel, as Vision would have it.
 mux='"mux": {"enabled": true, "concurrency": -1, "xudpConcurrency": 8, "xudpProxyUDP443": "reject"}'
 
+ob_reality() { # <tag> <id> <address> <port> <encryption> <name> <public key> <short id> <hello split|>
+  cat <<EOF
+    {"tag": "$1", "protocol": "vless",
+     "settings": {"address": "$3", "port": $4, "id": "$2", "encryption": "$5", "flow": "xtls-rprx-vision"},
+     "streamSettings": {"network": "raw", "security": "reality",
+       "realitySettings": {"serverName": "$6", "fingerprint": "chrome", "password": "$7", "shortId": "$8"}$9${uto}},
+     ${mux}},
+EOF
+}
+ob_xhttp() { # <tag> <id> <address> <port> <encryption> <name> <path>
+  cat <<EOF
+    {"tag": "$1", "protocol": "vless",
+     "settings": {"address": "$3", "port": $4, "id": "$2", "encryption": "$5"},
+     "streamSettings": {"network": "xhttp", "security": "tls",
+       "tlsSettings": {"serverName": "$6", "alpn": ["h2"], "fingerprint": "chrome"},
+       "xhttpSettings": {"path": "/$7", "host": "$6", "mode": "auto"}${uto}}},
+EOF
+}
+ob_kcp() { # <tag> <id> <address> <port> <encryption> <header> <seed> <open>
+  cat <<EOF
+    {"tag": "$1", "protocol": "vless",
+     "settings": {"address": "$3", "port": $4, "id": "$2", "encryption": "$5"},
+     "streamSettings": {"network": "kcp", "finalmask": {"udp": [$(kcp_masks "$7" "$6" "$8")]}}},
+EOF
+}
+# Hysteria2 under the site's own name, keepalives every 10 s.
+ob_hy2() { # <tag> <id> <address> <port> <name>
+  cat <<EOF
+    {"tag": "$1", "protocol": "hysteria",
+     "settings": {"version": 2, "address": "$3", "port": $4},
+     "streamSettings": {"network": "hysteria", "security": "tls",
+       "tlsSettings": {"serverName": "$5", "alpn": ["h3"]},
+       "hysteriaSettings": {"version": 2, "auth": "$2"},
+       "finalmask": {"quicParams": {"keepAlivePeriod": 10}}}},
+EOF
+}
+
+# shellcheck disable=SC2031,SC2086,SC2154,SC2229 # read -r $cols sets each column
 relay_outbounds() { # <id> <own|cdn> <normal|standby>: that group's relays' own outbounds, or their CDNs'
   n=0
-  printf '%s\n' "$relays" | while read -r h s k i e _ p c d only off sp hy _ cp sb or; do
+  printf '%s\n' "$relays" | while read -r $cols; do
     [ -n "$h" ] || continue
     n=$((n + 1))
     # standby: outside dotdash-, which the balancer and the checks take.
@@ -528,51 +601,20 @@ relay_outbounds() { # <id> <own|cdn> <normal|standby>: that group's relays' own 
         # dotdash-cdn-, as the servers' CDNs: apart from the relay's own
         # dotdash-relay-<n>, so a client can leave every CDN out by prefix
         # (dotdash-client's cdn=skip), Xray's only way to pick outbounds.
-        xh=${x%%/*} ex=$(extra_of "${x%%/*}")
-        if is_origin "$or" "$x"; then
-          xp=$cp
-          [ "$xh" = "$x" ] || xp=${x#*/}
-          cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$xh" "$e" "$xp" origin "$ex"
-        elif [ "${cp:--}" = - ]; then cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$x" "$e" "$p" - "$ex"
-        else cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$x" "$e" "$cp" disguised "$ex"; fi
+        relay_cdn "$x"
+        cdn_outbound "${pre}-cdn-relay-$n-$m" "$1" "$xh" "$e" "$xp" "$kind"
       done
       continue
     fi
     # split: REALITY through it with its hello split, even with off=reality.
     rhello=
     [ "$sp" != split ] || rhello=$split_hello
-    [ "$only" = cdn-only ] || { blocked "$off" reality && [ "$sp" != split ]; } || cat <<EOF
-    {"tag": "${pre}-relay-$n", "protocol": "vless",
-     "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e", "flow": "xtls-rprx-vision"},
-     "streamSettings": {"network": "raw", "security": "reality",
-       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "$k", "shortId": "$i"}${rhello}${uto}},
-     ${mux}},
-EOF
-    [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp || cat <<EOF
-    {"tag": "${pre}-relay-$n-xhttp", "protocol": "vless",
-     "settings": {"address": "$h", "port": 443, "id": "$1", "encryption": "$e"},
-     "streamSettings": {"network": "xhttp", "security": "tls",
-       "tlsSettings": {"serverName": "$s", "alpn": ["h2"], "fingerprint": "chrome"},
-       "xhttpSettings": {"path": "/$p", "host": "$s", "mode": "auto"}${uto}}},
-EOF
-    # Hysteria2 under the relay's own site's name, keepalives as the
-    # server's outbound has them.
-    [ "$hy" = - ] || [ "$only" = cdn-only ] || cat <<EOF
-    {"tag": "${pre}-relay-$n-hy2", "protocol": "hysteria",
-     "settings": {"version": 2, "address": "$h", "port": $hy},
-     "streamSettings": {"network": "hysteria", "security": "tls",
-       "tlsSettings": {"serverName": "$s", "alpn": ["h3"]},
-       "hysteriaSettings": {"version": 2, "auth": "$1"},
-       "finalmask": {"quicParams": {"keepAlivePeriod": 10}}}},
-EOF
-    [ "$c" != - ] && [ "$only" != cdn-only ] || continue
-    kport=${c%%,*}; r=${c#*,}; kheader=${r%%,*}; r2=${r#*,}; kseed=${r2%%,*}
-    kopen=none; case $r2 in *,*) kopen=${r2#*,} ;; esac
-    cat <<EOF
-    {"tag": "${pre}-relay-$n-kcp", "protocol": "vless",
-     "settings": {"address": "$h", "port": ${kport}, "id": "$1", "encryption": "$e"},
-     "streamSettings": {"network": "kcp", "finalmask": {"udp": [$(kcp_masks "$kseed" "$kheader" "$kopen")]}}},
-EOF
+    [ "$only" = cdn-only ] || { blocked "$off" reality && [ "$sp" != split ]; } ||
+      ob_reality "${pre}-relay-$n" "$1" "$h" 443 "$e" "$s" "$k" "$i" "$rhello"
+    [ "$p" = - ] || [ "$only" = cdn-only ] || blocked "$off" xhttp || ob_xhttp "${pre}-relay-$n-xhttp" "$1" "$h" 443 "$e" "$s" "$p"
+    [ "$hy" = - ] || [ "$only" = cdn-only ] || ob_hy2 "${pre}-relay-$n-hy2" "$1" "$h" "$hy" "$s"
+    [ "$kp" != - ] && [ "$only" != cdn-only ] || continue
+    ob_kcp "${pre}-relay-$n-kcp" "$1" "$h" "$kp" "$e" "$kh" "$ks" "$ko"
   done
 }
 
@@ -583,18 +625,8 @@ outbounds() { # <id>: the standby relays', then a REALITY and an XHTTP outbound 
   { relay_outbounds "$1" own standby; relay_outbounds "$1" cdn standby
   for s in $servers; do
     n=$((n + 1))
-    cat <<EOF
-    {"tag": "dotdash-$n-reality", "protocol": "vless",
-     "settings": {"address": "$s", "port": ${HTTPS_PORT}, "id": "$1", "encryption": "${enc}", "flow": "xtls-rprx-vision"},
-     "streamSettings": {"network": "raw", "security": "reality",
-       "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "${pbk}", "shortId": "${sid}"}${hello}${uto}},
-     ${mux}},
-    {"tag": "dotdash-$n-xhttp", "protocol": "vless",
-     "settings": {"address": "$s", "port": ${HTTPS_PORT}, "id": "$1", "encryption": "${enc}"},
-     "streamSettings": {"network": "xhttp", "security": "tls",
-       "tlsSettings": {"serverName": "$s", "alpn": ["h2"], "fingerprint": "chrome"},
-       "xhttpSettings": {"path": "/${path}", "host": "$s", "mode": "auto"}${uto}}},
-EOF
+    ob_reality "dotdash-$n-reality" "$1" "$s" "$HTTPS_PORT" "$enc" "$s" "$pbk" "$sid" "$hello"
+    ob_xhttp "dotdash-$n-xhttp" "$1" "$s" "$HTTPS_PORT" "$enc" "$s" "$path"
     [ -z "$xr_port" ] || cat <<EOF
     {"tag": "dotdash-$n-xhttp-reality", "protocol": "vless",
      "settings": {"address": "$s", "port": ${xr_port}, "id": "$1", "encryption": "${enc}"},
@@ -602,19 +634,8 @@ EOF
        "realitySettings": {"serverName": "$s", "fingerprint": "chrome", "password": "${pbk}", "shortId": "${sid}"},
        "xhttpSettings": {"path": "/${path}", "mode": "auto"}${uto}}},
 EOF
-    [ -z "$kcp_port" ] || cat <<EOF
-    {"tag": "dotdash-$n-kcp", "protocol": "vless",
-     "settings": {"address": "$s", "port": ${kcp_port}, "id": "$1", "encryption": "${enc}"},
-     "streamSettings": {"network": "kcp", "finalmask": {"udp": [$(kcp_masks "$kcp_seed" "$kcp_header" "$kcp_open")]}}},
-EOF
-    [ -z "$hy2_port" ] || cat <<EOF
-    {"tag": "dotdash-$n-hy2", "protocol": "hysteria",
-     "settings": {"version": 2, "address": "$s", "port": ${hy2_port}},
-     "streamSettings": {"network": "hysteria", "security": "tls",
-       "tlsSettings": {"serverName": "$s", "alpn": ["h3"]},
-       "hysteriaSettings": {"version": 2, "auth": "$1"},
-       "finalmask": {"quicParams": {"keepAlivePeriod": 10}}}},
-EOF
+    [ -z "$kcp_port" ] || ob_kcp "dotdash-$n-kcp" "$1" "$s" "$kcp_port" "$enc" "$kcp_header" "$kcp_seed" "$kcp_open"
+    [ -z "$hy2_port" ] || ob_hy2 "dotdash-$n-hy2" "$1" "$s" "$hy2_port" "$s"
   done; relay_outbounds "$1" own normal; cdn_outbounds "$1"; relay_outbounds "$1" cdn normal; } | sed '$ s/,$//'
 }
 
@@ -686,7 +707,7 @@ EOF
   # The standby relays' outbounds come first, where Xray sends what the
   # balancer can't place, so they take over only when no other answers; the
   # DNS tunnel's fallback would come before them, so it is left out then.
-  if [ -n "$(printf '%s\n' "$relays" | awk '$16 == "standby"')" ]; then
+  if [ -n "$(printf '%s\n' "$relays" | awk '$19 == "standby"')" ]; then
     last=", and the standby relays only when none answers"
     fallback=''
   elif [ -n "${XDNS_DOMAIN:-}" ]; then
