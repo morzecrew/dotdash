@@ -58,7 +58,8 @@ check() {
   kill "$client" 2>/dev/null || true
   wait "$client" 2>/dev/null || true
   [ -n "$why" ] || return 0
-  xray=$(grep -E '\[(Warning|Error)\]' /tmp/xray.log | tail -n1 | sed 's/^[^]]*\] \(\[[0-9]*\] \)\{0,1\}//' | cut -c1-300)
+  xray=$(grep -E '\[(Warning|Error)\]' /tmp/xray.log | grep -v '\] core: ' | tail -n1 |
+    sed 's/^[^]]*\] \(\[[0-9]*\] \)\{0,1\}//' | cut -c1-300)
   printf '%s' "${xray:-$why}"
 }
 trap 'kill "${client:-}" 2>/dev/null || true' EXIT
@@ -70,9 +71,9 @@ tls() { # <alpn>: the site's TLS, pinned to its certificate
   printf '"security": "tls", "tlsSettings": {"serverName": "%s", "alpn": ["%s"], "fingerprint": "chrome", "pinnedPeerCertSha256": "%s"}' \
     "$SITE" "$1" "$pin"
 }
-entry() { # <entry> <what works when it does> <outbound>
+entry() { # <entry> <what works when it does> <outbound> [where to look when it doesn't]
   why=$(check "$3")
-  if [ -z "$why" ]; then say "$1" "ok: $2"; else say "$1" "FAIL: $why"; fi
+  if [ -z "$why" ]; then say "$1" "ok: $2"; else say "$1" "FAIL: $why${4:+ ($4)}"; fi
 }
 
 why=$(fetch 10809)
@@ -82,12 +83,14 @@ else
   say servers "FAIL: the relay reaches no server ($why): every entry below fails with it; see doctor"
 fi
 entry reality "a device's REALITY link under ${SITE} gets through" \
-  "$(vless 443 "\"network\": \"raw\", \"security\": \"reality\", \"realitySettings\": {\"serverName\": \"${SITE}\", \"fingerprint\": \"chrome\", \"password\": \"${pbk}\", \"shortId\": \"${sid}\"}" xtls-rprx-vision)"
+  "$(vless 443 "\"network\": \"raw\", \"security\": \"reality\", \"realitySettings\": {\"serverName\": \"${SITE}\", \"fingerprint\": \"chrome\", \"password\": \"${pbk}\", \"shortId\": \"${sid}\"}" xtls-rprx-vision)" \
+  "REALITY borrows the site's handshake, Caddy's under own-site: does it answer TLS 1.3?"
 if [ -n "$path$hy2_port" ] && [ -z "$pin" ]; then
   say site "FAIL: Caddy has no certificate for ${SITE} yet, so neither XHTTP nor Hysteria2 through the site works: check its ACME"
 elif [ -n "$path" ]; then
   entry xhttp "the site passes the XHTTP path on to Xray, under its own certificate" \
-    "$(vless 443 "\"network\": \"xhttp\", $(tls h2), \"xhttpSettings\": {\"path\": \"/${path}\", \"host\": \"${SITE}\", \"mode\": \"auto\"}")"
+    "$(vless 443 "\"network\": \"xhttp\", $(tls h2), \"xhttpSettings\": {\"path\": \"/${path}\", \"host\": \"${SITE}\", \"mode\": \"auto\"}")" \
+    "doctor's cover-site check says whether Caddy runs"
 fi
 if [ -n "$kcp_seed" ]; then
   mask="{\"type\": \"mkcp-legacy\", \"settings\": {\"value\": \"${kcp_seed}\"}}"
