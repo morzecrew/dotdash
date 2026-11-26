@@ -105,3 +105,35 @@ def test_adopt_names_the_desktops_the_roster_does_not():
     said = adopt.take(st, net, keys, ids, unnamed, desktops)
     assert said[-1] == ("desktops on the server but not in the roster's desktops, getting CDN links at the next sync "
                         "unless added: laptop")
+
+
+def test_command_prints_the_settings_morzer_gives(tmp_path):
+    for k, make in state.SHARED_KEYS.items():
+        (tmp_path / k).write_text(make() + "\n")
+    (tmp_path / "vless_clients").write_text(f"{PHONE} phone\n")
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    # A morzer that knows every setting but direct, as a release before it.
+    (fake / "morzer").write_text('#!/bin/sh\ncase $5 in\n subscription) echo true;;\n cdn_hosts) echo cdn.example.net;;\n'
+                                ' pools) printf "# a comment\\nhome phone 203.0.113.5\\n";;\n *) exit 1;;\nesac\n')
+    (fake / "morzer").chmod(0o755)
+    out = subprocess.run(["sh", "-c", adopt.COMMAND.replace("/run/dotdash/secrets", str(tmp_path))], capture_output=True,
+                         text=True, check=True, env={"PATH": f"{fake}:/usr/bin:/bin"}).stdout
+    assert adopt.parse(out)[1] == {"phone": PHONE}
+    assert adopt.settings(out) == {"subscription": "true", "cdn_hosts": "cdn.example.net",
+                                   "pools": "# a comment\nhome phone 203.0.113.5"}
+
+
+def test_changes_names_what_the_first_sync_would_change():
+    net = loads(ROSTER.replace("subscription = true\n", "direct = false\n") + '[pools]\nhome = ["203.0.113.5", "phone"]\n')
+    a = net.find("a")
+    said = adopt.changes(net, a, {"subscription": "true", "cdn_hosts": "cdn.example.net", "direct": "true",
+                                  "pools": "# a comment\nhome phone 203.0.113.5\nwork laptop"})
+    assert said[0] == "subscription: the server has true, the roster false, which the next sync sets: every device's subscription URL stops"
+    assert said[1] == "cdn_hosts: the server has cdn.example.net, its [[server]] none, which the next sync sets"
+    assert said[2].startswith("pools: ") and said[3].startswith("direct: the server has true, the roster false")
+    assert said[4].startswith("join the relays before this server")
+    # The same settings, or a release that gives none, leave only the order to join in.
+    same = {"subscription": "false", "cdn_hosts": "none", "direct": "false", "pools": "# One pool per line\nhome phone 203.0.113.5"}
+    assert adopt.changes(net, a, same) == adopt.changes(net, a, {}) == said[4:]
+    assert adopt.changes(loads(ROSTER.split("[[relay]]")[0]), a, {}) == []
