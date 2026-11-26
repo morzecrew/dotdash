@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The manager's `status` shows machines joined with `joined` as joined, and writes `roster.yaml` under the state's lock, as `sync` does. It listed them as not joined, and could rewrite `roster.yaml` under a timer's sync.
 
+- A server whose document failed to publish is told again at the next sync to turn `hello_split` off. The manager forgot it had split a server before publishing, so one failed publish left that server's devices splitting their REALITY hello for good.
+
 ### Security
 
 - The manager refuses facts no bundle prints: whitespace, quotes, backslashes, braces or control characters in a value, or a field missing or of the wrong type. A tampered relay can no longer add lines to the servers' `relays`, crash every sync or write to the terminal, nor take another relay's address out of the pools.

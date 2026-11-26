@@ -425,3 +425,44 @@ watches = "r1"
     burnt, _ = judge(net, {"r1": relay, "c1": c1}, health)
     assert burnt == set() and health["r1"]["cause"] == "burst" and health["r1"]["paths"] == {"reality": 1, "xhttp": 0}
     assert "page opens several connections" in CAUSES["burst"]
+
+
+def test_a_server_whose_publish_failed_stays_split_for_the_next_sync(tmp_path, monkeypatch):
+    import json
+    import subprocess
+
+    from dotdash_manager import cli
+    from typer.testing import CliRunner
+
+    roster = 'target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[server]]\nname = "a"\nid = "inst_A"\nkey = "RWa"\n'
+    (tmp_path / "network.toml").write_text(roster)
+    st = state.load(Path("/nonexistent"), loads(roster))
+    st["split"] = ["a"]
+    state.save(tmp_path / "dotdash-state.json", st)
+    sent, answer = [], {"code": 1}
+
+    class Stand:
+        def __init__(self, *_):
+            pass
+
+        def gather(self, *_):
+            return {}
+
+        def rows(self):
+            return {}
+
+        def publish(self, m, doc, dry_run):
+            sent.append(doc["parameters"].get("hello_split"))
+            return subprocess.CompletedProcess([], answer["code"], "", "target down")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(state, "lock", lambda path: 0)
+    monkeypatch.setattr(cli, "Morzer", Stand)
+    run = lambda: CliRunner().invoke(cli.app, ["sync"])
+    kept = lambda: json.loads((tmp_path / "dotdash-state.json").read_text())
+    # No longer split: hello_split off, which a failed publish never delivered.
+    assert run().exit_code == 1 and sent == ["false"] and kept()["split"] == ["a"]
+    assert "inst_A" not in kept()["published"]
+    answer["code"] = 0
+    assert run().exit_code == 0 and sent == ["false", "false"] and kept()["split"] == []
+    assert "inst_A" in kept()["published"]

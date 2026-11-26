@@ -104,16 +104,10 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     traffic.record(st.setdefault("traffic", {}), facts, now)
     # Yesterday's whole day and today's so far.
     verdicts += traffic.unusual(st["traffic"], since=traffic.day(now - 86400))
-    if not dry_run:
-        state.save(o.state, st)
     for v in verdicts:
         print(v)
     docs, waiting = render(net, st, facts, burnt | held, off, stands, split)
-    # After render, which turns hello_split off where the last sync had it on.
-    st["split"] = sorted(split)
-    if not dry_run:
-        state.save(o.state, st)
-    failed = 0
+    failed = []
     for m in net.machines:
         doc = docs.get(m.name)
         if doc is None:
@@ -128,13 +122,18 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
             continue
         r = mz.publish(m, doc, dry_run)
         if r.returncode != 0:
-            failed += 1
+            failed.append(m.name)
             print(f"{m.name}: publish failed: {(r.stderr or r.stdout).strip()}", file=sys.stderr)
             continue
         print(f"{m.name}: {'would publish' if dry_run else 'published'}")
-        if not dry_run:
-            st["published"][m.id] = {"digest": digest, "at": int(time.time())}
-            state.save(o.state, st)
+        st["published"][m.id] = {"digest": digest, "at": int(time.time())}
+    # The servers split as of now, for the next render to turn hello_split
+    # off where it no longer holds: one whose publish failed still has it.
+    st["split"] = sorted(split | (set(st.get("split", [])) & set(failed)))
+    # Once, at the end: the keys were kept before anything went out (open),
+    # and the rest a sync that stops short reads again from the same facts.
+    if not dry_run:
+        state.save(o.state, st)
     for w in waiting:
         print(f"waiting: {w}")
     raise typer.Exit(1 if failed else 0)
