@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Sourced by the hooks that need a site only the stand-in server
 # (pre-apply/10-server.sh) reaches: busybox's httpd on that server's
 # loopback, in its network namespace. A canary check that left by the rig's
