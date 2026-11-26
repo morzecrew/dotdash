@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-26
+
 ### Added
 
 - A canary checks each CDN in front of the relay it watches, through the CDN as a device's CDN link goes, and gives each under `cdn` in its facts. The manager hands it the names and CDN path; by hand, set `dotdash_cdn_hosts`, `dotdash_origin_host` and the `dotdash_cdn_xhttp_path` secret.
