@@ -290,7 +290,7 @@ tasks:
     args: true
     timeout: 1m
   facts:
-    description: "Print relay-entry's line as JSON for the authority this relay follows: entry_host, site, public key, the short id, XHTTP path and mKCP seed links carry (output is credentials), and the Hysteria2 port"
+    description: "Print relay-entry's line as JSON for the authority this relay follows: entry_host, site, public key, the short id, XHTTP path and mKCP seed links carry (output is credentials), the Hysteria2 port, and under own-site the days left on its certificate"
     service: relay-entry
     command: ["sh", "/task/facts.sh"]
     timeout: 1m

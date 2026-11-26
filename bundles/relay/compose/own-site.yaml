@@ -62,11 +62,15 @@ services:
       start_period: 5s
 
   # The line it prints names the relay's own domain as the site, and marks
-  # the relay as serving it, subscriptions included.
+  # the relay as serving it, subscriptions included. The facts task reads
+  # the site's certificate from Caddy's data, for the days it has left.
   relay-entry:
     environment:
       SITE: ${DOTDASH_RELAY_DOMAIN:?the own-site profile needs a domain}
       OWN_SITE: "true"
+      CERT_ISSUER: ${DOTDASH_RELAY_PARAM_CERT_ISSUER:-acme}
+    volumes:
+      - caddy_data:/caddy-data:ro
 
 volumes:
   caddy_data: {}

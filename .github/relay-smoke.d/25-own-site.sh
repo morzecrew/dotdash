@@ -7,7 +7,8 @@
 # - REALITY's target is Caddy, under the relay's domain, and relay-entry names
 #   that domain as the site;
 # - a probe without the key gets the relay's own certificate for that name and
-#   the bundled page, titled with it; port 80 redirects there, naming no server;
+#   the bundled page, titled with it; port 80 redirects there, naming no
+#   server; the facts carry the days that certificate has left;
 # - a device whose link names the domain gets out through the relay, and
 #   doctor passes, the cover-site check included;
 # - a subscription path goes on to the dotdash servers through the relay's
@@ -86,6 +87,12 @@ grep -q '^HTTP/1.1 308' <<<"${head}" || die "port 80 did not redirect: ${head}"
 grep -qi "^location: https://${domain}/x?y" <<<"${head}" || die "port 80 did not redirect to HTTPS: ${head}"
 ! grep -qi '^server:' <<<"${head}" || die "port 80 names its server: ${head}"
 echo "${0##*/}: port 80 redirects to HTTPS and names no server"
+# The facts carry the whole days left on that certificate: under Caddy's
+# own CA, whose certificates last 12 hours, 0.
+facts=$(sudo morzer task run facts --output 2>/dev/null) || die "the facts task failed under own-site"
+jq -e '(.cert_days | type) == "number" and .cert_days >= 0' <<<"${facts}" >/dev/null ||
+  die "the facts carry no days left on the site's certificate: $(jq -c '{cert_days}' <<<"${facts}")"
+echo "${0##*/}: the facts carry the days left on the site's certificate, $(jq .cert_days <<<"${facts}")"
 
 device 18083 "${domain}"
 gets_out 18083 || die "a device naming ${domain} did not get out through the relay"
