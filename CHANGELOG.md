@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The release and dev keys' public halves, in the README and the docs' Releases section: `morzer init --signing-key` checks even the first release against them, with no access to the repository's variables.
+
 ### Security
 
 - `bootstrap.sh` runs morzer's installer from a pinned commit, checked by sha256, where it piped whatever a movable tag served into `sh`. It also trusts Docker's apt key only when the file holds that one key, by its fingerprint.

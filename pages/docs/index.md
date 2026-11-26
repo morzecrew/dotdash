@@ -49,3 +49,11 @@ trusts it, and requires every later release to be signed by it.
 `dotdash-canary` or `dotdash-acme-dns`. These docs are versioned with the
 releases: the version menu shows each released minor, and `dev` follows
 `main`.
+
+The keys are minisign public keys. Compare the one `init` prints with them,
+or pass one to `morzer init --signing-key` to check even the first release:
+
+| Key | Public key |
+| --- | --- |
+| release | `RWSodSvG4wmCA2FCL20MQ43y0Tw+/bcMnej3bzmFYr/yXmSKUx3YdF/B` |
+| dev | `RWQAQKYQdRbOZq2c9JoqAoq1mSvGmnVih04GY8vLgxd3cg5eXlgvDlcg` |
