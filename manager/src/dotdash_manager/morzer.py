@@ -12,6 +12,7 @@ from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from . import Refused
 from .roster import KINDS, PRODUCTS, Machine, Network, _say
 
 # morzer state facts runs at most this many at once: each waits on the target
@@ -144,6 +145,33 @@ def check(kind: str, doc) -> tuple[dict | None, str]:
     return doc, ""
 
 
+def word(value) -> str | None:
+    """A string a machine wrote in its own row, kept only when it is a few
+    plain words (a release, an age, a class, a name, a time): anything else
+    would reach the operator's terminal."""
+    return value if isinstance(value, str) and re.fullmatch(r"[\w.:+ -]{1,64}", value) else None
+
+
+def _sync(block) -> dict | None:
+    """A row's sync block (morzer's FleetSync), each field as status reads it:
+    the serials applied and refused, the refusal's step, class and names, the
+    last fetch's result, and the names waiting for the staged release."""
+    if not isinstance(block, dict):
+        return None
+    words = lambda v: [w for w in map(word, v) if w][:32] if isinstance(v, list) else []
+
+    def doc(d) -> dict | None:
+        if not isinstance(d, dict) or type(d.get("serial")) is not int:
+            return None
+        return {"serial": d["serial"], "at": word(d.get("at")), "step": word(d.get("step")),
+                "class": word(d.get("class")), "names": words(d.get("names"))}
+
+    fetch = block.get("last_fetch")
+    return {"enabled": block.get("enabled") is True, "applied": doc(block.get("applied")),
+            "refused": doc(block.get("refused")), "fetch": word(fetch.get("result")) if isinstance(fetch, dict) else None,
+            "pending": words(block.get("pending"))}
+
+
 def write_roster(path: Path, net: Network) -> None:
     """morzer's roster (--expect): the machines that joined, with their keys."""
     lines = ["# Written by dotdash-manager from network.toml; edits here are lost.", "schema: 1", "installations:"]
@@ -231,7 +259,9 @@ class Morzer:
         """Each joined machine's own fleet row, by name, where its signature
         verifies: its age, whether it missed three hourly publishes (stale), and
         how many of its services run. What a burnt verdict needs to tell a
-        machine blocked on the way from one that is down."""
+        machine blocked on the way from one that is down. For status, also
+        its release, the one staged, why its facts didn't refresh, and what
+        it did with the authority's documents (sync)."""
         r = self.run("fleet", "ls", self.net.target, "--expect", self.roster, "--stale-after", "3h", "--json", *self.creds)
         try:
             rows = json.loads(r.stdout)["data"]["rows"]
@@ -242,14 +272,30 @@ class Morzer:
         for row in rows:
             name = names.get(row.get("installation_id"))
             if name and row.get("signature") == "verified" and isinstance(row.get("row"), dict):
-                h = row["row"].get("health")
+                own = row["row"]
+                h = own.get("health")
                 h = h if isinstance(h, dict) else {}
                 # The machine writes its own row: only numbers reach a verdict.
                 count = lambda v: v if type(v) is int else None
-                out[name] = {"age": row.get("age", "?"), "stale": bool(row.get("stale")),
+                out[name] = {"age": word(row.get("age")) or "?", "stale": bool(row.get("stale")),
                              "services": count(h.get("services")), "running": count(h.get("running")),
-                             "problem": h.get("problem", "")}
+                             "problem": h.get("problem", ""), "version": word(own.get("version")),
+                             "staged": word(own.get("staged")), "facts_problem": word(own.get("facts_problem")),
+                             "sync": _sync(own.get("sync"))}
         return out
+
+    def published(self) -> dict[str, int]:
+        """The serial of the newest document on the target for each joined
+        machine, by name (state ls), which its row's sync says it applied or
+        refused, or neither yet."""
+        r = self.run("state", "ls", *self.common, "--json")
+        try:
+            rows = json.loads(r.stdout)["data"]["rows"]
+        except (ValueError, KeyError, TypeError):
+            raise Refused(f"morzer state ls gave no rows: {(r.stderr or r.stdout).strip()}") from None
+        names = {m.id: m.name for m in self.net.machines if m.id}
+        return {names[row["installation_id"]]: row.get("published", 0) for row in rows
+                if row.get("installation_id") in names and type(row.get("published", 0)) is int}
 
     def publish(self, m: Machine, doc: dict, dry_run: bool) -> subprocess.CompletedProcess:
         return self.run("state", "publish", *self.common, "--product", PRODUCTS[m.kind], "--installation", m.id,

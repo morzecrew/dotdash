@@ -123,7 +123,8 @@ def test_rows_keeps_verified_rows_of_joined_machines(tmp_path):
         {"installation_id": "inst_X", "signature": "verified", "row": {"health": {}}}]}}
     seen = []
     mz.run = lambda *args, stdin=None: seen.append(args) or subprocess.CompletedProcess(args, 0, json.dumps(out), "")
-    assert mz.rows() == {"r1": {"age": "40m", "stale": False, "services": 5, "running": 4, "problem": ""}}
+    assert mz.rows() == {"r1": {"age": "40m", "stale": False, "services": 5, "running": 4, "problem": "",
+                                "version": None, "staged": None, "facts_problem": None, "sync": None}}
     # A machine writes its own row: what is not a count says nothing.
     out["data"]["rows"][0]["row"]["health"] = {"services": "\x1b[2J5", "running": 4}
     assert mz.rows()["r1"]["services"] is None

@@ -84,16 +84,19 @@ def test_marker():
 
 def test_status_knows_who_joined_from_the_state(tmp_path, monkeypatch):
     bin_ = tmp_path / "morzer"
-    bin_.write_text('#!/bin/sh\necho "morzer $*"\n')
+    bin_.write_text('#!/bin/sh\necho "$*" >>calls\necho \'{"data": {"rows": []}}\'\n')
     bin_.chmod(0o755)
     (tmp_path / "network.toml").write_text(ROSTER)
     (tmp_path / "dotdash-state.json").write_text(json.dumps({"joined": {"r1": {"id": "inst_01ab", "key": "RWQabc="}}}))
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(state, "lock", lambda path: 0)
     r = CliRunner().invoke(app, ["--morzer", str(bin_), "status"])
-    assert r.exit_code == 0, r.output
-    assert r.output.startswith("morzer state ls --target file:///t --expect ")
-    assert "r1 (relay): not joined" not in r.output and "a (server): not joined" in r.output
+    # r1 joined and has published no row yet.
+    assert r.exit_code == 1, r.output
+    assert "state ls --target file:///t --expect roster.yaml --json" in (tmp_path / "calls").read_text()
+    lines = {line.split()[0]: line for line in r.output.splitlines() if line}
+    assert "not joined" not in lines["r1"] and "no verified row" in lines["r1"]
+    assert "not joined: run join a" in lines["a"]
     assert "id: inst_01ab" in (tmp_path / "roster.yaml").read_text()
     assert json.loads((tmp_path / "dotdash-state.json").read_text()) == {"joined": {"r1": {"id": "inst_01ab", "key": "RWQabc="}}}
 

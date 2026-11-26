@@ -1,0 +1,24 @@
+{
+  "ok": true,
+  "command": "state ls",
+  "manager_version": "0.19.1",
+  "data": {
+    "targets": ["file:///t"],
+    "rows": [
+      {"target": "file:///t", "product": "dotdash", "installation_id": "inst_A", "signature": "verified", "expected": true,
+       "published": 7, "sync": {"enabled": true, "applied": {"serial": 7, "at": "2026-11-26T09:58:00Z"}}},
+      {"target": "file:///t", "product": "dotdash-relay", "installation_id": "inst_R1", "signature": "verified", "expected": true,
+       "published": 4},
+      {"target": "file:///t", "product": "dotdash-relay", "installation_id": "inst_R2", "signature": "verified", "expected": true,
+       "published": 1},
+      {"target": "file:///t", "product": "dotdash-canary", "installation_id": "inst_C1", "signature": "verified", "expected": true,
+       "published": 3},
+      {"target": "file:///t", "product": "dotdash-client", "installation_id": "inst_H", "signature": "verified", "expected": true,
+       "published": 2},
+      {"target": "file:///t", "product": "dotdash", "installation_id": "inst_X", "signature": "signed-by-another-key", "published": "9"}
+    ],
+    "expected": 5,
+    "limitations": []
+  },
+  "exit_code": 0
+}

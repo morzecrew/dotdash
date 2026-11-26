@@ -166,7 +166,7 @@ manager. Relays keep their own keys, so devices keep their relay links too.
 ```sh
 dotdash-manager sync --dry-run   # what would change
 dotdash-manager sync
-dotdash-manager status           # what each machine applied and refused
+dotdash-manager status --wait    # until every machine applied it
 ```
 
 `sync` publishes only documents that changed, and renews the rest every three
@@ -207,6 +207,48 @@ To start over on new keys anyway, put `--new-state` before the command:
 ```sh
 dotdash-manager --new-state sync
 ```
+
+## Status
+
+`status` prints a line per machine, then the topology:
+
+```
+machine  kind    release  document                           health                facts  canaries
+a        server  0.18.0   applied 12                         5/5 up, row 12m ago   10m    reality ok, xhttp ok
+r1       relay   0.18.0   REFUSED 9 unmanageable: via_link   4/4 up, row 40m ago   20m    reality off, xhttp ok
+r2       relay   0.17.0   pending 4, last fetch unreachable  STALE, row 4h10m ago  5h 0m  unwatched
+c1       canary  0.18.0   applied 3                          2/2 up, row 20m ago   20m    read 30m ago
+r3       relay   -        not joined: run join r3            -                     -      -
+
+topology, from the facts the last sync read:
+  server a: a.example.net:443: reality, xhttp, mkcp 8447
+  relay r1: 203.0.113.5, site r1.example.net: reality, xhttp, hy2 443, cdn c.example.net; name edge-1; off=reality
+  relay r2: 198.51.100.9, site www.example.org: reality; via r1 (reality); spare
+  pool p: phone, 203.0.113.5
+  canary c1 watches r1
+```
+
+- **release**: what the machine runs, and the release its channel staged, if
+  one waits.
+- **document**: what it did with the newest document published for it:
+  `applied`, `REFUSED` with morzer's class and the names it refused, or
+  `pending` until its next pull, every 15 minutes, with the last fetch's
+  result when that failed. `sync off` or `not following the manager` is a
+  machine that won't take one.
+- **health**: how many of its services run, and how old its fleet row is.
+  `STALE` is a row older than three hours.
+- **facts**: how old the facts the last `sync` read are. Past a day, `sync`
+  leaves the machine out of every document.
+- **canaries**: each path, as its canaries found it at the last `sync`, and
+  `BURNT` before them; for a canary, how old its last reading is.
+
+It reads each machine's own fleet row and the newest document on the target,
+two morzer calls, and the rest from the state, so it prints no key, path or
+id. It exits 1 when a document is refused, a machine doesn't follow the
+manager, a row is stale or a service is down. After a `sync`,
+`status --wait` asks again every 30 seconds until every machine has applied
+or refused its newest document, for up to 20 minutes (`--timeout`), and exits
+1 if one is still pending. A timer's `sync` waits for it meanwhile.
 
 ## Burnt relays
 

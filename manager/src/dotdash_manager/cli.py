@@ -14,6 +14,7 @@ from typing import Annotated
 import typer
 
 from . import Refused, adopt, health, join as joining, roster, rotate, state, traffic
+from . import status as overview
 from .morzer import Morzer, write_roster
 from .render import render
 from .report import report as report_lines
@@ -21,6 +22,10 @@ from .roster import Network
 
 # A document lives 168 h (morzer's default): renew an unchanged one well before.
 RENEW_AFTER = 3 * 86400
+# status --wait: machines pull every 15 minutes, then apply; and it asks again
+# this often, two morzer calls each time.
+WAIT = 20 * 60
+POLL = 30
 
 app = typer.Typer(
     help="A dotdash network from one roster, through morzer's desired state.",
@@ -215,20 +220,29 @@ def rotate_key(
 
 
 @app.command()
-def status(ctx: typer.Context) -> None:
-    """What each machine applied and refused, and who has not joined."""
+def status(
+    ctx: typer.Context,
+    wait: Annotated[bool, typer.Option("--wait", help="until every machine applied or refused its newest document")] = False,
+    timeout: Annotated[int, typer.Option(help="how long --wait waits, in seconds")] = WAIT,
+) -> None:
+    """One line per machine: its release, what it did with its newest document,
+    its health, how old its facts are and what its canaries found; then the
+    topology. Exits 1 when a document is refused, a machine isn't following,
+    its row is stale or its services are down, or --wait ran out."""
     o: Options = ctx.obj
     # As sync opens them: who joined is in the state, and roster.yaml is
-    # written under the lock, never beside a sync writing it.
-    net, _ = o.open(dry_run=True)
+    # written under the lock, never beside a sync writing it. The lock is
+    # held while it waits, so no sync publishes meanwhile.
+    net, st = o.open(dry_run=True)
     mz = Morzer(net, o.morzer_roster, o.morzer)
-    r = mz.run("state", "ls", *mz.common)
-    sys.stdout.write(r.stdout)
-    sys.stderr.write(r.stderr)
-    for m in net.machines:
-        if not m.joined:
-            print(f"{m.name} ({m.kind}): not joined; run join {m.name}")
-    raise typer.Exit(r.returncode)
+    end = time.monotonic() + timeout
+    while True:
+        lines, pending, bad = overview.machines(net, st, mz.rows(), mz.published(), int(time.time()))
+        if not (wait and pending) or time.monotonic() >= end:
+            break
+        time.sleep(POLL)
+    print(*lines, *overview.topology(net, st), sep="\n")
+    raise typer.Exit(1 if bad or (wait and pending) else 0)
 
 
 @app.command(name="adopt")
