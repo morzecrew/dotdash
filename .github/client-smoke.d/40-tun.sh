@@ -2,10 +2,10 @@
 # The tun profile: a plain request on the machine, with no proxy settings,
 # goes through dotdash, and so does a LAN device's with this machine as its
 # gateway; a start with no links gets its subscription; DNS to a LAN
-# resolver goes into TUN; with dotdash gone,
-# with Xray itself gone, and with the kill switch stopped too, nothing gets out
-# directly instead; and back on the base files, the machine's own routes are
-# as before.
+# resolver lands in Xray's DNS, the machine's and a container's; with dotdash
+# gone, with Xray itself gone, and with the kill switch stopped too, nothing
+# gets out directly instead, DNS included; and back on the base files, the
+# machine's own routes and DNS are as before.
 #
 # TUN binds Xray's own sockets to the main interface, so this stand-in sits on
 # the rig's own network, reached over eth0, with a subscription of its link
@@ -26,7 +26,7 @@ host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
 eth0=$(ip -4 -o addr show eth0 | awk '{ sub("/.*", "", $4); print $4 }')
 target=$(sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' client-rig-sub)
 dir=/rig/client/tun
-sudo mkdir -p "${dir}/server" "${dir}/www" "${dir}/caddy"
+sudo mkdir -p "${dir}/server" "${dir}/www" "${dir}/caddy" "${dir}/dns"
 jq --arg target "${target}" '.inbounds[0].port = 9444 | .dns = {hosts: {"tun-target.test": $target}}
   | .outbounds[0].streamSettings = {sockopt: {domainStrategy: "UseIPv4"}}' /rig/client/server/config.json \
   | sudo tee "${dir}/server/config.json" >/dev/null
@@ -34,11 +34,21 @@ base64 -d </rig/client/www/sub | sed "s/@${host}:9443/@${eth0}:9444/" | base64 -
 jq --arg eth0 "${eth0}" '.outbounds[0].settings.address = $eth0 | .outbounds[0].settings.port = 9444' \
   /rig/client/www/sub.json | sudo tee "${dir}/www/sub.json" >/dev/null
 sed 's/^:8080 {/:8089 {/' /rig/client/caddy/Caddyfile | sudo tee "${dir}/caddy/Caddyfile" >/dev/null
+# A resolver on a network the machine is on, as the router DHCP names is,
+# answering leak.test with 10.10.10.10: that answer is DNS that went around
+# Xray's.
+jq -n '{log: {loglevel: "warning"}, dns: {hosts: {"leak.test": "10.10.10.10"}, servers: ["fakedns"]},
+  fakedns: [{ipPool: "100.64.0.0/10", poolSize: 1000}], outbounds: [{protocol: "dns"}],
+  inbounds: [{port: 53, protocol: "dokodemo-door", settings: {address: "127.0.0.1", port: 53, network: "tcp,udp"}}]}' \
+  | sudo tee "${dir}/dns/config.json" >/dev/null
 sudo chmod -R a+rX "${dir}"
 sudo docker run -d --name client-rig-tun-server --network host -v "${dir}/server:/etc/xray:ro" \
   -v /rig/client/secrets:/run/secrets:ro "${xray}" >/dev/null
 sudo docker run -d --name client-rig-tun-sub --network host -v "${dir}/caddy:/etc/caddy:ro" -v "${dir}/www:/www:ro" \
   "${caddy}" >/dev/null
+sudo docker run -d --name client-rig-tun-dns --sysctl net.ipv4.ip_unprivileged_port_start=53 -v "${dir}/dns:/etc/xray:ro" \
+  "${xray}" >/dev/null
+resolver=$(sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' client-rig-tun-dns)
 
 plain() { # <URL>: its status from the rig with no proxy, or 000
   curl -s -o /dev/null -w '%{http_code}' --noproxy '*' --max-time 10 "$1" || true
@@ -49,14 +59,26 @@ through() { # <tries>: poll, 2 s apart, for a plain request reaching tun-target.
 }
 routes() { # what decides where a plain request goes, for a failure's message
   { echo "--- ip rule"; ip rule; echo "--- ip route"; ip route; echo "--- ip -6 route"; ip -6 route
-    echo "--- table 9003"; ip route show table 9003 2>&1
+    echo "--- nft"; sudo docker exec "$(service_container killswitch)" nft list ruleset 2>&1 || true
     echo "--- resolv.conf"; cat /etc/resolv.conf; echo "--- tun-target.test"; getent hosts tun-target.test || true; } >&2
+}
+answer() { # the address in nslookup's answer on stdin, or nothing
+  sed -n 's/^Address: *\([0-9.]*\)$/\1/p' | tail -1
+}
+leak() { # [user]: what the rig's nslookup of leak.test at the resolver gets, as user (root)
+  { sudo -u "${1:-root}" timeout 20 nslookup leak.test "${resolver}" 2>&1 || true; } | answer
+}
+direct() { # poll, 1 s apart, for root's DNS reaching the resolver as it is
+  for _ in $(seq 10); do [ "$(leak)" = 10.10.10.10 ] && return 0; sleep 1; done
+  return 1
 }
 home=$(sudo docker volume inspect -f '{{.Mountpoint}}' dotdash-client_home)
 
-# ip netns, for the gateway's LAN device below; fetched now, as under TUN the
-# rig's own requests reach no further than tun-target.test.
-sudo apk add -q iproute2 >/dev/null || die "apk add iproute2 failed"
+# ip netns, for the gateway's LAN device below, and python3, for a socket
+# that names its link; fetched now, as under TUN the rig's own requests reach
+# no further than tun-target.test.
+sudo apk add -q iproute2 python3 >/dev/null || die "apk add iproute2 python3 failed"
+direct || die "the rig's LAN resolver does not answer leak.test: $(leak)"
 
 # Its subscription, the direct rule, no cached links, and a probe the stand-in
 # answers. The cache goes before the probe moves: morzer (0.16) health-checks
@@ -96,12 +118,30 @@ if sudo docker logs --since "${since}" "${client}" 2>&1 | grep -q 'through XRAY_
   die "under tun with no links, the subscription came by the entrypoint's direct fetch, not through the sub port"
 fi
 
-# DNS to a resolver on a network the machine is on, here the subscription
-# server's address on docker0, where nothing answers on port 53, goes into TUN
-# too and gets a fake address, the answer passing the kernel's check of its
-# way back, though it comes in on TUN.
-out=$(sudo -u nobody nslookup example.com "${target}" 2>&1 || true)
-grep -q 'Address:.*198\.1[89]\.' <<<"${out}" || { routes; die "DNS to a resolver on the LAN went around TUN: ${out}"; }
+# DNS to a resolver on a network the machine is on lands in Xray's DNS and
+# gets a fake address, never the resolver's own answer: root's, another
+# user's, one from a socket that names its link (IP_UNICAST_IF), as
+# systemd-resolved's do, and a container's, which the machine forwards.
+for who in root nobody; do
+  got=$(leak "${who}")
+  [[ "${got}" == 198.1[89].* ]] || { routes; die "DNS as ${who} to a resolver on the LAN went around Xray's DNS: ${got:-no answer}"; }
+done
+got=$(sudo -u nobody python3 - "${resolver}" 2>&1 <<'EOF'
+import socket, struct, sys
+q = struct.pack("!6H", 1, 0x100, 1, 0, 0, 0) + b"\4leak\4test\0" + struct.pack("!2H", 1, 1)
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.setsockopt(socket.IPPROTO_IP, 50, struct.pack("!I", socket.if_nametoindex("docker0")))  # IP_UNICAST_IF
+s.settimeout(10)
+s.sendto(q, (sys.argv[1], 53))
+print(socket.inet_ntoa(s.recv(512)[-4:]))
+EOF
+) || true
+[[ "${got}" == 198.1[89].* ]] || { routes; die "DNS from a socket that names its link went around Xray's DNS: ${got}"; }
+# The kill switch's image has busybox's nslookup.
+ks_image=$(sudo docker inspect -f '{{.Config.Image}}' "$(service_container killswitch)")
+sudo docker network create client-rig-dns >/dev/null
+got=$({ sudo docker run --rm --network client-rig-dns --entrypoint nslookup "${ks_image}" leak.test "${resolver}" 2>&1 || true; } | answer)
+[[ "${got}" == 198.1[89].* ]] || { routes; die "a container's DNS to a resolver on the LAN went around Xray's DNS: ${got:-no answer}"; }
 
 # A gateway. A LAN device, a network namespace behind a veth with this machine
 # as its gateway (as in the router spike, #50), first resolves with a public
@@ -179,6 +219,8 @@ for _ in 1 2 3; do
   [ "${code}" != 200 ] || { routes; die "with Xray gone, a plain request got out directly"; }
   sleep 2
 done
+got=$(leak nobody)
+[ -z "${got}" ] || { routes; die "with Xray gone, DNS to a resolver on the LAN got an answer: ${got}"; }
 sudo docker start "${client}" >/dev/null
 through 15 || { routes; die "with Xray back, a plain request did not go through TUN and dotdash again ($(plain http://tun-target.test:8080/sub))"; }
 
@@ -191,6 +233,8 @@ for pref in 9001 9002; do
 done
 code=$(plain https://example.com/)
 [ "${code}" != 200 ] || { routes; die "with the kill switch and Xray stopped, a plain request got out directly"; }
+got=$(leak)
+[ -z "${got}" ] || { routes; die "with the kill switch and Xray stopped, DNS to a resolver on the LAN got an answer: ${got}"; }
 sudo docker start "${ks}" "${client}" >/dev/null
 sleep 2
 [ "$(ip rule show pref 9001 | grep -c .)" = 1 ] || { routes; die "the kill switch's start added its rules twice"; }
@@ -198,12 +242,14 @@ through 15 || { routes; die "with the kill switch and Xray back, a plain request
 
 sudo morzer config unset installation.profile >/dev/null
 ip -o link show Meta >/dev/null 2>&1 && die "back on the base files, the TUN interface is still there"
-ip rule | grep -qE '^(899[89]|900[0-2]):' && { routes; die "back on the base files, the kill switch's rules are still there"; }
+ip rule | grep -qE '^(899[6-9]|900[0-2]):' && { routes; die "back on the base files, the kill switch's rules are still there"; }
+direct || { routes; die "back on the base files, DNS does not reach the LAN resolver as before: $(leak)"; }
 printf 'http://%s:8088/sub' "${host}" | sudo morzer secret set subscription_url >/dev/null
 sudo morzer config unset probe_url >/dev/null
 sudo morzer config unset direct_rules >/dev/null
 sudo rm -f "${home}/subscription_url.json"
 sudo docker restart "$(service_container xray)" >/dev/null
-sudo docker rm -f client-rig-tun-server client-rig-tun-sub >/dev/null
+sudo docker rm -f client-rig-tun-server client-rig-tun-sub client-rig-tun-dns >/dev/null
+sudo docker network rm client-rig-dns >/dev/null
 [ "$(plain https://www.gstatic.com/generate_204)" = 204 ] || die "back on the base files, the rig's own requests don't get out"
 echo "40-tun.sh: under tun, plain requests, the machine's and a LAN's, go through dotdash and never around it, with Xray down too; back to the base files cleanly"

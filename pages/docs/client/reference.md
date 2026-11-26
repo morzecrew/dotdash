@@ -20,7 +20,7 @@ with `sudo morzer config edit <name>`.
 | `cdn` | `use` | `skip`: links through a CDN are never picked nor probed; only a subscription with nothing else still sends traffic to one. A dotdash server of 0.13.0 or later tells a relay's CDN links apart |
 | `ipv6` | `allow` | `block`: every IPv6 destination refused before any other rule, a direct rule's included, so apps fall back to IPv4; with `tun` it is still taken in, so nothing leaves around dotdash |
 | `gateway` | `false` | under `tun`, this machine is its LAN's gateway, and `doctor` checks the host for it ([gateway](tun.md#a-gateway-for-the-lan)) |
-| `dns_listen` | `none` | under `tun`, the address and port that answers the LAN's DNS, such as `192.168.1.10:53`, or this machine's, such as `127.0.0.153:53` for [systemd-resolved](tun.md#systemd-resolved) |
+| `dns_listen` | `none` | under `tun`, the address and port that answers the LAN's DNS, such as `192.168.1.10:53` ([gateway](tun.md#a-gateway-for-the-lan)) |
 | `dns_server` | `1.1.1.1` | under `tun`, the DNS server asked directly, around dotdash, for dotdash's server names, the direct rules and the LAN's own names ([tun](tun.md)) |
 
 Profiles (`installation.profile`): `tun`, the [whole machine](tun.md);
@@ -44,5 +44,5 @@ Profiles (`installation.profile`): `tun`, the [whole machine](tun.md);
 
 `doctor` and each `apply` fetch `probe_url` through dotdash; under `tun`,
 check that the [kill switch](tun.md#the-kill-switch)'s rules are in place,
-IPv6's too; and with `gateway=true`, check that the host forwards the LAN
-into TUN.
+IPv6's too, and its DNS table; and with `gateway=true`, check that the host
+forwards the LAN into TUN.

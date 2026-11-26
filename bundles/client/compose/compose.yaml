@@ -73,8 +73,8 @@ services:
     # No healthcheck here: hooks/healthy runs the probe itself (see there).
 
   # The tun profile's kill switch (compose/tun.yaml) keeps its routing rules
-  # on the host when it stops, so an update or a restart never opens the
-  # machine. Under the base files this service takes them out, once, and
+  # and its nft table on the host when it stops, so an update or a restart
+  # never opens the machine. Under the base files this service takes them out, once, and
   # idles: leaving tun leaves none behind, a stop or a kill in between
   # included (killswitch/killswitch.sh). Root with NET_ADMIN on the host's
   # network, which deleting a routing rule needs, and nothing else; it serves

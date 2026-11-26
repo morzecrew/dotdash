@@ -5,9 +5,10 @@
 # write the home volume and runtime directory, which are 65532's;
 # NET_BIND_SERVICE lets it listen on port 53 (the resolver inbound, and
 # dns_listen). Nothing else is granted: the root filesystem stays read-only
-# and no-new-privileges stays on. A stop gives Xray time to take its routes
-# down; after a kill they linger, harmless, pointing at an interface that is
-# gone.
+# and no-new-privileges stays on. Group 65531 is Xray's alone: the kill
+# switch sends every DNS question into TUN but that group's. A stop gives
+# Xray time to take its routes down; after a kill they linger, harmless,
+# pointing at an interface that is gone.
 #
 # With Xray gone, a crash or a restart on a new subscription, its TUN and
 # routes go with it, and the machine's default route would carry everything
@@ -17,7 +18,7 @@
 
 services:
   xray:
-    user: "0:0"
+    user: "0:65531"
     cap_add: [NET_ADMIN, DAC_OVERRIDE, NET_BIND_SERVICE]
     devices: ["/dev/net/tun:/dev/net/tun"]
     network_mode: host
