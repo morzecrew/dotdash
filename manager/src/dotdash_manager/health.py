@@ -125,7 +125,9 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None,
             h["split"] = 0 if any(said) else h.get("split", 0) + 1
         else:
             h.pop("split", None)
-        if ups:
+        # A relay that gets through only with its hello split is reachable:
+        # devices' Xray configs split it (splits), so it is not burnt.
+        if ups or h.get("split") == 0:
             h["fails"] = 0
             h.pop("since", None)
         else:
@@ -188,15 +190,20 @@ def spares(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[se
 
 def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[dict[str, set[str]], list[str]]:
     """The paths (reality, xhttp, mkcp, hysteria2) each relay's canaries got through none
-    of in BURN_AFTER readings in a row while another path got through: devices
+    of in BURN_AFTER readings in a row while another path, or REALITY with its
+    hello split, got through: devices
     stop getting those through it, and keep the rest. A path blocked on every
     relay that has it is likelier the canaries' network refusing that transport
     than every relay losing it in the same hour: kept everywhere, and said.
     A server's are reported only, as for a burnt server."""
     def out(name: str) -> set[str]:
-        paths = health.get(name, {}).get("paths", {})
+        h = health.get(name, {})
+        paths = h.get("paths", {})
         gone = {p for p, n in paths.items() if n >= BURN_AFTER}
-        return gone if gone != set(paths) else set()
+        # Every path blocked burns it instead, unless its split hello gets
+        # through: then off= takes them from share links, and split keeps
+        # REALITY in devices' Xray configs.
+        return gone if gone != set(paths) or h.get("split") == 0 else set()
 
     judged = [r.name for r in net.relay if r.name not in burnt and r.name in facts and not facts[r.name].get("cdn_only")]
     off = {r: gone for r in judged if (gone := out(r))}

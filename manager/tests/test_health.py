@@ -373,6 +373,27 @@ watches = "r2"
     assert splits(net, health, burnt={"r1"})[0] == set()  # a burnt relay stays out
 
 
+def test_a_reality_only_relay_through_only_split_is_split_not_burnt():
+    from dotdash_manager.health import splits
+
+    net = loads(ROSTER)
+    health: dict = {}
+    for at in range(1, BURN_AFTER + 2):
+        c1 = {"server": R1["site"], "address": R1["entry_host"], "checked_at": at, "internet": True,
+              "paths": {"reality": False}, "reality_split": True, "blocked_by": "sni"}
+        facts = {"r1": R1, "r2": R2, "c1": c1, "c2": canary(R2, at, True)}
+        burnt, say = judge(net, facts, health)
+    assert burnt == set() and health["r1"]["fails"] == 0 and not any(line.startswith("burnt:") for line in say)
+    off, _ = blocked(net, facts, health, burnt)
+    on, _ = splits(net, health, burnt)
+    assert off == {"r1": {"reality"}} and on == {"r1"}
+    # The split failing too: every path blocked, and it burns.
+    for at in range(BURN_AFTER + 2, 2 * BURN_AFTER + 2):
+        c1 = {**c1, "checked_at": at, "reality_split": False}
+        burnt, _ = judge(net, {**facts, "c1": c1, "c2": canary(R2, at, True)}, health)
+    assert burnt == {"r1"} and blocked(net, facts, health, burnt)[0] == {}
+
+
 def test_a_burnt_verdict_says_what_blocks_it():
     net = loads('''
 target = "t"

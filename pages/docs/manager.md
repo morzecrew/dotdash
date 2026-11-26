@@ -453,7 +453,8 @@ split: server a: REALITY gets through only with its hello split into TLS records
 - **Relays too.** A relay's canaries can find the same of its site's name.
   Its line then gets `split` beside `off=reality`. Share links lose REALITY
   through it, as for any blocked path, while devices' Xray configs keep it,
-  split. A burnt relay stays out.
+  split. A relay with REALITY as its only path isn't burnt while its split
+  hello gets through. A burnt relay stays out.
 
 ## What it leaves alone
 
