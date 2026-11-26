@@ -22,7 +22,7 @@ connection = "/var/lib/acme-dns/acme-dns.db"
 
 [api]
 ip = "0.0.0.0"
-disable_registration = false
+disable_registration = {{ ne .Parameters.registration "true" }}
 port = "443"
 tls = "{{ .Parameters.api_tls }}"
 acme_cache_dir = "/var/lib/acme-dns/api-certs"

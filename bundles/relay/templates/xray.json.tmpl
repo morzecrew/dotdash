@@ -1,14 +1,23 @@
 {{- /* REALITY's target: under the own-site profile the relay's own site,
 Caddy, under the relay's own domain, whose DNS is this machine; otherwise the
 borrowed site, whose DNS is someone else's. */ -}}
+{{- /* A value that goes into this JSON as it is, or from dotdash_servers into
+caddy.env and on into the Caddyfile, holds nothing that would end its string
+there, its Caddyfile token or its env line: no quote, backslash, brace or
+whitespace. morzer's quote escapes only the quote, and all but site may come
+from an authority, via built from other relays' facts. */ -}}
+{{- define "plain" }}{{ if or (contains . "\"") (contains . "\\") (contains . "{") (contains . "}") (contains . " ") (contains . "\t") (contains . "\n") (contains . "\r") }}
+{{- required (printf "site, dotdash_servers, dotdash_address, dotdash_public_key and via take no quote, backslash, brace or whitespace: %q" .) "" }}{{ end }}{{ end -}}
 {{- $own := has "own-site" .Profiles -}}
 {{- $kcp := has "mkcp" .Profiles -}}
 {{- $hy2 := has "hysteria2" .Profiles -}}
 {{- if and $hy2 (not $own) }}{{ required "the hysteria2 profile serves the relay's own site's certificate: installation.profile=own-site,hysteria2" "" }}{{ end -}}
+{{- if and (has "http-origin" .Profiles) (not $own) }}{{ required "the http-origin profile's door is the relay's own site's Caddy: installation.profile=own-site,http-origin" "" }}{{ end -}}
 {{- if and $hy2 $kcp (eq .Parameters.hysteria2_port .Parameters.kcp_port) }}{{ required "hysteria2_port must differ from kcp_port" "" }}{{ end -}}
 {{- $site := .Parameters.site -}}
 {{- if $own }}{{ $site = required "the own-site profile needs a domain: sudo morzer config set installation.domains=relay.example.net" .Installation.Domain }}
 {{- else if eq $site "none" }}{{ $site = required "set site, a site next to the relay, or use the own-site profile with a domain of the relay's own" "" }}{{ end -}}
+{{- template "plain" $site -}}
 {{- /* The own site's certificate as its Caddy keeps it (caddy/Caddyfile), for
 Hysteria2: Let's Encrypt's directory for acme and acme-dns, Caddy's own CA's
 for internal, and with acme-dns the wildcard over the domain's parent
@@ -19,7 +28,9 @@ for internal, and with acme-dns the wildcard over the domain's parent
 {{- $cert := $site -}}
 {{- if and (eq .Parameters.cert_issuer "acme-dns") (gt (len $labels) 2) }}{{ $cert = printf "wildcard_.%s" (join (slice $labels 1) ".") }}{{ end -}}
 {{- $servers := split "," (required "set dotdash_servers" .Parameters.dotdash_servers) -}}
+{{- range $servers }}{{ template "plain" . }}{{ end -}}
 {{- $address := .Parameters.dotdash_address }}{{ if eq $address "none" }}{{ $address = "" }}{{ end -}}
+{{- template "plain" $address -}}
 {{- /* ipv6=block: an IPv6 destination ends here, in a blackhole after the
 servers' outbounds (the first outbound stays the default); names go on. */ -}}
 {{- $block6 := eq .Parameters.ipv6 "block" -}}
@@ -36,14 +47,14 @@ so each line has to carry it. */ -}}
 {{- $vx := eq .Parameters.via_link "xhttp" -}}
 {{- $via := "" -}}
 {{- range lines .Parameters.via }}{{ $l := trim . }}{{ if and $l (ne (slice $l 0 1) "#") }}
-{{- $f := split " " $l }}
+{{- $f := split " " $l }}{{ range $f }}{{ template "plain" . }}{{ end }}
 {{- if lt (len $f) 5 }}{{ required (printf "a via line is <host> <site> <public key> <short id> <encryption>, as the relay's relay-entry prints it, not: %s" $l) "" }}{{ end }}
 {{- if and $vx (not (and (gt (len $f) 6) (eq (index $f 5) "own-site"))) }}{{ required (printf "via_link=xhttp goes through each relay's own site, and this via line has no own-site <path>: %s" $l) "" }}{{ end }}
 {{- $via = printf "%s%s\n" $via $l }}{{ end }}{{ end -}}
 {{- $hops := lines (trim $via) -}}
 {{- $many := gt (len $servers) 1 -}}
 {{- $pbk := "" -}}
-{{- if $hops }}{{ $many = gt (len $hops) 1 }}{{ else }}{{ $pbk = required "set dotdash_public_key" .Parameters.dotdash_public_key }}{{ end -}}
+{{- if $hops }}{{ $many = gt (len $hops) 1 }}{{ else }}{{ $pbk = required "set dotdash_public_key" .Parameters.dotdash_public_key }}{{ template "plain" $pbk }}{{ end -}}
 {{- /* dotdash_link=xhttp-reality: XHTTP with REALITY to the servers'
 xhttp_reality_port, its connections reused across devices, in place of a
 REALITY connection with Vision for each. */ -}}
@@ -89,7 +100,10 @@ REALITY connection with Vision for each. */ -}}
         "network": "raw",
         "security": "reality",
         "realitySettings": {
-          "target": "{{ if $own }}caddy{{ else }}{{ $site }}{{ end }}:443",
+          {{- /* The own site's Caddy takes a PROXY header with each
+          connection handed to it, naming the visitor (caddy/Caddyfile); a
+          borrowed site is someone else's, which would take it as garbage. */}}
+          "target": "{{ if $own }}caddy{{ else }}{{ $site }}{{ end }}:443",{{ if $own }} "xver": 1,{{ end }}
           "serverNames": ["{{ $site }}"],
           "privateKey": {"$file": "/run/secrets/reality_key"},
           "shortIds": [{"$file": "/run/secrets/reality_short_id"}]
@@ -129,7 +143,9 @@ REALITY connection with Vision for each. */ -}}
     UUID its login, under the own site's certificate, on to dotdash like
     REALITY. As the server's: a connection that brings no login gets the site
     over HTTP/3, no stateless resets, a silent connection given up after 15 s
-    (devices' keepalives hold a healthy one), and BBR. */}}
+    (devices' keepalives hold a healthy one), and BBR. The site gets the Host
+    the visitor sent, as over TCP, not caddy:443 (rewriteHost), so a cover
+    app's redirects and cookies name the relay's domain alike. */}}
     {
       "tag": "devices-hy2",
       "listen": "0.0.0.0",
@@ -143,7 +159,7 @@ REALITY connection with Vision for each. */ -}}
           "certificateFile": "/caddy-data/caddy/certificates/{{ $issuer }}/{{ $cert }}/{{ $cert }}.crt",
           "keyFile": "/caddy-data/caddy/certificates/{{ $issuer }}/{{ $cert }}/{{ $cert }}.key"}]},
         "hysteriaSettings": {"version": 2, "udpIdleTimeout": 60,
-          "masquerade": {"type": "proxy", "url": "https://caddy:443", "rewriteHost": true, "insecure": true}},
+          "masquerade": {"type": "proxy", "url": "https://caddy:443", "rewriteHost": false, "insecure": true}},
         "finalmask": {"quicParams": {"disableStatelessReset": true, "maxIdleTimeout": 15, "congestion": "bbr"}}
       }
     }
