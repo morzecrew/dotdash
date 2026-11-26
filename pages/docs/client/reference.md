@@ -23,7 +23,8 @@ with `sudo morzer config edit <name>`.
 | `dns_listen` | `none` | under `tun`, the address and port that answers the LAN's DNS, such as `192.168.1.10:53`, or this machine's, such as `127.0.0.153:53` for [systemd-resolved](tun.md#systemd-resolved) |
 | `dns_server` | `1.1.1.1` | under `tun`, the DNS server asked directly, around dotdash, for dotdash's server names, the direct rules and the LAN's own names ([tun](tun.md)) |
 
-Profiles (`installation.profile`): `tun`, the [whole machine](tun.md).
+Profiles (`installation.profile`): `tun`, the [whole machine](tun.md);
+`openflux`, the [OpenFlux fallback](openflux.md).
 
 ## Secrets
 
@@ -31,6 +32,7 @@ Profiles (`installation.profile`): `tun`, the [whole machine](tun.md).
 | --- | --- | --- |
 | `subscription_url` | no | the device's subscription URL, as the server's `client-config` prints it |
 | `proxy_password` | yes | the password devices give beyond `127.0.0.1` |
+| `openflux_link` | no | under the `openflux` profile, this device's OpenFlux link, as the server's `openflux-link` task prints it ([OpenFlux](openflux.md)) |
 
 ## Tasks
 
