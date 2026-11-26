@@ -2563,7 +2563,7 @@ with a DNS change, and devices keep their links. It keeps its keys, which a
 backup holds. Prepare when you set it up: keep the recovery key off the
 machine, add a backup target, and set the <code>A</code> record's TTL to 300 s or less.</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>backup_s3<span class="w"> </span>&lt;<span class="w"> </span>./bucket.yaml<span class="w">   </span><span class="c1"># the bucket's credentials</span>
-sudo<span class="w"> </span>morzer<span class="w"> </span>backup<span class="w"> </span>target<span class="w"> </span>add<span class="w"> </span>s3://bucket/dotdash-relay<span class="w"> </span>--credentials<span class="w"> </span>backup_s3
+sudo<span class="w"> </span>morzer<span class="w"> </span>backup<span class="w"> </span>target<span class="w"> </span>add<span class="w"> </span>s3://bucket/dotdash-relay/&lt;name&gt;<span class="w"> </span>--credentials<span class="w"> </span>backup_s3<span class="w">   </span><span class="c1"># a prefix of its own</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>backup<span class="w">                                  </span><span class="c1"># one now; each update takes another</span>
 </code></pre></div>
 <p>Then, on the new machine, after <code>bootstrap.sh</code>:</p>
