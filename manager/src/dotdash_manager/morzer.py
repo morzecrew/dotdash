@@ -20,6 +20,10 @@ READERS = 8
 # How long a machine's last good facts stand in for a read that fails: a day
 # of a target's outage, a timer's worth of retries, before its relays go.
 KEEP = 24 * 3600
+# How long one morzer call may take. Each waits on the target, a bucket or a
+# host over SSH, and takes seconds; one hung there would hold the state's lock,
+# and every timer's sync behind it, for good.
+TIMEOUT = 120
 
 # What a machine reports goes into every device's links and config, and onto
 # the operator's terminal, so a machine that is not what it should be must
@@ -166,7 +170,15 @@ class Morzer:
         self.common = ["--target", net.target, "--expect", self.roster, *self.creds]
 
     def run(self, *args: str, stdin: str | None = None) -> subprocess.CompletedProcess:
-        return subprocess.run([self.binary, *args], input=stdin, capture_output=True, text=True, check=False)
+        """morzer's answer; one that never comes is a failure after TIMEOUT,
+        which every caller already handles as such."""
+        try:
+            return subprocess.run([self.binary, *args], input=stdin, capture_output=True, text=True, check=False,
+                                  timeout=TIMEOUT)
+        except subprocess.TimeoutExpired:
+            return subprocess.CompletedProcess([self.binary, *args], 124, "",
+                                               f"morzer {' '.join(args[:2])} gave no answer in {TIMEOUT} s: "
+                                               "is the target reachable?")
 
     def facts(self, m: Machine) -> tuple[dict | None, str]:
         """A machine's facts (check), or None and why there are none."""

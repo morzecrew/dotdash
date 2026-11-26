@@ -73,6 +73,20 @@ def test_a_failed_read_takes_the_last_good_facts_for_a_day(tmp_path, capsys):
     assert mz.gather(kept, 1001) == {}
 
 
+def test_a_morzer_call_that_hangs_fails_in_time(tmp_path, monkeypatch):
+    from dotdash_manager import morzer
+
+    monkeypatch.setattr(morzer, "TIMEOUT", 0.2)
+    bin_ = tmp_path / "morzer"
+    bin_.write_text("#!/bin/sh\nexec sleep 30\n")
+    bin_.chmod(0o755)
+    mz = Morzer(loads(HEAD), tmp_path / "roster.yaml", str(bin_))
+    began = time.monotonic()
+    r = mz.run("state", "facts", "--json")
+    assert time.monotonic() - began < 5
+    assert r.returncode == 124 and r.stderr == "morzer state facts gave no answer in 0.2 s: is the target reachable?"
+
+
 def test_gather_leaves_refused_facts_out_and_says_why(tmp_path, capsys):
     net = loads(HEAD + '[[relay]]\nname = "r1"\nid = "inst_R1"\nkey = "RWr"\n')
     mz = Morzer(net, tmp_path / "roster.yaml", "morzer")
