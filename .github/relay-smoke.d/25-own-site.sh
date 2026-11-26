@@ -7,7 +7,7 @@
 # - REALITY's target is Caddy, under the relay's domain, and relay-entry names
 #   that domain as the site;
 # - a probe without the key gets the relay's own certificate for that name and
-#   the bundled page, titled with it;
+#   the bundled page, titled with it; port 80 redirects there, naming no server;
 # - a device whose link names the domain gets out through the relay, and
 #   doctor passes, the cover-site check included;
 # - a subscription path goes on to the dotdash servers through the relay's
@@ -80,6 +80,12 @@ grep -q "DNS:${domain}" <<<"${san}" || die "a probe did not get a certificate fo
 page=$(curl -sk --max-time 10 --resolve "${domain}:443:127.0.0.1" "https://${domain}/" || true)
 grep -q "<title>${domain}</title>" <<<"${page}" || die "a probe did not get the bundled page titled ${domain}"
 echo "${0##*/}: a probe without the key gets the relay's own certificate and page"
+# Port 80 redirects to HTTPS as Caddy would, and names no server, as 443.
+head=$(curl -sI --max-time 10 -H "Host: ${domain}" http://127.0.0.1/x?y || true)
+grep -q '^HTTP/1.1 308' <<<"${head}" || die "port 80 did not redirect: ${head}"
+grep -qi "^location: https://${domain}/x?y" <<<"${head}" || die "port 80 did not redirect to HTTPS: ${head}"
+! grep -qi '^server:' <<<"${head}" || die "port 80 names its server: ${head}"
+echo "${0##*/}: port 80 redirects to HTTPS and names no server"
 
 device 18083 "${domain}"
 gets_out 18083 || die "a device naming ${domain} did not get out through the relay"

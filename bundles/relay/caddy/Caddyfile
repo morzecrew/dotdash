@@ -45,8 +45,21 @@
 	# this domain's certificate rather than none. A CDN that checks it against
 	# its own name still fails; tell it to send this domain.
 	fallback_sni {$DOMAIN}
+	# Port 80's redirect is the http:// site below, as Caddy's own but
+	# without its Server header.
+	auto_https disable_redirects
 	servers {
 		protocols h1 h2
+	}
+}
+
+# Port 80: the ACME HTTP-01 check, which Caddy answers before any route, and
+# for everything else the redirect to HTTPS Caddy would make itself.
+http:// {
+	header -Server
+	header Location https://{host}{uri}
+	respond 308 {
+		close
 	}
 }
 
@@ -65,6 +78,15 @@ http://127.0.0.1:8081 {
 # path, so the CDN, which reads every request here, never learns that one,
 # and VLESS Encryption keeps what the requests carry unreadable to it.
 http://:8091 {
+	# No word of Caddy, as on the site: neither its Server header nor the
+	# Via it adds to what it passes back.
+	header {
+		-Server
+		-Via
+	}
+	handle_errors {
+		header -Server
+	}
 	@door {
 		remote_ip {$HTTP_ORIGIN_FROM:192.0.2.1/32}
 		path /{file./run/secrets/cdn_xhttp_path}/*
@@ -112,6 +134,8 @@ http://:8090 {
 (headers) {
 	header {
 		-Server
+		# Caddy's own, on what it passes back from a cover app or a server.
+		-Via
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer

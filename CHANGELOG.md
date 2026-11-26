@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A subscription token the servers don't have gets the relay's own site, as any other path does, where it got the server's 404 page through the tunnel. One request could tell an own-site relay apart, and might name its server.
 
+- A relay's site names no server anywhere: port 80's redirect and the `http-origin` door dropped `Server: Caddy`, as port 443 already did, and every port drops the `Via: 1.1 Caddy` Caddy adds to what it passes back from a cover app, a server or Xray.
+
 ## [0.17.0] - 2026-11-25
 
 ### Added

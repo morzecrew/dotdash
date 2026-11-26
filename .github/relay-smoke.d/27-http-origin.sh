@@ -8,8 +8,8 @@
 #   cdnpath;
 # - http-origin without own-site is refused;
 # - the door passes the CDNs' path on to Xray for an address in
-#   http_origin_from, answers any other path with a 404, and answers nobody
-#   with http_origin_from=none.
+#   http_origin_from, answers any other path with a 404, names no server,
+#   and answers nobody with http_origin_from=none.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -62,6 +62,11 @@ for _ in $(seq 15); do xray "$(code "/${path}/${session}")" && break; sleep 2; d
 status=$(code "/${path}/${session}")
 xray "${status}" || die "the door did not pass the CDNs' path on to Xray: ${status}"
 [ "$(code /elsewhere)" = 404 ] || die "the door answered a path other than the CDNs': $(code /elsewhere)"
+# Neither its own 404 nor what it passes back from Xray names Caddy.
+for p in /elsewhere "/${path}/${session}"; do
+  head=$(curl -s -D - -o /dev/null --max-time 5 "http://127.0.0.1:8880${p}" || true)
+  ! grep -qiE '^(server|via):' <<<"${head}" || die "the door names Caddy on ${p}: ${head}"
+done
 set_config http_origin_from=none
 [ "$(code "/${path}/${session}")" = 404 ] || die "with http_origin_from=none, the door still answered"
 echo "${0##*/}: the door passes the CDNs' path alone, to the addresses in http_origin_from alone"
