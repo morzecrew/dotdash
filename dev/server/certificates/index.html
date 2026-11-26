@@ -2289,10 +2289,15 @@ about where the servers are.</p>
    machine as usual, with an <code>A</code> record.</li>
 <li>
 <p><strong>Registration,</strong> once per parent, on the
-   <a href="#an-acme-dns-server">acme-dns server</a>:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>register<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>s.example.net
+   <a href="#an-acme-dns-server">acme-dns server</a>, with its <code>registration</code> parameter
+   on for the while, and off again after, so nobody else registers meanwhile
+   (<a href="../../acme-dns/">acme-dns</a>):</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">registration</span><span class="o">=</span><span class="nb">true</span>
+sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>register<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>s.example.net
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">registration</span><span class="o">=</span><span class="nb">false</span>
 </code></pre></div>
-<p>It prints the CNAME for step 3 and the <code>acme_dns</code> secret for step 4. Keep
+<p>With registration off, <code>register</code> says to turn it on and does nothing.
+It prints the CNAME for step 3 and the <code>acme_dns</code> secret for step 4. Keep
 the secret as you keep the servers' keys: every machine under the parent
 shares it.</p>
 </li>

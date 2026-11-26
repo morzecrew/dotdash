@@ -2423,7 +2423,14 @@ expect the account to be closed.</p>
   those fronting the bundled page.</li>
 </ul>
 <p>The CDN ends one TLS connection and opens another, so it sees the requests'
-paths and headers. VLESS Encryption keeps what they carry from it.</p>
+paths and headers. VLESS Encryption keeps what they carry from it. The links
+go by a path of the CDNs' own (the <code>cdn_xhttp_path</code> secret, made at the
+first apply), never the one devices reach this server by directly, disguised
+as <a href="#in-front-of-a-relay">through a relay</a>: one path, the session, sequence
+and padding in cookies, no protocol marker by name. Devices on a
+subscription take these links at their next refresh. Links imported by hand
+before them take the direct path through the CDN, plain, which still works:
+send those devices their links again.</p>
 <p>A CDN is refused subscriptions. A subscription read in the clear gives away
 every link, the device's keys and every relay and CDN name, so one request
 to the provider would list every way in. The server and
@@ -2451,6 +2458,15 @@ contents, so an app behind the site that answers every path doesn't pass for
 it. Keep such a CDN's name away from
 devices' subscriptions: an own-site relay serves them inside the restricted
 network with nothing in between reading them.</p>
+<p><code>cdn-check</code> also asks each name, a relay's <code>origin=</code> names included, on the
+path its links take, with no session, which Xray turns down with a 400 where
+the site answers a path that leads nowhere with its 404. So for each name it
+says whether the data path reaches Xray behind it; ends at the site's 404,
+when the relay's line here is stale or a <a href="#a-cdn-that-fetches-in-plain-http">door</a>
+refused the CDN's address; or gets a 5xx or no answer, when the CDN doesn't
+reach its origin. It exits 1 if a CDN serves subscriptions or a path doesn't
+reach Xray. Run it on demand: it fetches through the upstreams, and a fetch
+of every CDN each hour would be a pattern of its own.</p>
 <h3 id="in-front-of-a-relay">In front of a relay<a class="headerlink" href="#in-front-of-a-relay" title="Permanent link">&para;</a></h3>
 <p>A CDN can front a <a href="../../relay/install/#1-pick-the-site">relay with a site of its own</a>
 instead of this server. The CDN's account then names the relay, which is
@@ -2474,7 +2490,7 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
    above, and <a href="../devices/#pools">pools</a> take the relay's CDN names as members.</p>
 </li>
 </ol>
-<p>A CDN reads every request it passes on, and keeps logs. Through a relay, the
+<p>A CDN reads every request it passes on, and keeps logs. Through a relay too, the
 links go by a path of the CDNs' own, so the CDN never learns the path devices
 reach the relay by directly, and they are disguised: one path, the session,
 sequence and padding in cookies, the padding a random token rather than a run
@@ -2485,7 +2501,9 @@ download. Keep CDN links a fallback, front a relay you can replace (below),
 and expect a CDN account to be closed one day. A relay's line from before
 0.12.0, without <code>cdnpath=</code>, gives the plain links by its own path. A
 <a href="../../client/reference/">dotdash-client</a> with <code>cdn=skip</code> leaves CDN links
-out while it has any other.</p>
+out while it has any other. <code>off=cdn:&lt;name&gt;</code> on the relay's line takes that one CDN's
+links out of devices' and keeps the relay's others: for a CDN that gets
+nothing through, as its canaries <a href="../../canary/#a-relays-cdns">find</a>.</p>
 <h4 id="the-cdns-origin-only">The CDN's origin only<a class="headerlink" href="#the-cdns-origin-only" title="Permanent link">&para;</a></h4>
 <p>Devices behind a CDN connect to the CDN's addresses, never to the relay's, so
 the relay behind it is not exposed the way a relay devices reach directly is.
