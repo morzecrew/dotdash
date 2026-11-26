@@ -122,16 +122,17 @@ violations+=$'\n'$(jq '
   ["public-tls", "public-dns", "public-xhttp-reality", "public-kcp", "public-hysteria2"] as $public
   | ["egress", "egress6", "backups", "backups6"] as $hops
   | ([.inbounds[]?.tag] - $public - $hops) as $extra
-  | [.routing.rules[]? | select(.outboundTag == "inside") | .inboundTag // ["(any)"] | .[]] as $inward
+  | [.routing.rules[]? | select(.outboundTag | IN("inside", "inside-udp")) | .inboundTag // ["(any)"] | .[]] as $inward
   | check($extra == []; "the gate has unexpected inbounds: \($extra)"),
     (.inbounds[]? | select(.protocol == "dokodemo-door") |
       check(.settings.address == "xray"; "the gate forwards \(.tag) to \(.settings.address), not Xray")),
     (.inbounds[]? | select(.tag | IN("backups", "backups6")) |
       check(.listen == "127.0.0.1"; "the gate'"'"'s \(.tag) hop listens beyond loopback")),
-    # Its own outbounds: block, inside, and the hops into its backups balancers.
+    # Its own outbounds: block, inside (TCP) and inside-udp, and the hops into
+    # its backups balancers.
     # The upstreams lines come from the upstreams file, which the image turns
     # into socks, http and wireguard outbounds only (noKernelTun always).
-    check([.outbounds[]?.tag] | .[0:2] == ["block", "inside"] and IN(.[2:]; [], ["to-backups"], ["to-backups", "to-backups6"]);
+    check([.outbounds[]?.tag] | .[0:3] == ["block", "inside", "inside-udp"] and IN(.[3:]; [], ["to-backups"], ["to-backups", "to-backups6"]);
       "the gate'"'"'s outbounds are \([.outbounds[]?.tag])"),
     check(.outbounds[0].protocol == "blackhole"; "the gate'"'"'s block outbound is not a blackhole"),
     (.outbounds[]? | select(.tag | IN("to-backups", "to-backups6")) |
@@ -147,8 +148,8 @@ violations+=$'\n'$(jq '
     (.routing.rules[]? | select(.balancerTag != null) |
       check(.inboundTag != null and (.inboundTag - $hops) == [];
         "the gate sends \(.inboundTag // ["(any)"]) through a balancer")),
-    check([.routing.rules[]? | .outboundTag // empty] - ["inside", "block"] == [];
-      "the gate routes straight to \([.routing.rules[]? | .outboundTag // empty] - ["inside", "block"])"),
+    check([.routing.rules[]? | .outboundTag // empty] - ["inside", "inside-udp", "block"] == [];
+      "the gate routes straight to \([.routing.rules[]? | .outboundTag // empty] - ["inside", "inside-udp", "block"])"),
     check(($inward - $public) == []; "the gate sends \($inward - $public) out directly"),
     check(.routing.rules[-1] == {network: "tcp,udp", outboundTag: "block"}; "the gate does not block what its rules leave"),
     check(has("dns") | not; "the gate has a DNS section of its own")

@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The release and dev keys' public halves, in the README and the docs' Releases section: `morzer init --signing-key` checks even the first release against them, with no access to the repository's variables.
 
+### Changed
+
+- The cover app behind a server sees each visitor's own address in `X-Forwarded-For`, not Xray's, so its per-address limits and lockouts hold per visitor. The gate and Xray hand the address on in PROXY headers, which Caddy takes from Xray alone. HTTP/3 visitors still show as Xray.
+
 ### Security
 
 - Under the server's `openflux` profile, the exits' connections go through Xray, so the rules devices get apply to them: BitTorrent and trackers, mail on port 25, private addresses and the server's networks are blocked, and `resolve` and `ipv6` hold. They went to the gate, past all of it.

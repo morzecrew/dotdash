@@ -47,6 +47,22 @@
 	fallback_sni {$DOMAIN}
 	# The redirect to HTTPS is the http:// site's, for every name.
 	auto_https disable_redirects
+	# On 443, a connection from XRAY_NET, the backend network Caddy shares
+	# with Xray alone (caddy/start.sh), may open with a PROXY header naming
+	# the visitor Xray relays, which the cover app then gets as
+	# X-Forwarded-For. Hysteria2's masquerade sends none, and is taken as
+	# Xray's own address. A header from anywhere else is read and ignored.
+	# The first servers block that names a server's address is the one it
+	# takes.
+	servers :443 {
+		listener_wrappers {
+			proxy_protocol {
+				allow {$XRAY_NET}
+			}
+			tls
+		}
+		protocols h1 h2
+	}
 	servers {
 		protocols h1 h2
 	}

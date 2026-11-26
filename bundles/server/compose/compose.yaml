@@ -126,6 +126,9 @@ services:
   caddy:
     <<: *hardened
     image: ${DOTDASH_IMAGE_CADDY:?set by morzer}
+    # Caddy, told first which addresses are Xray's, whose PROXY headers it
+    # takes (caddy/start.sh).
+    entrypoint: ["sh", "/etc/caddy/start.sh"]
     environment:
       DOMAIN: ${DOTDASH_DOMAIN:?install with --domain}
       CERT_ISSUER: ${DOTDASH_PARAM_CERT_ISSUER:-acme}
@@ -138,9 +141,10 @@ services:
     # 80 and 443 inside, as above.
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
     volumes:
+      # The Caddyfile and start.sh.
       - type: bind
-        source: ${DOTDASH_RELEASE_DIR:?set by morzer}/caddy/Caddyfile
-        target: /etc/caddy/Caddyfile
+        source: ${DOTDASH_RELEASE_DIR:?set by morzer}/caddy
+        target: /etc/caddy
         read_only: true
         bind: {create_host_path: false}
       # The bundled page, and the operator's own files, served first when one

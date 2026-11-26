@@ -63,6 +63,13 @@ How Caddy reaches the app depends on where it runs:
 Either way:
 
 - The app gets requests for this domain as Host, as behind any reverse proxy.
+- The app gets each visitor's address as `X-Forwarded-For`, so its per-address
+  limits hold per visitor. Xray hands it to Caddy in a PROXY header, which
+  Caddy takes from Xray alone; one a visitor sends is replaced. A visitor
+  over HTTP/3, through [Hysteria2](hysteria2.md), shows as Xray's address.
+  Where Docker relays the port itself, as for IPv6 without its NAT or behind
+  a web server of your own on this machine, every visitor shows as Docker's
+  bridge address.
 - `doctor` checks that the app answers, asking it from inside Caddy, as Caddy
   does. Any HTTP answer counts, a 401 from a login wall included. With no
   answer, visitors get a 502, so the cover-site check fails, and

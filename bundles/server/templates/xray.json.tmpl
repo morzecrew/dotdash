@@ -9,6 +9,10 @@ with the client list in that file, before starting Xray (platform-images#125,
 REALITY owns the public TLS port. A client holding the key gets Xray; anything
 else (browsers, scanners, ACME, a CDN) is relayed to Caddy, which serves the
 cover site with its own certificate and passes the XHTTP path back here.
+Every REALITY inbound takes the PROXY header the gate opens each connection
+with, naming the visitor, and opens what it relays with one of its own
+(xver), so Caddy and the app behind it see the visitor, not Xray; the
+second key's twins take it from the inbound that hands them on.
 
 The xhttp-reality profiles add XHTTP under REALITY instead of TLS, on a port of
 its own (8443 here, xhttp_reality_port outside): same keys, same fallback to
@@ -142,7 +146,9 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
       "streamSettings": {
         "network": "raw",
         "security": "reality",
+        "sockopt": {"acceptProxyProtocol": true},
         "realitySettings": {
+          "xver": 1,
           "target": "{{ if $second }}127.0.0.1:4430{{ else }}caddy:443{{ end }}",
           "serverNames": ["{{ $domain }}"],
           "privateKey": {"$file": "/run/secrets/reality_key"},
@@ -165,7 +171,9 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
       "streamSettings": {
         "network": "raw",
         "security": "reality",
+        "sockopt": {"acceptProxyProtocol": true},
         "realitySettings": {
+          "xver": 1,
           "target": "caddy:443",
           "serverNames": ["{{ $domain }}"],
           "privateKey": {"$file": "/run/secrets/reality_key_second"},
@@ -203,7 +211,9 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
       "streamSettings": {
         "network": "xhttp",
         "security": "reality",
+        "sockopt": {"acceptProxyProtocol": true},
         "realitySettings": {
+          "xver": 1,
           "target": "{{ if $second }}127.0.0.1:4431{{ else }}caddy:443{{ end }}",
           "serverNames": ["{{ $domain }}"],
           "privateKey": {"$file": "/run/secrets/reality_key"},
@@ -226,7 +236,9 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
       "streamSettings": {
         "network": "xhttp",
         "security": "reality",
+        "sockopt": {"acceptProxyProtocol": true},
         "realitySettings": {
+          "xver": 1,
           "target": "caddy:443",
           "serverNames": ["{{ $domain }}"],
           "privateKey": {"$file": "/run/secrets/reality_key_second"},
