@@ -2451,8 +2451,11 @@ requests never learns the other from
 <p>REALITY hands the site each connection with the visitor's address (a PROXY
 header), so a cover app sees each visitor's own address in
 <code>X-Forwarded-For</code>, not Xray's, and its per-address limits work. Visitors
-over the Hysteria2 port's HTTP/3 still show Xray's. A subscription token
-the servers don't have gets the site's own answer, as any other path does.</p>
+over the Hysteria2 port's HTTP/3 still show Xray's, and where Docker relays
+the port itself, as for IPv6 without its NAT or behind a web server of your
+own on this machine, every visitor shows as Docker's bridge address. A
+subscription token the servers don't have gets the site's own answer, as any
+other path does.</p>
 <p><code>installation.profile=own-site,hysteria2</code>: the relay serves
 <a href="../../server/hysteria2/">Hysteria2</a> on UDP <code>hysteria2_port</code> too, under its own
 site's certificate, each device's UUID its login, and carries it on to the
