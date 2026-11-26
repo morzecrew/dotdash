@@ -71,8 +71,11 @@ requests never learns the other from
 REALITY hands the site each connection with the visitor's address (a PROXY
 header), so a cover app sees each visitor's own address in
 `X-Forwarded-For`, not Xray's, and its per-address limits work. Visitors
-over the Hysteria2 port's HTTP/3 still show Xray's. A subscription token
-the servers don't have gets the site's own answer, as any other path does.
+over the Hysteria2 port's HTTP/3 still show Xray's, and where Docker relays
+the port itself, as for IPv6 without its NAT or behind a web server of your
+own on this machine, every visitor shows as Docker's bridge address. A
+subscription token the servers don't have gets the site's own answer, as any
+other path does.
 
 `installation.profile=own-site,hysteria2`: the relay serves
 [Hysteria2](../server/hysteria2.md) on UDP `hysteria2_port` too, under its own
