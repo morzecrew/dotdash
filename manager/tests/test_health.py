@@ -84,6 +84,22 @@ def test_a_quiet_canarys_old_success_does_not_hold_a_relay_up():
     assert health["r1"]["fails"] == 0
 
 
+def test_a_canary_whose_clock_runs_ahead_neither_burns_a_relay_nor_holds_it():
+    net = loads(ROSTER.replace('name = "c2"\nwatches = "r2"', 'name = "c2"\nwatches = "r1"')
+                + '[[canary]]\nname = "c3"\nwatches = "r2"\n')
+    health, now = {}, 10_000
+    for n in range(BURN_AFTER + 1):
+        # c2 says it read a year on, failing; c1, on time, gets through.
+        facts = {"r1": R1, "r2": R2, "c1": canary(R1, now + n * 3600, True), "c2": canary(R1, now + 365 * 86400, False),
+                 "c3": canary(R2, now + n * 3600, True)}
+        burnt, _ = judge(net, facts, health, None, now + n * 3600)
+    assert burnt == set() and health["r1"]["fails"] == 0 and health["r1"]["at"] == now + BURN_AFTER * 3600
+    # A few minutes ahead still counts.
+    facts["c1"] = canary(R1, now + BURN_AFTER * 3600 + 900, False)
+    judge(net, facts, health, None, now + BURN_AFTER * 3600 + 400)
+    assert health["r1"]["fails"] == 1
+
+
 def test_every_relay_failing_at_once_drops_none():
     net, health = loads(ROSTER), {}
     for at in range(1, BURN_AFTER):

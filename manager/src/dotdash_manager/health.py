@@ -4,6 +4,8 @@ BURN_AFTER readings in a row. A canary refreshes its facts before every fleet
 publish, so a reading is its facts' checked_at, and the same one read again
 counts once."""
 
+import time
+
 from .roster import Network
 
 BURN_AFTER = 3
@@ -22,6 +24,10 @@ LATENCIES = 24
 # moment of its own, so one that missed a publish, or went quiet, falls out
 # rather than holding an old success against a fresh failure.
 FRESH = 90 * 60
+# A canary's clock may run this far ahead of the manager's. A reading from
+# further on is dropped: it would make every honest one look old (FRESH), and
+# until real time caught up, keep the verdict it gave (a reading counts once).
+AHEAD = 600
 
 
 def _watched(f: dict, kind: str) -> tuple[str, str]:
@@ -68,12 +74,14 @@ def record(h: dict, seen: list[dict]) -> None:
         del h["latency"][p][:-LATENCIES]
 
 
-def judge(net: Network, facts: dict, health: dict, rows: dict | None = None) -> tuple[set[str], list[str]]:
+def judge(net: Network, facts: dict, health: dict, rows: dict | None = None,
+          now: float | None = None) -> tuple[set[str], list[str]]:
     """Read the canaries' new verdicts into health, the state's record per
     machine, and return the burnt relays to leave out and what to say. rows,
     the machines' own fleet rows (Morzer.rows), say whether each looks
-    blocked or down."""
+    blocked or down. A reading from more than AHEAD past now is dropped."""
     rows = rows or {}
+    now = time.time() if now is None else now
     targets = [*net.server, *net.relay]
     for gone in set(health) - {t.name for t in targets}:
         del health[gone]
@@ -89,7 +97,8 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None) -> 
         # here; a canary offline itself says nothing about its target.
         seen = [f for c in net.canary if c.watches == t.name and (f := facts.get(c.name))
                 and (f.get("server"), f.get("address")) == expect and f.get("internet") is not False
-                and isinstance(f.get("checked_at"), int) and isinstance(f.get("paths"), dict)]
+                and isinstance(f.get("checked_at"), int) and f["checked_at"] <= now + AHEAD
+                and isinstance(f.get("paths"), dict)]
         if not seen:
             continue
         at = max(f["checked_at"] for f in seen)

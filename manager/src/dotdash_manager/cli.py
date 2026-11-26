@@ -79,7 +79,7 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     now = int(time.time())
     facts = mz.gather(st.setdefault("facts", {}), now)
     before = copy.deepcopy(st.setdefault("health", {}))
-    burnt, verdicts = health.judge(net, facts, st["health"], mz.rows())
+    burnt, verdicts = health.judge(net, facts, st["health"], mz.rows(), now)
     held, stands, more = health.spares(net, facts, st["health"], burnt)
     verdicts += more
     off, more = health.blocked(net, facts, st["health"], burnt)

@@ -225,6 +225,9 @@ replace it. A row that doesn't verify says nothing either way.
 - **A canary whose own network is down says nothing**, given a `control_url`:
   a site its network reaches without dotdash. A reading where that fails
   doesn't count. Without one, an offline canary looks like a burnt relay.
+- **A canary's clock may run ahead by ten minutes.** A reading stamped
+  further ahead of the manager's clock doesn't count, so a canary whose clock
+  is wrong can't burn a relay alone or keep it burnt.
 - **Every relay at once is kept.** If every relay would be left out in the
   same sync, the manager keeps them all and says to check the canaries'
   network instead.
