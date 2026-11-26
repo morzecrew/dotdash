@@ -12,7 +12,7 @@ BUNDLES = Path(__file__).resolve().parents[2] / "bundles"
 # Sent today, not yet in their manifest's managed lists: the relay and server
 # bundles add them. Delete each once its manifest has it.
 PENDING = {("relay", "parameters", "via"), ("relay", "parameters", "via_link"),
-           ("relay", "parameters", "via_fingerprint"), ("server", "parameters", "hello_split")}
+           ("relay", "parameters", "via_fingerprint")}
 ROSTER = """
 target = "t"
 key = "k"
