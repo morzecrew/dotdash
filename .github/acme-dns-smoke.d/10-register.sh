@@ -2,11 +2,20 @@
 # What a server's Caddy relies on: the register task gives a registration and
 # its CNAME, the API takes a DNS-01 token under it, and the zone answers that
 # token over the published port 53, as a CA's resolver would ask it.
+# Registration is off by default: the task says how to open it and the API
+# refuses /register; once it is closed again, the registration still works.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
 
+registers() { sudo docker exec "$(service_container acme-dns)" wget -q -O /dev/null --post-data= http://auth.rig.invalid:443/register 2>/dev/null; }
+out=$(sudo morzer task run register --output -- s.rig.invalid. 2>&1) && die "register ran with registration off"
+grep -qF 'config set registration=true' <<<"${out}" || die "register with registration off did not say to open it: ${out}"
+! registers || die "the API took a registration with registration off"
+sudo morzer config set registration=true >/dev/null || die "could not set registration=true"
 out=$(sudo morzer task run register --output -- s.rig.invalid. 2>&1) || die "register failed: $(tail -3 <<<"${out}")"
+sudo morzer config set registration=false >/dev/null || die "could not set registration=false"
+! registers || die "the API still took a registration after registration=false"
 grep -qE '^_acme-challenge\.s\.rig\.invalid\.  CNAME  [0-9a-f-]+\.auth\.rig\.invalid\.$' <<<"${out}" ||
   die "register printed no CNAME for s.rig.invalid"
 secret=$(grep -m1 '^{' <<<"${out}") || die "register printed no secret"
