@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- A relay refuses a quote, backslash, brace or whitespace in `site`, `dotdash_servers`, `dotdash_address`, `dotdash_public_key` and each `via` line, set by hand or by an authority. Such a value could add keys to its Xray config or lines to its Caddyfile; the apply now fails and the relay stays as it was.
+
 ## [0.17.0] - 2026-11-25
 
 ### Added
