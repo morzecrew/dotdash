@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Each call the manager makes to morzer fails after two minutes without an answer, saying so, and the run goes on as for any failed read or publish. A target that hung held the state's lock, and every timer's sync behind it, for good.
 
+- The manager's `adopt` names the devices a server lists as `desktop` that the roster's `desktops` lacks. It dropped the kind silently, so after the first sync former desktops got CDN links, some paid by the gigabyte.
+
 ### Security
 
 - The manager refuses facts no bundle prints: whitespace, quotes, backslashes, braces or control characters in a value, or a field missing or of the wrong type. A tampered relay can no longer add lines to the servers' `relays`, crash every sync or write to the terminal, nor take another relay's address out of the pools.

@@ -25,8 +25,8 @@ def test_command_prints_what_parse_reads(tmp_path):
     (tmp_path / "vless_clients").write_text(f"{PHONE} phone\n")
     out = subprocess.run(["sh", "-c", adopt.COMMAND.replace("/run/dotdash/secrets", str(tmp_path))],
                          capture_output=True, text=True, check=True).stdout
-    keys, ids, unnamed = adopt.parse(out)
-    assert set(keys) == set(state.SHARED_KEYS) and ids == {"phone": PHONE} and unnamed == 0
+    keys, ids, unnamed, desktops = adopt.parse(out)
+    assert set(keys) == set(state.SHARED_KEYS) and ids == {"phone": PHONE} and unnamed == 0 and desktops == set()
     assert keys["xhttp_path"] == (tmp_path / "xhttp_path").read_text().strip()
     (tmp_path / "kcp_seed").unlink()
     r = subprocess.run(["sh", "-c", adopt.COMMAND.replace("/run/dotdash/secrets", str(tmp_path))], capture_output=True)
@@ -52,7 +52,7 @@ def test_parse_refuses_what_no_server_printed():
 def test_take_keeps_the_roster_names_and_says_who_moves():
     net = loads(ROSTER)
     st = {"keys": {k: "made" for k in state.SHARED_KEYS}, "ids": {"phone": "new", "laptop": "new2"}}
-    keys, ids, unnamed = adopt.parse(server_output(f"# devices\n{PHONE} phone\n{OLD} tablet\n{R1} relay-r1\n{OLD}\n"))
+    keys, ids, unnamed, _ = adopt.parse(server_output(f"# devices\n{PHONE} phone\n{OLD} tablet\n{R1} relay-r1\n{OLD}\n"))
     said = adopt.take(st, net, keys, ids, unnamed)
     assert st["keys"] == keys and st["ids"]["phone"] == PHONE and st["ids"]["relay-r1"] == R1 and st["ids"]["laptop"] == "new2"
     assert said[0] == "adopted: the server's keys; ids of 2 of the roster's 3 names"
@@ -92,5 +92,16 @@ def test_adopt_makes_the_state_of_a_roster_naming_the_server_joined(tmp_path, mo
 
 
 def test_parse_takes_the_first_word_of_a_key_file_and_no_newline():
-    keys, _, _ = adopt.parse(server_output("", reality_short_id="0123456789abcdef\n"))
+    keys, _, _, _ = adopt.parse(server_output("", reality_short_id="0123456789abcdef\n"))
     assert keys["reality_short_id"] == "0123456789abcdef"
+
+
+def test_adopt_names_the_desktops_the_roster_does_not():
+    net = loads(ROSTER.replace('devices = ["phone", "laptop"]', 'devices = ["phone", "laptop", "pc"]\ndesktops = ["pc"]'))
+    st = {"keys": {}, "ids": {}}
+    PC = "2e3c4bd2-5a4f-4b8e-9d1e-0f2a3b4c5d6e"
+    keys, ids, unnamed, desktops = adopt.parse(server_output(f"{PHONE} phone mobile\n{OLD} laptop desktop\n{PC} pc desktop\n"))
+    assert desktops == {"laptop", "pc"}
+    said = adopt.take(st, net, keys, ids, unnamed, desktops)
+    assert said[-1] == ("desktops on the server but not in the roster's desktops, getting CDN links at the next sync "
+                        "unless added: laptop")

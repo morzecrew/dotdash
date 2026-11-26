@@ -148,7 +148,9 @@ ssh root@a.example 'sudo sh -c …' | dotdash-manager adopt a
 
 It says which devices keep their links, which are new to the server, and
 which the server has but the roster doesn't, which lose access at the next
-`sync` unless you add them. Finish a [key rotation](#rotating-the-reality-key)
+`sync` unless you add them. It also names the server's desktops missing from
+the roster's `desktops`, which would get CDN links at the next `sync` unless
+you add them there. Finish a [key rotation](#rotating-the-reality-key)
 first: only the current key is taken. Once the manager has published, `adopt`
 refuses, since it would change the keys on every machine again; `--force` when
 that is meant.
