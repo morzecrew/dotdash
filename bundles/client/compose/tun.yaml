@@ -21,6 +21,11 @@ services:
     cap_add: [NET_ADMIN, DAC_OVERRIDE, NET_BIND_SERVICE]
     devices: ["/dev/net/tun:/dev/net/tun"]
     network_mode: host
+    environment:
+      # The sub port (config-tun.json): through dotdash where a link answers,
+      # and directly from Xray, outside TUN, while none does, the one way out
+      # a fresh install has.
+      XRAY_SUBSCRIPTION_PROXY: socks5h://127.0.0.1:7892
     # On the host's network the port is the listener's own (config-tun.json).
     ports: !reset []
     volumes:

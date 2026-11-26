@@ -4,8 +4,9 @@ TUN, which takes every connection on the machine, its containers' and IPv6
 included, and DNS answered with fake addresses whose names go to dotdash.
 On the host's network, so the proxy port listens on the listen address
 itself. Rules only this file has name a TUN-only inbound (tun, dns-in,
-resolver) or the DNS module's tag (dns-internal); the smoke test drops those,
-the dns outbound, the inbounds, dns and fakedns, and compares the rest.
+resolver, sub) or the DNS module's tag (dns-internal); the smoke test drops
+those, the sub balancer, the dns outbound, the inbounds, dns and fakedns, and
+compares the rest.
 The openflux profile's fallback is config.json's alone: that profile doesn't
 run under tun, whose host network has no name for its client.
 
@@ -59,6 +60,8 @@ through a CDN (dotdash-cdn-*): the servers' (dotdash-<n>-*) and the relays'
      "settings": {"udp": true{{ if $lan }}, "auth": "password",
        "accounts": [{"user": "{{ required "set proxy_user" .Parameters.proxy_user }}", "pass": {"$file": "/run/secrets/proxy_password"}}]{{ end }}}},
     {"tag": "probe", "listen": "127.0.0.1", "port": 7891, "protocol": "socks", "settings": {"udp": true}},
+    {{- /* The subscription's and pinned geodata's fetches (tun.yaml). */}}
+    {"tag": "sub", "listen": "127.0.0.1", "port": 7892, "protocol": "socks"},
     {{- /* Everything, IPv4 and IPv6, into the interface Meta (the gateway
     check and its DOCKER-USER rules name it), as two halves of each family:
     Xray adds its routes at metric 1, which a default route at metric 0
@@ -88,7 +91,13 @@ through a CDN (dotdash-cdn-*): the servers' (dotdash-<n>-*) and the relays'
   "burstObservatory": {"subjectSelector": [{{ $links }}], "pingConfig": {"destination": "{{ $probe }}", "interval": "1m", "sampling": 1}},
   "routing": {
     "domainStrategy": "AsIs",
-    "balancers": [{"tag": "dotdash", "selector": [{{ $links }}], "strategy": {"type": "leastPing"}}],
+    {{- /* sub: a fresh install, or a cache whose server is gone, has no
+    link that answers, and the entrypoint's own direct fetch, its fallback,
+    enters TUN and goes where the dotdash balancer sends it. Through the sub
+    port, the fetch leaves directly from Xray's own socket outside TUN, then
+    and only then. */}}
+    "balancers": [{"tag": "dotdash", "selector": [{{ $links }}], "strategy": {"type": "leastPing"}},
+      {"tag": "sub", "selector": [{{ $links }}], "strategy": {"type": "leastPing"}, "fallbackTag": "direct"}],
     "rules": [
       {"type": "field", "inboundTag": ["resolver", "dns-internal"], "outboundTag": "direct"},
       {"type": "field", "inboundTag": ["tun", "dns-in"], "port": "53", "outboundTag": "dns"},
@@ -96,6 +105,11 @@ through a CDN (dotdash-cdn-*): the servers' (dotdash-<n>-*) and the relays'
       {"type": "field", "ip": ["::/0"], "outboundTag": "block"},
       {{- end }}
       {"type": "field", "inboundTag": ["probe"], "balancerTag": "dotdash"},
+      {{- /* Only the image's entrypoint, which fetches, gets the sub
+      balancer. The port is on the host's network, and any other process
+      there goes to dotdash as through the probe port. */}}
+      {"type": "field", "inboundTag": ["sub"], "process": ["/usr/local/bin/xray-entrypoint"], "balancerTag": "sub"},
+      {"type": "field", "inboundTag": ["sub"], "balancerTag": "dotdash"},
       {{- range lines .Parameters.block_rules }}{{ $l := replace (trim .) "\\" "\\\\" }}{{ if and $l (ne (slice $l 0 1) "#") }}
       {"type": "field", {{ template "match" $l }}, "outboundTag": "block"},
       {{- end }}{{ end }}

@@ -67,6 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A relay's site names no server anywhere: port 80's redirect and the `http-origin` door dropped `Server: Caddy`, as port 443 already did, and every port drops the `Via: 1.1 Caddy` Caddy adds to what it passes back from a cover app, a server or Xray.
 
+- A client under `tun` with no link that answers, as on a fresh install or with kept links whose server is gone, now gets its subscription: while no link answers, the fetch goes directly from Xray, outside TUN. Before, it entered TUN, found no link and was refused for good. No other process can take that way out.
+
 ### Security
 
 - A server takes a `relays` line only when its host, site, public key, short id, VLESS encryption and XHTTP path each have their shape, and gives no mKCP link through a `kcp=` field that isn't whole. A bad line is left out and named by its line number, so a tampered one can't rewrite or break every device's config.

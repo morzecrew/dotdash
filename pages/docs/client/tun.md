@@ -26,7 +26,9 @@ sudo morzer config unset installation.profile     # back to the proxy port alone
 - Networks the machine is directly on, such as its LAN, stay reachable
   directly.
 - The subscription and the dotdash server must be reachable over the
-  machine's main interface, as they normally are.
+  machine's main interface, as they normally are. With no link that
+  answers, as on a first start, the subscription's fetch alone goes
+  directly, from Xray.
 
 Xray then runs as root with `NET_ADMIN`, `DAC_OVERRIDE` and
 `NET_BIND_SERVICE`, on the host's network, with `/dev/net/tun`: a TUN
