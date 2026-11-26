@@ -41,6 +41,15 @@ reveals none of them.
 | The relay's own keys (`secret rotate` on the relay) | Run `relay-entry` again, replace the relay's line in the server's `relays`, and send devices their links again (subscriptions pick them up). |
 | The relay's address | The same: `relay-entry -- <new address>`, then replace the line. |
 
+## Undo a change
+
+morzer's journal names each change but not the value it replaced, so note
+the old value before a change (`sudo morzer config get <name>`). To undo it,
+set that value again. If the parameter goes into the relay's line
+([which do](reference.md#what-changes-the-relays-line)), run `relay-entry`
+and replace the line on every server too. Under the
+[manager](../manager.md#a-relays-transports), the next `sync` does that.
+
 ## A site of its own, later
 
 A relay set up with a borrowed site moves to one of its own in place. Point a
@@ -178,6 +187,8 @@ Point the relay's domain at the new address, and open 443, and 80 under
 `own-site`. Shut the old machine down: two live relays with one installation
 id confuse each other's backups. A relay whose links name its IP needs a new
 line from `relay-entry` in the server's `relays`, and new links for devices.
+Under the manager, the imported relay has a new signing key and age
+identity: [join it again](../manager.md#a-rebuilt-machine).
 
 ## Watching it
 

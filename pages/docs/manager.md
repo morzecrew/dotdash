@@ -259,8 +259,8 @@ document until a read succeeds, and `sync` says so in capitals.
 The manager keeps what it made in `dotdash-state.json` beside the roster: the
 shared keys, every device's id, the client machines' proxy passwords and each
 machine's last good facts. It is
-written with mode 0600 and holds every credential in the network: back it up
-like `authority.key`. One run at a time changes it: a run holds
+written with mode 0600 and holds every credential in the network:
+[back it up](#back-up-the-state) like `authority.key`. One run at a time changes it: a run holds
 `dotdash-state.lock` beside it, and another started meanwhile, such as a timer's
 `sync` during a `rotate`, waits for it. `sync --dry-run` leaves it as it was.
 
@@ -611,3 +611,85 @@ Give every server the same profiles and transport ports, though: each server's
 links and configs name the others with its own `https_port`, XHTTP with
 REALITY, mKCP (port, header and opener) and Hysteria2 ports. `sync` says when
 the servers that applied the keys differ in any of those.
+
+## A relay's transports
+
+Change them on the relay itself: a profile, a port, `cdn_hosts`, `name`, and
+its firewall to match. Its facts carry its new line after the apply, and the
+next `sync` puts that line in every server's `relays`; devices get the new
+links at their next refresh. Nothing is edited on the servers. Which
+parameters go into the line is in the
+[relay reference](relay/reference.md#what-changes-the-relays-line);
+`http_origin_from` doesn't, so a change to it needs nothing more. Then
+`entry-check` on the relay says whether each entry works.
+
+To undo a change, set the previous value again on the relay, and the next
+`sync` does the rest. morzer's journal names a change but not the value it
+replaced, so note it first:
+
+```sh
+sudo morzer config get cdn_hosts      # on the relay, before the change
+```
+
+## Back up the state
+
+`dotdash-state.json` holds the keys the servers share and every device's id.
+Lost, the next `sync` with `--new-state` gives every server new keys, and
+every device new links and a new subscription URL. Keep a copy off the
+operator's box after each change to the roster, encrypted to an age
+recipient whose identity is kept elsewhere, such as the machines' recovery
+key:
+
+```sh
+age -r age1… -o "dotdash-state-$(date +%F).json.age" dotdash-state.json
+```
+
+Keep `authority.key`, `authority.age` and `network.toml` with it: the first
+two can't be made again, as every machine pins the key and encrypts its facts
+to the identity. To restore, decrypt the copy beside `network.toml`. A state
+a few changes old still has the shared keys; devices added since get new ids
+at the next `sync`. A key rotated since, though, would go back to the old
+key on every server, so take a copy after each `rotate` step too.
+
+## A rebuilt machine
+
+A machine installed afresh, at the same address or not, has a new
+installation id, signing key and age identity. One brought back from its
+backup (`installation import`) keeps its id, but has a new signing key and
+age identity too. Either way the manager's documents don't decrypt there,
+and `status` finds no verified row for it. [Join](#add-a-machine) it again
+under the same name: on a machine installed already the script only points
+it at the manager, `joined` replaces the id and key it kept, and the next
+`sync` sends it its document. Take a roster entry's own `id` and `key` out
+first, as they win.
+
+- **A server** comes back with the manager's keys and devices, from its
+  first document, so devices keep their links and subscription URLs.
+- **A relay installed afresh** comes back with new keys of its own, so its
+  line changes. The next `sync` puts it in the servers' `relays`, and
+  devices' subscriptions pick up its new links; links sent by hand have to
+  be sent again. One [moved from its backup](relay/operations.md#move-a-relay)
+  keeps its keys and its line.
+
+## A lost server
+
+With the state, a server lost with no backup comes back with the same keys,
+and devices keep their links and subscription URLs:
+
+1. Bring up a new machine, and point the server's domain at it.
+2. Join it under the server's name in the roster, with its domain and
+   upstreams:
+
+    ```sh
+    dotdash-manager join a --domain a.example.net --upstreams ./upstreams \
+      | ssh root@198.51.100.4 sh | dotdash-manager joined a
+    ```
+
+3. `dotdash-manager sync`, then `status --wait`. The server applies the
+   manager's keys and devices; once its facts show them, the relays,
+   canaries and client machines follow at the next `sync`.
+
+Relays reach the server by its domain, so they reconnect once its DNS
+points at the new address. Under a new domain, the next `sync` gives every
+server and relay the new one, and devices that fetch their subscription
+through a relay get links to it at their next refresh.
