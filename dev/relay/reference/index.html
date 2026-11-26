@@ -2575,8 +2575,12 @@ starts Xray if it is down.</p>
 <td>the relay's line for the server's <code>relays</code>, and how a canary checks the relay; with no address, at <code>entry_host</code></td>
 </tr>
 <tr>
+<td><code>entry-check --output</code></td>
+<td>each of the relay's entries checked end to end as a device reaches it, and the <code>http-origin</code> door by its log, a line each with why it fails (<a href="../operations/#check-each-entry">Check each entry</a>)</td>
+</tr>
+<tr>
 <td><code>facts --output</code></td>
-<td>the same line as JSON, which the relay publishes to an authority it <a href="../../server/operations/#managed-from-elsewhere">follows</a>; under <code>own-site</code> also <code>cert_days</code>, the whole days left on the site's certificate</td>
+<td>the same line as JSON, which the relay publishes to an authority it <a href="../../server/operations/#managed-from-elsewhere">follows</a>; under <code>own-site</code> also <code>cert_days</code>, the whole days left on the site's certificate; and <code>clients</code>, how many devices it lets in and their <a href="../operations/#devices">digest</a></td>
 </tr>
 </tbody>
 </table>

@@ -1897,6 +1897,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#bucket-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Bucket credentials
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#moving-a-running-network" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1912,6 +1923,28 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Keep it current
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-devices-link" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A device's link
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Status
       </span>
     </span>
   </a>
@@ -2022,6 +2055,50 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         What it leaves alone
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-relays-transports" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A relay's transports
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#back-up-the-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Back up the state
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-rebuilt-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A rebuilt machine
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-lost-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A lost server
       </span>
     </span>
   </a>
@@ -2218,6 +2295,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#bucket-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Bucket credentials
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#moving-a-running-network" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2233,6 +2321,28 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Keep it current
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-devices-link" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A device's link
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Status
       </span>
     </span>
   </a>
@@ -2349,6 +2459,50 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#a-relays-transports" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A relay's transports
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#back-up-the-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Back up the state
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-rebuilt-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A rebuilt machine
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-lost-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A lost server
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2432,6 +2586,7 @@ bundles let it, devices and keys included.</p>
 <span class="n">standby</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w">                              </span><span class="c1"># optional: devices use it only once every other link fails</span>
 <span class="n">via</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"r0"</span><span class="p">]</span><span class="w">                                </span><span class="c1"># optional: relays it goes through instead of the servers</span>
 <span class="n">via_link</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"xhttp"</span><span class="w">                          </span><span class="c1"># optional, with via: reality (the default) or xhttp through their own sites</span>
+<span class="n">credentials</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./r1-credential.yaml"</span><span class="w">        </span><span class="c1"># optional, on any machine: its own credential document (Bucket credentials)</span>
 
 <span class="k">[[canary]]</span>
 <span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"c1"</span>
@@ -2489,6 +2644,58 @@ too, so its backups outlive it.
 The script holds the machine's credentials: send it to that machine only. A
 roster entry's own <code>id</code> and <code>key</code>, as earlier releases had you write them,
 still win over what <code>joined</code> kept.</p>
+<h2 id="bucket-credentials">Bucket credentials<a class="headerlink" href="#bucket-credentials" title="Permanent link">&para;</a></h2>
+<p><code>join</code> hands each machine the network's <code>credentials</code>, the same document the
+manager uses, unless the machine's roster entry names one of its own. With
+one credential for all, a seized relay can delete or overwrite every
+server's documents, fleet rows, facts and backups. Signatures keep it from
+forging them, not from destroying them. A credential per machine, scoped to
+its own prefixes on the target, bounds that:</p>
+<table>
+<thead>
+<tr>
+<th>Whose</th>
+<th>List</th>
+<th>Read</th>
+<th>Write</th>
+<th>Delete</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>the manager's (<code>credentials</code> at the top)</td>
+<td>the target</td>
+<td><code>fleet/</code>, <code>state/</code></td>
+<td><code>state/</code></td>
+<td><code>state/</code>, to prune old documents</td>
+</tr>
+<tr>
+<td>a machine's (its <code>credentials</code>)</td>
+<td>the target</td>
+<td><code>state/&lt;product&gt;/&lt;installation-id&gt;/</code>, and each backup's manifest</td>
+<td><code>fleet/&lt;product&gt;/&lt;installation-id&gt;/</code> (its row and facts), and its backups</td>
+<td>none</td>
+</tr>
+</tbody>
+</table>
+<p>The product is <code>dotdash</code>, <code>dotdash-relay</code>, <code>dotdash-canary</code> or
+<code>dotdash-client</code>; the installation id is the one <code>joined</code> kept, which
+<code>morzer installation describe</code> on the machine prints.</p>
+<p>Backups are the gap. morzer keeps every machine's backups at the target's
+root, one directory per backup named by the second it was taken, so a
+machine needs write there, beside the others' backups. Its retention lists
+every backup at the root and prunes by count, whichever machine took them.
+So:</p>
+<ul>
+<li><strong>Give machines no delete.</strong> Retention then fails with a warning, and
+  the bucket's own lifecycle rules expire old backups instead. With delete,
+  a relay's retention prunes the servers' backups too, the shared
+  credential included.</li>
+<li><strong>Turn on versioning or Object Lock</strong> where the bucket has them, so a
+  machine overwriting another's backup leaves the old version.</li>
+</ul>
+<p>To move a joined machine to its own credential, name it in the roster and
+run its <code>join</code> again: the script replaces the credential it holds.</p>
 <h2 id="moving-a-running-network">Moving a running network<a class="headerlink" href="#moving-a-running-network" title="Permanent link">&para;</a></h2>
 <p>A network set up by hand moves to the manager without devices noticing: the
 manager takes a running server's keys and its devices' ids instead of making
@@ -2512,7 +2719,7 @@ manager. Relays keep their own keys, so devices keep their relay links too.</p>
 <h2 id="keep-it-current">Keep it current<a class="headerlink" href="#keep-it-current" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>sync<span class="w"> </span>--dry-run<span class="w">   </span><span class="c1"># what would change</span>
 dotdash-manager<span class="w"> </span>sync
-dotdash-manager<span class="w"> </span>status<span class="w">           </span><span class="c1"># what each machine applied and refused</span>
+dotdash-manager<span class="w"> </span>status<span class="w"> </span>--wait<span class="w">    </span><span class="c1"># until every machine applied it</span>
 </code></pre></div>
 <p><code>sync</code> publishes only documents that changed, and renews the rest every three
 days: a document expires after seven. Run it from a timer to keep it ahead of
@@ -2521,8 +2728,29 @@ sync; one removed loses its access everywhere, each machine within its next
 cycle. The manager forgets its id at that sync, so a device added back later
 gets a new one: new links and a new subscription URL, and its old ones let no
 one in. The same goes for a relay's or canary's own id and a client machine's
-proxy password. That's how to revoke a device whose link leaked: take it out,
-<code>sync</code>, then add it back.</p>
+proxy password.</p>
+<h2 id="a-devices-link">A device's link<a class="headerlink" href="#a-devices-link" title="Permanent link">&para;</a></h2>
+<p>Add the device's name to <code>devices</code>, then:</p>
+<div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>sync
+dotdash-manager<span class="w"> </span>status<span class="w"> </span>--wait<span class="w">     </span><span class="c1"># every server and relay has it</span>
+dotdash-manager<span class="w"> </span>link<span class="w"> </span>phone<span class="w"> </span>--qr
+</code></pre></div>
+<p><code>link</code> prints the device's subscription URLs, as the servers' <code>client-config</code>
+does: the server's, unless <code>direct = false</code>, then the same through each
+own-site relay its <code>pools</code> give it, which a device inside the restricted
+network fetches from. A burnt relay or a waiting spare is left out, as at the
+last <code>sync</code>. <code>--qr</code> adds a QR code for each, by <code>qrencode</code> if it is
+installed. The URLs are the device's credentials: <code>link</code> prints them and
+keeps them nowhere. With <code>subscription = false</code>, run <code>client-config</code> on a
+server for the device's links.</p>
+<p>When a device's link leaks, give it a new id:</p>
+<div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>renew<span class="w"> </span>phone
+dotdash-manager<span class="w"> </span>sync
+dotdash-manager<span class="w"> </span>status<span class="w"> </span>--wait
+</code></pre></div>
+<p><code>renew</code> prints the device's new URLs, which work once the servers applied
+the <code>sync</code>. Its old links and URL stop once every server and relay has. The
+device fetches its new links from the new URL, so send it that.</p>
 <p>Before it uses a machine's facts, <code>sync</code> checks them. Facts no release
 prints are refused: a value holding whitespace, a quote, a backslash, a brace
 or a control character, or a field missing or of the wrong type. <code>sync</code> names
@@ -2536,8 +2764,8 @@ document until a read succeeds, and <code>sync</code> says so in capitals.</p>
 <p>The manager keeps what it made in <code>dotdash-state.json</code> beside the roster: the
 shared keys, every device's id, the client machines' proxy passwords and each
 machine's last good facts. It is
-written with mode 0600 and holds every credential in the network: back it up
-like <code>authority.key</code>. One run at a time changes it: a run holds
+written with mode 0600 and holds every credential in the network:
+<a href="#back-up-the-state">back it up</a> like <code>authority.key</code>. One run at a time changes it: a run holds
 <code>dotdash-state.lock</code> beside it, and another started meanwhile, such as a timer's
 <code>sync</code> during a <code>rotate</code>, waits for it. <code>sync --dry-run</code> leaves it as it was.</p>
 <p>With no state beside a roster that names a joined machine, every command but
@@ -2546,6 +2774,48 @@ device off. That's a checkout the state wasn't copied to, so copy it there.
 To start over on new keys anyway, put <code>--new-state</code> before the command:</p>
 <div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>--new-state<span class="w"> </span>sync
 </code></pre></div>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
+<p><code>status</code> prints a line per machine, then the topology:</p>
+<div class="highlight"><pre><span></span><code>machine  kind    release  document                           health                facts  canaries
+a        server  0.18.0   applied 12                         5/5 up, row 12m ago   10m    reality ok, xhttp ok
+r1       relay   0.18.0   REFUSED 9 unmanageable: via_link   4/4 up, row 40m ago   20m    reality off, xhttp ok
+r2       relay   0.17.0   pending 4, last fetch unreachable  STALE, row 4h10m ago  5h 0m  unwatched
+c1       canary  0.18.0   applied 3                          2/2 up, row 20m ago   20m    read 30m ago
+r3       relay   -        not joined: run join r3            -                     -      -
+
+topology, from the facts the last sync read:
+  server a: a.example.net:443: reality, xhttp, mkcp 8447
+  relay r1: 203.0.113.5, site r1.example.net: reality, xhttp, hy2 443, cdn c.example.net; name edge-1; off=reality
+  relay r2: 198.51.100.9, site www.example.org: reality; via r1 (reality); spare
+  pool p: phone, 203.0.113.5
+  canary c1 watches r1
+</code></pre></div>
+<ul>
+<li><strong>release</strong>: what the machine runs, and the release its channel staged, if
+  one waits.</li>
+<li><strong>document</strong>: what it did with the newest document published for it:
+  <code>applied</code>, <code>REFUSED</code> with morzer's class and the names it refused, or
+  <code>pending</code> until its next pull, every 15 minutes, with the last fetch's
+  result when that failed. <code>sync off</code> or <code>not following the manager</code> is a
+  machine that won't take one.</li>
+<li><strong>health</strong>: how many of its services run, and how old its fleet row is.
+  <code>STALE</code> is a row older than three hours.</li>
+<li><strong>facts</strong>: how old the facts the last <code>sync</code> read are. Past a day, <code>sync</code>
+  leaves the machine out of every document.</li>
+<li><strong>canaries</strong>: each path, as its canaries found it at the last <code>sync</code>, and
+  <code>BURNT</code> before them; for a canary, how old its last reading is.</li>
+</ul>
+<p>Below the table come notes: a machine whose facts task failed, and a relay
+whose device list, by the digest its facts carry, isn't the one the manager
+sent it, which a hand edit on the relay does.</p>
+<p>It reads each machine's own fleet row and the newest document on the target,
+two morzer calls, and the rest from the state, so it prints no key, path or
+id. It exits 1 when a document is refused, a machine doesn't follow the
+manager, a row is stale, a service is down or a relay's device list differs.
+After a <code>sync</code>,
+<code>status --wait</code> asks again every 30 seconds until every machine has applied
+or refused its newest document, for up to 20 minutes (<code>--timeout</code>), and exits
+1 if one is still pending. A timer's <code>sync</code> waits for it meanwhile.</p>
 <h2 id="burnt-relays">Burnt relays<a class="headerlink" href="#burnt-relays" title="Permanent link">&para;</a></h2>
 <p>Before every fleet publish, about hourly, each canary that follows the manager
 reports whether each of its paths to the server or relay it watches gets
@@ -2682,12 +2952,12 @@ until they update.</p>
 has moved. <code>sync</code> adds each device's bytes up by day, over the last 30 days.
 It names a device whose day reached five times its median day and at least
 2 GB, once it has 7 days to judge by:</p>
-<div class="highlight"><pre><span></span><code>phone-2: 14.2 GB on 2026-12-03, against 0.4 GB on its usual day: if its link may have leaked, take the device out, sync, and add it back
+<div class="highlight"><pre><span></span><code>phone-2: 14.2 GB on 2026-12-03, against 0.4 GB on its usual day: if its link may have leaked, renew phone-2 and sync
 </code></pre></div>
 <p><code>sync</code> prints yesterday's and today's; <code>report</code> ends with the last 30 days'.
 A link passed around shows this way: its device suddenly moves far more than
 it ever did. A long video call or a big download can too, so ask before
-deleting the device. Only counts reach the manager, never an address. They
+renewing it. Only counts reach the manager, never an address. They
 are an hour behind at most, as the facts refresh hourly. A server or relay
 that restarts loses only what it counted since the last refresh.</p>
 <h2 id="certificates">Certificates<a class="headerlink" href="#certificates" title="Permanent link">&para;</a></h2>
@@ -2783,6 +3053,76 @@ changes it until the next document.</p>
 links and configs name the others with its own <code>https_port</code>, XHTTP with
 REALITY, mKCP (port, header and opener) and Hysteria2 ports. <code>sync</code> says when
 the servers that applied the keys differ in any of those.</p>
+<h2 id="a-relays-transports">A relay's transports<a class="headerlink" href="#a-relays-transports" title="Permanent link">&para;</a></h2>
+<p>Change them on the relay itself: a profile, a port, <code>cdn_hosts</code>, <code>name</code>, and
+its firewall to match. Its facts carry its new line after the apply, and the
+next <code>sync</code> puts that line in every server's <code>relays</code>; devices get the new
+links at their next refresh. Nothing is edited on the servers. Which
+parameters go into the line is in the
+<a href="../relay/reference/#what-changes-the-relays-line">relay reference</a>;
+<code>http_origin_from</code> doesn't, so a change to it needs nothing more. Then
+<code>entry-check</code> on the relay says whether each entry works.</p>
+<p>To undo a change, set the previous value again on the relay, and the next
+<code>sync</code> does the rest. morzer's journal names a change but not the value it
+replaced, so note it first:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>get<span class="w"> </span>cdn_hosts<span class="w">      </span><span class="c1"># on the relay, before the change</span>
+</code></pre></div>
+<h2 id="back-up-the-state">Back up the state<a class="headerlink" href="#back-up-the-state" title="Permanent link">&para;</a></h2>
+<p><code>dotdash-state.json</code> holds the keys the servers share and every device's id.
+Lost, the next <code>sync</code> with <code>--new-state</code> gives every server new keys, and
+every device new links and a new subscription URL. Keep a copy off the
+operator's box after each change to the roster, encrypted to an age
+recipient whose identity is kept elsewhere, such as the machines' recovery
+key:</p>
+<div class="highlight"><pre><span></span><code>age<span class="w"> </span>-r<span class="w"> </span>age1…<span class="w"> </span>-o<span class="w"> </span><span class="s2">"dotdash-state-</span><span class="k">$(</span>date<span class="w"> </span>+%F<span class="k">)</span><span class="s2">.json.age"</span><span class="w"> </span>dotdash-state.json
+</code></pre></div>
+<p>Keep <code>authority.key</code>, <code>authority.age</code> and <code>network.toml</code> with it: the first
+two can't be made again, as every machine pins the key and encrypts its facts
+to the identity. To restore, decrypt the copy beside <code>network.toml</code>. A state
+a few changes old still has the shared keys; devices added since get new ids
+at the next <code>sync</code>. A key rotated since, though, would go back to the old
+key on every server, so take a copy after each <code>rotate</code> step too.</p>
+<h2 id="a-rebuilt-machine">A rebuilt machine<a class="headerlink" href="#a-rebuilt-machine" title="Permanent link">&para;</a></h2>
+<p>A machine installed afresh, at the same address or not, has a new
+installation id, signing key and age identity. One brought back from its
+backup (<code>installation import</code>) keeps its id, but has a new signing key and
+age identity too. Either way the manager's documents don't decrypt there,
+and <code>status</code> finds no verified row for it. <a href="#add-a-machine">Join</a> it again
+under the same name: on a machine installed already the script only points
+it at the manager, <code>joined</code> replaces the id and key it kept, and the next
+<code>sync</code> sends it its document. Take a roster entry's own <code>id</code> and <code>key</code> out
+first, as they win.</p>
+<ul>
+<li><strong>A server</strong> comes back with the manager's keys and devices, from its
+  first document, so devices keep their links and subscription URLs.</li>
+<li><strong>A relay installed afresh</strong> comes back with new keys of its own, so its
+  line changes. The next <code>sync</code> puts it in the servers' <code>relays</code>, and
+  devices' subscriptions pick up its new links; links sent by hand have to
+  be sent again. One <a href="../relay/operations/#move-a-relay">moved from its backup</a>
+  keeps its keys and its line.</li>
+</ul>
+<h2 id="a-lost-server">A lost server<a class="headerlink" href="#a-lost-server" title="Permanent link">&para;</a></h2>
+<p>With the state, a server lost with no backup comes back with the same keys,
+and devices keep their links and subscription URLs:</p>
+<ol>
+<li>Bring up a new machine, and point the server's domain at it.</li>
+<li>
+<p>Join it under the server's name in the roster, with its domain and
+   upstreams:</p>
+<div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>join<span class="w"> </span>a<span class="w"> </span>--domain<span class="w"> </span>a.example.net<span class="w"> </span>--upstreams<span class="w"> </span>./upstreams<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="p">|</span><span class="w"> </span>ssh<span class="w"> </span>root@198.51.100.4<span class="w"> </span>sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>dotdash-manager<span class="w"> </span>joined<span class="w"> </span>a
+</code></pre></div>
+</li>
+<li>
+<p><code>dotdash-manager sync</code>, then <code>status --wait</code>. The server applies the
+   manager's keys and devices; once its facts show them, the relays,
+   canaries and client machines follow at the next <code>sync</code>.</p>
+</li>
+</ol>
+<p>Relays reach the server by its domain, so they reconnect once its DNS
+points at the new address. Under a new domain, the next <code>sync</code> gives every
+server and relay the new one, and devices that fetch their subscription
+through a relay get links to it at their next refresh.</p>
 
 
 

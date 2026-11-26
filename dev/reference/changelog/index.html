@@ -4016,6 +4016,21 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>A canary checks each CDN in front of the relay it watches, through the CDN as a device's CDN link goes, and gives each under <code>cdn</code> in its facts. The manager hands it the names and CDN path; by hand, set <code>dotdash_cdn_hosts</code>, <code>dotdash_origin_host</code> and the <code>dotdash_cdn_xhttp_path</code> secret.</p>
 </li>
 <li>
+<p>The manager's <code>status</code> prints a line per machine: its release, whether it applied, refused (naming what) or still waits for its newest document, its health, its facts' age and its canaries' verdicts, then the topology. <code>status --wait</code> waits until every machine applied or refused it.</p>
+</li>
+<li>
+<p>The manager's <code>link &lt;device&gt;</code> prints a device's subscription URLs as the servers serve them, its server's and through each own-site relay its pools give it, as QR codes too with <code>--qr</code>. <code>renew &lt;device&gt;</code> gives a device whose link leaked a new id, and prints its new URLs: no ssh to a server for either.</p>
+</li>
+<li>
+<p>The relay's <code>entry-check</code> task tries each of its entries end to end as a device would, REALITY, XHTTP through its site, mKCP and Hysteria2, and says why one fails. The <code>http-origin</code> door keeps each request's address and status in memory, so the check can tell a firewall from docker-proxy hiding the CDN's addresses.</p>
+</li>
+<li>
+<p>A machine's roster entry can name its own <code>credentials</code>, which <code>join</code> hands it in place of the network's, so a relay's credential reaches only its own prefixes on the target. The manager's docs list what each credential needs, and why machines should get no delete.</p>
+</li>
+<li>
+<p>The server's <code>relay-config</code> ends with the count and digest of the devices it hands a relay, and the relay's <code>relay-entry</code> and facts give the same of its own copy, so a stale copy that rejects new devices or still lets in deleted ones shows. The manager's <code>status</code> says when a relay's list isn't the one it sent.</p>
+</li>
+<li>
 <p>The manager's <code>sync</code> and <code>report</code> warn when a server's or relay's site certificate has under 14 days left, from the <code>cert_days</code> in its facts. An expired certificate breaks XHTTP, Hysteria2 and the CDN links while REALITY works, which canaries read as a block.</p>
 </li>
 <li>

@@ -1541,6 +1541,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#undo-a-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Undo a change
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#a-site-of-its-own-later" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1606,6 +1617,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Watching it
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#check-each-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Check each entry
       </span>
     </span>
   </a>
@@ -2185,6 +2207,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#undo-a-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Undo a change
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#a-site-of-its-own-later" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2250,6 +2283,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Watching it
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#check-each-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Check each entry
       </span>
     </span>
   </a>
@@ -2377,6 +2421,17 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w">
 <span class="s">…</span>
 <span class="s">END</span>
 </code></pre></div>
+<p>A relay copy you forget rejects a device added on the server, and still lets
+in one deleted there. To check, compare the digests: <code>relay-config</code> ends with
+the devices its copy lets in and their digest, and the relay's <code>relay-entry</code>
+prints the same of its own copy:</p>
+<div class="highlight"><pre><span></span><code>The devices this copy lets in: 14, digest 3f9a1c2b.     # relay-config, on the server
+The devices it lets in: 14, digest 3f9a1c2b.            # relay-entry, on the relay
+</code></pre></div>
+<p>The same digest means the same devices. The relay's facts carry it too, and
+under the <a href="../../manager/#status">manager</a>, <code>status</code> says when a relay's list
+isn't the one the manager sent. It is taken over the devices' ids alone, and
+reveals none of them.</p>
 <h2 id="keys">Keys<a class="headerlink" href="#keys" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2400,6 +2455,13 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w">
 </tr>
 </tbody>
 </table>
+<h2 id="undo-a-change">Undo a change<a class="headerlink" href="#undo-a-change" title="Permanent link">&para;</a></h2>
+<p>morzer's journal names each change but not the value it replaced, so note
+the old value before a change (<code>sudo morzer config get &lt;name&gt;</code>). To undo it,
+set that value again. If the parameter goes into the relay's line
+(<a href="../reference/#what-changes-the-relays-line">which do</a>), run <code>relay-entry</code>
+and replace the line on every server too. Under the
+<a href="../../manager/#a-relays-transports">manager</a>, the next <code>sync</code> does that.</p>
 <h2 id="a-site-of-its-own-later">A site of its own, later<a class="headerlink" href="#a-site-of-its-own-later" title="Permanent link">&para;</a></h2>
 <p>A relay set up with a borrowed site moves to one of its own in place. Point a
 domain at it and open port 80, then:</p>
@@ -2513,7 +2575,9 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>update<span class="w">
 <p>Point the relay's domain at the new address, and open 443, and 80 under
 <code>own-site</code>. Shut the old machine down: two live relays with one installation
 id confuse each other's backups. A relay whose links name its IP needs a new
-line from <code>relay-entry</code> in the server's <code>relays</code>, and new links for devices.</p>
+line from <code>relay-entry</code> in the server's <code>relays</code>, and new links for devices.
+Under the manager, the imported relay has a new signing key and age
+identity: <a href="../../manager/#a-rebuilt-machine">join it again</a>.</p>
 <h2 id="watching-it">Watching it<a class="headerlink" href="#watching-it" title="Permanent link">&para;</a></h2>
 <p><code>doctor</code> and each <code>apply</code> fetch <code>probe_url</code> through dotdash, so they fail
 when the relay can't reach the server. Have them alert you:</p>
@@ -2522,6 +2586,40 @@ when the relay can't reach the server. Have them alert you:</p>
 <p>What the relay can't see is whether devices reach it: only a machine on the
 networks devices use can. A <a href="../../canary/#on-a-mobile-line">canary on a mobile line</a>
 checks the relay as it checks a server, with the commands <code>relay-entry</code> prints.</p>
+<h2 id="check-each-entry">Check each entry<a class="headerlink" href="#check-each-entry" title="Permanent link">&para;</a></h2>
+<p><code>entry-check</code> tries each of the relay's entries as a device would, end to
+end, and says why one fails:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>entry-check<span class="w"> </span>--output
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>servers  ok: the relay reaches the servers, or the relays in via
+reality  ok: a device's REALITY link under relay.example.net gets through
+xhttp    ok: the site passes the XHTTP path on to Xray, under its own certificate
+mkcp     ok: mKCP answers on UDP 8447
+hy2      ok: Hysteria2 answers on UDP 443, under the site's certificate
+cdn      not checked here: a CDN's half takes a fetch through it, which cdn-check on a server makes
+door     FAIL: all 41 requests in the last hour refused, all from 172.19.0.1, Docker's own address: docker-proxy hides the CDN's (over IPv6, or with its userland proxy). Set http_origin_from=any, or listen=0.0.0.0 to publish the door on IPv4 alone
+</code></pre></div>
+<ul>
+<li><strong>The entries.</strong> An Xray client inside the relay dials each of its
+  inbounds with the relay's own keys and the first device's id, and fetches
+  <code>probe_url</code> through it, on to the servers. <code>servers</code> goes straight to the
+  servers first: when it fails, every entry fails with it, and <code>doctor</code>
+  says more. The site's TLS is pinned to the certificate Caddy holds, so a
+  failure there names what Xray saw.</li>
+<li><strong>The door.</strong> Under <code>http-origin</code>, Caddy logs each request to the door,
+  its address and status alone, never its path or headers, in memory, the
+  newest megabyte or two. The check reads the last hour of it. No request at
+  all is a firewall, or the CDN fetching another port. Every request refused
+  from one private address is docker-proxy, which Docker puts in front of a
+  port reached over IPv6: the door sees Docker's address instead of the
+  CDN's, so only <code>http_origin_from=any</code> matches, or <code>listen=0.0.0.0</code> keeps
+  the door to IPv4. Every request refused from other addresses is
+  <code>http_origin_from</code> missing the CDN's ranges, or the CDN asking for
+  another path. Only the CDN's gateways and scanners reach the door, never
+  a device. The log empties whenever Caddy restarts, and no backup holds it.</li>
+<li><strong>What it can't see</strong> is the way from devices' networks to the relay: its
+  address, its ports and its firewall. A canary on such a network sees that.</li>
+</ul>
 <h2 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h2>
 <p>With morzer's own metrics in the node exporter's textfile directory
 (<a href="https://github.com/morzecrew/morzer/tree/main/pages/docs/operating"><code>metrics.textfile</code></a>),
