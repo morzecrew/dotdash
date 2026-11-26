@@ -12,13 +12,15 @@
 # hosting address abroad after its first 16-20 KB, leaving it open and silent;
 # probe_url's fetch is too small to reach that, so a frozen path would still
 # read as up. freeze_url is past it (64 KB). A download that stops partway,
-# with no byte for 8 seconds or cut, twice running, makes the path down, and
-# stalled gives the bytes it got. One that gets no byte at all says nothing
-# of a freeze (freeze_url's own host may be down) and leaves the path up.
-# freeze_up_url is the same the other way, for a network that counts what a
-# device sends: a 64 KB upload that gets no answer for 8 seconds, twice
-# running, makes the path down, named in stalled_up. One that fails sooner
-# (refused, an error page) says nothing of a freeze.
+# with no byte for 8 seconds, cut, or not done in 40, twice running, makes
+# the path down, and stalled gives the bytes it got. One that gets no byte at
+# all says nothing of a freeze (freeze_url's own host may be down) and leaves
+# the path up. freeze_up_url is the same the other way, for a network that
+# counts what a device sends: a 64 KB upload that gets no answer for 8
+# seconds, twice running, makes the path down, named in stalled_up. One that
+# fails sooner (refused, an error page) says nothing of a freeze. Both go
+# through the path's probe inbound by the Xray image's fetch, which checks an
+# https URL's certificate.
 #
 # internet is whether control_url answers without dotdash, so a canary whose
 # own network is down is not read as its target blocked; null when
@@ -32,11 +34,10 @@ set -eu
 : "${DOTDASH_SERVER:?}" "${DOTDASH_ADDRESS:?}" "${PROBE_URL:?}"
 freeze_url=${FREEZE_URL:-none}
 [ "$freeze_url" != none ] || freeze_url=
-# wget reaches the probe inbound by https_proxy alone, as measure's downloads.
-case $freeze_url in '' | https://*) ;; *) echo "freeze_url must be https://, not '$freeze_url'" >&2; exit 2 ;; esac
+case $freeze_url in '' | http://* | https://*) ;; *) echo "freeze_url must be http:// or https://, not '$freeze_url'" >&2; exit 2 ;; esac
 freeze_up_url=${FREEZE_UP_URL:-none}
 [ "$freeze_up_url" != none ] || freeze_up_url=
-case $freeze_up_url in '' | https://*) ;; *) echo "freeze_up_url must be https://, not '$freeze_up_url'" >&2; exit 2 ;; esac
+case $freeze_up_url in '' | http://* | https://*) ;; *) echo "freeze_up_url must be http:// or https://, not '$freeze_up_url'" >&2; exit 2 ;; esac
 str() {
 	case $1 in *[[:cntrl:]]*) echo "facts: a value holds a control character" >&2; exit 1 ;; esac
 	printf '"%s"' "$(printf '%s' "$1" | sed 's/[\\"]/\\&/g')"
@@ -56,21 +57,17 @@ up() { # <service> [port] [url]: prints the milliseconds of the fetch that succe
 	done
 	return 1
 }
+# fetch prints "<bytes> <ms>" and exits 0 for a whole body, 1 for no byte of
+# one, 3 for some bytes, then cut, nothing for -read-timeout, or -timeout.
 frozen() { # <service>: prints the bytes and succeeds when freeze_url stops partway twice
 	for try in 1 2; do
-		# busybox wget's -T is a read timeout: no byte for 8 seconds ends it.
-		# shellcheck disable=SC3040 # busybox ash has pipefail
-		if n=$(set -o pipefail; https_proxy="http://$1:10809" \
-			wget -q -T 8 -O - "$freeze_url" 2>/dev/null | wc -c); then
-			return 1
-		fi
-		n=$(echo "$n" | tr -d ' ')
-		[ "$n" -gt 0 ] || return 1
+		rc=0
+		got=$(/opt/xray/xray-entrypoint fetch -proxy "http://$1:10809" -read-timeout 8s -timeout 40s "$freeze_url" 2>/dev/null) || rc=$?
+		[ "$rc" = 3 ] || return 1
 		[ "$try" = 2 ] || sleep 1
 	done
-	echo "$n"
+	echo "${got% *}"
 }
-now() { awk '{ printf "%d\n", $1 }' /proc/uptime; }
 udp_ok() { # <service>: a DNS question sent over UDP through it (its udp inbound, to udp_target) gets an answer
 	for try in 1 2; do
 		# example.com, type A, with recursion: 29 bytes, in octal for busybox's printf.
@@ -82,13 +79,11 @@ udp_ok() { # <service>: a DNS question sent over UDP through it (its udp inbound
 	return 1
 }
 frozen_up() { # <service>: succeeds when a 64 KB upload to freeze_up_url gets no answer for 8 seconds, twice
-	body=$(head -c 65536 /dev/zero | tr '\0' x)
 	for try in 1 2; do
-		start=$(now)
-		# -T times reads, the wait for the answer; timeout caps a write that blocks.
-		https_proxy="http://$1:10809" timeout 40 wget -q -T 8 -O /dev/null --post-data "$body" "$freeze_up_url" \
-			2>/dev/null && return 1
-		[ $(($(now) - start)) -ge 8 ] || return 1
+		# -read-timeout times a write that blocks as well as the wait for the answer.
+		out=$(/opt/xray/xray-entrypoint fetch -proxy "http://$1:10809" -upload 65536 -read-timeout 8s -timeout 40s \
+			"$freeze_up_url" 2>/dev/null) && return 1
+		[ "${out#* }" -ge 8000 ] || return 1
 		[ "$try" = 2 ] || sleep 1
 	done
 }

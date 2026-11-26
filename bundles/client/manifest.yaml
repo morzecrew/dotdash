@@ -157,7 +157,7 @@ images:
   killswitch: ghcr.io/morzecrew/openvpn:2.6.20@sha256:0892a6b6dfd2ce4369eb69c0d2701c24ced35ef9a2f4eee6ef5fa4d6f3684943
   # The proxy-config task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
-  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:252bd193f5ee63a622b01684aef1543de36ece78ec4cbea4295fc94c3c4a3222
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:c9cbe1fc19310f136c3dd19fd7316378e8ea2bb8c9b45d48e53fa2a1571ce48d
   # The openflux profile's client (platform-images, images/openflux).
   openflux: ghcr.io/morzecrew/openflux:0.17.1@sha256:eb83da74d8a647f969407d4301f451cd4136c52a772e3c3b746365eb044c247d
 

@@ -160,7 +160,7 @@ parameters:
   freeze_url:
     type: string
     default: https://speed.cloudflare.com/__down?bytes=65536
-    description: "What facts download through each transport after its probe_url check, https:// only: past the first 16-20 KB, after which a network's DPI may freeze a connection to a hosting address abroad, which probe_url's fetch never reaches. A download that stops partway twice makes the path down; none skips it"
+    description: "What facts download through each transport after its probe_url check, http:// or https://: past the first 16-20 KB, after which a network's DPI may freeze a connection to a hosting address abroad, which probe_url's fetch never reaches. A download that stops partway twice makes the path down; none skips it"
   # No services: only the facts task reads it, when it runs.
   burst_check:
     type: bool
@@ -169,12 +169,12 @@ parameters:
   freeze_up_url:
     type: string
     default: https://speed.cloudflare.com/__up
-    description: "Where facts upload 64 KB through each transport after freeze_url, https:// only, for a network that freezes a connection by what the device sends. An upload that gets no answer for 8 seconds twice makes the path down; none skips it"
+    description: "Where facts upload 64 KB through each transport after freeze_url, http:// or https://, for a network that freezes a connection by what the device sends. An upload that gets no answer for 8 seconds twice makes the path down; none skips it"
 
 images:
   # The measure task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
-  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:252bd193f5ee63a622b01684aef1543de36ece78ec4cbea4295fc94c3c4a3222
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:c9cbe1fc19310f136c3dd19fd7316378e8ea2bb8c9b45d48e53fa2a1571ce48d
 
 # What an authority's desired-state document may set here (morzer 0.16): the
 # server or relay this canary watches, from that machine's facts. None of

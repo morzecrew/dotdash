@@ -322,7 +322,7 @@ images:
   # hooks/policy reads the rendered config with it, run with no network, so
   # the host needs no jq of its own.
   jq: ghcr.io/jqlang/jq:1.8.1@sha256:4f34c6d23f4b1372ac789752cc955dc67c2ae177eb1b5860b75cdc5091ce6f91
-  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:252bd193f5ee63a622b01684aef1543de36ece78ec4cbea4295fc94c3c4a3222
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:c9cbe1fc19310f136c3dd19fd7316378e8ea2bb8c9b45d48e53fa2a1571ce48d
   # Upstream's Caddy with the acme-dns DNS module, for cert_issuer=acme-dns;
   # otherwise as upstream's image, whose shell the tasks also use.
   caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:93c19f705c2218d5fca7f7dcb694cae1ed3889588678aabb7af34c8892e2f2bb

@@ -57,17 +57,20 @@ Getting through takes more than `probe_url`'s fetch. A network's DPI may
 freeze a connection to a hosting address abroad after its first 16-20 KB,
 leaving it open and silent, and a fetch that small never reaches the mark.
 So `facts` then downloads `freeze_url` (64 KB) through each transport. A
-download that stops partway, with no byte for 8 seconds or cut, twice
-running, counts the transport as not getting through, and `facts` gives the
-bytes it got under `stalled`. A download that gets no byte at all says
-nothing about a freeze (`freeze_url`'s own host may be down) and leaves the
-transport as `probe_url` found it.
+download that stops partway, with no byte for 8 seconds, cut, or not done in
+40 seconds, twice running, counts the transport as not getting through, and
+`facts` gives the bytes it got under `stalled`. A download that gets no byte
+at all says nothing about a freeze (`freeze_url`'s own host may be down) and
+leaves the transport as `probe_url` found it.
 
 The same goes the other way, for a network that counts what a device sends:
 `facts` uploads 64 KB to `freeze_up_url` through each transport. An upload
 that gets no answer for 8 seconds, twice running, counts the transport as not
 getting through, named under `stalled_up`; one that fails sooner (refused, an
 error page) says nothing about a freeze.
+
+Both freeze checks, like `measure`'s downloads, go through the transport they
+check, and an `https://` URL's certificate is checked.
 
 A network may also freeze a device that opens more than a few connections to
 one address within a fraction of a second, for a couple of minutes. REALITY
@@ -154,11 +157,13 @@ relay's address no longer gets through for devices.
 | `dotdash_hysteria2_pin` | `none` | the SHA-256 of a certificate Hysteria2 trusts in place of the public CAs, as `openssl x509 -fingerprint -sha256` prints it, for a server whose certificate no public CA signed; `none` checks it as devices do |
 | `dotdash_public_key` | none, given at `init` | the REALITY public key, the `pbk` of a link |
 | `probe_url` | `https://www.gstatic.com/generate_204` | what each check fetches through dotdash; any 2xx is healthy |
-| `download_url` | `https://speed.cloudflare.com/__down?bytes=1000000` | what `measure` downloads for its Mbit/s, `https://` only; `none` skips the downloads |
+| `download_url` | `https://speed.cloudflare.com/__down?bytes=1000000` | what `measure` downloads for its Mbit/s, `http://` or `https://`; `none` skips the downloads |
 | `control_url` | `none` | a site this canary's network reaches without dotdash, which `facts` fetches directly; `none` for no such check |
-| `freeze_url` | `https://speed.cloudflare.com/__down?bytes=65536` | what `facts` downloads through each transport after `probe_url`, past the 16-20 KB a freeze lets through, `https://` only; `none` skips it |
+| `freeze_url` | `https://speed.cloudflare.com/__down?bytes=65536` | what `facts` downloads through each transport after `probe_url`, past the 16-20 KB a freeze lets through, `http://` or `https://`; `none` skips it |
 | `burst_check` | `true` | whether `facts` ends with a burst through REALITY, for a network that freezes a device opening several connections at once; `false` skips it |
-| `freeze_up_url` | `https://speed.cloudflare.com/__up` | where `facts` uploads 64 KB through each transport, for a freeze counted on what the device sends, `https://` only; `none` skips it |
+| `freeze_up_url` | `https://speed.cloudflare.com/__up` | where `facts` uploads 64 KB through each transport, for a freeze counted on what the device sends, `http://` or `https://`; `none` skips it |
+| `udp_target` | `1.1.1.1:53` | a DNS server, `host:port`, that `facts` asks over UDP through each transport, for `udp` |
+| `ipv6_url` | `none` | an address reachable over IPv6 alone (an AAAA record only, `http://` or `https://`), which `facts` fetches through each transport, for `ipv6`; `none` for no such check |
 
 | Secret | |
 | --- | --- |
