@@ -66,7 +66,7 @@ jq -e '.inbounds | length == 1 and .[0].settings.auth == "password" and (.[0].se
 [ "$(jq -S 'del(.inbounds)' <<<"$a")" = "$(jq -S 'del(.inbounds)' <<<"$plain")" ] ||
   fail "--local-auth: the config changed beyond its inbounds"
 
-relay="203.0.113.7 r.example.com ${pbk} ab12 ${enc} own-site aaaa1111bbbb2222 cdn=cdn.example.net cdnpath=cccc3333dddd4444 origin=o.example.ru name=edge"
+relay="203.0.113.7 r.example.com ${pbk} ab12 ${enc} own-site aaaa1111bbbb2222 cdn=cdn.example.net cdnpath=cccc3333dddd4444 origin=o.example.org name=edge"
 echo "== a relay with a CDN and a door: the CDN's links disguised, the door's plain in 4 KiB"
 out=$(cc SUBSCRIPTION=false "RELAYS=$relay" -- --full phone)
 cfg=$(printf '%s\n' "$out" | config)
@@ -74,27 +74,27 @@ jq -e '[.outbounds[] | select(.tag == "dotdash-cdn-relay-1-1") | .streamSettings
     .scMaxEachPostBytes == 8192 and .xPaddingObfsMode == true and .path == "/cccc3333dddd4444"] == [true]' <<<"$cfg" >/dev/null ||
   fail "relay: the CDN's outbound is not disguised, 8 KiB, on the CDN path"
 jq -e '[.outbounds[] | select(.tag == "dotdash-cdn-relay-1-2") | .settings.address as $a | .streamSettings.xhttpSettings |
-    $a == "o.example.ru" and .scMaxEachPostBytes == 4096 and .uplinkChunkSize == 4096 and (.xPaddingObfsMode // false) == false
+    $a == "o.example.org" and .scMaxEachPostBytes == 4096 and .uplinkChunkSize == 4096 and (.xPaddingObfsMode // false) == false
     and .path == "/cccc3333dddd4444"] == [true]' <<<"$cfg" >/dev/null ||
   fail "relay: the door's outbound is not plain, 4 KiB, on the CDN path, to its name"
-printf '%s\n' "$out" | links | grep -q '^vless://[^@]*@o\.example\.ru:443?.*scMaxEachPostBytes%22%3A4096.*#edge%20%C2%B7%20cdn%202$' ||
+printf '%s\n' "$out" | links | grep -q '^vless://[^@]*@o\.example\.org:443?.*scMaxEachPostBytes%22%3A4096.*#edge%20%C2%B7%20cdn%202$' ||
   fail "relay: no 4 KiB link through the door, named edge · cdn 2"
 
 echo "== a door with two names: a 4 KiB link and outbound through each, numbered after the CDN's"
-out=$(cc SUBSCRIPTION=false "RELAYS=${relay/origin=o.example.ru/origin=o.example.ru,alt.example.ru}" -- --full phone)
+out=$(cc SUBSCRIPTION=false "RELAYS=${relay/origin=o.example.org/origin=o.example.org,alt.example.org}" -- --full phone)
 cfg=$(printf '%s\n' "$out" | config)
 jq -e '[.outbounds[] | select(.tag == "dotdash-cdn-relay-1-3") | .settings.address as $a | .streamSettings.xhttpSettings |
-    $a == "alt.example.ru" and .scMaxEachPostBytes == 4096 and .path == "/cccc3333dddd4444"] == [true]' <<<"$cfg" >/dev/null ||
+    $a == "alt.example.org" and .scMaxEachPostBytes == 4096 and .path == "/cccc3333dddd4444"] == [true]' <<<"$cfg" >/dev/null ||
   fail "two door names: the second's outbound is not plain, 4 KiB, on the CDN path, to its name"
-for n in '2 o\.example\.ru' '3 alt\.example\.ru'; do
+for n in '2 o\.example\.org' '3 alt\.example\.org'; do
   printf '%s\n' "$out" | links | grep -q "^vless://[^@]*@${n#* }:443?.*scMaxEachPostBytes%22%3A4096.*#edge%20%C2%B7%20cdn%20${n%% *}\$" ||
     fail "two door names: no 4 KiB link through ${n#* }, named edge · cdn ${n%% *}"
 done
-out=$(cc SUBSCRIPTION=false "RELAYS=${relay/origin=o.example.ru/origin=o.example.ru,,x}" -- --full phone)
+out=$(cc SUBSCRIPTION=false "RELAYS=${relay/origin=o.example.org/origin=o.example.org,,x}" -- --full phone)
 grep -q "origin= field of 203.0.113.7 is not <host>\[/<path>\]" "$work/err" || fail "a bad door list: not said"
 
 echo "== a door name with a gateway's path, and cdn_extra: links and outbounds take both; one Xray refuses is said, and left out"
-extra='alt.example.ru {
+extra='alt.example.org {
   "mode": "packet-up",
   "uplinkHTTPMethod": "GET",
   "xPaddingKey": "_t", "xPaddingObfsMode": true
@@ -102,22 +102,22 @@ extra='alt.example.ru {
 # a comment
 scdn.example.net {"uplinkHTTPMethod": "GET", "uplinkChunkSize": 2048}
 cdn.example.net {"mode": broken}'
-out=$(cc SUBSCRIPTION=false CDN_HOSTS=scdn.example.net "RELAYS=${relay/origin=o.example.ru/origin=o.example.ru,alt.example.ru/e/tok/s/}" \
-  "CDN_EXTRA=$extra" "POOLS=p1 phone alt.example.ru" -- --full phone)
+out=$(cc SUBSCRIPTION=false CDN_HOSTS=scdn.example.net "RELAYS=${relay/origin=o.example.org/origin=o.example.org,alt.example.org/e/tok/s/}" \
+  "CDN_EXTRA=$extra" "POOLS=p1 phone alt.example.org" -- --full phone)
 cfg=$(printf '%s\n' "$out" | config)
 jq -e '[.outbounds[] | select(.tag == "dotdash-cdn-relay-1-3") | .settings.address as $a | .streamSettings.xhttpSettings |
-    $a == "alt.example.ru" and .host == "alt.example.ru" and .path == "/e/tok/s/" and .extra.xPaddingKey == "_t"
+    $a == "alt.example.org" and .host == "alt.example.org" and .path == "/e/tok/s/" and .extra.xPaddingKey == "_t"
     and .extra.xPaddingObfsMode == true and .scMaxEachPostBytes == null] == [true]' <<<"$cfg" >/dev/null ||
-  fail "gateway path: the outbound is not to alt.example.ru on /e/tok/s/ with its extra alone"
+  fail "gateway path: the outbound is not to alt.example.org on /e/tok/s/ with its extra alone"
 jq -e '[.outbounds[] | select(.tag == "dotdash-cdn-1") | .streamSettings.xhttpSettings.extra.uplinkChunkSize] == [2048]' <<<"$cfg" >/dev/null ||
   fail "cdn_extra: the server's CDN outbound does not carry its extra"
 jq -e '[.outbounds[] | select(.tag == "dotdash-cdn-relay-1-1") | .streamSettings.xhttpSettings |
     .xPaddingObfsMode == true and .scMaxEachPostBytes == 8192 and .extra == null] == [true]' <<<"$cfg" >/dev/null ||
   fail "cdn_extra: a refused extra was not left out, the CDN's outbound not disguised as before"
 grep -q "Xray refuses the extra for cdn.example.net" "$work/err" || fail "cdn_extra: a refused extra not said"
-grep -q "pools: alt.example.ru" "$work/err" && fail "pools: a door name with a path not taken as a member"
-link=$(printf '%s\n' "$out" | links | grep '^vless://[^@]*@alt\.example\.ru:443?.*sni=alt\.example\.ru&host=alt\.example\.ru&.*path=%2Fe%2Ftok%2Fs%2F&.*#edge%20%C2%B7%20cdn%203$') ||
-  fail "gateway path: no link through alt.example.ru on its path, named edge · cdn 3"
+grep -q "pools: alt.example.org" "$work/err" && fail "pools: a door name with a path not taken as a member"
+link=$(printf '%s\n' "$out" | links | grep '^vless://[^@]*@alt\.example\.org:443?.*sni=alt\.example\.org&host=alt\.example\.org&.*path=%2Fe%2Ftok%2Fs%2F&.*#edge%20%C2%B7%20cdn%203$') ||
+  fail "gateway path: no link through alt.example.org on its path, named edge · cdn 3"
 e=$(printf '%s' "$link" | sed -n 's/.*[?&]extra=\([^&#]*\).*/\1/p')
 printf '%b' "${e//%/\\x}" | jq -e '.xPaddingKey == "_t" and .uplinkHTTPMethod == "GET"' >/dev/null ||
   fail "gateway path: the link's extra is not cdn_extra's, percent-encoded"
@@ -127,20 +127,20 @@ only="203.0.113.9 q.example.com ${pbk} ab12 ${enc} own-site aaaa1111bbbb2222 cdn
 envs=(SUBSCRIPTION=false CDN_HOSTS=scdn.example.net "RELAYS=$relay
 $only")
 out=$(cc "${envs[@]}" -- --full desk)
-[ -z "$(printf '%s\n' "$out" | links | grep -E '@(scdn|cdn|cdn2|o)\.example\.(net|ru):|@203\.0\.113\.9:')" ] ||
+[ -z "$(printf '%s\n' "$out" | links | grep -E '@(scdn|cdn|cdn2|o)\.example\.(net|org):|@203\.0\.113\.9:')" ] ||
   fail "desktop: a CDN link, or one through the cdn-only relay"
 printf '%s\n' "$out" | links | grep -q '^vless://[^@]*@203\.0\.113\.7:443?.*security=reality.*#edge%20%C2%B7%20reality$' ||
   fail "desktop: no REALITY link through the relay"
 printf '%s\n' "$out" | config | jq -e '[.outbounds[].tag | select(test("cdn"))] == []' >/dev/null ||
   fail "desktop: a CDN outbound in the config"
 out=$(cc "${envs[@]}" -- --full phone)
-[ "$(printf '%s\n' "$out" | links | grep -cE '@(scdn|cdn|cdn2|o)\.example\.(net|ru):')" = 4 ] ||
+[ "$(printf '%s\n' "$out" | links | grep -cE '@(scdn|cdn|cdn2|o)\.example\.(net|org):')" = 4 ] ||
   fail "a device of no kind: not every CDN link"
 
 echo "== origin= without cdnpath=: said, and no link through it"
-out=$(cc SUBSCRIPTION=false "RELAYS=203.0.113.7 r.example.com ${pbk} ab12 ${enc} own-site aaaa1111bbbb2222 origin=o.example.ru" -- --full phone)
+out=$(cc SUBSCRIPTION=false "RELAYS=203.0.113.7 r.example.com ${pbk} ab12 ${enc} own-site aaaa1111bbbb2222 origin=o.example.org" -- --full phone)
 grep -q "names origin= but no cdnpath=" "$work/err" || fail "origin without cdnpath: not said"
-printf '%s\n' "$out" | links | grep -q '@o\.example\.ru:' && fail "origin without cdnpath: a link through it anyway"
+printf '%s\n' "$out" | links | grep -q '@o\.example\.org:' && fail "origin without cdnpath: a link through it anyway"
 
 echo "== pools: a device in a pool gets its pool's relay and those in none"
 two="203.0.113.7 a.example.com ${pbk} ab12 ${enc}
