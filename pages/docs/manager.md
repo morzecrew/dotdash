@@ -186,7 +186,10 @@ It says which devices keep their links, which are new to the server, and
 which the server has but the roster doesn't, which lose access at the next
 `sync` unless you add them. It also names the server's desktops missing from
 the roster's `desktops`, which would get CDN links at the next `sync` unless
-you add them there. Finish a [key rotation](#rotating-the-reality-key)
+you add them there. And it names each of the server's `subscription`,
+`cdn_hosts`, `pools` and `direct` that the roster would change at the first
+`sync`: with `subscription` left out of the roster, for one, every device's
+subscription URL stops. Finish a [key rotation](#rotating-the-reality-key)
 first: only the current key is taken. Once the manager has published, `adopt`
 refuses, since it would change the keys on every machine again; `--force` when
 that is meant.
@@ -194,6 +197,9 @@ that is meant.
 Then join every machine as above, the running server and relays included,
 with no options: the script finds them installed and only points them at the
 manager. Relays keep their own keys, so devices keep their relay links too.
+Join the relays before the server: the server's document writes `relays`
+from the relays' facts, so a relay that hasn't joined yet is left out of it,
+and devices lose its links until it joins.
 
 ## Keep it current
 
