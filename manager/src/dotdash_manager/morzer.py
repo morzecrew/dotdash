@@ -8,7 +8,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -116,7 +116,7 @@ def _safe(s: str, where: str) -> str:
     return s
 
 
-def _clean(value, where: str):
+def _clean(value: Any, where: str) -> Any:
     """value with every null left out, as if absent: no reader tells the two
     apart, and one looking for an object would crash on a null."""
     if isinstance(value, dict):

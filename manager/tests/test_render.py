@@ -122,8 +122,8 @@ def test_servers_whose_ports_or_profiles_differ_are_said(net, st, facts):
     both = {**both, "a": {**both["a"], "kcp": kcp, "hysteria2_port": 443},
             "b": {**both["b"], "kcp": {**kcp, "open": "quic"}, "https_port": 8443}}
     said = [w for w in render(net, st, both)[1] if w.startswith("servers differ")]
-    assert said == ["servers differ in https_port, kcp, hysteria2_port: each server's links name the others with its own, "
-                    "so some are dead; give every server the same profiles and ports; relays take 443, a's"]
+    assert said == [("servers differ in https_port, kcp, hysteria2_port: each server's links name the others with its own, "
+                     "so some are dead; give every server the same profiles and ports; relays take 443, a's")]
     # b not ready yet: nothing to compare.
     assert not any(w.startswith("servers differ") for w in render(net, st, {**both, "b": {**both["b"], "public_key": "old"}})[1])
 

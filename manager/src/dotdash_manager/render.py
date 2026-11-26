@@ -144,7 +144,7 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     # header and opener and profiles (each present or not): where those
     # differ, its subscriptions carry dead links to the others.
     differ = [k for k in SHARED if len({json.dumps(facts[s.name].get(k), sort_keys=True) for s in ready}) > 1]
-    if differ:
+    if lead and differ:
         waiting.append(f"servers differ in {', '.join(differ)}: each server's links name the others with its own, so "
                        "some are dead; give every server the same profiles and ports"
                        + (f"; relays take {lead['https_port']}, {ready[0].name}'s" if "https_port" in differ else ""))

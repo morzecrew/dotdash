@@ -454,11 +454,9 @@ def test_a_certificate_running_out_is_said_and_one_unknown_is_not():
     net = loads(ROSTER)
     server = {"domain": "s.example.net", "https_port": 443, "public_key": "P", "encryption": "E", "cert_days": 3}
     facts = {"s": server, "r1": {**R1, "cert_days": -2}, "r2": {**R2, "cert_days": CERT_DAYS}}
-    assert certs(net, facts) == [
-        "certificate: server s: its site's certificate runs out in 3 day(s): renewal is failing, check its ACME "
-        "(for acme-dns, that it runs and answers)",
-        "certificate: relay r1: its site's certificate ran out 2 day(s) ago: renewal is failing, check its ACME "
-        "(for acme-dns, that it runs and answers)"]
+    check = ": renewal is failing, check its ACME (for acme-dns, that it runs and answers)"
+    assert certs(net, facts) == [f"certificate: server s: its site's certificate runs out in 3 day(s){check}",
+                                 f"certificate: relay r1: its site's certificate ran out 2 day(s) ago{check}"]
     assert certs(net, {"s": {**server, "cert_days": None}, "r1": R1}) == []
 
 
@@ -538,13 +536,13 @@ def test_via_is_unset_only_on_a_relay_a_document_gave_it(tmp_path, monkeypatch):
     server = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
               "encryption": "E"}
     run = sync_with(tmp_path, monkeypatch, via, st, {"s": server, "r1": {**R1, "via": True}, "r2": {**R2, "via": True}})
-    code, sent, kept = run(0)
+    _, sent, kept = run(0)
     assert "via" in sent["r2"]["parameters"] and kept["via"] == ["r2"]
     assert "unset" not in sent["r1"], "r1 never had via: a release that doesn't manage it would refuse the document"
     (tmp_path / "network.toml").write_text(roster)
-    code, sent, kept = run(1)
+    _, sent, kept = run(1)
     assert sent["r2"]["unset"] == {"parameters": ["via", "via_link", "via_fingerprint"]} and kept["via"] == ["r2"]
-    code, sent, kept = run(0)
+    _, sent, kept = run(0)
     assert "unset" in sent["r2"] and kept["via"] == []
     assert "unset" not in run(0)[1]["r2"]
 
