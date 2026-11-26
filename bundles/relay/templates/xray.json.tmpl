@@ -140,7 +140,9 @@ REALITY connection with Vision for each. */ -}}
     UUID its login, under the own site's certificate, on to dotdash like
     REALITY. As the server's: a connection that brings no login gets the site
     over HTTP/3, no stateless resets, a silent connection given up after 15 s
-    (devices' keepalives hold a healthy one), and BBR. */}}
+    (devices' keepalives hold a healthy one), and BBR. The site gets the Host
+    the visitor sent, as over TCP, not caddy:443 (rewriteHost), so a cover
+    app's redirects and cookies name the relay's domain alike. */}}
     {
       "tag": "devices-hy2",
       "listen": "0.0.0.0",
@@ -154,7 +156,7 @@ REALITY connection with Vision for each. */ -}}
           "certificateFile": "/caddy-data/caddy/certificates/{{ $issuer }}/{{ $cert }}/{{ $cert }}.crt",
           "keyFile": "/caddy-data/caddy/certificates/{{ $issuer }}/{{ $cert }}/{{ $cert }}.key"}]},
         "hysteriaSettings": {"version": 2, "udpIdleTimeout": 60,
-          "masquerade": {"type": "proxy", "url": "https://caddy:443", "rewriteHost": true, "insecure": true}},
+          "masquerade": {"type": "proxy", "url": "https://caddy:443", "rewriteHost": false, "insecure": true}},
         "finalmask": {"quicParams": {"disableStatelessReset": true, "maxIdleTimeout": 15, "congestion": "bbr"}}
       }
     }

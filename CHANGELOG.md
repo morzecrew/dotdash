@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A relay's `http-origin` profile without `own-site` is refused with a message that says to add `own-site`, in place of a Compose error about a service with no image.
 
+- A relay's Hysteria2 hands a visitor without a login to its site with the Host the visitor sent, as over TCP. It sent `caddy:443`, so a cover app's redirects and cookies over HTTP/3 named another host than over TCP.
+
 ## [0.17.0] - 2026-11-25
 
 ### Added
