@@ -17,6 +17,7 @@ replace a generated one with `sudo morzer secret rotate <name>`.
 | `kcp_seed` | yes | key [mKCP](mkcp.md)'s packets are encrypted under |
 | `reality_key_second` | no | with `reality_second_key`, a second REALITY private key ([Rotating the REALITY key](#rotating-the-reality-key)) |
 | `reality_short_id_second` | no | with `reality_second_key`, the short id that goes with it |
+| `call_token` | no | with the `openflux` profile and `call_provider=tm`, the provider's API token ([Calls made for you](openflux.md#calls-made-for-you)) |
 
 Rotating `vless_seed`, `reality_key`, `reality_short_id` or `xhttp_path`
 changes every link, and `kcp_seed` the mKCP links: resend them, or let
