@@ -67,6 +67,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A relay's site names no server anywhere: port 80's redirect and the `http-origin` door dropped `Server: Caddy`, as port 443 already did, and every port drops the `Via: 1.1 Caddy` Caddy adds to what it passes back from a cover app, a server or Xray.
 
+- A client under `tun` with no link that answers, as on a fresh install or with kept links whose server is gone, now gets its subscription: while no link answers, the fetch goes directly from Xray, outside TUN. Before, it entered TUN, found no link and was refused for good. No other process can take that way out.
+
+- The client's kill switch keeps its rules while dotdash-client is updated, restarted or stopped, so the machine never gets out around dotdash then; leaving `tun` still takes them out, even after a stop. `doctor` now checks IPv6's rules too. The client's tun page shows a unit that closes the gap at boot.
+
+- Under `tun`, DNS to a resolver on the LAN, such as the router DHCP named, goes into TUN and gets fake addresses like the rest, and goes nowhere while Xray is down. systemd-resolved's own queries can't be redirected so: `doctor` says so, and the tun page shows the fix.
+
+- A client's `DOMAIN-REGEX` rule keeps its commas, as in `^a{2,3}`. It was cut at the first one, which Xray refused, so the change rolled back.
+
 ### Security
 
 - A server takes a `relays` line only when its host, site, public key, short id, VLESS encryption and XHTTP path each have their shape, and gives no mKCP link through a `kcp=` field that isn't whole. A bad line is left out and named by its line number, so a tampered one can't rewrite or break every device's config.

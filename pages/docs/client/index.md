@@ -60,10 +60,20 @@ The port is on `127.0.0.1`, for this machine alone. Next:
 The client fetches the subscription every `subscription_interval` seconds
 (an hour), through dotdash, so it stays current where only dotdash gets
 through, such as through a [relay](../relay/index.md) while only some
-addresses do. When that fails, as on a first start, it fetches directly. It
+addresses do. When that fails, as on a first start, it fetches directly;
+under [`tun`](tun.md), Xray itself does, while no link answers. It
 asks the URL for the device's Xray config, the one `client-config --full`
 prints, and takes its outbounds; when they changed and Xray accepts them, it
 restarts Xray on them. It keeps the last ones Xray accepted, so a restart
 while the URL is out of reach starts on them. Relays in the subscription are
 outbounds like the others: while only a relay gets through, the client goes
 through it.
+
+Under `tun`, where a start can't fetch directly, kept links whose server is
+gone for good give way to the new ones at the next fetch, within
+`subscription_interval`. To fetch at once, drop them and restart:
+
+```sh
+sudo rm "$(sudo docker volume inspect -f '{{.Mountpoint}}' dotdash-client_home)/subscription_url.json"
+sudo morzer restart
+```
