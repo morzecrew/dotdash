@@ -3015,11 +3015,13 @@ address is blocked.</p>
   canaries' network refusing the transport than every relay losing it at
   once, so the manager says to check that network instead.</li>
 <li><strong>A server's blocked paths are only reported</strong>, as a burnt server is.</li>
-<li><strong>So is a CDN blocked while the relay's other paths get through.</strong> <code>off=</code>
-  takes no CDN, so devices keep its links; check the CDN's settings and the
-  relay's site.</li>
+<li><strong>A CDN in front of a relay goes off alone</strong>, as <code>off=cdn:&lt;name&gt;</code>, while
+  the relay's other paths get through: devices lose that CDN's links and keep
+  the rest. It is one relay's, so it is never kept for being blocked on every
+  relay. Check the CDN's settings and the relay's site.</li>
 <li><strong>A server released before <code>off=</code> ignores the field</strong> and gives devices
-  every link through the relay, as before.</li>
+  every link through the relay, as before. So does one released before
+  <code>off=cdn:&lt;name&gt;</code>, for a line naming a CDN there: update the servers first.</li>
 </ul>
 <h2 id="a-name-blocked-by-sni">A name blocked by SNI<a class="headerlink" href="#a-name-blocked-by-sni" title="Permanent link">&para;</a></h2>
 <p>A box can block a server's name by the SNI in each ClientHello, reassembling

@@ -4013,9 +4013,6 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p>A <code>relays</code> line's <code>off=</code> takes <code>cdn:&lt;name&gt;</code> for a CDN in front of that relay which gets nothing through: devices lose that CDN's links and outbounds and keep the relay's others, and a cdn-only relay left with no CDN drops out. Until now a <code>cdn:</code> token voided the whole <code>off=</code> field.</p>
-</li>
-<li>
 <p>A canary checks each CDN in front of the relay it watches, through the CDN as a device's CDN link goes, and gives each under <code>cdn</code> in its facts. The manager hands it the names and CDN path; by hand, set <code>dotdash_cdn_hosts</code>, <code>dotdash_origin_host</code> and the <code>dotdash_cdn_xhttp_path</code> secret.</p>
 </li>
 <li>
@@ -4048,17 +4045,14 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>
 <p>A server's facts carry <code>cert_days</code>, the whole days left on the certificate Caddy serves for its domain, so the authority can warn before a failed renewal breaks XHTTP, Hysteria2 and the CDN paths while REALITY keeps working. Left out while there is no certificate yet.</p>
 </li>
+<li>
+<p>A <code>relays</code> line's <code>off=</code> takes <code>cdn:&lt;name&gt;</code> for a CDN in front of that relay which gets nothing through: devices lose that CDN's links and outbounds and keep the relay's others, and a cdn-only relay left with no CDN drops out. Until now a <code>cdn:</code> token voided the whole <code>off=</code> field.</p>
+</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p><code>cdn-check</code> also checks a relay's <code>origin=</code> names, and for every CDN name whether its links' path reaches Xray behind it, ends at the site's 404 (a stale path, or a door that refused the CDN), or gets a 5xx or nothing (the CDN doesn't reach its origin). It exits 1 on any of those too.</p>
-</li>
-<li>
-<p>A <code>relays</code> or <code>cdn_extra</code> line, or a field of one, that the server would leave out now fails the change that brings it, by its line number and field, and morzer rolls it back: a new <code>lists</code> health check, which <code>doctor</code> runs too. A field it doesn't know, a taken name or a pool member naming nothing still only warns.</p>
-</li>
-<li>
-<p>The server's <code>cdn_hosts</code> links go by a path of their own (a new <code>cdn_xhttp_path</code> secret), disguised as a relay's CDN links are, so a CDN's logs show neither the direct XHTTP path nor its padding. Devices take them at their next subscription refresh; links imported by hand still work, as the plain path stays.</p>
+<p>A CDN in front of a relay that gets nothing through for its canaries goes on the relay's line as <code>off=cdn:&lt;name&gt;</code>, so devices lose that CDN's links and keep the relay's others. It was only reported. Update the servers first: a server released before <code>off=cdn:</code> ignores that relay's whole <code>off=</code>.</p>
 </li>
 <li>
 <p>The manager judges a CDN-only relay by its canaries' CDN checks and leaves it out of devices' links once none of its CDNs gets through, where it left it unwatched. Any relay whose CDN gets through is no longer burnt; a CDN failing alone is only reported.</p>
@@ -4074,6 +4068,15 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </li>
 <li>
 <p>The cover app behind a server sees each visitor's own address in <code>X-Forwarded-For</code>, not Xray's, so its per-address limits and lockouts hold per visitor. The gate and Xray hand the address on in PROXY headers, which Caddy takes from Xray alone. HTTP/3 visitors still show as Xray.</p>
+</li>
+<li>
+<p><code>cdn-check</code> also checks a relay's <code>origin=</code> names, and for every CDN name whether its links' path reaches Xray behind it, ends at the site's 404 (a stale path, or a door that refused the CDN), or gets a 5xx or nothing (the CDN doesn't reach its origin). It exits 1 on any of those too.</p>
+</li>
+<li>
+<p>A <code>relays</code> or <code>cdn_extra</code> line, or a field of one, that the server would leave out now fails the change that brings it, by its line number and field, and morzer rolls it back: a new <code>lists</code> health check, which <code>doctor</code> runs too. A field it doesn't know, a taken name or a pool member naming nothing still only warns.</p>
+</li>
+<li>
+<p>The server's <code>cdn_hosts</code> links go by a path of their own (a new <code>cdn_xhttp_path</code> secret), disguised as a relay's CDN links are, so a CDN's logs show neither the direct XHTTP path nor its padding. Devices take them at their next subscription refresh; links imported by hand still work, as the plain path stays.</p>
 </li>
 <li>
 <p>The server's OpenVPN upstream runs OpenVPN 2.6.23, as the client's kill switch does.</p>
