@@ -26,8 +26,8 @@
 # servers (hooks/killswitch).
 #
 # A LAN device's traffic, with gateway on, takes the same path. `run` puts
-# back what is missing every 5 s, and the interface rules follow the default
-# routes as they change (another network, a reconnect). The rules stay when
+# back what is missing as links change and every 5 s, and the interface rules
+# follow the default routes as they change (another network, a reconnect). The rules stay when
 # the service stops, so an update, a restart or `morzer stop` never opens the
 # machine: `clean`, which the base files run as this service
 # (compose/compose.yaml), takes them out once the tun profile is left. By
@@ -98,11 +98,18 @@ clean)
 	;;
 run)
 	echo "killswitch: on; nothing leaves around TUN but Xray's own connections"
-	while :; do
+	# Again at once when a link comes, goes or changes, as TUN does with
+	# Xray, so DNS follows it within a moment; and every 5 s, for the default
+	# routes. A monitor that stops ends the service, which restarts with its
+	# rules kept. read -t is busybox ash's, the image's sh.
+	# shellcheck disable=SC3045
+	{ ip monitor link; echo stop; } | while :; do
 		on
-		sleep 5 &
-		wait $! || true
-	done
+		line=
+		read -r -t 5 line || true
+		[ "$line" != stop ] || exit 1
+	done &
+	wait $!
 	;;
 *) echo "killswitch.sh [run|clean]" >&2; exit 2 ;;
 esac
