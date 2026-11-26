@@ -118,6 +118,34 @@ http://:8090 {
 	}
 }
 
+# What the site serves past its own routes: the operator's own files wherever
+# one is there; then their app (cover); otherwise the bundled page, titled
+# with the domain so no two machines serve one body.
+(cover) {
+	@own file {
+		root /srv/own
+		try_files {path} {path}/index.html
+	}
+	handle @own {
+		root * /srv/own
+		file_server
+	}
+	# The operator's app (cover), for everything else: a live site, which a
+	# probe or a reviewer finds behaving like one, rather than pages. Caddy
+	# has no conditional, so the matcher compares the value as the Caddyfile
+	# loads; with pages, the handler, whose upstream is then the word pages,
+	# is never reached.
+	@app expression `"{$COVER:pages}" != "pages"`
+	handle @app {
+		reverse_proxy {$COVER:pages}
+	}
+	handle {
+		root * /srv/default
+		templates
+		file_server
+	}
+}
+
 # The site, its routes and the XHTTP path: served under the relay's domain,
 # and under any name a CDN in front sends as Host (below).
 (site) {
@@ -201,33 +229,18 @@ http://:8090 {
 			transport http {
 				network_proxy url http://xray:10810
 			}
+			# A token no server has: the servers' 404 is a server's own site,
+			# which would tell this relay apart and might name the server.
+			# This relay's own site answers it instead, as any other path.
+			@unknown status 404
+			handle_response @unknown {
+				import cover
+			}
 		}
 	}
 
-	# The operator's own files wherever one is there; then their app (cover);
-	# otherwise the bundled page, titled with the domain so no
-	# two machines serve one body.
-	@own file {
-		root /srv/own
-		try_files {path} {path}/index.html
-	}
-	handle @own {
-		root * /srv/own
-		file_server
-	}
-	# The operator's app (cover), for everything else: a live site, which a
-	# probe or a reviewer finds behaving like one, rather than pages. Caddy
-	# has no conditional, so the matcher compares the value as the Caddyfile
-	# loads; with pages, the handler, whose upstream is then the word pages,
-	# is never reached.
-	@app expression `"{$COVER:pages}" != "pages"`
-	handle @app {
-		reverse_proxy {$COVER:pages}
-	}
 	handle {
-		root * /srv/default
-		templates
-		file_server
+		import cover
 	}
 }
 

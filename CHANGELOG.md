@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A relay's Hysteria2 hands a visitor without a login to its site with the Host the visitor sent, as over TCP. It sent `caddy:443`, so a cover app's redirects and cookies over HTTP/3 named another host than over TCP.
 
+- A subscription token the servers don't have gets the relay's own site, as any other path does, where it got the server's 404 page through the tunnel. One request could tell an own-site relay apart, and might name its server.
+
 ## [0.17.0] - 2026-11-25
 
 ### Added
