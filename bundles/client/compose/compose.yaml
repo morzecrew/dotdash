@@ -72,6 +72,32 @@ services:
     secrets: [subscription_url, proxy_password]
     # No healthcheck here: hooks/healthy runs the probe itself (see there).
 
+  # The tun profile's kill switch (compose/tun.yaml) keeps its routing rules
+  # on the host when it stops, so an update or a restart never opens the
+  # machine. Under the base files this service takes them out, once, and
+  # idles: leaving tun leaves none behind, a stop or a kill in between
+  # included (killswitch/killswitch.sh). Root with NET_ADMIN on the host's
+  # network, which deleting a routing rule needs, and nothing else; it serves
+  # nothing.
+  killswitch:
+    image: ${DOTDASH_CLIENT_IMAGE_KILLSWITCH:?set by morzer}
+    restart: unless-stopped
+    user: "0:0"
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN]
+    security_opt: ["no-new-privileges:true"]
+    network_mode: host
+    pids_limit: 32
+    mem_limit: 32m
+    logging:
+      driver: local
+      options: {max-size: 1m, max-file: "2"}
+    entrypoint: ["sh", "/killswitch/killswitch.sh"]
+    command: ["clean"]
+    volumes:
+      - ${DOTDASH_CLIENT_RELEASE_DIR:?set by morzer}/killswitch:/killswitch:ro
+
   # One-shot behind a profile, started only by `morzer task run proxy-config`.
   proxy-config:
     image: ${DOTDASH_CLIENT_IMAGE_BUSYBOX:?set by morzer}

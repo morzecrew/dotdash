@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # The tun profile: a plain request on the machine, with no proxy settings,
 # goes through dotdash, and so does a LAN device's with this machine as its
-# gateway; with dotdash gone, and with Xray itself gone, nothing gets out
+# gateway; a start with no links gets its subscription; DNS to a LAN
+# resolver goes into TUN; with dotdash gone,
+# with Xray itself gone, and with the kill switch stopped too, nothing gets out
 # directly instead; and back on the base files, the machine's own routes are
 # as before. First, the two
 # configs differ only where TUN needs them to.
@@ -19,10 +21,11 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-# Beyond the inbounds, DNS, the dns outbound and the rules naming a TUN-only
-# inbound or the DNS module's tag, the two are the same.
+# Beyond the inbounds, DNS, the dns outbound, the sub balancer and the rules
+# naming a TUN-only inbound or the DNS module's tag, the two are the same.
 same='del(.inbounds, .dns, .fakedns) | .outbounds |= map(select(.tag != "dns"))
-  | .routing.rules |= map(select((.inboundTag // []) | any(. == "tun" or . == "dns-in" or . == "resolver" or . == "dns-internal") | not))'
+  | .routing.balancers |= map(select(.tag != "sub"))
+  | .routing.rules |= map(select((.inboundTag // []) | any(. == "tun" or . == "dns-in" or . == "resolver" or . == "sub" or . == "dns-internal") | not))'
 a=$(sudo jq -S "${same}" /etc/dotdash-client/config.json)
 b=$(sudo jq -S "${same}" /etc/dotdash-client/config-tun.json)
 [ "${a}" = "${b}" ] || die "config-tun.json differs from config.json beyond what TUN needs: $(diff <(echo "${a}") <(echo "${b}") | head -20)"
@@ -55,6 +58,7 @@ through() { # <tries>: poll, 2 s apart, for a plain request reaching tun-target.
 }
 routes() { # what decides where a plain request goes, for a failure's message
   { echo "--- ip rule"; ip rule; echo "--- ip route"; ip route; echo "--- ip -6 route"; ip -6 route
+    echo "--- table 9003"; ip route show table 9003 2>&1
     echo "--- resolv.conf"; cat /etc/resolv.conf; echo "--- tun-target.test"; getent hosts tun-target.test || true; } >&2
 }
 home=$(sudo docker volume inspect -f '{{.Mountpoint}}' dotdash-client_home)
@@ -75,6 +79,38 @@ sudo morzer config set installation.profile=tun >/dev/null
 ip -o link show Meta >/dev/null 2>&1 || die "under the tun profile there is no TUN interface"
 
 through 15 || { routes; die "a plain request did not go through TUN and dotdash ($(plain http://tun-target.test:8080/sub))"; }
+
+# A fresh install, or a cache whose server is gone: no cached links, and a
+# subscription that fails at start (404 here), so Xray starts with none. Its
+# refresh goes through the sub port, directly from Xray's socket outside TUN
+# while no link answers. A real server would send the entrypoint's own direct
+# fetch into TUN and to block; this one is local and would answer it, so the
+# log tells which way the links came. Meanwhile no other process on the
+# machine gets out through that port.
+client=$(service_container xray)
+sudo mv "${dir}/www/sub.json" "${dir}/www/sub.json.off"
+sudo rm -f "${home}/subscription_url.json"
+since=$(date +%s)
+sudo docker restart "${client}" >/dev/null
+for _ in $(seq 30); do sudo docker logs --since "${since}" "${client}" 2>&1 | grep -qE 'no outbounds yet|outbound\(s\)' && break; sleep 1; done
+sudo docker logs --since "${since}" "${client}" 2>&1 | grep -q 'no outbounds yet' \
+  || die "with the subscription failing at start, Xray did not start with no links: $(sudo docker logs --since "${since}" "${client}" 2>&1 | tail -5)"
+sleep 3 # Xray's inbounds up
+code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -x "socks5h://127.0.0.1:7892" "http://${eth0}:8089/sub" || true)
+[ "${code}" != 200 ] || die "with no links, a process on the machine got out directly through the sub port"
+since=$(date +%s)
+sudo mv "${dir}/www/sub.json.off" "${dir}/www/sub.json"
+through 30 || { routes; die "with no links under tun, the subscription never came back"; }
+if sudo docker logs --since "${since}" "${client}" 2>&1 | grep -q 'through XRAY_SUBSCRIPTION_PROXY'; then
+  die "under tun with no links, the subscription came by the entrypoint's direct fetch, not through the sub port"
+fi
+
+# DNS to a resolver on a network the machine is on, here the subscription
+# server's address on docker0, where nothing answers on port 53, goes into TUN
+# too and gets a fake address, the answer passing the kernel's check of its
+# way back, though it comes in on TUN.
+out=$(sudo -u nobody nslookup example.com "${target}" 2>&1 || true)
+grep -q 'Address:.*198\.1[89]\.' <<<"${out}" || { routes; die "DNS to a resolver on the LAN went around TUN: ${out}"; }
 
 # A gateway. A LAN device, a network namespace behind a veth with this machine
 # as its gateway (as in the router spike, #50), first resolves with a public
@@ -155,9 +191,23 @@ done
 sudo docker start "${client}" >/dev/null
 through 15 || { routes; die "with Xray back, a plain request did not go through TUN and dotdash again ($(plain http://tun-target.test:8080/sub))"; }
 
+# An update or a restart stops the kill switch too: its rules stay, so with
+# Xray gone as well nothing gets out, and its next start adds none twice.
+ks=$(service_container killswitch)
+sudo docker stop "${ks}" "${client}" >/dev/null
+for pref in 9001 9002; do
+  ip rule show pref "${pref}" | grep -q . || { routes; die "with the kill switch stopped, its rule ${pref} went"; }
+done
+code=$(plain https://example.com/)
+[ "${code}" != 200 ] || { routes; die "with the kill switch and Xray stopped, a plain request got out directly"; }
+sudo docker start "${ks}" "${client}" >/dev/null
+sleep 2
+[ "$(ip rule show pref 9001 | grep -c .)" = 1 ] || { routes; die "the kill switch's start added its rules twice"; }
+through 15 || { routes; die "with the kill switch and Xray back, a plain request did not go through TUN and dotdash"; }
+
 sudo morzer config unset installation.profile >/dev/null
 ip -o link show Meta >/dev/null 2>&1 && die "back on the base files, the TUN interface is still there"
-ip rule | grep -qE '^900[0-2]:' && { routes; die "back on the base files, the kill switch's rules are still there"; }
+ip rule | grep -qE '^(899[89]|900[0-2]):' && { routes; die "back on the base files, the kill switch's rules are still there"; }
 printf 'http://%s:8088/sub' "${host}" | sudo morzer secret set subscription_url >/dev/null
 sudo morzer config unset probe_url >/dev/null
 sudo morzer config unset direct_rules >/dev/null

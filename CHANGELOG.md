@@ -81,6 +81,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The docs' recipe for several servers copies `kcp_seed` and `subscription_key` too, and says they need the same profiles and transport parameters. Servers set up by the old one gave dead mKCP links to each other, and a 404 to a subscription a relay fetched from the other.
 
+- A client under `tun` with no link that answers, as on a fresh install or with kept links whose server is gone, now gets its subscription: while no link answers, the fetch goes directly from Xray, outside TUN. Before, it entered TUN, found no link and was refused for good. No other process can take that way out.
+
+- The client's kill switch keeps its rules while dotdash-client is updated, restarted or stopped, so the machine never gets out around dotdash then; leaving `tun` still takes them out, even after a stop. `doctor` now checks IPv6's rules too. The client's tun page shows a unit that closes the gap at boot.
+
+- Under `tun`, DNS to a resolver on the LAN, such as the router DHCP named, goes into TUN and gets fake addresses like the rest, and goes nowhere while Xray is down. systemd-resolved's own queries can't be redirected so: `doctor` says so, and the tun page shows the fix.
+
+- A client's `DOMAIN-REGEX` rule keeps its commas, as in `^a{2,3}`. It was cut at the first one, which Xray refused, so the change rolled back.
+
 ### Security
 
 - A relay refuses a quote, backslash, brace or whitespace in `site`, `dotdash_servers`, `dotdash_address`, `dotdash_public_key` and each `via` line, set by hand or by an authority. Such a value could add keys to its Xray config or lines to its Caddyfile; the apply now fails and the relay stays as it was.
