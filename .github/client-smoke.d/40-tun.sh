@@ -119,8 +119,8 @@ sudo mv "${dir}/www/sub.json" "${dir}/www/sub.json.off"
 sudo rm -f "${home}/subscription_url.json"
 since=$(date +%s)
 sudo docker restart "${client}" >/dev/null
-for _ in $(seq 30); do sudo docker logs --since "${since}" "${client}" 2>&1 | grep -qE 'no outbounds yet|outbound\(s\)' && break; sleep 1; done
-sudo docker logs --since "${since}" "${client}" 2>&1 | grep -q 'no outbounds yet' \
+for _ in $(seq 30); do grep -qE 'no outbounds yet|outbound\(s\)' <(sudo docker logs --since "${since}" "${client}" 2>&1) && break; sleep 1; done
+grep -q 'no outbounds yet' <(sudo docker logs --since "${since}" "${client}" 2>&1) \
   || die "with the subscription failing at start, Xray did not start with no links: $(sudo docker logs --since "${since}" "${client}" 2>&1 | tail -5)"
 sleep 3 # Xray's inbounds up
 code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -x "socks5h://127.0.0.1:7892" "http://${eth0}:8089/sub" || true)
@@ -128,7 +128,7 @@ code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -x "socks5h://127.0.0
 since=$(date +%s)
 sudo mv "${dir}/www/sub.json.off" "${dir}/www/sub.json"
 through 30 || { routes; die "with no links under tun, the subscription never came back"; }
-if sudo docker logs --since "${since}" "${client}" 2>&1 | grep -q 'through XRAY_SUBSCRIPTION_PROXY'; then
+if grep -q 'through XRAY_SUBSCRIPTION_PROXY' <(sudo docker logs --since "${since}" "${client}" 2>&1); then
   die "under tun with no links, the subscription came by the entrypoint's direct fetch, not through the sub port"
 fi
 

@@ -67,12 +67,12 @@ since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 poll=$!
 sudo docker restart "$(service_container subscription)" >/dev/null
 for _ in $(seq 60); do
-  sudo docker logs --since "${since}" "$(service_container subscription)" 2>&1 | grep -q '^subscription: ' && break
+  grep -q '^subscription: ' <(sudo docker logs --since "${since}" "$(service_container subscription)" 2>&1) && break
   sleep 1
 done
 kill "${poll}"
 wait "${poll}" 2>/dev/null || true
-sudo docker logs --since "${since}" "$(service_container subscription)" 2>&1 | grep -q '^subscription: ' ||
+grep -q '^subscription: ' <(sudo docker logs --since "${since}" "$(service_container subscription)" 2>&1) ||
   die "the subscription service did not write the files again after a restart"
 [ -s "${codes}" ] || die "the live URL was never asked while the service wrote the files again"
 ! grep -qvx 200 "${codes}" ||
