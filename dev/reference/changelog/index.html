@@ -4063,6 +4063,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>
 <p>The cover app behind a server sees each visitor's own address in <code>X-Forwarded-For</code>, not Xray's, so its per-address limits and lockouts hold per visitor. The gate and Xray hand the address on in PROXY headers, which Caddy takes from Xray alone. HTTP/3 visitors still show as Xray.</p>
 </li>
+<li>
+<p>The server's OpenVPN upstream runs OpenVPN 2.6.23, as the client's kill switch does.</p>
+</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
