@@ -568,11 +568,13 @@ address is blocked.
   canaries' network refusing the transport than every relay losing it at
   once, so the manager says to check that network instead.
 - **A server's blocked paths are only reported**, as a burnt server is.
-- **So is a CDN blocked while the relay's other paths get through.** `off=`
-  takes no CDN, so devices keep its links; check the CDN's settings and the
-  relay's site.
+- **A CDN in front of a relay goes off alone**, as `off=cdn:<name>`, while
+  the relay's other paths get through: devices lose that CDN's links and keep
+  the rest. It is one relay's, so it is never kept for being blocked on every
+  relay. Check the CDN's settings and the relay's site.
 - **A server released before `off=` ignores the field** and gives devices
-  every link through the relay, as before.
+  every link through the relay, as before. So does one released before
+  `off=cdn:<name>`, for a line naming a CDN there: update the servers first.
 
 ## A name blocked by SNI
 

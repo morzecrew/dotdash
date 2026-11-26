@@ -174,18 +174,18 @@ def test_a_cdn_only_relay_is_judged_by_its_cdns_alone():
     assert burnt == {"r1"} and any(line.startswith("burnt: relay r1:") for line in say)
     assert health["r1"]["paths"] == {"cdn:c.example.net": BURN_AFTER, "cdn:o.example.ru": BURN_AFTER}
     assert not {"cause", "split", "latency"} & set(health["r1"])
-    # One CDN through, and it is back; the other, still out, is said, and on no line.
+    # One CDN through, and it is back; the other, still out, goes off its line alone.
     for at in range(BURN_AFTER + 1, 2 * BURN_AFTER + 1):
         burnt, _, (off, say) = run_cdn(at, {"c.example.net": True, "o.example.ru": False})
-    assert burnt == set() and off == {} and health["r1"]["fails"] == 0
-    assert any(line.startswith("blocked: relay r1: its CDN o.example.ru got through") for line in say)
+    assert burnt == set() and off == {"r1": {"cdn:o.example.ru"}} and health["r1"]["fails"] == 0
+    assert any(line.startswith("blocked: relay r1: cdn:o.example.ru got through") for line in say)
     # Every relay at once, a cdn-only one among them, is kept.
     for at in range(2 * BURN_AFTER + 1, 3 * BURN_AFTER + 1):
         burnt, say, _ = run_cdn(at, {"c.example.net": False, "o.example.ru": False}, c2_up=False)
     assert burnt == set() and "check the canaries' network" in say[-1]
 
 
-def test_a_relays_cdn_holds_it_up_and_is_said_but_never_taken_off():
+def test_a_relays_cdn_holds_it_up_and_goes_off_alone():
     net, health = loads(ROSTER), {}
 
     def run_cdn(at: int, paths: dict, cdn: dict):
@@ -203,8 +203,8 @@ def test_a_relays_cdn_holds_it_up_and_is_said_but_never_taken_off():
     health = {}
     for at in range(1, BURN_AFTER + 1):
         burnt, (off, say) = run_cdn(at, {"reality": True, "xhttp": True}, {"c.example.net": False})
-    assert burnt == set() and off == {}
-    assert any(line.startswith("blocked: relay r1: its CDN c.example.net got through for none") for line in say)
+    assert burnt == set() and off == {"r1": {"cdn:c.example.net"}}
+    assert any(line.startswith("blocked: relay r1: cdn:c.example.net got through for none") for line in say)
 
 
 def paths_run(net, health, at, r1: dict, r2: dict):

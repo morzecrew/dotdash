@@ -61,12 +61,18 @@ def alive(row: dict | None) -> tuple[str, str]:
     if not row:
         return "", ""
     if row["stale"]:
-        return "down", f"its own fleet row is {row['age']} old, so it may be down rather than blocked: check it first"
+        return "down", f"its own fleet row is from {_ago(row['age'])}, so it may be down rather than blocked: check it first"
     services, running = row["services"], row["running"]
     if row["problem"] or (services is not None and running is not None and running < services):
         return "down", (f"its own fleet row says {'?' if running is None else running} of "
                         f"{'?' if services is None else services} services run: likelier down than blocked, fix it first")
-    return "blocked", f"its own fleet row ({row['age']} old) says it runs: blocked on the way, not down"
+    return "blocked", f"its own fleet row (from {_ago(row['age'])}) says it runs: blocked on the way, not down"
+
+
+def _ago(age: str) -> str:
+    """morzer's age of a row, "40m0s ago", as "40m ago"; one without "ago" gets it."""
+    age = age.replace("m0s", "m")
+    return age if age.endswith(" ago") else f"{age} ago"
 
 
 def _median(values: list) -> int:
@@ -221,8 +227,10 @@ def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[d
     stop getting those through it, and keep the rest. A path blocked on every
     relay that has it is likelier the canaries' network refusing that transport
     than every relay losing it in the same hour: kept everywhere, and said.
-    A server's are reported only, as for a burnt server. So is a CDN in front
-    of a relay (cdn:<name>): off= takes no CDN, and devices keep its links."""
+    A server's are reported only, as for a burnt server. A CDN in front of a
+    relay (cdn:<name>) goes on its line as such, and devices lose that CDN's
+    links alone; being one relay's, it is never kept for being blocked
+    everywhere it is."""
     def out(name: str) -> set[str]:
         h = health.get(name, {})
         paths = h.get("paths", {})
@@ -234,12 +242,8 @@ def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[d
 
     judged = [r.name for r in net.relay if r.name not in burnt and r.name in facts]
     off = {r: gone for r in judged if (gone := out(r))}
-    cdns = {r: sorted(p.removeprefix("cdn:") for p in gone if p.startswith("cdn:")) for r, gone in off.items()}
-    off = {r: {p for p in gone if not p.startswith("cdn:")} for r, gone in off.items()}
-    say = [f"blocked: relay {r}: its CDN {', '.join(names)} got through for none of its canaries in {BURN_AFTER} "
-           "readings; reported only, as off= takes no CDN: check the CDN's settings and the relay's site"
-           for r, names in sorted(cdns.items()) if names]
-    for p in sorted({p for gone in off.values() for p in gone}):
+    say = []
+    for p in sorted({p for gone in off.values() for p in gone if not p.startswith("cdn:")}):
         having = [r for r in judged if p in health.get(r, {}).get("paths", {})]
         if all(p in off.get(r, set()) for r in having):
             for r in having:
