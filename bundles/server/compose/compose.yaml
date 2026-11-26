@@ -250,6 +250,7 @@ services:
     command: ["sh", "/task/exit-title.sh"]
     environment:
       SUBSCRIPTION: ${DOTDASH_PARAM_SUBSCRIPTION:-false}
+      DIRECT: ${DOTDASH_PARAM_DIRECT:-true}
       EXIT_IPV4_URL: ${DOTDASH_PARAM_EXIT_IPV4_URL:-http://api4.ipify.org}
       EXIT_INFO_URL: ${DOTDASH_PARAM_EXIT_INFO_URL:-http://ipinfo.io}
     volumes:

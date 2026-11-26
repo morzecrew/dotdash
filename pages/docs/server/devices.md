@@ -143,7 +143,8 @@ sudo morzer task run client-config --output -- --full phone    # plus links and 
   through the upstreams every ten minutes (`exit_ipv4_url`, `exit_info_url`),
   so after a line fails over, the next refresh shows the new exit. With
   `upstream_mode=balance` the exit changes between connections, and the name
-  shows one of them.
+  shows one of them. With `direct=false` there is no name
+  ([below](#keeping-the-servers-out-of-devices-links)).
 - Hiddify reads XHTTP links with its own core, which takes `mode=auto` as
   `packet-up` and ignores a `mode` in the link: long uploads through them can
   hang there. In Hiddify, use the REALITY or Hysteria2 link.
@@ -201,7 +202,7 @@ Replacing a pool's relay then means new links only for that pool's devices.
 
 Pools hide relays and CDN hosts, but every device still gets the servers'
 own links, so one leaked device gives away every server. With `direct=false`
-devices get no server's address at all:
+nothing the servers hand devices holds a server's address:
 
 ```sh
 sudo morzer config set direct=false
@@ -212,6 +213,11 @@ sudo morzer config set direct=false
   server's domain.
 - The DNS tunnel goes: its zone is delegated to a server, so a lookup of it
   names the address.
+- Subscriptions carry no name, which shows the exit: a
+  [`direct` line](upstreams.md#no-upstream-this-servers-own-address) in
+  `upstreams` makes the exit the server's own address. A device whose
+  traffic leaves by that line still sees the address on any site that shows
+  a visitor's IP: only an exit elsewhere keeps it from devices.
 - A device that gets no relay and no CDN host gets no links, and one with no
   own-site relay no subscription URL. `client-config` names each.
 
