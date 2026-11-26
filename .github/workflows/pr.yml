@@ -29,7 +29,7 @@ jobs:
   # which they hold to client-config's output; every bundle the workflows
   # they share.
   changes:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -82,7 +82,7 @@ jobs:
   client-config:
     needs: changes
     if: contains(fromJSON(needs.changes.outputs.bundles), 'server')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       packages: read
