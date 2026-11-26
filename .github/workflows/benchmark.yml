@@ -92,7 +92,7 @@ jobs:
           from=ghcr.io/morzecrew/dotdash-server:main
           bash .bundle-ci/scripts/rehearse.sh --from "${from}" --keep
           # The token stays out of the rest of the rig.
-          GITHUB_TOKEN= bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal \
+          GITHUB_TOKEN='' bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal \
             sh -c 'bash /rig/smoke.sh update "$(ls /rig/dist/*.tar.zst | head -1)"'
 
       - name: Benchmark
