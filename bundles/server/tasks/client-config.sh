@@ -119,7 +119,8 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # it they take that one, plain. cdn-only: devices get the relay's CDN links alone,
 # so its own address reaches none of them. off=: the paths its canaries find
 # blocked (reality, xhttp, mkcp, hysteria2; dotdash-manager sets it), which devices then
-# don't get through it; its CDN links stay. split: its canaries got REALITY
+# don't get through it; its CDN links stay, but for a cdn:<name> it names, a
+# CDN in front that gets nothing through, whose links go. split: its canaries got REALITY
 # through only with its hello split into TLS records (dotdash-manager sets it):
 # the Xray config devices get keeps a REALITY outbound through it, split, even
 # with off=reality, which share links can't carry. name=: the operator's
@@ -137,10 +138,10 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # gateway's own, which it turns back into the relay's on the way.
 # Each becomes a row of the columns in cols, "-" for a field it lacks: kp, kh,
 # ks and ko kcp='s port, header, seed and opener; d its CDN hosts, the
-# origin's among them, comma-separated, which pick then cuts down to a
-# device's, and dall all of them; rn its route, which its links are named by;
-# or its origin hosts. awk reads $2 the site, $6 own-site, $12 the CDN hosts,
-# $13 cdn-only and $19 standby.
+# origin's among them, but those off= takes, comma-separated, which pick then
+# cuts down to a device's, and dall all of them; rn its route, which its links are named by;
+# or its origin hosts. awk reads $2 the site, $6 own-site, $13 cdn-only, $19
+# standby and $21 all the CDN hosts.
 cols='h s k i e o p kp kh ks ko d only off sp hy rn cp sb or dall'
 # fronts_ok <list>: whether it is "<host>[/<path>]", comma-separated.
 fronts_ok() {
@@ -226,13 +227,25 @@ all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
        elif [ "$d" = - ]; then d=$or
        else d="$d,$or"; fi ;;
   esac
-  case $x in *[!a-z0-9,-]*) echo "relays: line $n: the off= field of $1 is not <path>[,<path>]; ignored" >&2; x=- ;; esac
+  case $x in *[!A-Za-z0-9.:,-]*) echo "relays: line $n: the off= field of $1 is not <path>[,<path>]; ignored" >&2; x=- ;; esac
   case ,$x, in ,-, | ,,) x=- ;; esac
   case ,$x, in *,mkcp,*) kp=- ;; esac
   case ,$x, in *,hysteria2,*) hy=- ;; esac
   for y in $(printf '%s' "$x" | tr ',' ' '); do
-    case $y in - | reality | xhttp | mkcp | hysteria2) ;; *) echo "relays: line $n: the off= field of $1 names $y, not reality, xhttp, mkcp or hysteria2; ignored" >&2 ;; esac
+    case $y in - | reality | xhttp | mkcp | hysteria2) continue ;; cdn:*) ! name_ok "${y#cdn:}" || continue ;; esac
+    echo "relays: line $n: the off= field of $1 names $y, not reality, xhttp, mkcp, hysteria2 or cdn:<host>; ignored" >&2
   done
+  # off=cdn:<name>: that CDN in front of it gets nothing through (dotdash-manager
+  # sets it), so its links and outbounds go, under every path of the name, and
+  # the relay's others stay; dall keeps it, so the rest keep their numbers. A
+  # cdn-only relay that has none left goes too, as off= has it, unsaid.
+  dall=$d
+  case ,$x, in *,cdn:*)
+    dk=
+    for e in $(printf '%s' "$d" | tr ',' ' '); do case ,$x, in *,"cdn:${e%%/*}",*) ;; *) dk="$dk,$e" ;; esac; done
+    [ -n "$dk" ] || [ "$only" != cdn-only ] || continue
+    d=${dk#,}; d=${d:--} ;;
+  esac
   if [ "$only" = cdn-only ] && [ "$d" = - ]; then
     echo "relays: line $n: $1 is cdn-only but has no CDN link; left out" >&2
     continue
@@ -248,7 +261,7 @@ all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
     esac ;;
   esac
   taken="${taken:-} $nm"
-  echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $kp $kh $ks $ko $d $only $x $sp $hy $nm $cp $sb $or $d"
+  echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $kp $kh $ks $ko $d $only $x $sp $hy $nm $cp $sb $or $dall"
 done)
 # A relay's route, unnamed: "relay", numbered where there are several by its
 # place among the lines (a host's first), the same on every device.
@@ -303,7 +316,7 @@ pick() { # <device name> [<kind>]: the relays, CDN hosts and subscription relays
 # A member that names nothing would leave its device in no pool, or its relay
 # or CDN host in none, and so seen by every device: say so.
 names=$(awk '$1 !~ /^#/ && NF > 1 { print $2 }' /run/secrets/vless_clients)
-relay_names=$(printf '%s\n' "$all_relays" | awk '{ print $1; if ($12 != "-") { gsub(",", "\n", $12); gsub("/[^\n]*", "", $12); print $12 } }')
+relay_names=$(printf '%s\n' "$all_relays" | awk '{ print $1; if ($21 != "-") { gsub(",", "\n", $21); gsub("/[^\n]*", "", $21); print $21 } }')
 printf '%s\n' "${POOLS:-}" | sed 's/#.*//' | awk 'NF > 1 { for (i = 2; i <= NF; i++) print NR, $i }' | while read -r n m; do
   printf '%s\n%s\n%s\n' "$names" "$all_cdns" "$relay_names" | grep -qxF -- "$m" ||
     echo "pools: line $n: $m is no device name, relay host or CDN host" >&2

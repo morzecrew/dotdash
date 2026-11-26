@@ -305,6 +305,14 @@ gold "a bad xdns_resolvers" XDNS_DOMAIN=t XDNS_RESOLVERS=dns.example -- --full p
 gold "entry_port not a port" ENTRY_PORT=x -- --full phone
 gold "--check, the fleet" SUBSCRIPTION=true "${profiles[@]}" "${fleet[@]}" -- --check
 gold "--check, every line said" "RELAYS=$bad" -- --check
+# off=cdn:<name>: that CDN's links and outbounds go, under every path of the
+# name, the rest keep their numbers, a pool may still name it, and a cdn-only
+# relay left with none goes, unsaid.
+gold "off= names CDNs" "POOLS=p1 phone a.example.net d1.example.net" "RELAYS=203.0.113.2 r.example.com ${pbk} ab12 ${enc} ${own} kcp=9447,dtls,aa cdn=a.example.net,b.example.net cdnpath=cccc3333dddd4444eeee5555 origin=o.example.org,o.example.org/e/x/ off=cdn:a.example.net,cdn:o.example.org,mkcp
+203.0.113.3 c.example.com ${pbk} 01 ${enc} own-site 0a0b cdn=c.example.net cdn-only off=cdn:c.example.net
+203.0.113.4 d.example.com ${pbk} 02 ${enc} own-site 0c0d cdn=d1.example.net,d2.example.net cdn-only off=cdn:d1.example.net
+203.0.113.5 e.example.com ${pbk} 03 ${enc} off=reality,cdn:a..b
+203.0.113.6 f.example.com ${pbk} 04 ${enc} off=cdn:Bad_host!" -- --full phone
 golden=.github/tests/client-config.golden
 if [ "${UPDATE_GOLDEN:-}" = 1 ]; then
   cp "$work/golden" "$golden"

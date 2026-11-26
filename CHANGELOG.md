@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A `relays` line's `off=` takes `cdn:<name>` for a CDN in front of that relay which gets nothing through: devices lose that CDN's links and outbounds and keep the relay's others, and a cdn-only relay left with no CDN drops out. Until now a `cdn:` token voided the whole `off=` field.
+
 - A canary checks each CDN in front of the relay it watches, through the CDN as a device's CDN link goes, and gives each under `cdn` in its facts. The manager hands it the names and CDN path; by hand, set `dotdash_cdn_hosts`, `dotdash_origin_host` and the `dotdash_cdn_xhttp_path` secret.
 
 - The manager's `sync` and `report` warn when a server's or relay's site certificate has under 14 days left, from the `cert_days` in its facts. An expired certificate breaks XHTTP, Hysteria2 and the CDN links while REALITY works, which canaries read as a block.
