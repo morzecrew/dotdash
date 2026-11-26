@@ -11,6 +11,16 @@
 #         machine is on, but never the default route;
 #   9002  and what that leaves is unreachable.
 #
+# And before them DNS, which 9001 would let reach a resolver on a network
+# the machine is on, such as the router DHCP named:
+#
+#   8998, 8999  DNS (TCP, UDP port 53) from any process but root's (Xray's
+#         own is root's) looks up 9003: TUN, whose DNS answers with fake
+#         addresses, and unreachable while TUN is gone.
+#
+# A socket that names its interface finds no route in 9003 and goes on: what
+# systemd-resolved sends a link's own DNS servers (hooks/killswitch).
+#
 # A LAN device's traffic, with gateway on, takes the same path. `run` puts
 # back what is missing every 5 s, and the interface rules follow the default
 # routes as they change (another network, a reconnect). The rules stay when
@@ -27,11 +37,16 @@ fams=-4
 
 off() {
 	for fam in $fams; do
-		while ip "$fam" rule del pref 9000 2>/dev/null; do :; done
-		ip "$fam" rule del pref 9001 2>/dev/null || true
-		ip "$fam" rule del pref 9002 2>/dev/null || true
+		for pref in 8998 8999 9000 9001 9002; do
+			while ip "$fam" rule del pref "$pref" 2>/dev/null; do :; done
+		done
 		ip "$fam" route flush table 9002 2>/dev/null || true
+		ip "$fam" route flush table 9003 2>/dev/null || true
 	done
+}
+
+rule() { # <pref> <selector...>: the rule at pref, unless one is there
+	ip "$fam" rule show pref "$1" | grep -q . || ip "$fam" rule add pref "$@"
 }
 
 sync() { # the interface rules, one per interface that holds a default route
@@ -50,9 +65,13 @@ sync() { # the interface rules, one per interface that holds a default route
 on() { # what is missing, in the order that leaves Xray's own connections working
 	sync
 	for fam in $fams; do
-		ip "$fam" rule show pref 9001 | grep -q . || ip "$fam" rule add pref 9001 lookup main suppress_prefixlength 0
+		ip "$fam" route replace default dev Meta table 9003 2>/dev/null \
+			|| ip "$fam" route replace unreachable default table 9003
+		rule 8998 uidrange 1-4294967294 ipproto tcp dport 53 lookup 9003
+		rule 8999 uidrange 1-4294967294 ipproto udp dport 53 lookup 9003
+		rule 9001 lookup main suppress_prefixlength 0
 		ip "$fam" route replace unreachable default table 9002
-		ip "$fam" rule show pref 9002 | grep -q . || ip "$fam" rule add pref 9002 lookup 9002
+		rule 9002 lookup 9002
 	done
 }
 

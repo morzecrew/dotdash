@@ -71,6 +71,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The client's kill switch keeps its rules while dotdash-client is updated, restarted or stopped, so the machine never gets out around dotdash then; leaving `tun` still takes them out, even after a stop. `doctor` now checks IPv6's rules too. The client's tun page shows a unit that closes the gap at boot.
 
+- Under `tun`, DNS to a resolver on the LAN, such as the router DHCP named, goes into TUN and gets fake addresses like the rest, and goes nowhere while Xray is down. systemd-resolved's own queries can't be redirected so: `doctor` says so, and the tun page shows the fix.
+
 ### Security
 
 - A server takes a `relays` line only when its host, site, public key, short id, VLESS encryption and XHTTP path each have their shape, and gives no mKCP link through a `kcp=` field that isn't whole. A bad line is left out and named by its line number, so a tampered one can't rewrite or break every device's config.

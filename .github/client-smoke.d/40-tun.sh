@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # The tun profile: a plain request on the machine, with no proxy settings,
 # goes through dotdash, and so does a LAN device's with this machine as its
-# gateway; a start with no links gets its subscription; with dotdash gone,
+# gateway; a start with no links gets its subscription; DNS to a LAN
+# resolver goes into TUN; with dotdash gone,
 # with Xray itself gone, and with the kill switch stopped too, nothing gets out
 # directly instead; and back on the base files, the machine's own routes are
 # as before. First, the two
@@ -102,6 +103,12 @@ through 30 || { routes; die "with no links under tun, the subscription never cam
 if sudo docker logs --since "${since}" "${client}" 2>&1 | grep -q 'through XRAY_SUBSCRIPTION_PROXY'; then
   die "under tun with no links, the subscription came by the entrypoint's direct fetch, not through the sub port"
 fi
+
+# DNS to a resolver on a network the machine is on, here docker0's address,
+# where nothing answers, goes into TUN too and gets a fake address: from any
+# process but root's, which Xray's own lookups are.
+out=$(sudo -u nobody nslookup example.com "${host}" 2>&1 || true)
+grep -q 'Address:.*198\.1[89]\.' <<<"${out}" || { routes; die "DNS to a resolver on the LAN went around TUN: ${out}"; }
 
 # A gateway. A LAN device, a network namespace behind a veth with this machine
 # as its gateway (as in the router spike, #50), first resolves with a public

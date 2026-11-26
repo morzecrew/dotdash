@@ -10,7 +10,10 @@ sudo morzer config unset installation.profile     # back to the proxy port alone
 ```
 
 - DNS answers with fake addresses, and the names go to dotdash, which
-  resolves them. `dns_server` (`1.1.1.1`), asked directly, answers only for
+  resolves them. Questions to a resolver on the LAN, such as the router
+  DHCP named, go there too, from any process but root's;
+  [systemd-resolved](#systemd-resolved) takes a step of its own.
+  `dns_server` (`1.1.1.1`), asked directly, answers only for
   dotdash's server names, the direct rules, and `.lan`, `.local` and
   `.home.arpa` names. Set it to your router's address for the LAN's own
   names, or where public resolvers don't answer:
@@ -49,11 +52,10 @@ reaches nothing but its LAN with dotdash-client gone, removed or with Docker
 down, take them out by hand:
 
 ```sh
-sudo ip rule del pref 9001; sudo ip rule del pref 9002
-sudo ip -6 rule del pref 9001; sudo ip -6 rule del pref 9002
+for p in 8998 8999 9001 9002; do sudo ip rule del pref $p; sudo ip -6 rule del pref $p; done
 ```
 
-Remove dotdash-client only after leaving the profile, or run those after.
+Remove dotdash-client only after leaving the profile, or run that after.
 
 ### From boot
 
@@ -73,6 +75,7 @@ Conflicts=shutdown.target
 Type=oneshot
 # The kill switch's rules, IPv4's and IPv6's ($$ is systemd's $).
 ExecStart=-/bin/sh -c 'for f in -4 -6; do ip $$f rule add pref 9001 lookup main suppress_prefixlength 0; ip $$f route replace unreachable default table 9002; ip $$f rule add pref 9002 lookup 9002; done'
+ExecStart=-/bin/sh -c 'for f in -4 -6; do ip $$f route replace unreachable default table 9003; ip $$f rule add pref 8998 uidrange 1-4294967294 ipproto tcp dport 53 lookup 9003; ip $$f rule add pref 8999 uidrange 1-4294967294 ipproto udp dport 53 lookup 9003; done'
 
 [Install]
 WantedBy=sysinit.target
@@ -90,6 +93,31 @@ disable the unit before removing dotdash-client:
 
 ```sh
 sudo systemctl disable dotdash-killswitch.service
+```
+
+## systemd-resolved
+
+systemd-resolved, which many distributions run, sends what it asks a link's
+own DNS servers, the ones DHCP named, out of that link, where no routing
+rule can take it into TUN: those questions leave around dotdash, though the
+connections that follow go through it. `sudo morzer doctor` names the links.
+Have Xray answer on a loopback address and resolved ask it for every name:
+
+```sh
+sudo morzer config set dns_listen=127.0.0.153:53
+sudo mkdir -p /etc/systemd/resolved.conf.d
+printf '[Resolve]\nDNS=127.0.0.153\nDomains=~.\n' | sudo tee /etc/systemd/resolved.conf.d/dotdash.conf
+sudo systemctl restart systemd-resolved
+```
+
+With `dns_listen` already on the LAN address for a gateway, give resolved that
+address instead. Undo it before leaving the profile, or the machine's names
+stop resolving:
+
+```sh
+sudo rm /etc/systemd/resolved.conf.d/dotdash.conf
+sudo systemctl restart systemd-resolved
+sudo morzer config unset dns_listen
 ```
 
 ## A gateway for the LAN
