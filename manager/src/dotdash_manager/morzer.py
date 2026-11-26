@@ -187,7 +187,10 @@ def write_roster(path: Path, net: Network) -> None:
         for m in getattr(net, kind):
             if m.id:
                 lines += [f"  - product: {PRODUCTS[kind]}", f"    id: {m.id}"] + ([f"    key: {m.key}"] if m.key else [])
-    path.write_text("\n".join(lines) + ("\n" if len(lines) > 3 else " []\n"))
+    # Whole or not at all: status --wait reads it holding no lock.
+    tmp = path.with_name(f".{path.name}.tmp")
+    tmp.write_text("\n".join(lines) + ("\n" if len(lines) > 3 else " []\n"))
+    tmp.replace(path)
 
 
 def to_yaml(doc: dict) -> str:
