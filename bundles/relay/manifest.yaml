@@ -295,7 +295,7 @@ tasks:
     command: ["sh", "/task/facts.sh"]
     timeout: 1m
   entry-check:
-    description: "Check each of this relay's entries end to end as a device reaches it (REALITY, XHTTP through its own site, mKCP, Hysteria2), and the http-origin door by its log of the last hour, one line each with why it fails"
+    description: "Check each entry end to end as a device reaches it, and the http-origin door by its log of the last hour: a line each, with why it fails"
     service: entry-check
     command: ["sh", "/task/entry-check.sh"]
     timeout: 3m
