@@ -58,6 +58,7 @@ through() { # <tries>: poll, 2 s apart, for a plain request reaching tun-target.
 }
 routes() { # what decides where a plain request goes, for a failure's message
   { echo "--- ip rule"; ip rule; echo "--- ip route"; ip route; echo "--- ip -6 route"; ip -6 route
+    echo "--- table 9003"; ip route show table 9003 2>&1
     echo "--- resolv.conf"; cat /etc/resolv.conf; echo "--- tun-target.test"; getent hosts tun-target.test || true; } >&2
 }
 home=$(sudo docker volume inspect -f '{{.Mountpoint}}' dotdash-client_home)
@@ -106,8 +107,8 @@ fi
 
 # DNS to a resolver on a network the machine is on, here the subscription
 # server's address on docker0, where nothing answers on port 53, goes into TUN
-# too and gets a fake address: from any process but root's, which Xray's own
-# lookups are.
+# too and gets a fake address, the answer passing the kernel's check of its
+# way back, though it comes in on TUN.
 out=$(sudo -u nobody nslookup example.com "${target}" 2>&1 || true)
 grep -q 'Address:.*198\.1[89]\.' <<<"${out}" || { routes; die "DNS to a resolver on the LAN went around TUN: ${out}"; }
 

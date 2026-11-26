@@ -7,7 +7,7 @@ ip link show Meta >/dev/null 2>&1 || { echo "not under the tun profile (no TUN i
 fams=-4
 [ ! -e /proc/net/if_inet6 ] || fams="-4 -6"
 for fam in $fams; do
-  for pref in 8998 8999 9001 9002; do
+  for pref in 8996 8997 8998 8999 9001 9002; do
     ip "$fam" rule show pref "$pref" | grep -q . \
       || { echo "TUN is up, but the kill switch's rules are not (no ip $fam rule $pref): is the killswitch service running? sudo docker ps -f name=killswitch" >&2; exit 1; }
   done

@@ -14,12 +14,16 @@
 # And before them DNS, which 9001 would let reach a resolver on a network
 # the machine is on, such as the router DHCP named:
 #
-#   8998, 8999  DNS (TCP, UDP port 53) from any process but root's (Xray's
-#         own is root's) looks up 9003: TUN, whose DNS answers with fake
-#         addresses, and unreachable while TUN is gone.
+#   8996, 8997  DNS (TCP, UDP port 53) looks up 9003, TUN while it is there,
+#         whose DNS answers with fake addresses. The kernel's check of the
+#         answer's way back (rp_filter) takes it too, or the answer, which
+#         comes in on TUN, would be dropped;
+#   8998, 8999  and while TUN is gone, any but root's looks up 9004, which is
+#         unreachable then. Root's is Xray's own on its way up.
 #
-# A socket that names its interface finds no route in 9003 and goes on: what
-# systemd-resolved sends a link's own DNS servers (hooks/killswitch).
+# A socket that names its interface, as all of Xray's own do, finds no route
+# in 9003 and goes on. So does what systemd-resolved sends a link's own DNS
+# servers (hooks/killswitch).
 #
 # A LAN device's traffic, with gateway on, takes the same path. `run` puts
 # back what is missing every 5 s, and the interface rules follow the default
@@ -37,11 +41,12 @@ fams=-4
 
 off() {
 	for fam in $fams; do
-		for pref in 8998 8999 9000 9001 9002; do
+		for pref in 8996 8997 8998 8999 9000 9001 9002; do
 			while ip "$fam" rule del pref "$pref" 2>/dev/null; do :; done
 		done
-		ip "$fam" route flush table 9002 2>/dev/null || true
-		ip "$fam" route flush table 9003 2>/dev/null || true
+		for table in 9002 9003 9004; do
+			ip "$fam" route flush table "$table" 2>/dev/null || true
+		done
 	done
 }
 
@@ -65,10 +70,16 @@ sync() { # the interface rules, one per interface that holds a default route
 on() { # what is missing, in the order that leaves Xray's own connections working
 	sync
 	for fam in $fams; do
-		ip "$fam" route replace default dev Meta table 9003 2>/dev/null \
-			|| ip "$fam" route replace unreachable default table 9003
-		rule 8998 uidrange 1-4294967294 ipproto tcp dport 53 lookup 9003
-		rule 8999 uidrange 1-4294967294 ipproto udp dport 53 lookup 9003
+		if ip link show Meta >/dev/null 2>&1; then
+			ip "$fam" route replace default dev Meta table 9003 2>/dev/null || true
+			ip "$fam" route flush table 9004 2>/dev/null || true
+		else
+			ip "$fam" route replace unreachable default table 9004
+		fi
+		rule 8996 ipproto tcp dport 53 lookup 9003
+		rule 8997 ipproto udp dport 53 lookup 9003
+		rule 8998 uidrange 1-4294967294 ipproto tcp dport 53 lookup 9004
+		rule 8999 uidrange 1-4294967294 ipproto udp dport 53 lookup 9004
 		rule 9001 lookup main suppress_prefixlength 0
 		ip "$fam" route replace unreachable default table 9002
 		rule 9002 lookup 9002
