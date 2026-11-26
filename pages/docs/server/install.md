@@ -48,8 +48,8 @@ stands for your domain throughout.
       [Upstreams](upstreams.md) for backups, IPv6, WireGuard and OpenVPN.
     - Changing proxy later is one `secret edit upstreams` and one restart.
     - `init` prints the release's signing key and trusts it. To check even
-      this first release against the key published with the repository, add
-      `--signing-key "$(gh variable get MINISIGN_RELEASE_PUBKEY -R morzecrew/dotdash)"`.
+      this first release against the [release key](../index.md#releases), add
+      `--signing-key RWSodSvG4wmCA2FCL20MQ43y0Tw+/bcMnej3bzmFYr/yXmSKUx3YdF/B`.
 
 6. **Check:** `apply` succeeds only once Xray reaches the internet through
    the upstream and 443 serves the site with a trusted certificate. Later,

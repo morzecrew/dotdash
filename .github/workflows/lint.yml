@@ -1,0 +1,64 @@
+# shellcheck over every shell script (the bundles' tasks and hooks,
+# bootstrap.sh and .github's), then actionlint and zizmor over the workflows.
+# The tools are pinned, so a finding here is one locally too: run the same
+# commands with shellcheck 0.11.0, which reads .shellcheckrc.
+name: lint
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ACTIONLINT: "1.7.12"
+  ZIZMOR: "1.30.0"
+  # The runner's own shellcheck is another version, whose findings differ;
+  # shellcheck publishes no checksums file, so the archive's digest is pinned.
+  SHELLCHECK: "0.11.0"
+  SHELLCHECK_SHA256: "8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198"
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Authenticated: anonymous release downloads have failed for hours while
+      # authenticated ones went through. actionlint runs this shellcheck too.
+      - name: Install shellcheck and actionlint
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          get() { curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors -H "Authorization: Bearer ${GITHUB_TOKEN}" -o "$1" "$2"; }
+          get shellcheck.tar.xz "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK}/shellcheck-v${SHELLCHECK}.linux.x86_64.tar.xz"
+          echo "${SHELLCHECK_SHA256}  shellcheck.tar.xz" | sha256sum -c -
+          tar -xJf shellcheck.tar.xz "shellcheck-v${SHELLCHECK}/shellcheck"
+          sudo install -m 0755 "shellcheck-v${SHELLCHECK}/shellcheck" /usr/local/bin/shellcheck
+          base="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT}"
+          get actionlint.tar.gz "${base}/actionlint_${ACTIONLINT}_linux_amd64.tar.gz"
+          get checksums.txt "${base}/actionlint_${ACTIONLINT}_checksums.txt"
+          grep " actionlint_${ACTIONLINT}_linux_amd64.tar.gz\$" checksums.txt | sed 's/ .*/  actionlint.tar.gz/' | sha256sum -c -
+          tar -xzf actionlint.tar.gz actionlint
+          sudo install -m 0755 actionlint /usr/local/bin/actionlint
+          rm -rf shellcheck.tar.xz "shellcheck-v${SHELLCHECK}" actionlint actionlint.tar.gz checksums.txt
+
+      - name: shellcheck
+        run: git ls-files -z '*.sh' 'bundles/*/hooks/*' | xargs -0 shellcheck -S warning
+
+      - name: actionlint
+        run: actionlint -color
+
+      - name: zizmor
+        run: pipx run "zizmor==${ZIZMOR}" --offline .github/workflows

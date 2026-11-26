@@ -12,3 +12,9 @@ manager/.venv/
 manager/dist/
 __pycache__/
 .pytest_cache/
+
+# Local leftovers: core dumps, which may hold secrets, agents' worktrees, and
+# research notes kept out of the public repository.
+core.[0-9]*
+.claude/worktrees/
+docs/research/
