@@ -114,6 +114,20 @@ def test_direct_false_takes_the_first_own_site_relay_the_devices_pools_give_it(s
                                       for w in waiting)
 
 
+def test_servers_whose_ports_or_profiles_differ_are_said(net, st, facts):
+    pbk = facts["a"]["public_key"]
+    both = {**facts, "b": {**facts["a"], "domain": "b.example.net", "public_key": pbk}}
+    assert not any(w.startswith("servers differ") for w in render(net, st, both)[1])
+    kcp = {"port": 8447, "header": "dtls", "open": "none"}
+    both = {**both, "a": {**both["a"], "kcp": kcp, "hysteria2_port": 443},
+            "b": {**both["b"], "kcp": {**kcp, "open": "quic"}, "https_port": 8443}}
+    said = [w for w in render(net, st, both)[1] if w.startswith("servers differ")]
+    assert said == ["servers differ in https_port, kcp, hysteria2_port: each server's links name the others with its own, "
+                    "so some are dead; give every server the same profiles and ports; relays take 443, a's"]
+    # b not ready yet: nothing to compare.
+    assert not any(w.startswith("servers differ") for w in render(net, st, {**both, "b": {**both["b"], "public_key": "old"}})[1])
+
+
 def test_nothing_applied_yet(net, st):
     docs, waiting = render(net, st, {})
     assert set(docs) == {"a", "b"} and docs["a"]["unset"] == {"parameters": ["relays"]}

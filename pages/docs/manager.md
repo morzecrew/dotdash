@@ -483,3 +483,8 @@ The upstreams, ports, profiles, domains and anything else a machine alone
 knows stay the operator's, set on that machine as before. A value the manager
 sets is refused by `config set` on the machine while sync is on; `--force`
 changes it until the next document.
+
+Give every server the same profiles and transport ports, though: each server's
+links and configs name the others with its own `https_port`, XHTTP with
+REALITY, mKCP (port, header and opener) and Hysteria2 ports. `sync` says when
+the servers that applied the keys differ in any of those.
