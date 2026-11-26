@@ -60,6 +60,6 @@ def unusual(t: dict, since: str = "") -> list[str]:
             usual = statistics.median(days[p].get(dev, 0) for p in order[:i])
             if n >= FLOOR and n >= TIMES * usual:
                 lines.append(f"{dev}: {n / 1e9:.1f} GB on {d}, against {usual / 1e9:.1f} GB on its usual day:"
-                             " if its link may have leaked, delete the device and add it again")
+                             " if its link may have leaked, take the device out, sync, and add it back")
     return lines
 

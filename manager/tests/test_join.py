@@ -82,6 +82,22 @@ def test_marker():
             join.marker(line, "r1")
 
 
+def test_status_knows_who_joined_from_the_state(tmp_path, monkeypatch):
+    bin_ = tmp_path / "morzer"
+    bin_.write_text('#!/bin/sh\necho "morzer $*"\n')
+    bin_.chmod(0o755)
+    (tmp_path / "network.toml").write_text(ROSTER)
+    (tmp_path / "dotdash-state.json").write_text(json.dumps({"joined": {"r1": {"id": "inst_01ab", "key": "RWQabc="}}}))
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(state, "lock", lambda path: 0)
+    r = CliRunner().invoke(app, ["--morzer", str(bin_), "status"])
+    assert r.exit_code == 0, r.output
+    assert r.output.startswith("morzer state ls --target file:///t --expect ")
+    assert "r1 (relay): not joined" not in r.output and "a (server): not joined" in r.output
+    assert "id: inst_01ab" in (tmp_path / "roster.yaml").read_text()
+    assert json.loads((tmp_path / "dotdash-state.json").read_text()) == {"joined": {"r1": {"id": "inst_01ab", "key": "RWQabc="}}}
+
+
 def test_joined_keeps_the_id_and_key_and_the_roster_wins(tmp_path, monkeypatch):
     (tmp_path / "network.toml").write_text(ROSTER)
     monkeypatch.chdir(tmp_path)
@@ -91,7 +107,8 @@ def test_joined_keeps_the_id_and_key_and_the_roster_wins(tmp_path, monkeypatch):
     r = run(app, ["joined", "r1"], input="bootstrap: done\nmorzer: applied\n")
     assert r.exit_code != 0 and "stopped before its last line" in str(r.exception)
     assert "bootstrap: done" in r.output
-    r = run(app, ["joined", "r1"], input="applied\ndotdash-joined r1 inst_01ab RWQabc=\n")
+    # r2 is joined in the roster, the way earlier releases had it: this state is new on purpose.
+    r = run(app, ["--new-state", "joined", "r1"], input="applied\ndotdash-joined r1 inst_01ab RWQabc=\n")
     assert r.exit_code == 0, r.output
     assert "applied" in r.output and "dotdash-joined" not in r.output
     st = json.loads((tmp_path / "dotdash-state.json").read_text())
@@ -100,3 +117,7 @@ def test_joined_keeps_the_id_and_key_and_the_roster_wins(tmp_path, monkeypatch):
     assert (net.find("r1").id, net.find("r1").key) == ("inst_01ab", "RWQabc=") and net.find("r1").joined
     assert net.find("r2").id == "inst_2" and not net.find("a").joined
     assert run(app, ["joined", "nobody"], input="").exit_code != 0
+    # The script for r1 run on r2's machine prints r2's installation.
+    r = run(app, ["joined", "r1"], input="dotdash-joined r1 inst_2 RW2\n")
+    assert r.exit_code != 0 and "ran on r2's installation (inst_2): nothing kept" in str(r.exception)
+    assert json.loads((tmp_path / "dotdash-state.json").read_text())["joined"]["r1"]["id"] == "inst_01ab"

@@ -40,9 +40,11 @@ jobs:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    # Shared with docs-release.yml: every mike deploy pushes to gh-pages.
+    # Not docs-release.yml's group: GitHub keeps one waiting run per group, so
+    # a third deploy would cancel a waiting release's. Both push to gh-pages,
+    # so a push another deploy beat starts again from the branch as it is now.
     concurrency:
-      group: docs-deploy
+      group: docs-dev
       cancel-in-progress: false
     permissions:
       contents: write # mike pushes the built site to gh-pages
@@ -60,11 +62,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          uv run --locked mike deploy --push --branch gh-pages dev
+          retry() { for _ in 1 2 3; do git fetch -q origin gh-pages && git branch -f gh-pages origin/gh-pages && "$@" && return; sleep 10; done; return 1; }
+          retry uv run --locked mike deploy --push --branch gh-pages dev
           # Until the first release publishes `latest`, main owns the root:
           # its redirect, and bootstrap.sh beside it.
           versions=$(uv run --locked mike list --branch gh-pages)
           if ! grep -q '\[latest\]' <<<"$versions"; then
-            uv run --locked mike set-default --push --branch gh-pages dev
-            ../.github/scripts/publish-bootstrap.sh
+            retry uv run --locked mike set-default --push --branch gh-pages dev
+            retry ../.github/scripts/publish-bootstrap.sh
           fi

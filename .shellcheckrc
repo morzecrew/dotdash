@@ -1,0 +1,5 @@
+# The tasks source entry.sh beside them (`# shellcheck source=entry.sh`).
+source-path=SCRIPTDIR
+external-sources=true
+# `a= b= c=` empties several variables in one line, as exit-check.sh does.
+disable=SC1007

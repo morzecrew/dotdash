@@ -71,6 +71,8 @@ def test_a_rotation_from_start_to_finish():
     rotate.finish(st, 200 + rotate.WINDOW)
     docs, _ = render(net, st, {**facts, "a": server(st["keys"])})
     assert docs["a"]["parameters"]["reality_second_key"] == "false" and "reality_key_second" not in docs["a"]["secrets"]
+    # The old key leaves the server's secret store, beside the pools it has none of.
+    assert docs["a"]["unset"] == {"parameters": ["pools"], "secrets": ["reality_key_second", "reality_short_id_second"]}
     assert rotate.status(st, 0).startswith("no rotation")
     rotate.start(st, 300)  # and another may begin
 
@@ -82,6 +84,7 @@ def test_no_rotation_leaves_the_servers_as_they_were():
                    "public_key": state.public_key(st["keys"]["reality_key"])}, "r1": RELAY}
     docs, _ = render(net, st, facts)
     assert "reality_second_key" not in docs["a"]["parameters"] and "reality_key_second" not in docs["a"]["secrets"]
+    assert "secrets" not in docs["a"].get("unset", {})
     with pytest.raises(Refused, match="no rotation"):
         rotate.finish(st, 0)
     rotate.start(st, 0)

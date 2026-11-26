@@ -34,6 +34,18 @@ def test_events_say_what_changed_between_two_readings():
     assert events({"r1": burnt}, {"r1": {**burnt, "fails": BURN_AFTER + 1}}, {"r3": "r1"}, {"r3": "r1"}, 99) == []
 
 
+def test_a_relay_turned_cdn_only_is_unwatched_not_gone():
+    burnt = {"fails": BURN_AFTER, "at": 20, "since": 10, "paths": {"reality": BURN_AFTER}}
+    assert events({"r1": burnt}, {}, {}, {}, 99, {"s", "r1"}) == [[99, "r1", "unwatched"]]
+    assert events({"r1": burnt}, {}, {}, {}, 99, {"s"}) == [[99, "r1", "gone"]]
+    log = [[0, "r1", "watched"], [10, "r1", "burnt"], [99, "r1", "unwatched"], [0, "r2", "watched"], [50, "r2", "gone"]]
+    h = history(log, "r1", 200)
+    assert not h["burnt_now"] and h["burns"] == [[10, 99]]
+    lines = report(loads(ROSTER), log, 200)
+    for name in "r1", "r2":  # r2's gone, from before unwatched, while it stays in the roster
+        assert next(line for line in lines if line.startswith(f"{name} ")).split()[1:3] == ["relay", "up"]
+
+
 def test_a_relays_history_and_the_fleets_median():
     now = 40 * DAY
     log = [[0, "r1", "watched"], [10 * DAY, "r1", "burnt"], [10 * DAY, "r1", "off:reality"],

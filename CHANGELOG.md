@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The manager's `sync` and `report` warn when a server's or relay's site certificate has under 14 days left, from the `cert_days` in its facts. An expired certificate breaks XHTTP, Hysteria2 and the CDN links while REALITY works, which canaries read as a block.
+
+- The manager's `sync` says when servers differ in `https_port` or in the ports, mKCP header and opener, or presence of XHTTP with REALITY, mKCP and Hysteria2. Each server's subscriptions name the others with its own, so a difference gives devices dead links.
+
+- The release and dev keys' public halves, in the README and the docs' Releases section: `morzer init --signing-key` checks even the first release against them, with no access to the repository's variables.
+
 ### Changed
 
 - A `relays` line with a field the server doesn't know, such as a mistyped `cdn_path=`, gets a warning naming the field and the line, where the relay used to lose that transport unsaid.
@@ -21,6 +29,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The docs' recipe for several servers copies `kcp_seed` and `subscription_key` too, and says they need the same profiles and transport parameters. Servers set up by the old one gave dead mKCP links to each other, and a 404 to a subscription a relay fetched from the other.
 
+- When the manager can't read a machine's facts, its last good facts stand in for up to a day, and `sync` prints the read's error. A passing outage of the target, or a wrong `identity` file, no longer takes every relay off every device in one sync.
+
+- A canary reading stamped more than ten minutes ahead of the manager's clock no longer counts. One canary whose clock ran ahead could burn a relay alone, and its reading outweighed every honest one until real time caught up.
+
+- The manager refuses to run with no state file beside a roster that names a joined machine, unless given `--new-state`. A sync on a checkout the state wasn't copied to made new keys for every server, cutting every device off. `adopt` still makes the state, as it takes the server's keys.
+
+- The manager's `status` shows machines joined with `joined` as joined, and writes `roster.yaml` under the state's lock, as `sync` does. It listed them as not joined, and could rewrite `roster.yaml` under a timer's sync.
+
+- A server whose document failed to publish is told again at the next sync to turn `hello_split` off. The manager forgot it had split a server before publishing, so one failed publish left that server's devices splitting their REALITY hello for good.
+
+- The manager unsets a relay's `via` only where an earlier document set it. Every relay whose release takes `via` was sent the unset, which a relay whose manifest doesn't let a document manage `via` refuses along with the whole document, so it took no change after `join`.
+
+- Each call the manager makes to morzer fails after two minutes without an answer, saying so, and the run goes on as for any failed read or publish. A target that hung held the state's lock, and every timer's sync behind it, for good.
+
+- The manager's `adopt` names the devices a server lists as `desktop` that the roster's `desktops` lacks. It dropped the kind silently, so after the first sync former desktops got CDN links, some paid by the gigabyte.
+
+- The manager refuses two machines on one installation id, in the roster or from `joined` run on the wrong machine. Each then got the other's document on every sync.
+
+- A relay with REALITY as its only path, whose name is blocked by SNI, is no longer burnt while its canaries get through with the hello split: it gets `off=reality` and `split`, so devices' Xray configs keep reaching it, split.
+
+- A relay that turns CDN-only no longer shows as `gone` in the manager's `report` for as long as the log keeps it, nor as burnt for good if it was burnt then. `report` calls a machine gone only once it leaves the roster.
+
+- Under `direct = false`, a client machine fetches its subscription through the first own-site relay its device's `pools` give it, as the servers choose. The manager took the first own-site relay of all, which could be one the device's pools keep from it.
+
 ### Security
 
 - A server takes a `relays` line only when its host, site, public key, short id, VLESS encryption and XHTTP path each have their shape, and gives no mKCP link through a `kcp=` field that isn't whole. A bad line is left out and named by its line number, so a tampered one can't rewrite or break every device's config.
@@ -28,6 +60,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `servers` and `cdn_hosts` entries that aren't host names are left out with a warning, and an `xdns_domain` that isn't one stops `client-config`, instead of reaching every device's links and Xray config.
 
 - With `direct=false`, subscriptions carry no title (`Profile-Title`), which names the exit in Happ and Hiddify: with a `direct` line in `upstreams` it was the server's own address, shown to every device that `direct=false` keeps it from.
+
+- The manager refuses facts no bundle prints: whitespace, quotes, backslashes, braces or control characters in a value, or a field missing or of the wrong type. A tampered relay can no longer add lines to the servers' `relays`, crash every sync or write to the terminal, nor take another relay's address out of the pools.
+
+- A device taken out of the manager's roster loses its id at the next sync, so added back it gets new links and a new subscription URL, and its leaked ones let no one in. Before, it got the same id and token back. Relays' and canaries' own ids and client machines' passwords are dropped the same way.
+
+- After `rotate finish`, the manager's next sync removes the retired REALITY key and its short id from every server's secret store, so later backups no longer hold them. Before, the old key was only turned off.
+
+- `bootstrap.sh` runs morzer's installer from a pinned commit, checked by sha256, where it piped whatever a movable tag served into `sh`. It also trusts Docker's apt key only when the file holds that one key, by its fingerprint.
 
 ## [0.17.0] - 2026-11-25
 

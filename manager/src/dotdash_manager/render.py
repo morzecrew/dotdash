@@ -3,10 +3,14 @@ at hand. Pure: it reads nothing and writes nothing."""
 
 import hashlib
 import json
+from collections import Counter
 
 from . import rotate
 from .roster import Network
 from .state import public_key
+
+# What a server's facts say that client-config takes for every server alike.
+SHARED = ("https_port", "xhttp_reality_port", "kcp", "hysteria2_port")
 
 
 def relay_line(f: dict, off: set[str] | frozenset[str] = frozenset(), split: bool = False,
@@ -81,17 +85,25 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     # An origin name may carry its gateway's path, <host>/<path>: pools name the host.
     hosts = lambda name: [facts[name]["entry_host"], *facts[name].get("cdn_hosts", []),
                           *(o.split("/")[0] for o in facts[name].get("origin_host", "").split(",") if o)]
-    gone = {h for r in burnt if r in facts for h in hosts(r)}
+    # A host counts as a relay's only while no other relay's facts name it: a
+    # burnt or held one claiming another's must not take it out of the pools,
+    # nor bring its stand-in into that one's.
+    named = Counter(h for r in net.relay if r.name in facts for h in set(hosts(r.name)))
+    own = lambda name: [h for h in hosts(name) if named[h] == 1]
+    waiting += [f"{h}: more than one relay's facts name it, so no burnt relay or spare moves it in the pools"
+                for h in sorted(h for h, n in named.items() if n > 1)]
+    gone = {h for r in burnt if r in facts for h in own(r)}
     stands = stands or {}
 
     def members(ms: list[str]) -> list[str]:
         kept = [m for m in ms if m not in gone]
         for s, r in stands.items():
-            if r in facts and s in facts and set(hosts(r)) & set(ms):
-                kept += [h for h in hosts(s) if h not in kept]
+            if r in facts and s in facts and set(own(r)) & set(ms):
+                kept += [h for h in own(s) if h not in kept]
         return kept
 
-    pools = "\n".join(f"{p} {' '.join(kept)}" for p, ms in net.pools.items() if (kept := members(ms)))
+    pools_kept = {p: kept for p, ms in net.pools.items() if (kept := members(ms))}
+    pools = "\n".join(f"{p} {' '.join(kept)}" for p, kept in pools_kept.items())
     for s in net.server:
         others = [facts[o.name]["domain"] for o in known if o is not s]
         doc = {
@@ -118,6 +130,9 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
             doc["secrets"].update({f"{k}_second": v for k, v in two.items()})
         elif rotate.phase(state) == "done":
             doc["parameters"]["reality_second_key"] = "false"
+            # The retired key out of the server's secret store, and so out of
+            # its backups from then on, not only unused.
+            doc.setdefault("unset", {})["secrets"] = [f"{k}_second" for k in rotate.KEYS]
         if s.name in split:
             doc["parameters"]["hello_split"] = "true"
         elif s.name in state.get("split", []):
@@ -125,8 +140,14 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
         docs[s.name] = doc
 
     lead = facts[ready[0].name] if ready else None
-    if lead and len({facts[s.name]["https_port"] for s in ready}) > 1:
-        waiting.append(f"servers differ in https_port: relays take {lead['https_port']}, {ready[0].name}'s")
+    # client-config gives every server in servers its own server's ports, mKCP
+    # header and opener and profiles (each present or not): where those
+    # differ, its subscriptions carry dead links to the others.
+    differ = [k for k in SHARED if len({json.dumps(facts[s.name].get(k), sort_keys=True) for s in ready}) > 1]
+    if lead and differ:
+        waiting.append(f"servers differ in {', '.join(differ)}: each server's links name the others with its own, so "
+                       "some are dead; give every server the same profiles and ports"
+                       + (f"; relays take {lead['https_port']}, {ready[0].name}'s" if "https_port" in differ else ""))
     for r in net.relay:
         if not lead:
             waiting.append(f"{r.name}: waits for a server that applied the keys")
@@ -166,7 +187,10 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
             doc["parameters"]["via_link"] = r.via_link
             if r.via_link == "xhttp":
                 doc["parameters"]["via_fingerprint"] = r.via_fingerprint
-        elif takes_via and r.name in facts:
+        elif r.name in state.get("via", []):
+            # Off via again: unset only where an earlier document set it (the
+            # state's via). A relay whose release doesn't let a document manage
+            # via refuses any naming it, and so would take no change at all.
             doc["unset"] = {"parameters": ["via", "via_link", "via_fingerprint"]}
 
     for c in net.canary:
@@ -202,9 +226,16 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
         docs[c.name] = {"parameters": params, "secrets": {"dotdash_id": ids[f"canary-{c.name}"], **sec}}
 
     # direct = false keeps the servers' domains out of what devices hold, so a
-    # client machine fetches through an own-site relay, as a phone does.
-    own_site = [facts[r.name]["site"] for r in net.relay if "own_site" in facts.get(r.name, {})
-                and r.name not in burnt and not facts[r.name].get("cdn_only")]
+    # client machine fetches through an own-site relay, as a phone does: the
+    # first its device sees, as client-config's pick has it. A device in a
+    # pool sees its pools' relays and those in none; one in none sees all.
+    listed = {h for kept in pools_kept.values() for h in kept}
+
+    def own_site(device: str) -> list[str]:
+        mine = {h for kept in pools_kept.values() if device in kept for h in kept}
+        return [f["site"] for r in net.relay if "own_site" in (f := facts.get(r.name, {})) and r.name not in burnt
+                and not f.get("cdn_only") and (not mine or f["entry_host"] in mine or f["entry_host"] not in listed)]
+
     for c in net.client:
         if not lead:
             waiting.append(f"{c.name}: waits for a server that applied the keys")
@@ -213,9 +244,11 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
         port = "" if lead["https_port"] == 443 else f":{lead['https_port']}"
         url = f"https://{lead['domain']}{port}/{token}"
         if net.direct is False:
-            if not own_site:
-                waiting.append(f"{c.name}: waits for an own-site relay: direct = false keeps the servers' URL out")
+            sites = own_site(c.device)
+            if not sites:
+                waiting.append(f"{c.name}: waits for an own-site relay that {c.device}'s pools give it: "
+                               "direct = false keeps the servers' URL out")
                 continue
-            url = f"https://{own_site[0]}/{token}"
+            url = f"https://{sites[0]}/{token}"
         docs[c.name] = {"secrets": {"subscription_url": url, "proxy_password": state["passwords"][c.name]}}
     return docs, waiting

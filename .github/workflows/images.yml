@@ -1,12 +1,14 @@
 # A pull request that changes the image pins: each morzecrew image must carry a
 # provenance attestation signed for platform-images' publish workflow on main
 # (platform-images#134), so a digest nobody built there cannot be merged.
-# Renovate's bumps wait for this check as for the smoke test.
+# Renovate's bumps wait for this check as for the smoke test. Each repo:tag is
+# pinned at one digest everywhere: two builds of one tag would test one and
+# ship the other.
 name: images
 
 on:
   pull_request:
-    paths: [bundles/server/manifest.yaml, bundles/canary/manifest.yaml, bundles/relay/manifest.yaml, bundles/client/manifest.yaml, .github/smoke.d/**, .github/client-smoke.d/**]
+    paths: [bundles/*/manifest.yaml, .github/*smoke.d/**, .github/workflows/images.yml]
 
 permissions: {}
 
@@ -25,6 +27,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: One digest per repo:tag
+        run: |
+          set -euo pipefail
+          tags=$(grep -rhoE '[a-z0-9.-]+\.[a-z]+/[a-z0-9._/-]+:[A-Za-z0-9._-]+@sha256:[a-f0-9]{64}' bundles .github |
+            sort -u | cut -d@ -f1 | uniq -d)
+          [ -z "${tags}" ] || { echo "::error::pinned at more than one digest: ${tags//$'\n'/, }"; exit 1; }
 
       - name: Verify each morzecrew image's provenance
         env:
