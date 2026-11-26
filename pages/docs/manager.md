@@ -288,8 +288,9 @@ knowing when you pick where the next one goes.
 ## How long relays last
 
 Every `sync` logs what changed: a server or relay its canaries start
-watching, one that burns or comes back, one that leaves the roster, a path
-going off or on, a spare standing in or waiting again. `report` reads that
+watching, one that burns or comes back, one that leaves the roster, a relay
+turning CDN-only (no longer judged, so a burn ends there), a path going off or
+on, a spare standing in or waiting again. `report` reads that
 log:
 
 ```sh

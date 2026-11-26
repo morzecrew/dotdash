@@ -97,7 +97,8 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     split, more = health.splits(net, st["health"], burnt)
     verdicts += more
     log = st.setdefault("events", [])
-    log += health.events(before, st["health"], st.get("stands", {}), stands, now)
+    log += health.events(before, st["health"], st.get("stands", {}), stands, now,
+                         {t.name for t in [*net.server, *net.relay]})
     del log[:-health.EVENTS]
     labels(net, st)
     st["stands"] = stands

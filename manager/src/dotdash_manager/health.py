@@ -244,17 +244,20 @@ def splits(net: Network, health: dict, burnt: set[str] | frozenset[str] = frozen
     return servers | relays, say
 
 
-def events(before: dict, after: dict, stood: dict, stands: dict, now: int) -> list[list]:
+def events(before: dict, after: dict, stood: dict, stands: dict, now: int,
+           roster: set[str] | frozenset[str] = frozenset()) -> list[list]:
     """What changed between two health records (judge's, before and after a
     sync), as [at, machine, what], for report: watched (its canaries' first
-    reading), burnt, back, gone (out of the roster), off:<path> and on:<path>;
-    and for a spare, stands-in:<relay> and waits, from health.spares' stands
-    before (stood) and now. at is the reading's checked_at, else now."""
+    reading), burnt, back, gone (out of the roster), unwatched (in the roster,
+    its servers' and relays' names, but judged no more: turned cdn-only),
+    off:<path> and on:<path>; and for a spare, stands-in:<relay> and waits,
+    from health.spares' stands before (stood) and now. at is the reading's
+    checked_at, else now."""
     out = []
     for name in sorted(set(before) | set(after)):
         b, a = before.get(name), after.get(name)
         if a is None:
-            out.append([now, name, "gone"])
+            out.append([now, name, "unwatched" if name in roster else "gone"])
             continue
         at = a.get("at") or now
         if b is None:

@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A relay with REALITY as its only path, whose name is blocked by SNI, is no longer burnt while its canaries get through with the hello split: it gets `off=reality` and `split`, so devices' Xray configs keep reaching it, split.
 
+- A relay that turns CDN-only no longer shows as `gone` in the manager's `report` for as long as the log keeps it, nor as burnt for good if it was burnt then. `report` calls a machine gone only once it leaves the roster.
+
 ### Security
 
 - The manager refuses facts no bundle prints: whitespace, quotes, backslashes, braces or control characters in a value, or a field missing or of the wrong type. A tampered relay can no longer add lines to the servers' `relays`, crash every sync or write to the terminal, nor take another relay's address out of the pools.

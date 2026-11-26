@@ -37,7 +37,8 @@ def history(events: list, name: str, now: int) -> dict:
             h["watched"] = at
         elif what == "burnt":
             h["burns"].append([at, None])
-        elif what == "back" and h["burns"] and h["burns"][-1][1] is None:
+        elif what in ("back", "unwatched") and h["burns"] and h["burns"][-1][1] is None:
+            # Judged no more, it can't come back: its burn ends there.
             h["burns"][-1][1] = at
         elif what == "gone":
             h["gone"] = at
@@ -185,7 +186,9 @@ def report(net: Network, events: list, now: int, stands: dict | None = None,
             continue
         kind = kinds.get(name, "gone")
         seen = h["watched"] is not None
-        status = ("gone" if h["gone"] else "burnt" if h["burnt_now"] else "standing" if name in stands
+        # Gone once out of the roster, whatever the log says: one written before
+        # unwatched says gone of a relay that turned cdn-only.
+        status = ("gone" if kind == "gone" else "burnt" if h["burnt_now"] else "standing" if name in stands
                   else "waiting" if kind == "spare" else "up" if seen else "unseen")
         lasted = "-" if h["lasted"] is None else span(h["lasted"]) + ("+" if h["lasting"] else "")
         off = ", ".join(f"{p}×{n}" for p, n in sorted(h["off"].items())) or "-"
