@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Under the server's `openflux` profile, the exits' connections go through Xray, so the rules devices get apply to them: BitTorrent and trackers, mail on port 25, private addresses and the server's networks are blocked, and `resolve` and `ipv6` hold. They went to the gate, past all of it.
 
+- `resolve=upstream` beside a `direct` upstreams line is refused: the apply rolls back and `doctor` names it. The gate resolved devices' names on the server, so a device reached its containers by name, `xray` and `gate` among them, past Xray's rules. Use `resolve=gateway`.
+
 ### Fixed
 
 - When the manager can't read a machine's facts, its last good facts stand in for up to a day, and `sync` prints the read's error. A passing outage of the target, or a wrong `identity` file, no longer takes every relay off every device in one sync.

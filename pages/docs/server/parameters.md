@@ -27,7 +27,7 @@
 | `probe_url` | `https://www.gstatic.com/generate_204` | fetched through the upstreams, and through each line every 10 s; an answer slower than 1.5 s counts as none |
 | `probe_expect` | `.*` | regex the response must match, such as the exit IP |
 | `probe6_url` | `http://api6.ipify.org` | IPv6-only URL fetched through the IPv6 lines, with `ipv6=separate` |
-| `resolve` | `gateway` | `gateway`: this server resolves over `dns_resolver`; `upstream`: the upstream proxies see hostnames (no WireGuard or OpenVPN line then) |
+| `resolve` | `gateway` | `gateway`: this server resolves over `dns_resolver`; `upstream`: the upstream proxies see hostnames (no WireGuard, OpenVPN or `direct` line then) |
 | `ipv6` | `allow` | `allow`: IPv6 leaves like the rest; `separate`: through the [`group=ipv6` lines](upstreams.md#ipv6) alone; `block`: no IPv6 destination leaves, names resolve to IPv4 only, so dual-stack sites still work (with `resolve=upstream`, the upstream resolves names itself) |
 | `dns_resolver` | `https://1.1.1.1/dns-query` | DoH server for `resolve=gateway`; `https://` only |
 | `subscription` | `false` | a subscription URL per device |

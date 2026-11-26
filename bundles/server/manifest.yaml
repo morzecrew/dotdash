@@ -198,7 +198,7 @@ parameters:
     type: enum
     values: [gateway, upstream]
     default: gateway
-    description: "Who turns hostnames into addresses. gateway: this server, over dns_resolver, which itself goes out through the upstreams, so they see addresses only; a name resolving to a private address is blocked. upstream: the upstream proxies, which then see every hostname; not with a WireGuard or OpenVPN line, which resolves no names"
+    description: "Who turns hostnames into addresses. gateway: this server, over dns_resolver, which itself goes out through the upstreams, so they see addresses only; a name resolving to a private address is blocked. upstream: the upstream proxies, which then see every hostname; not with a WireGuard or OpenVPN line, which resolves no names, nor a direct line, which would resolve them on this machine"
     services: [xray]
   ipv6:
     type: enum

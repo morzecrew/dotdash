@@ -7,8 +7,9 @@
 #     with ipv6=separate a third, upstream6, the same hop to the gate's IPv6
 #     egress; no freedom anywhere, and the upstream the explicit last rule;
 #   - names are resolved either by the upstream (no DNS in Xray, names passed
-#     on), or here over DoH routed through the upstream, with the upstream
-#     handed addresses only (ForceIP, never UseIP's fallback to the name);
+#     on, and no direct line, which would resolve them on this machine), or
+#     here over DoH routed through the upstream, with the upstream handed
+#     addresses only (ForceIP, never UseIP's fallback to the name);
 #   - every VLESS inbound demands a listed client and VLESS decryption, no
 #     XHTTP inbound sets a flow, the Hysteria2 inbound demands a listed user,
 #     and anything else listens on loopback only, but exit-title's forwards
@@ -160,7 +161,7 @@ want='{"outbounds": {"$upstreams": "/run/secrets/upstreams"}}'
 # URL, goes into a message: the file holds credentials.
 upstreams=${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/upstreams
 if [ -r "${upstreams}" ]; then
-  tunnels=0 openvpn=0 http=0 v4=0 v6=0
+  tunnels=0 openvpn=0 http=0 direct=0 v4=0 v6=0
   # A line is its URL with name= and group= before it (then a |) or after it.
   while read -r -a words || [ "${#words[@]}" -gt 0 ]; do
     case ${words[0]:-} in '' | '#'*) continue ;; esac
@@ -170,7 +171,7 @@ if [ -r "${upstreams}" ]; then
     done
     case ${url} in wireguard://* | openvpn | openvpn://*) tunnels=$((tunnels + 1)) ;; esac
     case ${url} in openvpn | openvpn://*) openvpn=$((openvpn + 1)) ;; esac
-    case ${url} in http://* | https://*) http=$((http + 1)) ;; esac
+    case ${url} in http://* | https://*) http=$((http + 1)) ;; direct) direct=$((direct + 1)) ;; esac
     case ",${groups}," in *,upstream,*) v4=$((v4 + 1)) ;; esac
     case ",${groups}," in *,ipv6,*) v6=$((v6 + 1)) ;; esac
   done <"${upstreams}"
@@ -179,6 +180,12 @@ if [ -r "${upstreams}" ]; then
   [ "${openvpn}" -le 8 ] || violations+=$'\n'"upstreams has ${openvpn} OpenVPN lines, and the tunnels' SOCKS hop carries 8"
   if [ "${DOTDASH_PARAM_RESOLVE:-gateway}" = upstream ] && [ "${tunnels}" -gt 0 ]; then
     violations+=$'\n'"resolve=upstream, but ${tunnels} upstreams line(s) are a WireGuard or OpenVPN tunnel, which resolves no names"
+  fi
+  # A direct line would resolve devices' names in the gate, on this machine,
+  # where xray, gate and the like name its containers, past Xray's block of
+  # private addresses; resolve=gateway resolves them over DoH and blocks those.
+  if [ "${DOTDASH_PARAM_RESOLVE:-gateway}" = upstream ] && [ "${direct}" -gt 0 ]; then
+    violations+=$'\n'"resolve=upstream, but an upstreams line is direct, which would resolve devices' names on this machine, its containers' included: use resolve=gateway"
   fi
   if [ "${DOTDASH_PARAM_UPSTREAM_UDP:-false}" = true ] && [ "${http}" -gt 0 ]; then
     violations+=$'\n'"upstream_udp=true, but ${http} upstreams line(s) are an HTTP proxy, which drops UDP"

@@ -79,6 +79,16 @@ if sudo grep -qF 'which drops UDP' "${release}/hooks/policy"; then
   echo "25-policy.sh: upstream_udp=true with an HTTP proxy line is named"
 fi
 
+# A direct line would resolve devices' names in the gate, where xray, gate
+# and the like name this machine's containers: resolve=upstream with one is a
+# violation.
+printf 'name=home | direct\n' >"${work}/upstreams"
+out=$(sudo env DOTDASH_RELEASE_DIR="${release}" DOTDASH_PARAM_HTTPS_PORT=443 DOTDASH_COMPOSE_PROJECT=dotdash \
+  DOTDASH_SECRETS_DIR="${work}" DOTDASH_PARAM_RESOLVE=upstream "${release}/hooks/policy" 2>&1) &&
+  die "policy passes resolve=upstream with a direct line"
+grep -qF "an upstreams line is direct" <<<"${out}" || die "policy failed on resolve=upstream, but not on the direct line: ${out}"
+echo "25-policy.sh: resolve=upstream with a direct line is named"
+
 # The image Caddy runs, whichever repository the release pins it from.
 caddy=$(sudo docker inspect -f '{{.Config.Image}}' "$(service_container caddy)")
 sudo docker run -d --name dotdash-rig-intruder --label com.docker.compose.project=dotdash \
