@@ -3,6 +3,7 @@ at hand. Pure: it reads nothing and writes nothing."""
 
 import hashlib
 import json
+from collections import Counter
 
 from . import rotate
 from .roster import Network
@@ -81,14 +82,21 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     # An origin name may carry its gateway's path, <host>/<path>: pools name the host.
     hosts = lambda name: [facts[name]["entry_host"], *facts[name].get("cdn_hosts", []),
                           *(o.split("/")[0] for o in facts[name].get("origin_host", "").split(",") if o)]
-    gone = {h for r in burnt if r in facts for h in hosts(r)}
+    # A host counts as a relay's only while no other relay's facts name it: a
+    # burnt or held one claiming another's must not take it out of the pools,
+    # nor bring its stand-in into that one's.
+    named = Counter(h for r in net.relay if r.name in facts for h in set(hosts(r.name)))
+    own = lambda name: [h for h in hosts(name) if named[h] == 1]
+    waiting += [f"{h}: more than one relay's facts name it, so no burnt relay or spare moves it in the pools"
+                for h in sorted(h for h, n in named.items() if n > 1)]
+    gone = {h for r in burnt if r in facts for h in own(r)}
     stands = stands or {}
 
     def members(ms: list[str]) -> list[str]:
         kept = [m for m in ms if m not in gone]
         for s, r in stands.items():
-            if r in facts and s in facts and set(hosts(r)) & set(ms):
-                kept += [h for h in hosts(s) if h not in kept]
+            if r in facts and s in facts and set(own(r)) & set(ms):
+                kept += [h for h in own(s) if h not in kept]
         return kept
 
     pools = "\n".join(f"{p} {' '.join(kept)}" for p, ms in net.pools.items() if (kept := members(ms)))

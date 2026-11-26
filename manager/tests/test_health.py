@@ -113,6 +113,22 @@ def test_a_burnt_relays_door_names_leave_the_pools_too():
     assert render(net, st, facts, {"r1"})[0]["s"]["parameters"]["pools"] == "a phone"
 
 
+def test_a_burnt_or_held_relay_claiming_anothers_host_moves_it_in_no_pool():
+    net = loads(SPARES)
+    st = state.load(Path("/nonexistent"), net)
+    server = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
+              "encryption": "E"}
+    # r2 burnt and r3, a spare held back, both name r1's address and CDN host.
+    liar = {**R2, "cdn_hosts": ["c.example.net"], "origin_host": "203.0.113.5"}
+    facts = {"s": server, "r1": R1, "r2": liar, "r3": {**R3, "entry_host": "203.0.113.5"}, "r4": R4}
+    docs, waiting = render(net, st, facts, {"r2", "r3", "r4"})
+    assert docs["s"]["parameters"]["pools"] == "a phone 203.0.113.5 c.example.net\nb 203.0.113.5"
+    assert "203.0.113.5: more than one relay's facts name it, so no burnt relay or spare moves it in the pools" in waiting
+    # Nor does a spare standing in for it carry its own hosts into r1's pools.
+    docs, _ = render(net, st, facts, {"r2", "r3"}, None, {"r4": "r2"})
+    assert docs["s"]["parameters"]["pools"] == "a phone 203.0.113.5 c.example.net\nb 203.0.113.5"
+
+
 def test_a_cdn_only_relay_carries_the_flag_is_never_judged_and_serves_no_subscription():
     net, health = loads(ROSTER), {"r1": {"fails": BURN_AFTER, "at": 1}}
     only = {**R1, "cdn_only": True, "own_site": {"xhttp_path": "p"}}

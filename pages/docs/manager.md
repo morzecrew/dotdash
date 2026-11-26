@@ -171,6 +171,12 @@ that. A device added to `devices` reaches every server and relay at the next
 sync; one removed loses its access everywhere, each machine within its next
 cycle.
 
+Before it uses a machine's facts, `sync` checks them. Facts no release
+prints are refused: a value holding whitespace, a quote, a backslash, a brace
+or a control character, or a field missing or of the wrong type. `sync` names
+the machine and the field, and leaves the facts out. Two relays whose facts
+name the same host don't move it in the pools when one burns or stands in.
+
 The manager keeps what it made in `dotdash-state.json` beside the roster: the
 shared keys, every device's id and the client machines' proxy passwords. It is
 written with mode 0600 and holds every credential in the network: back it up

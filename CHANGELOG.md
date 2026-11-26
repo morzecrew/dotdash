@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- The manager refuses facts no bundle prints: whitespace, quotes, backslashes, braces or control characters in a value, or a field missing or of the wrong type. A tampered relay can no longer add lines to the servers' `relays`, crash every sync or write to the terminal, nor take another relay's address out of the pools.
+
 ## [0.17.0] - 2026-11-25
 
 ### Added
