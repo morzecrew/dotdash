@@ -156,7 +156,7 @@ images:
   busybox: docker.io/library/busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec
   xray: ghcr.io/morzecrew/xray:26.11.9@sha256:f9651c4e3bb6732824dacead53936dccf26ec6a59b0db763bda175b9ebe359a3
   # The openflux profile's client (platform-images, images/openflux).
-  openflux: ghcr.io/morzecrew/openflux:0.17.1@sha256:eb83da74d8a647f969407d4301f451cd4136c52a772e3c3b746365eb044c247d
+  openflux: ghcr.io/morzecrew/openflux:0.17.1@sha256:0e494df450bad0933867c1e66e970d7166f2f45fa66e523f067941e0582f51aa
 
 # What an authority's desired-state document may set here (morzer 0.16): the
 # device's subscription, the password of its local proxy, and its OpenFlux
