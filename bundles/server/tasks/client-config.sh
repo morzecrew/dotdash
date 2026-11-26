@@ -7,10 +7,8 @@
 # holding it can use this server, so send it only over a channel you would
 # send a password on.
 set -eu
-: "${DOMAIN:?}" "${HTTPS_PORT:?}"
-# The port others dial: entry_port, when a proxy on this machine passes the
-# domain through to https_port.
-case ${ENTRY_PORT:-none} in none) ;; '' | *[!0-9]*) echo "entry_port is not a port: ${ENTRY_PORT}" >&2; exit 1 ;; *) HTTPS_PORT=$ENTRY_PORT ;; esac
+# shellcheck source=common.sh
+. /task/common.sh
 full=false
 local_auth=false
 while :; do
@@ -44,15 +42,7 @@ for r in $(printf '%s' "${XDNS_RESOLVERS:-udp://1.1.1.1:53}" | tr ',' ' '); do
   xdns_addrs="${xdns_addrs:+${xdns_addrs}, }\"${r}\""
 done
 [ -n "$xdns_addrs" ] || { echo "xdns_resolvers is empty" >&2; exit 1; }
-hosts() { # <parameter> <list>: the list's host names, one per line, "none" aside; any other entry is said and left out
-  printf '%s\n' "$2" | tr ',' '\n' | awk -v p="$1" '{ gsub(/^ +| +$/, "") } $0 == "" || $0 == "none" { next }
-    /^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*$/ { print; next } { print p ": " $0 " is not a host name; left out" > "/dev/stderr" }'
-}
-# The servers carrying these clients with the same secrets, in order (the
-# servers parameter); self is this one. A list naming none, such as " , ", is
-# this one alone, as an empty one is.
-servers=$(hosts servers "${SERVERS:-self}" | sed "s/^self\$/${DOMAIN}/")
-[ -n "$servers" ] || { echo "servers names no server: this one alone" >&2; servers=$DOMAIN; }
+servers=$(server_list)
 count=$(printf '%s\n' "$servers" | grep -c .)
 # direct=false: no server's address in anything printed here, so a leaked
 # device gives away relays and CDN hosts, never a server. No links or outbounds

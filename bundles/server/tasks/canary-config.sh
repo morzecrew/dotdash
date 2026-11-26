@@ -2,18 +2,11 @@
 # Prints what a dotdash-canary machine needs to act as the client named in $1:
 # the init command and its secrets. The output is that client's credentials.
 set -eu
-: "${DOMAIN:?}" "${HTTPS_PORT:?}"
-# The port others dial: entry_port, when a proxy on this machine passes the
-# domain through to https_port.
-case ${ENTRY_PORT:-none} in none) ;; '' | *[!0-9]*) echo "entry_port is not a port: ${ENTRY_PORT}" >&2; exit 1 ;; *) HTTPS_PORT=$ENTRY_PORT ;; esac
+# shellcheck source=common.sh
+. /task/common.sh
 want=${1:?name the client the canary uses, as in vless_clients: canary-config -- <name>}
 
-id=
-while read -r line_id name _ || [ -n "${line_id:-}" ]; do
-  case $line_id in '' | '#'*) continue ;; esac
-  [ "$want" = "${name:-}" ] && { id=$line_id; break; }
-done </run/secrets/vless_clients
-[ -n "$id" ] || { echo "no client named '$want' in vless_clients" >&2; exit 1; }
+id=$(client_id "$want")
 
 cat <<EOF
 On the canary machine (scripts/bootstrap.sh installs what it needs). init
@@ -42,7 +35,7 @@ sudo morzer apply
 EOF
 # The other servers carry the same secrets (the servers parameter), so a
 # canary for one of them differs in its dotdash_server and dotdash_address only.
-others=$(printf '%s\n' "${SERVERS:-self}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e '/^self$/d' | grep -vxF "${DOMAIN}" || true)
+others=$(server_list | grep -vxF "${DOMAIN}" || true)
 if [ -n "$others" ]; then
   cat <<EOF
 

@@ -6,10 +6,8 @@
 # and the certificate's days left are on it for anyone to read.
 # The shared keys themselves come from the authority, which made them.
 set -eu
-: "${DOMAIN:?}" "${HTTPS_PORT:?}"
-# The port others dial: entry_port, when a proxy on this machine passes the
-# domain through to https_port.
-case ${ENTRY_PORT:-none} in none) ;; '' | *[!0-9]*) echo "entry_port is not a port: ${ENTRY_PORT}" >&2; exit 1 ;; *) HTTPS_PORT=$ENTRY_PORT ;; esac
+# shellcheck source=common.sh
+. /task/common.sh
 # A JSON string: backslashes and quotes escaped. Every value here is a name, a
 # number or base64, so a control character means something is wrong.
 str() {
