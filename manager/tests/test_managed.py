@@ -43,7 +43,7 @@ device = "phone"
 """
 RELAY = {"entry_host": "203.0.113.5", "site": "r1.example.net", "public_key": "P", "short_id": "S", "encryption": "E",
          "own_site": {"xhttp_path": "x"}, "kcp": {"port": 8447, "header": "dtls", "seed": "K"}, "hysteria2": {"port": 443},
-         "cdn_hosts": ["c.example.net"], "cdn_path": "y", "origin_host": "o.example.ru", "via": True}
+         "cdn_hosts": ["c.example.net"], "cdn_path": "y", "origin_host": "o.example.org", "via": True}
 
 
 def managed(kind: str) -> dict[str, set[str]]:

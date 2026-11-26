@@ -161,8 +161,8 @@ def test_a_relay_line_carries_its_cdn_path_after_its_cdns():
 
 def test_a_relay_line_carries_its_door_s_cdn_after_its_cdn_path():
     f = {"entry_host": "203.0.113.5", "site": "r.example.net", "public_key": "P", "short_id": "S", "encryption": "E",
-         "own_site": {"xhttp_path": "x"}, "cdn_path": "y", "origin_host": "o.example.ru", "cdn_only": True}
-    assert relay_line(f) == "203.0.113.5 r.example.net P S E own-site x cdnpath=y origin=o.example.ru cdn-only"
+         "own_site": {"xhttp_path": "x"}, "cdn_path": "y", "origin_host": "o.example.org", "cdn_only": True}
+    assert relay_line(f) == "203.0.113.5 r.example.net P S E own-site x cdnpath=y origin=o.example.org cdn-only"
 
 
 def test_a_relay_line_carries_its_name_before_what_the_manager_adds():
@@ -180,11 +180,11 @@ def test_a_canary_on_a_relay_gets_its_hysteria2_port(net, st, facts):
 
 
 def test_a_canary_checks_a_relays_cdns_once_its_release_does(net, st, facts):
-    r1 = {**RELAY, "own_site": {"xhttp_path": "x"}, "cdn_path": "y", "origin_host": "o.example.ru,alt.example.ru/e/t/s/"}
+    r1 = {**RELAY, "own_site": {"xhttp_path": "x"}, "cdn_path": "y", "origin_host": "o.example.org,alt.example.org/e/t/s/"}
     # No facts yet: it installs a release that checks them.
     docs, _ = render(net, st, {**facts, "r1": r1})
     assert docs["c1"]["parameters"]["dotdash_cdn_hosts"] == "c.example.net"
-    assert docs["c1"]["parameters"]["dotdash_origin_host"] == "o.example.ru,alt.example.ru/e/t/s/"
+    assert docs["c1"]["parameters"]["dotdash_origin_host"] == "o.example.org,alt.example.org/e/t/s/"
     assert docs["c1"]["secrets"]["dotdash_cdn_xhttp_path"] == "y"
     # A release from before them would refuse the document: none, and said.
     old = {"server": "www.example.net", "address": "203.0.113.5", "checked_at": 1, "paths": {"reality": True}}
@@ -196,10 +196,10 @@ def test_a_canary_checks_a_relays_cdns_once_its_release_does(net, st, facts):
     assert docs["c1"]["parameters"]["dotdash_cdn_hosts"] == docs["c1"]["parameters"]["dotdash_origin_host"] == "none"
     # A CDN the roster gives a cdn_extra is left out, and said.
     net = loads(ROSTER.replace("subscription = true",
-                               'subscription = true\ncdn_extra = { "alt.example.ru" = { uplinkHTTPMethod = "GET" } }'))
+                               'subscription = true\ncdn_extra = { "alt.example.org" = { uplinkHTTPMethod = "GET" } }'))
     docs, waiting = render(net, st, {**facts, "r1": r1})
-    assert docs["c1"]["parameters"]["dotdash_origin_host"] == "o.example.ru"
-    assert any(w.startswith("c1: checks none of r1's CDNs with a cdn_extra in the roster (alt.example.ru/e/t/s/)")
+    assert docs["c1"]["parameters"]["dotdash_origin_host"] == "o.example.org"
+    assert any(w.startswith("c1: checks none of r1's CDNs with a cdn_extra in the roster (alt.example.org/e/t/s/)")
                for w in waiting)
 
 
@@ -291,20 +291,20 @@ def test_cdn_extra_reaches_every_server_only_when_the_roster_says(st, facts):
     docs, _ = render(loads(ROSTER), st, facts)
     assert "cdn_extra" not in docs["a"]["parameters"]
     net = loads(ROSTER.replace("subscription = true", 'subscription = true\n'
-                               'cdn_extra = { "alt.example.ru" = { uplinkHTTPMethod = "GET", xPaddingObfsMode = true } }'))
+                               'cdn_extra = { "alt.example.org" = { uplinkHTTPMethod = "GET", xPaddingObfsMode = true } }'))
     docs, _ = render(net, st, facts)
     for s in "a", "b":
-        assert docs[s]["parameters"]["cdn_extra"] == 'alt.example.ru {"uplinkHTTPMethod": "GET", "xPaddingObfsMode": true}'
+        assert docs[s]["parameters"]["cdn_extra"] == 'alt.example.org {"uplinkHTTPMethod": "GET", "xPaddingObfsMode": true}'
     net = loads(ROSTER.replace("subscription = true", "subscription = true\ncdn_extra = {}"))
     assert render(net, st, facts)[0]["a"]["parameters"]["cdn_extra"] == "none"
 
 
 def test_a_burnt_relays_origin_names_leave_the_pools_without_their_paths(st, facts):
     net = loads(ROSTER.replace('pools = { a = ["laptop", "203.0.113.5"] }',
-                               'pools = { a = ["laptop", "o.example.ru", "alt.example.ru"] }'))
-    r1 = {**RELAY, "own_site": {"xhttp_path": "x"}, "cdn_path": "y", "origin_host": "o.example.ru,alt.example.ru/e/t/s/"}
+                               'pools = { a = ["laptop", "o.example.org", "alt.example.org"] }'))
+    r1 = {**RELAY, "own_site": {"xhttp_path": "x"}, "cdn_path": "y", "origin_host": "o.example.org,alt.example.org/e/t/s/"}
     docs, _ = render(net, st, {**facts, "r1": r1})
-    assert "origin=o.example.ru,alt.example.ru/e/t/s/" in docs["a"]["parameters"]["relays"]
+    assert "origin=o.example.org,alt.example.org/e/t/s/" in docs["a"]["parameters"]["relays"]
     docs, _ = render(net, st, {**facts, "r1": r1}, burnt={"r1"})
     assert docs["a"]["parameters"]["pools"] == "a laptop"
 

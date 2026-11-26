@@ -121,9 +121,9 @@ def test_a_burnt_relay_leaves_the_servers_relays_and_pools():
 
 
 def test_a_burnt_relays_door_names_leave_the_pools_too():
-    net = loads(ROSTER.replace('"c.example.net"]', '"c.example.net", "o.example.ru", "alt.example.ru"]'))
+    net = loads(ROSTER.replace('"c.example.net"]', '"c.example.net", "o.example.org", "alt.example.org"]'))
     st = state.load(Path("/nonexistent"), net)
-    r1 = {**R1, "cdn_path": "y", "origin_host": "o.example.ru,alt.example.ru"}
+    r1 = {**R1, "cdn_path": "y", "origin_host": "o.example.org,alt.example.org"}
     facts = {"s": {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
                    "encryption": "E"}, "r1": r1, "r2": R2}
     assert render(net, st, facts, {"r1"})[0]["s"]["parameters"]["pools"] == "a phone"
@@ -158,7 +158,7 @@ def test_a_cdn_only_relay_carries_the_flag_and_is_not_judged_until_a_canary_chec
 
 def test_a_cdn_only_relay_is_judged_by_its_cdns_alone():
     net, health = loads(ROSTER), {}
-    only = {**R1, "cdn_only": True, "cdn_path": "y", "origin_host": "o.example.ru/g"}
+    only = {**R1, "cdn_only": True, "cdn_path": "y", "origin_host": "o.example.org/g"}
 
     def run_cdn(at: int, cdn: dict, c2_up: bool = True):
         # Its own address, which no device gets: REALITY down but split, an
@@ -170,18 +170,18 @@ def test_a_cdn_only_relay_is_judged_by_its_cdns_alone():
 
     # A name r1 no longer gives counts for nothing.
     for at in range(1, BURN_AFTER + 1):
-        burnt, say, _ = run_cdn(at, {"c.example.net": False, "o.example.ru": False, "gone.example.net": True})
+        burnt, say, _ = run_cdn(at, {"c.example.net": False, "o.example.org": False, "gone.example.net": True})
     assert burnt == {"r1"} and any(line.startswith("burnt: relay r1:") for line in say)
-    assert health["r1"]["paths"] == {"cdn:c.example.net": BURN_AFTER, "cdn:o.example.ru": BURN_AFTER}
+    assert health["r1"]["paths"] == {"cdn:c.example.net": BURN_AFTER, "cdn:o.example.org": BURN_AFTER}
     assert not {"cause", "split", "latency"} & set(health["r1"])
     # One CDN through, and it is back; the other, still out, goes off its line alone.
     for at in range(BURN_AFTER + 1, 2 * BURN_AFTER + 1):
-        burnt, _, (off, say) = run_cdn(at, {"c.example.net": True, "o.example.ru": False})
-    assert burnt == set() and off == {"r1": {"cdn:o.example.ru"}} and health["r1"]["fails"] == 0
-    assert any(line.startswith("blocked: relay r1: cdn:o.example.ru got through") for line in say)
+        burnt, _, (off, say) = run_cdn(at, {"c.example.net": True, "o.example.org": False})
+    assert burnt == set() and off == {"r1": {"cdn:o.example.org"}} and health["r1"]["fails"] == 0
+    assert any(line.startswith("blocked: relay r1: cdn:o.example.org got through") for line in say)
     # Every relay at once, a cdn-only one among them, is kept.
     for at in range(2 * BURN_AFTER + 1, 3 * BURN_AFTER + 1):
-        burnt, say, _ = run_cdn(at, {"c.example.net": False, "o.example.ru": False}, c2_up=False)
+        burnt, say, _ = run_cdn(at, {"c.example.net": False, "o.example.org": False}, c2_up=False)
     assert burnt == set() and "check the canaries' network" in say[-1]
 
 
