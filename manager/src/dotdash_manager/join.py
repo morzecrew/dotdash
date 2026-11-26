@@ -2,6 +2,7 @@
 run as root over ssh, whose last line (MARKER) carries the machine's
 installation id and signing key back to `joined`."""
 
+import json
 import shlex
 
 from pydantic import TypeAdapter, ValidationError
@@ -54,13 +55,21 @@ def script(m: Machine, target: str, authority: str, recipient: str, recovery: st
         fresh += [_secret(k, v) for k, v in (doc or {}).get("secrets", {}).items()]
     cred = ""
     follow = []
+    backups = f"{target.rstrip('/')}/backups/{m.name}"
     if credentials is not None:
         follow += [_secret("sync_target", credentials), "morzer config set sync.credentials=sync_target"]
         cred = " --credentials sync_target"
     follow += [
         f"morzer config set sync.target={shlex.quote(target)} sync.authority={shlex.quote(authority)} "
         f"sync.recipient={shlex.quote(recipient)} sync.enabled=true",
-        f"morzer backup target list | grep -qF {shlex.quote(target)} || morzer backup target add {shlex.quote(target)}{cred}",
+        # Its backups under a prefix of its own: morzer keeps them one level
+        # under a target's root and prunes all it finds there, so machines
+        # sharing the root pruned each other's. One joined before kept them at
+        # the root: that target goes, and the backups already there stay.
+        f"morzer backup target list --json | grep -qF {shlex.quote(json.dumps(backups))} || "
+        f"morzer backup target add {shlex.quote(backups)}{cred}",
+        f"! morzer backup target list --json | grep -qF {shlex.quote(json.dumps(target))} || "
+        f"morzer backup target remove {shlex.quote(target)}",
         # init names it on a fresh machine; one installed before joining may
         # have none, and its backups would then die with it.
         (f"morzer secret recipients list --json | grep -qF {shlex.quote(recovery)} || "

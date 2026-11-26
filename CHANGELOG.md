@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The relay's `entry-check` task tries each of its entries end to end as a device would, REALITY, XHTTP through its site, mKCP and Hysteria2, and says why one fails. The `http-origin` door keeps each request's address and status in memory, so the check can tell a firewall from docker-proxy hiding the CDN's addresses.
 
-- A machine's roster entry can name its own `credentials`, which `join` hands it in place of the network's, so a relay's credential reaches only its own prefixes on the target. The manager's docs list what each credential needs, and why machines should get no delete.
+- A machine's roster entry can name its own `credentials`, which `join` hands it in place of the network's, so a relay's credential reaches only its own prefixes on the target. The manager's docs list what each credential needs.
 
 - The server's `relay-config` ends with the count and digest of the devices it hands a relay, and the relay's `relay-entry` and facts give the same of its own copy, so a stale copy that rejects new devices or still lets in deleted ones shows. The manager's `status` says when a relay's list isn't the one it sent.
 
@@ -124,6 +124,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Under `tun`, DNS to any resolver not on the machine, such as the router DHCP named, gets fake addresses like the rest, whoever asks: any user, systemd-resolved, a container. It goes nowhere while Xray is down. The kill switch redirects it with nftables.
 
 - A client's `DOMAIN-REGEX` rule keeps its commas, as in `^a{2,3}`. It was cut at the first one, which Xray refused, so the change rolled back.
+
+- Each machine `join` sets up backs up under `backups/<name>/` on the target. At the shared root, one machine's retention deleted the others' backups, and two backing up in the same second overwrote each other's. Run `join` again for a machine joined before: it moves to its prefix, and its backups at the root stay.
 
 ### Security
 
