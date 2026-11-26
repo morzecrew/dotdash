@@ -2476,7 +2476,9 @@ home line with a residential address, needs no proxy in between: the line
   <code>ipv6=separate</code>), not <code>warm=</code>. It carries UDP, so <code>upstream_udp</code> works
   with it.</li>
 <li><code>resolve=gateway</code> keeps resolving names over <code>dns_resolver</code>, now from this
-  address; <code>resolve=upstream</code> leaves them to this machine's resolver.</li>
+  address. <code>resolve=upstream</code> is refused with a <code>direct</code> line: this machine
+  would resolve devices' names, its own containers' among them, which
+  devices would then reach.</li>
 <li>When nothing gets out, <code>doctor</code> fetches <code>probe_url</code> from this machine
   directly for that line.</li>
 </ul>

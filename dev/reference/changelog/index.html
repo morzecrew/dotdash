@@ -4013,6 +4013,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>An own-site relay's facts carry <code>cert_days</code>, the whole days left on the certificate its site serves, so an authority can warn before it runs out: when it does, XHTTP, Hysteria2 and the CDN links through the relay stop while REALITY goes on. It is left out while Caddy has no certificate.</p>
+</li>
+<li>
 <p>The manager's <code>sync</code> and <code>report</code> warn when a server's or relay's site certificate has under 14 days left, from the <code>cert_days</code> in its facts. An expired certificate breaks XHTTP, Hysteria2 and the CDN links while REALITY works, which canaries read as a block.</p>
 </li>
 <li>
@@ -4022,31 +4025,37 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>The release and dev keys' public halves, in the README and the docs' Releases section: <code>morzer init --signing-key</code> checks even the first release against them, with no access to the repository's variables.</p>
 </li>
 <li>
-<p>An own-site relay's facts carry <code>cert_days</code>, the whole days left on the certificate its site serves, so an authority can warn before it runs out: when it does, XHTTP, Hysteria2 and the CDN links through the relay stop while REALITY goes on. It is left out while Caddy has no certificate.</p>
+<p>A server's facts carry <code>cert_days</code>, the whole days left on the certificate Caddy serves for its domain, so the authority can warn before a failed renewal breaks XHTTP, Hysteria2 and the CDN paths while REALITY keeps working. Left out while there is no certificate yet.</p>
 </li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p>A <code>relays</code> line with a field the server doesn't know, such as a mistyped <code>cdn_path=</code>, gets a warning naming the field and the line, where the relay used to lose that transport unsaid.</p>
+<p>The cover app behind a server sees each visitor's own address in <code>X-Forwarded-For</code>, not Xray's, so its per-address limits and lockouts hold per visitor. The gate and Xray hand the address on in PROXY headers, which Caddy takes from Xray alone. HTTP/3 visitors still show as Xray.</p>
 </li>
 <li>
 <p>A relay's cover app sees each visitor's own address in <code>X-Forwarded-For</code>, where every visitor showed Xray's, so its per-address limits and lockouts no longer hit everyone at once. REALITY hands Caddy each connection behind a PROXY header that only Xray's network may send; the Hysteria2 masquerade still shows Xray's.</p>
+</li>
+<li>
+<p>A <code>relays</code> line with a field the server doesn't know, such as a mistyped <code>cdn_path=</code>, gets a warning naming the field and the line, where the relay used to lose that transport unsaid.</p>
 </li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p>A <code>servers</code> that names no server, such as <code>,</code>, stopped <code>client-config</code> and the subscriptions with no message. It now means this server alone, as an empty <code>servers</code> does, with a warning.</p>
+<p>A relay run by the manager takes <code>via</code>, <code>via_link</code> and <code>via_fingerprint</code> from it. The relay never declared them managed, so morzer refused the whole document that set or unset them, and such a relay took no change from the manager after <code>join</code>.</p>
 </li>
 <li>
-<p>Subscriptions fit about 1000 devices, up from about 10 to 30, on a new 512 MiB in-memory volume that takes only what the files fill. The 4 MiB <code>dotdash_subscription</code> before it is left behind, empty, for <code>sudo docker volume rm dotdash_subscription</code> after the update.</p>
+<p>A relay's <code>http-origin</code> profile without <code>own-site</code> is refused with a message that says to add <code>own-site</code>, in place of a Compose error about a service with no image.</p>
 </li>
 <li>
-<p>A device's subscription URL no longer answers 404 while the service writes the files again after a change: the files of deleted devices or a rotated key go first, and each live one is replaced in place. A full volume now leaves the last files served, where every URL used to go.</p>
+<p>A relay's Hysteria2 hands a visitor without a login to its site with the Host the visitor sent, as over TCP. It sent <code>caddy:443</code>, so a cover app's redirects and cookies over HTTP/3 named another host than over TCP.</p>
 </li>
 <li>
-<p>The docs' recipe for several servers copies <code>kcp_seed</code> and <code>subscription_key</code> too, and says they need the same profiles and transport parameters. Servers set up by the old one gave dead mKCP links to each other, and a 404 to a subscription a relay fetched from the other.</p>
+<p>A subscription token the servers don't have gets the relay's own site, as any other path does, where it got the server's 404 page through the tunnel. One request could tell an own-site relay apart, and might name its server.</p>
+</li>
+<li>
+<p>A relay's site names no server anywhere: port 80's redirect and the <code>http-origin</code> door dropped <code>Server: Caddy</code>, as port 443 already did, and every port drops the <code>Via: 1.1 Caddy</code> Caddy adds to what it passes back from a cover app, a server or Xray.</p>
 </li>
 <li>
 <p>When the manager can't read a machine's facts, its last good facts stand in for up to a day, and <code>sync</code> prints the read's error. A passing outage of the target, or a wrong <code>identity</code> file, no longer takes every relay off every device in one sync.</p>
@@ -4085,19 +4094,31 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>Under <code>direct = false</code>, a client machine fetches its subscription through the first own-site relay its device's <code>pools</code> give it, as the servers choose. The manager took the first own-site relay of all, which could be one the device's pools keep from it.</p>
 </li>
 <li>
-<p>A relay run by the manager takes <code>via</code>, <code>via_link</code> and <code>via_fingerprint</code> from it. The relay never declared them managed, so morzer refused the whole document that set or unset them, and such a relay took no change from the manager after <code>join</code>.</p>
+<p>A server takes <code>hello_split</code> from the manager's desired state. The server didn't list it as managed, so once the manager's canaries found a server's name blocked by SNI, morzer refused that server's whole document, keys and devices included, until the split was off again.</p>
 </li>
 <li>
-<p>A relay's <code>http-origin</code> profile without <code>own-site</code> is refused with a message that says to add <code>own-site</code>, in place of a Compose error about a service with no image.</p>
+<p><code>hysteria2_port=53</code> beside the DNS tunnel is refused when the change is made, as <code>kcp_port=53</code> is, rather than failing when the gate publishes both on UDP 53.</p>
 </li>
 <li>
-<p>A relay's Hysteria2 hands a visitor without a login to its site with the Host the visitor sent, as over TCP. It sent <code>caddy:443</code>, so a cover app's redirects and cookies over HTTP/3 named another host than over TCP.</p>
+<p>Under the <code>hysteria2</code> profile, a visitor over HTTP/3 reaches the cover site with the domain as its Host, as over TCP. Hysteria2's masquerade sent <code>caddy:443</code> in its place, so an app's redirects and cookies over HTTP/3 named <code>caddy</code>.</p>
 </li>
 <li>
-<p>A subscription token the servers don't have gets the relay's own site, as any other path does, where it got the server's 404 page through the tunnel. One request could tell an own-site relay apart, and might name its server.</p>
+<p>The server's redirect to HTTPS on port 80 no longer sends <code>Server: Caddy</code>, which the site's own answers on 443 already left out. It is otherwise the redirect Caddy makes itself.</p>
 </li>
 <li>
-<p>A relay's site names no server anywhere: port 80's redirect and the <code>http-origin</code> door dropped <code>Server: Caddy</code>, as port 443 already did, and every port drops the <code>Via: 1.1 Caddy</code> Caddy adds to what it passes back from a cover app, a server or Xray.</p>
+<p>With <code>cover</code> naming an app, the site's answers no longer carry <code>Via: 1.1 Caddy</code>, which Caddy adds to whatever it proxies and which named it as <code>Server</code> would.</p>
+</li>
+<li>
+<p>A <code>servers</code> that names no server, such as <code>,</code>, stopped <code>client-config</code> and the subscriptions with no message. It now means this server alone, as an empty <code>servers</code> does, with a warning.</p>
+</li>
+<li>
+<p>Subscriptions fit about 1000 devices, up from about 10 to 30, on a new 512 MiB in-memory volume that takes only what the files fill. The 4 MiB <code>dotdash_subscription</code> before it is left behind, empty, for <code>sudo docker volume rm dotdash_subscription</code> after the update.</p>
+</li>
+<li>
+<p>A device's subscription URL no longer answers 404 while the service writes the files again after a change: the files of deleted devices or a rotated key go first, and each live one is replaced in place. A full volume now leaves the last files served, where every URL used to go.</p>
+</li>
+<li>
+<p>The docs' recipe for several servers copies <code>kcp_seed</code> and <code>subscription_key</code> too, and says they need the same profiles and transport parameters. Servers set up by the old one gave dead mKCP links to each other, and a 404 to a subscription a relay fetched from the other.</p>
 </li>
 <li>
 <p>A client under <code>tun</code> with no link that answers, as on a fresh install or with kept links whose server is gone, now gets its subscription: while no link answers, the fetch goes directly from Xray, outside TUN. Before, it entered TUN, found no link and was refused for good. No other process can take that way out.</p>
@@ -4115,13 +4136,10 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p>A server takes a <code>relays</code> line only when its host, site, public key, short id, VLESS encryption and XHTTP path each have their shape, and gives no mKCP link through a <code>kcp=</code> field that isn't whole. A bad line is left out and named by its line number, so a tampered one can't rewrite or break every device's config.</p>
+<p>A relay refuses a quote, backslash, brace or whitespace in <code>site</code>, <code>dotdash_servers</code>, <code>dotdash_address</code>, <code>dotdash_public_key</code> and each <code>via</code> line, set by hand or by an authority. Such a value could add keys to its Xray config or lines to its Caddyfile; the apply now fails and the relay stays as it was.</p>
 </li>
 <li>
-<p><code>servers</code> and <code>cdn_hosts</code> entries that aren't host names are left out with a warning, and an <code>xdns_domain</code> that isn't one stops <code>client-config</code>, instead of reaching every device's links and Xray config.</p>
-</li>
-<li>
-<p>With <code>direct=false</code>, subscriptions carry no title (<code>Profile-Title</code>), which names the exit in Happ and Hiddify: with a <code>direct</code> line in <code>upstreams</code> it was the server's own address, shown to every device that <code>direct=false</code> keeps it from.</p>
+<p><strong>acme-dns takes no new registrations by default</strong>, as anyone reaching its port 443 could register. To register a parent, <code>sudo morzer config set registration=true</code>, run <code>register</code>, then set it back to <code>false</code>; <code>register</code> says so. Existing registrations keep working.</p>
 </li>
 <li>
 <p>The manager refuses facts no bundle prints: whitespace, quotes, backslashes, braces or control characters in a value, or a field missing or of the wrong type. A tampered relay can no longer add lines to the servers' <code>relays</code>, crash every sync or write to the terminal, nor take another relay's address out of the pools.</p>
@@ -4136,10 +4154,19 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p><code>bootstrap.sh</code> runs morzer's installer from a pinned commit, checked by sha256, where it piped whatever a movable tag served into <code>sh</code>. It also trusts Docker's apt key only when the file holds that one key, by its fingerprint.</p>
 </li>
 <li>
-<p>A relay refuses a quote, backslash, brace or whitespace in <code>site</code>, <code>dotdash_servers</code>, <code>dotdash_address</code>, <code>dotdash_public_key</code> and each <code>via</code> line, set by hand or by an authority. Such a value could add keys to its Xray config or lines to its Caddyfile; the apply now fails and the relay stays as it was.</p>
+<p>Under the server's <code>openflux</code> profile, the exits' connections go through Xray, so the rules devices get apply to them: BitTorrent and trackers, mail on port 25, private addresses and the server's networks are blocked, and <code>resolve</code> and <code>ipv6</code> hold. They went to the gate, past all of it.</p>
 </li>
 <li>
-<p><strong>acme-dns takes no new registrations by default</strong>, as anyone reaching its port 443 could register. To register a parent, <code>sudo morzer config set registration=true</code>, run <code>register</code>, then set it back to <code>false</code>; <code>register</code> says so. Existing registrations keep working.</p>
+<p><code>resolve=upstream</code> beside a <code>direct</code> upstreams line is refused: the apply rolls back and <code>doctor</code> names it. The gate resolved devices' names on the server, so a device reached its containers by name, <code>xray</code> and <code>gate</code> among them, past Xray's rules. Use <code>resolve=gateway</code>.</p>
+</li>
+<li>
+<p>A server takes a <code>relays</code> line only when its host, site, public key, short id, VLESS encryption and XHTTP path each have their shape, and gives no mKCP link through a <code>kcp=</code> field that isn't whole. A bad line is left out and named by its line number, so a tampered one can't rewrite or break every device's config.</p>
+</li>
+<li>
+<p><code>servers</code> and <code>cdn_hosts</code> entries that aren't host names are left out with a warning, and an <code>xdns_domain</code> that isn't one stops <code>client-config</code>, instead of reaching every device's links and Xray config.</p>
+</li>
+<li>
+<p>With <code>direct=false</code>, subscriptions carry no title (<code>Profile-Title</code>), which names the exit in Happ and Hiddify: with a <code>direct</code> line in <code>upstreams</code> it was the server's own address, shown to every device that <code>direct=false</code> keeps it from.</p>
 </li>
 </ul>
 <h2 id="0170-2026-11-25">[0.17.0] - 2026-11-25<a class="headerlink" href="#0170-2026-11-25" title="Permanent link">&para;</a></h2>

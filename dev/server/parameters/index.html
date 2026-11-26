@@ -2234,7 +2234,7 @@
 <tr>
 <td><code>hysteria2_port</code></td>
 <td><code>443</code></td>
-<td>UDP port for <a href="../hysteria2/">Hysteria2</a>; not <code>kcp_port</code></td>
+<td>UDP port for <a href="../hysteria2/">Hysteria2</a>; not <code>kcp_port</code>, nor 53 with the DNS tunnel</td>
 </tr>
 <tr>
 <td><code>hysteria2_up</code></td>
@@ -2269,7 +2269,7 @@
 <tr>
 <td><code>resolve</code></td>
 <td><code>gateway</code></td>
-<td><code>gateway</code>: this server resolves over <code>dns_resolver</code>; <code>upstream</code>: the upstream proxies see hostnames (no WireGuard or OpenVPN line then)</td>
+<td><code>gateway</code>: this server resolves over <code>dns_resolver</code>; <code>upstream</code>: the upstream proxies see hostnames (no WireGuard, OpenVPN or <code>direct</code> line then)</td>
 </tr>
 <tr>
 <td><code>ipv6</code></td>

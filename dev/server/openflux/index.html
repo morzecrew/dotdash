@@ -2328,11 +2328,12 @@ code made from it):</p>
 (<a href="../../ways-in/#during">ways in</a>).</p>
 <h2 id="what-it-does">What it does<a class="headerlink" href="#what-it-does" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Device traffic leaves through the upstreams</strong>, as it does from Xray: each
-  exit opens its connections through the gate. UDP goes the same way where
-  <code>upstream_udp</code> is on, and is dropped where it is off. Only the connections
-  to the carrier, the service the rooms or calls are on, leave the server
-  directly.</li>
+<li><strong>Device traffic takes the way the other links' does</strong>: each exit opens
+  its connections through Xray, under the same rules (BitTorrent, mail on
+  port 25 and private addresses blocked, <code>resolve</code> and <code>ipv6</code> as set), and
+  out through the upstreams. UDP goes the same way where <code>upstream_udp</code> is
+  on, and is dropped where it is off. Only the connections to the carrier,
+  the service the rooms or calls are on, leave the server directly.</li>
 <li><strong>The link stays good</strong> across restarts and releases. Each device's key,
   rooms and link are kept on the <code>dotdash_openflux</code> volume.</li>
 <li><strong>A leaked link shows itself.</strong> A second app on the same link takes the
@@ -2341,8 +2342,8 @@ code made from it):</p>
   UUID: it loses its old key and rooms, and gets new ones and a new link.
   Leaving a device out of <code>openflux_channels</code> stops its channel but keeps its
   link for its return.</li>
-<li><strong>Not counted by device.</strong> OpenFlux traffic passes the gate but not Xray, so
-  the <code>device-traffic</code> profile doesn't see it.</li>
+<li><strong>Not counted by device.</strong> OpenFlux traffic reaches Xray as the exits'
+  one hop, not as the device, so the <code>device-traffic</code> profile doesn't see it.</li>
 </ul>
 <h2 id="calls-made-for-you">Calls made for you<a class="headerlink" href="#calls-made-for-you" title="Permanent link">&para;</a></h2>
 <p>With <code>call_provider=tm</code> and the <code>call_token</code> secret, a bare <code>tm</code> in a device's
