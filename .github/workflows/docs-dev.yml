@@ -16,7 +16,7 @@ permissions: {}
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -38,7 +38,7 @@ jobs:
     # `dev` follows main only, so a dispatch from another branch can't
     # overwrite it.
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     # Not docs-release.yml's group: GitHub keeps one waiting run per group, so
     # a third deploy would cancel a waiting release's. Both push to gh-pages,

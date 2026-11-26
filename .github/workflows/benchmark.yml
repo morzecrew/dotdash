@@ -42,7 +42,7 @@ jobs:
   benchmark:
     # GitHub-hosted on purpose: netem needs the host's sch_netem module, which
     # a self-hosted runner may not have or let a job load.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 75
     permissions:
       contents: read
