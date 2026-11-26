@@ -116,7 +116,8 @@ jobs:
         run: |
           baseline=
           if [ "${EVENT}" = pull_request ]; then
-            run=$(gh run list -R "${GITHUB_REPOSITORY}" --workflow benchmark.yml --branch main \
+            # The weekly run: a fork's branch named main is main to --branch.
+            run=$(gh run list -R "${GITHUB_REPOSITORY}" --workflow benchmark.yml --branch main --event schedule \
               --status success --limit 1 --json databaseId -q '.[0].databaseId // empty')
             if [ -n "${run}" ] && gh run download "${run}" -R "${GITHUB_REPOSITORY}" -n benchmark \
               -D "${RUNNER_TEMP}/baseline" 2>/dev/null; then
