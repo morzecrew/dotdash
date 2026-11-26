@@ -177,8 +177,8 @@ fi
 # restricted network: client-config adds that URL, the same token, under the
 # server's; a relay on a borrowed site, without the mark, gets none.
 if sudo grep -q sub_through /opt/dotdash/current/tasks/client-config.sh; then
-  printf '%s\n%s\n' "relay-a.test site-a.test pbkA 0011223344556677 mlkem.a" \
-    "198.51.100.7 relay-b.test pbkB 8899aabbccddeeff mlkem.b own-site" | sudo morzer config set --set-file relays=- >/dev/null
+  printf '%s\n%s\n' "relay-a.test site-a.test pbkA000000000000000000000000000000000000000 0011223344556677 mlkem768x25519plus.native.0rtt.a" \
+    "198.51.100.7 relay-b.test pbkB000000000000000000000000000000000000000 8899aabbccddeeff mlkem768x25519plus.native.0rtt.b own-site" | sudo morzer config set --set-file relays=- >/dev/null
   text=$(sudo morzer task run client-config --output)
   [ "$(grep -m1 '^https://' <<<"${text}")" = "${url}" ] || die "the server's URL is no longer the first a device gets"
   grep -qx "through the relay relay-b.test: https://relay-b.test/${url##*/}" <<<"${text}" ||

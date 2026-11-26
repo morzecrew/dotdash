@@ -26,6 +26,9 @@ printf seedkcp >"$work/secrets/kcp_seed"
 printf subkey >"$work/secrets/subscription_key"
 printf '0593b52c-b345-41cb-96b8-134724f6ca65 phone\n1b2c3d4e-5f60-4718-8a9b-0c1d2e3f4a5b laptop\n2c3d4e5f-6071-4829-9bac-1d2e3f4a5b6c desk desktop\n' >"$work/secrets/vless_clients"
 chmod 644 "$work"/secrets/*
+# A relay's public key and encryption, in the shapes relay-entry prints.
+pbk=_nYApZTt3dznuqLOlXzr0UR_BxEvKRLTLv9dL3qt3Ww
+enc=mlkem768x25519plus.native.0rtt.c2VlZA
 
 failed=0
 fail() { echo "FAIL: $*" >&2; failed=1; }
@@ -56,7 +59,7 @@ jq -e '.inbounds | length == 1 and .[0].settings.auth == "password" and (.[0].se
 [ "$(jq -S 'del(.inbounds)' <<<"$a")" = "$(jq -S 'del(.inbounds)' <<<"$plain")" ] ||
   fail "--local-auth: the config changed beyond its inbounds"
 
-relay='203.0.113.7 r.example.com PBK ab12 ENC own-site aaaa1111bbbb2222 cdn=cdn.example.net cdnpath=cccc3333dddd4444 origin=o.example.ru name=edge'
+relay="203.0.113.7 r.example.com ${pbk} ab12 ${enc} own-site aaaa1111bbbb2222 cdn=cdn.example.net cdnpath=cccc3333dddd4444 origin=o.example.ru name=edge"
 echo "== a relay with a CDN and a door: the CDN's links disguised, the door's plain in 4 KiB"
 out=$(cc SUBSCRIPTION=false "RELAYS=$relay" -- --full phone)
 cfg=$(printf '%s\n' "$out" | config)
@@ -113,7 +116,7 @@ printf '%b' "${e//%/\\x}" | jq -e '.xPaddingKey == "_t" and .uplinkHTTPMethod ==
   fail "gateway path: the link's extra is not cdn_extra's, percent-encoded"
 
 echo "== a desktop: no CDN link or outbound, the server's or a relay's, and nothing through a cdn-only relay"
-only='203.0.113.9 q.example.com PBK ab12 ENC own-site aaaa1111bbbb2222 cdn=cdn2.example.net cdn-only name=hidden'
+only="203.0.113.9 q.example.com ${pbk} ab12 ${enc} own-site aaaa1111bbbb2222 cdn=cdn2.example.net cdn-only name=hidden"
 envs=(SUBSCRIPTION=false CDN_HOSTS=scdn.example.net "RELAYS=$relay
 $only")
 out=$(cc "${envs[@]}" -- --full desk)
@@ -128,14 +131,14 @@ out=$(cc "${envs[@]}" -- --full phone)
   fail "a device of no kind: not every CDN link"
 
 echo "== origin= without cdnpath=: said, and no link through it"
-out=$(cc SUBSCRIPTION=false "RELAYS=203.0.113.7 r.example.com PBK ab12 ENC own-site aaaa1111bbbb2222 origin=o.example.ru" -- --full phone)
+out=$(cc SUBSCRIPTION=false "RELAYS=203.0.113.7 r.example.com ${pbk} ab12 ${enc} own-site aaaa1111bbbb2222 origin=o.example.ru" -- --full phone)
 grep -q "names origin= but no cdnpath=" "$work/err" || fail "origin without cdnpath: not said"
 printf '%s\n' "$out" | links | grep -q '@o\.example\.ru:' && fail "origin without cdnpath: a link through it anyway"
 
 echo "== pools: a device in a pool gets its pool's relay and those in none"
-two="203.0.113.7 a.example.com PBK ab12 ENC
-203.0.113.8 b.example.com PBK ab12 ENC
-203.0.113.9 c.example.com PBK ab12 ENC"
+two="203.0.113.7 a.example.com ${pbk} ab12 ${enc}
+203.0.113.8 b.example.com ${pbk} ab12 ${enc}
+203.0.113.9 c.example.com ${pbk} ab12 ${enc}"
 pools="p1 phone 203.0.113.7
 p2 laptop 203.0.113.8"
 hosts() { config | jq -r '[.outbounds[].settings.address // empty] | unique | join(" ")'; }
@@ -148,8 +151,8 @@ case " $p " in *" 203.0.113.8 "*) fail "pools: phone gets laptop's pool's relay:
 case " $l " in *" 203.0.113.8 "*) ;; *) fail "pools: laptop lacks its pool's relay: $l" ;; esac
 
 echo "== a standby relay: outside dotdash-, first among the outbounds"
-cfg=$(cc SUBSCRIPTION=false "RELAYS=203.0.113.7 a.example.com PBK ab12 ENC
-203.0.113.8 b.example.com PBK ab12 ENC standby" -- --full phone | config)
+cfg=$(cc SUBSCRIPTION=false "RELAYS=203.0.113.7 a.example.com ${pbk} ab12 ${enc}
+203.0.113.8 b.example.com ${pbk} ab12 ${enc} standby" -- --full phone | config)
 jq -e '.outbounds[0].tag | startswith("standby")' <<<"$cfg" >/dev/null || fail "standby: not the first outbound"
 jq -e '[.outbounds[].tag | select(startswith("dotdash-relay"))] | length >= 1' <<<"$cfg" >/dev/null ||
   fail "standby: the normal relay's outbound is missing"
@@ -159,6 +162,36 @@ out=$(cc SUBSCRIPTION=false CDN_HOSTS=cdn1.example.net,cdn2.example.net -- --ful
 [ "$(printf '%s\n' "$out" | config | jq '[.outbounds[] | select(.tag | startswith("dotdash-cdn-")) | .streamSettings.xhttpSettings |
   select(.scMaxEachPostBytes == 8192 and .uplinkHTTPMethod == "GET")] | length')" = 2 ] ||
   fail "cdn_hosts: not two 8 KiB GET outbounds"
+out=$(cc SUBSCRIPTION=false 'CDN_HOSTS=cdn1.example.net,c"x' -- --full phone)
+grep -qF 'cdn_hosts: c"x is not a host name; left out' "$work/err" || fail "cdn_hosts: a malformed name not said"
+grep -qF 'c"x' <<<"$out" && fail "cdn_hosts: a malformed name not left out"
+
+echo "== a malformed relays line: left out by its line number, the good lines' output byte-identical"
+good="$relay
+203.0.113.9 c.example.com ${pbk} 0123456789abcdef none kcp=9448,wireguard,abcdef,quic hy2=8443 off=reality"
+# The encryption closing its string to set another address, and the same
+# with balanced braces adding a dotdash- outbound; then a bad site, key,
+# short id, encryption and XHTTP path. Last, so every good line keeps its number.
+bad="$good
+# bad lines
+203.0.113.20 r2.example.com ${pbk} ab12 none\",\"address\":\"evil.example
+203.0.113.21 r3.example.com ${pbk} ab12 none\"},\"streamSettings\":{}},{\"tag\":\"dotdash-evil\",\"protocol\":\"freedom\",\"settings\":{\"x\":\"
+203.0.113.22 r4.example.com\",\"x\":\"evil.example ${pbk} ab12 ${enc}
+203.0.113.23 r5.example.com ${pbk}x ab12 ${enc}
+203.0.113.24 r6.example.com ${pbk} 0123456789abcdef0 ${enc}
+203.0.113.25 r7.example.com ${pbk} ab12 mlkem.short
+203.0.113.26 r8.example.com ${pbk} ab12 ${enc} own-site aaaa\"evil"
+a=$(cc SUBSCRIPTION=false "RELAYS=$good" -- --full phone)
+b=$(cc SUBSCRIPTION=false "RELAYS=$bad" -- --full phone)
+[ "$a" = "$b" ] || fail "malformed lines: the output changed"
+grep -q evil <<<"$b" && fail "malformed lines: an injected value reached the output"
+for w in '4: its encryption' '5: its encryption' '6: its site' '7: its public key' '8: its short id' '9: its encryption' '10: its XHTTP path'; do
+  grep -qF "relays: line $w is malformed; left out" "$work/err" || fail "malformed lines: line ${w%%:*} not said"
+done
+out=$(cc SUBSCRIPTION=false "RELAYS=203.0.113.9 c.example.com ${pbk} 01 none kcp=9448,dtls,abcd\"}]},{\"tag\":\"dotdash-evil
+203.0.113.10 d.example.com ${pbk} 01 none kcp=09448,dtls,abcd" -- --full phone)
+[ "$(grep -c 'kcp= field of' "$work/err")" = 2 ] || fail "a kcp= field with more after its seed, or a port from 0: not said"
+grep -qE 'evil|#relay%20[0-9]%20%C2%B7%20kcp' <<<"$out" && fail "a malformed kcp= field still gives an mKCP link"
 
 echo "== subscriptions on: the URL alone without --full, one per device"
 [ "$(cc SUBSCRIPTION=true -- | grep -cE '^https://s\.example\.com/[0-9a-f]{32}$')" = 3 ] || fail "subscription: not one URL per device"

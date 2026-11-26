@@ -23,8 +23,13 @@ while :; do
 done
 [ "${SUBSCRIPTION:-false}" = true ] || full=true
 want=${1:-}
+# name_ok <name>: a host name or an IPv4 address, nothing a link or JSON
+# would read past. port_ok <port>: a port, as JSON takes a number.
+name_ok() { case $1 in '' | .* | *. | *..* | *[!A-Za-z0-9.-]*) return 1 ;; esac; }
+port_ok() { case $1 in '' | 0* | *[!0-9]* | ??????*) return 1 ;; esac; [ "$1" -le 65535 ]; }
 # A tunnel zone with no dot is a name under the domain, as in the template.
 case ${XDNS_DOMAIN:-} in '' | *.*) ;; *) XDNS_DOMAIN=${XDNS_DOMAIN}.${DOMAIN} ;; esac
+[ -z "${XDNS_DOMAIN:-}" ] || name_ok "$XDNS_DOMAIN" || { echo "xdns_domain is not a name: ${XDNS_DOMAIN}" >&2; exit 1; }
 case ${XDNS_TTI:-50} in '' | *[!0-9]*) echo "xdns_tti is not a number of milliseconds: ${XDNS_TTI}" >&2; exit 1 ;; esac
 [ "${XDNS_TTI:-50}" -ge 10 ] && [ "${XDNS_TTI:-50}" -le 1000 ] || { echo "xdns_tti is outside 10 to 1000: ${XDNS_TTI}" >&2; exit 1; }
 # xdns_resolvers as a JSON list: udp://, tcp:// or https:// URLs, none with a
@@ -39,9 +44,13 @@ for r in $(printf '%s' "${XDNS_RESOLVERS:-udp://1.1.1.1:53}" | tr ',' ' '); do
   xdns_addrs="${xdns_addrs:+${xdns_addrs}, }\"${r}\""
 done
 [ -n "$xdns_addrs" ] || { echo "xdns_resolvers is empty" >&2; exit 1; }
+hosts() { # <parameter> <list>: the list's host names, one per line, "none" aside; any other entry is said and left out
+  printf '%s\n' "$2" | tr ',' '\n' | awk -v p="$1" '{ gsub(/^ +| +$/, "") } $0 == "" || $0 == "none" { next }
+    /^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*$/ { print; next } { print p ": " $0 " is not a host name; left out" > "/dev/stderr" }'
+}
 # The servers carrying these clients with the same secrets, in order (the
 # servers parameter); self is this one.
-servers=$(printf '%s\n' "${SERVERS:-self}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e "s/^self\$/${DOMAIN}/")
+servers=$(hosts servers "${SERVERS:-self}" | sed "s/^self\$/${DOMAIN}/")
 count=$(printf '%s\n' "$servers" | grep -c .)
 # direct=false: no server's address in anything printed here, so a leaked
 # device gives away relays and CDN hosts, never a server. No links or outbounds
@@ -135,11 +144,12 @@ fronts_ok() {
   case $1 in '' | ,* | *, | *,,*) return 1 ;; esac
   for fe in $(printf '%s' "$1" | tr ',' ' '); do
     fh=${fe%%/*}
-    case $fh in '' | .* | *. | *..* | *[!A-Za-z0-9.-]*) return 1 ;; esac
+    name_ok "$fh" || return 1
     case ${fe#"$fh"} in *[!A-Za-z0-9._~/-]*) return 1 ;; esac
   done
 }
-all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
+all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
+  n=$((n + 1))
   case $line in '' | '#'*) continue ;; esac
   c=- d=- only=- x=- sp=- hy=- nm=- cp=- sb=- or=- rest=
   for f in $line; do
@@ -147,20 +157,46 @@ all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   done
   # shellcheck disable=SC2086 # one field per word
   set -- $rest
-  case $c in - | [0-9]*,[a-z]*,[0-9a-f]* | [0-9]*,[a-z]*,[0-9a-f]*,[a-z]*) ;; *)
-    echo "relays: the kcp= field of $1 is not <port>,<header>,<seed>[,<open>]; no mKCP link through it" >&2
-    c=- ;;
+  [ -n "${5:-}" ] || continue
+  # Each field Xray or a link reads: one that could close its string, or that
+  # a device's Xray would refuse along with its whole config, leaves the line
+  # out, so a tampered line can neither rewrite nor break every device's.
+  # Checked last to first, so the first bad one is named.
+  why=
+  [ "${6:-}" != own-site ] || case ${7:-} in *[!0-9a-f]*) why='XHTTP path' ;; esac
+  case $5 in none | mlkem768x25519plus.*) ;; *) why=encryption ;; esac
+  case $5 in *[!A-Za-z0-9._-]*) why=encryption ;; esac
+  case $4 in '' | *[!0-9a-f]*) why='short id' ;; esac
+  [ ${#4} -le 16 ] || why='short id'
+  case $3 in *[!A-Za-z0-9_-]*) why='public key' ;; esac
+  [ ${#3} = 43 ] || why='public key'
+  name_ok "$2" || why=site
+  # The host may be an IPv6 address too.
+  name_ok "$1" || case $1 in *:*:*) case $1 in *[!0-9A-Fa-f:.]*) why=host ;; esac ;; *) why=host ;; esac
+  if [ -n "$why" ]; then
+    echo "relays: line $n: its $why is malformed; left out" >&2
+    continue
+  fi
+  # kcp=<port>,<header>,<seed>[,quic], whole.
+  case $c in -) ;; *)
+    kh=${c#*,} ks=${c#*,*,} ok=true
+    port_ok "${c%%,*}" || ok=false
+    case ${kh%%,*} in none | dtls | srtp | utp | wechat | wireguard) ;; *) ok=false ;; esac
+    case ${ks%,quic} in '' | *[!0-9a-f]*) ok=false ;; esac
+    $ok || {
+      echo "relays: the kcp= field of $1 is not <port>,<header>,<seed>[,<open>]; no mKCP link through it" >&2
+      c=-; } ;;
   esac
   o=${6:-} p=${7:-}
   if [ "$o" != own-site ]; then o='' p=''; fi
   case $hy in
     -) ;;
-    *[!0-9]* | '') echo "relays: the hy2= field of $1 is not a port; no Hysteria2 link through it" >&2; hy=- ;;
-    *) [ -n "$o" ] || { echo "relays: $1 names hy2= but no site of its own, whose certificate Hysteria2 needs; no Hysteria2 link through it" >&2; hy=-; } ;;
+    *) if ! port_ok "$hy"; then echo "relays: the hy2= field of $1 is not a port; no Hysteria2 link through it" >&2; hy=-
+       elif [ -z "$o" ]; then echo "relays: $1 names hy2= but no site of its own, whose certificate Hysteria2 needs; no Hysteria2 link through it" >&2; hy=-; fi ;;
   esac
   case $d in
     -) ;;
-    '' | ,* | *, | *,,* | *[!A-Za-z0-9.,-]*)
+    '' | ,* | *, | *,,* | .* | *. | *..* | *,.* | *.,* | *[!A-Za-z0-9.,-]*)
       echo "relays: the cdn= field of $1 is not <host>[,<host>]; no CDN link through it" >&2
       d=- ;;
     *) [ -n "$p" ] || {
@@ -180,6 +216,7 @@ all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
        elif [ "$d" = - ]; then d=$or
        else d="$d,$or"; fi ;;
   esac
+  case $x in *[!a-z0-9,-]*) echo "relays: the off= field of $1 is not <path>[,<path>]; ignored" >&2; x=- ;; esac
   case ,$x, in ,-, | ,,) x=- ;; esac
   case ,$x, in *,mkcp,*) c=- ;; esac
   case ,$x, in *,hysteria2,*) hy=- ;; esac
@@ -190,7 +227,6 @@ all_relays=$(set -f; printf '%s\n' "${RELAYS:-}" | while read -r line; do
     echo "relays: $1 is cdn-only but has no CDN link; left out" >&2
     continue
   fi
-  [ -n "${5:-}" ] || continue
   case $nm in
     -) ;;
     '' | ?????????????????????????* | *[!A-Za-z0-9._-]*)
@@ -207,7 +243,7 @@ done)
 
 # The local CDNs in front of this server (the cdn_hosts parameter), each
 # fronting https://${DOMAIN}.
-all_cdns=$(printf '%s\n' "${CDN_HOSTS:-none}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e '/^none$/d')
+all_cdns=$(hosts cdn_hosts "${CDN_HOSTS:-none}")
 
 # The pools parameter: one "<pool> <member>..." line per pool, the members
 # device names, relay hosts and CDN hosts, a relay's own included. A device in
@@ -286,7 +322,7 @@ cdn_extras=$(printf '%s\n' "${CDN_EXTRA:-none}" | awk '
   !depth { print h, j }
   END { if (depth) print h, j }' | while read -r h j; do
   case $h in none) continue ;; esac
-  case $h in '' | .* | *. | *..* | *[!A-Za-z0-9.-]*) echo "cdn_extra: $h is not a host; its line is left out" >&2; continue ;; esac
+  name_ok "$h" || { echo "cdn_extra: $h is not a host; its line is left out" >&2; continue; }
   case $j in '{'*'}') ;; *) echo "cdn_extra: the extra for $h is not a JSON object; dotdash's own through it" >&2; continue ;; esac
   printf '{"outbounds": [{"protocol": "vless", "settings": {"address": "%s", "port": 443, "id": "00000000-0000-0000-0000-000000000000", "encryption": "none"}, "streamSettings": {"network": "xhttp", "security": "tls", "xhttpSettings": {"path": "/", "mode": "packet-up", "extra": %s}}}]}' "$h" "$j" |
     /opt/xray/xray run -test -config stdin: >/dev/null 2>&1 ||

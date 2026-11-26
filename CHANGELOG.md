@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- A server takes a `relays` line only when its host, site, public key, short id, VLESS encryption and XHTTP path each have their shape, and gives no mKCP link through a `kcp=` field that isn't whole. A bad line is left out and named by its line number, so a tampered one can't rewrite or break every device's config.
+
+- `servers` and `cdn_hosts` entries that aren't host names are left out with a warning, and an `xdns_domain` that isn't one stops `client-config`, instead of reaching every device's links and Xray config.
+
 ## [0.17.0] - 2026-11-25
 
 ### Added
