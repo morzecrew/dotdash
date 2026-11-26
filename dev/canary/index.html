@@ -2202,16 +2202,18 @@ leaves a relay its canaries can't get through out of devices' links.</p>
 freeze a connection to a hosting address abroad after its first 16-20 KB,
 leaving it open and silent, and a fetch that small never reaches the mark.
 So <code>facts</code> then downloads <code>freeze_url</code> (64 KB) through each transport. A
-download that stops partway, with no byte for 8 seconds or cut, twice
-running, counts the transport as not getting through, and <code>facts</code> gives the
-bytes it got under <code>stalled</code>. A download that gets no byte at all says
-nothing about a freeze (<code>freeze_url</code>'s own host may be down) and leaves the
-transport as <code>probe_url</code> found it.</p>
+download that stops partway, with no byte for 8 seconds, cut, or not done in
+40 seconds, twice running, counts the transport as not getting through, and
+<code>facts</code> gives the bytes it got under <code>stalled</code>. A download that gets no byte
+at all says nothing about a freeze (<code>freeze_url</code>'s own host may be down) and
+leaves the transport as <code>probe_url</code> found it.</p>
 <p>The same goes the other way, for a network that counts what a device sends:
 <code>facts</code> uploads 64 KB to <code>freeze_up_url</code> through each transport. An upload
 that gets no answer for 8 seconds, twice running, counts the transport as not
 getting through, named under <code>stalled_up</code>; one that fails sooner (refused, an
 error page) says nothing about a freeze.</p>
+<p>Both freeze checks, like <code>measure</code>'s downloads, go through the transport they
+check, and an <code>https://</code> URL's certificate is checked.</p>
 <p>A network may also freeze a device that opens more than a few connections to
 one address within a fraction of a second, for a couple of minutes. REALITY
 with Vision opens one for every connection inside it, so a page's parallel
@@ -2359,7 +2361,7 @@ relay's address no longer gets through for devices.</p>
 <tr>
 <td><code>download_url</code></td>
 <td><code>https://speed.cloudflare.com/__down?bytes=1000000</code></td>
-<td>what <code>measure</code> downloads for its Mbit/s, <code>https://</code> only; <code>none</code> skips the downloads</td>
+<td>what <code>measure</code> downloads for its Mbit/s, <code>http://</code> or <code>https://</code>; <code>none</code> skips the downloads</td>
 </tr>
 <tr>
 <td><code>control_url</code></td>
@@ -2369,7 +2371,7 @@ relay's address no longer gets through for devices.</p>
 <tr>
 <td><code>freeze_url</code></td>
 <td><code>https://speed.cloudflare.com/__down?bytes=65536</code></td>
-<td>what <code>facts</code> downloads through each transport after <code>probe_url</code>, past the 16-20 KB a freeze lets through, <code>https://</code> only; <code>none</code> skips it</td>
+<td>what <code>facts</code> downloads through each transport after <code>probe_url</code>, past the 16-20 KB a freeze lets through, <code>http://</code> or <code>https://</code>; <code>none</code> skips it</td>
 </tr>
 <tr>
 <td><code>burst_check</code></td>
@@ -2379,7 +2381,17 @@ relay's address no longer gets through for devices.</p>
 <tr>
 <td><code>freeze_up_url</code></td>
 <td><code>https://speed.cloudflare.com/__up</code></td>
-<td>where <code>facts</code> uploads 64 KB through each transport, for a freeze counted on what the device sends, <code>https://</code> only; <code>none</code> skips it</td>
+<td>where <code>facts</code> uploads 64 KB through each transport, for a freeze counted on what the device sends, <code>http://</code> or <code>https://</code>; <code>none</code> skips it</td>
+</tr>
+<tr>
+<td><code>udp_target</code></td>
+<td><code>1.1.1.1:53</code></td>
+<td>a DNS server, <code>host:port</code>, that <code>facts</code> asks over UDP through each transport, for <code>udp</code></td>
+</tr>
+<tr>
+<td><code>ipv6_url</code></td>
+<td><code>none</code></td>
+<td>an address reachable over IPv6 alone (an AAAA record only, <code>http://</code> or <code>https://</code>), which <code>facts</code> fetches through each transport, for <code>ipv6</code>; <code>none</code> for no such check</td>
 </tr>
 </tbody>
 </table>
