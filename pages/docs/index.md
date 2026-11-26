@@ -5,8 +5,8 @@ a server of yours outside it. It comes as five
 [morzer](https://github.com/morzecrew/morzer) bundles, released together from
 one tag:
 
-![The four bundles: phones, the client and the canary inside the restricted network reach the dotdash server outside it directly, or through the relay while only some addresses get through; the server leaves only through your upstream proxy](assets/diagrams/overview.light.svg#only-light)
-![The four bundles: phones, the client and the canary inside the restricted network reach the dotdash server outside it directly, or through the relay while only some addresses get through; the server leaves only through your upstream proxy](assets/diagrams/overview.dark.svg#only-dark)
+![Four of the five bundles: phones, the client and the canary inside the restricted network reach the dotdash server outside it directly, or through the relay while only some addresses get through; the server leaves only through your upstream proxy](assets/diagrams/overview.light.svg#only-light)
+![Four of the five bundles: phones, the client and the canary inside the restricted network reach the dotdash server outside it directly, or through the relay while only some addresses get through; the server leaves only through your upstream proxy](assets/diagrams/overview.dark.svg#only-dark)
 
 | Bundle | Runs on | What it does |
 | --- | --- | --- |
