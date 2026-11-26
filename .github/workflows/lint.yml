@@ -1,6 +1,6 @@
 # shellcheck over every shell script (the bundles' tasks and hooks,
-# bootstrap.sh and .github's), then actionlint and zizmor over the workflows.
-# The tools are pinned, so a finding here is one locally too: run the same
+# bootstrap.sh and .github's), then actionlint and zizmor over the workflows,
+# then what bundles copy from each other, held alike. The tools are pinned, so a finding here is one locally too: run the same
 # commands with shellcheck 0.11.0, which reads .shellcheckrc.
 name: lint
 
@@ -62,3 +62,28 @@ jobs:
 
       - name: zizmor
         run: pipx run "zizmor==${ZIZMOR}" --offline .github/workflows
+
+      # Bundles share no directory, so what two of them must hold alike is
+      # copied: the server's and the relay's metrics, site and device traffic;
+      # the CDN disguise in the relay's inbound, client-config's outbounds and
+      # its links' extra; the QUIC opener's mask in each of its copies.
+      - name: Drift between bundles
+        run: |
+          set -euo pipefail
+          for f in metrics/metrics.sh metrics/metrics.jq site/index.html; do
+            cmp "bundles/server/${f}" "bundles/relay/${f}"
+          done
+          traffic() { sed -n '/^if .*DEVICE_TRAFFIC:-false}" = true/,/^fi$/p' "bundles/$1/tasks/facts.sh"; }
+          [ -n "$(traffic server)" ] && [ "$(traffic server)" = "$(traffic relay)" ] ||
+            { echo "facts.sh: the server's and the relay's device traffic differ"; exit 1; }
+          cc=bundles/server/tasks/client-config.sh
+          inbound=$(awk '/"tag": "devices-cdn"/ { p = 1 } p && /"xhttpSettings"/ { x = 1 } x { print } x && /noSSEHeader/ { exit }' \
+            bundles/relay/templates/xray.json.tmpl | sed '1s/^ *"xhttpSettings": //' | jq -c 'del(.path, .mode, .noSSEHeader)')
+          outbound=$(sed -n "s/^cdn_disguise='\(.*\)'\$/{\1}/p" "${cc}" | jq -c .)
+          extra=$(sed -n "s/^cdn_disguised_extra='\(.*\)'\$/\1/p" "${cc}")
+          extra=$(printf '%b' "${extra//%/\\x}" | jq -c .)
+          jq -en --argjson i "${inbound}" --argjson o "${outbound}" --argjson e "${extra}" \
+            '($i | length) > 0 and $i == $o and ([$i | to_entries[] | $e[.key] == .value] | all)' >/dev/null ||
+            { echo "the CDN disguise differs: relay inbound ${inbound}, client-config ${outbound}, link extra ${extra}"; exit 1; }
+          [ "$(grep -rhoE '"type": "hex", "packet": "[0-9a-f]+"' bundles | sort -u | wc -l)" = 1 ] ||
+            { echo "the QUIC opener's copies differ:"; grep -rnoE '"type": "hex", "packet": "[0-9a-f]+"' bundles; exit 1; }
