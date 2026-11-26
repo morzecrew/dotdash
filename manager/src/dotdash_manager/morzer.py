@@ -5,6 +5,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated
@@ -16,6 +17,9 @@ from .roster import KINDS, PRODUCTS, Machine, Network, _say
 # morzer state facts runs at most this many at once: each waits on the target
 # (a bucket, a host over SSH), not on this machine.
 READERS = 8
+# How long a machine's last good facts stand in for a read that fails: a day
+# of a target's outage, a timer's worth of retries, before its relays go.
+KEEP = 24 * 3600
 
 # What a machine reports goes into every device's links and config, and onto
 # the operator's terminal, so a machine that is not what it should be must
@@ -177,18 +181,36 @@ class Morzer:
         f, why = check(m.kind, doc)
         return f, why and f"its facts are refused: {why}"
 
-    def gather(self) -> dict:
+    def gather(self, kept: dict | None = None, now: int | None = None) -> dict:
         """The facts of every server, relay and canary that joined, by name,
-        read READERS at a time."""
+        read READERS at a time. Where none come, the machine's last good facts
+        stand in for up to KEEP: kept (the state's facts), each as {id, at,
+        facts}, which this keeps current. A passing error, or a wrong identity
+        file, would otherwise take a server or relay out of every document."""
+        kept = {} if kept is None else kept
+        now = int(time.time()) if now is None else now
         joined = [m for m in [*self.net.server, *self.net.relay, *self.net.canary] if m.joined]
         with ThreadPoolExecutor(READERS) as pool:
             read = list(pool.map(self.facts, joined))
+        for name in set(kept) - {m.name for m in joined}:
+            del kept[name]
         out = {}
         for m, (f, why) in zip(joined, read, strict=True):
-            if f is None:
-                print(f"{m.name}: {why}; left out", file=sys.stderr)
-            else:
+            last = kept.get(m.name)
+            if last and last["id"] != m.id:
+                last = None  # another installation's
+            if f is not None:
                 out[m.name] = f
+                kept[m.name] = {"id": m.id, "at": now, "facts": f}
+            elif last and now - last["at"] <= KEEP:
+                out[m.name] = last["facts"]
+                print(f"{m.name}: {why}; its facts of {(now - last['at']) // 3600} h ago stand in, "
+                      f"for {KEEP // 3600} h at most", file=sys.stderr)
+            elif last:
+                print(f"{m.name}: {why}; its last facts are {(now - last['at']) // 3600} h old, past {KEEP // 3600} h: "
+                      "LEFT OUT of every document until a read succeeds", file=sys.stderr)
+            else:
+                print(f"{m.name}: {why}; left out", file=sys.stderr)
         return out
 
     def rows(self) -> dict:

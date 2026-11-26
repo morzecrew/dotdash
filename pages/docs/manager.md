@@ -181,8 +181,15 @@ or a control character, or a field missing or of the wrong type. `sync` names
 the machine and the field, and leaves the facts out. Two relays whose facts
 name the same host don't move it in the pools when one burns or stands in.
 
+When a machine's facts can't be read, or are refused, its last good facts
+stand in for up to a day, and `sync` prints why, the read's error included. A
+passing outage of the target, or a wrong `identity` file, then doesn't take a
+relay off every device at once. After a day the machine is left out of every
+document until a read succeeds, and `sync` says so in capitals.
+
 The manager keeps what it made in `dotdash-state.json` beside the roster: the
-shared keys, every device's id and the client machines' proxy passwords. It is
+shared keys, every device's id, the client machines' proxy passwords and each
+machine's last good facts. It is
 written with mode 0600 and holds every credential in the network: back it up
 like `authority.key`. One run at a time changes it: a run holds
 `dotdash-state.lock` beside it, and another started meanwhile, such as a timer's

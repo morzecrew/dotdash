@@ -76,7 +76,8 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     o: Options = ctx.obj
     net, st = o.open(dry_run)
     mz = Morzer(net, o.morzer_roster, o.morzer)
-    facts = mz.gather()
+    now = int(time.time())
+    facts = mz.gather(st.setdefault("facts", {}), now)
     before = copy.deepcopy(st.setdefault("health", {}))
     burnt, verdicts = health.judge(net, facts, st["health"], mz.rows())
     held, stands, more = health.spares(net, facts, st["health"], burnt)
@@ -86,11 +87,10 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     split, more = health.splits(net, st["health"], burnt)
     verdicts += more
     log = st.setdefault("events", [])
-    log += health.events(before, st["health"], st.get("stands", {}), stands, int(time.time()))
+    log += health.events(before, st["health"], st.get("stands", {}), stands, now)
     del log[:-health.EVENTS]
     labels(net, st)
     st["stands"] = stands
-    now = int(time.time())
     traffic.record(st.setdefault("traffic", {}), facts, now)
     # Yesterday's whole day and today's so far.
     verdicts += traffic.unusual(st["traffic"], since=traffic.day(now - 86400))
@@ -179,7 +179,8 @@ def rotate_key(
     if step == "start":
         said = rotate.start(st, now)
     elif step == "swap":
-        said = rotate.swap(st, net, Morzer(net, o.morzer_roster, o.morzer).gather(), now, force)
+        facts = Morzer(net, o.morzer_roster, o.morzer).gather(st.setdefault("facts", {}), now)
+        said = rotate.swap(st, net, facts, now, force)
     elif step == "finish":
         said = rotate.finish(st, now, force)
     else:
@@ -247,7 +248,7 @@ def join(
     recipient = subprocess.run(["age-keygen", "-y", net.identity], capture_output=True, text=True, check=True).stdout.strip()
     doc = None
     if m.kind != "server":
-        docs, waiting = render(net, st, Morzer(net, o.morzer_roster, o.morzer).gather())
+        docs, waiting = render(net, st, Morzer(net, o.morzer_roster, o.morzer).gather(st.setdefault("facts", {})))
         doc = docs.get(m.name)
         if doc is None:
             raise Refused(f"{m.name} can't come up yet: " + "; ".join(w for w in waiting if w.startswith(m.name + ":")))

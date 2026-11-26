@@ -50,6 +50,29 @@ def test_facts_that_would_crash_a_sync_or_reach_devices_are_refused(kind, doc, s
     assert "\x1b" not in why and "evil" not in why, "the reason names keys, never a value"
 
 
+def test_a_failed_read_takes_the_last_good_facts_for_a_day(tmp_path, capsys):
+    net = loads(HEAD + '[[relay]]\nname = "r1"\nid = "inst_R1"\nkey = "RWr"\n')
+    mz = Morzer(net, tmp_path / "roster.yaml", "morzer")
+    ok = lambda *args, stdin=None: subprocess.CompletedProcess(args, 0, json.dumps({"data": {"facts": json.dumps(RELAY)}}), "")
+    fail = lambda *args, stdin=None: subprocess.CompletedProcess(args, 1, "", "age: no identity matched\n")
+    kept = {"gone": {"id": "inst_G", "at": 0, "facts": RELAY}}
+    mz.run = ok
+    assert mz.gather(kept, 1000) == {"r1": RELAY}
+    assert kept == {"r1": {"id": "inst_R1", "at": 1000, "facts": RELAY}}, "a machine left the roster: its facts go"
+    mz.run = fail
+    assert mz.gather(kept, 1000 + 5 * 3600) == {"r1": RELAY}
+    err = capsys.readouterr().err
+    assert "r1: no facts read: age: no identity matched; its facts of 5 h ago stand in, for 24 h at most" in err
+    assert kept["r1"]["at"] == 1000, "a stand-in is no new reading"
+    assert mz.gather(kept, 1000 + 25 * 3600) == {}
+    assert "its last facts are 25 h old, past 24 h: LEFT OUT of every document" in capsys.readouterr().err
+    # Another installation under the name: the old one's facts aren't its.
+    other = loads(HEAD + '[[relay]]\nname = "r1"\nid = "inst_NEW"\nkey = "RWr"\n')
+    mz = Morzer(other, tmp_path / "roster.yaml", "morzer")
+    mz.run = fail
+    assert mz.gather(kept, 1001) == {}
+
+
 def test_gather_leaves_refused_facts_out_and_says_why(tmp_path, capsys):
     net = loads(HEAD + '[[relay]]\nname = "r1"\nid = "inst_R1"\nkey = "RWr"\n')
     mz = Morzer(net, tmp_path / "roster.yaml", "morzer")
