@@ -4192,6 +4192,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>
 <p><code>dotdash-manager status --wait</code> no longer holds the manager's lock while it waits. A timer's sync goes ahead meanwhile and status reads what it left; before, the sync waited behind it for up to 20 minutes.</p>
 </li>
+<li>
+<p>The manager's <code>adopt</code> names each of the server's <code>subscription</code>, <code>cdn_hosts</code>, <code>pools</code> and <code>direct</code> that the first sync would change, and says to join the relays before the server. Left out of the roster, <code>subscription</code> stopped every device's subscription URL unannounced.</p>
+</li>
 </ul>
 <h3 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h3>
 <ul>

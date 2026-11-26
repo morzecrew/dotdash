@@ -2707,13 +2707,19 @@ ssh<span class="w"> </span>root@a.example<span class="w"> </span><span class="s1
 which the server has but the roster doesn't, which lose access at the next
 <code>sync</code> unless you add them. It also names the server's desktops missing from
 the roster's <code>desktops</code>, which would get CDN links at the next <code>sync</code> unless
-you add them there. Finish a <a href="#rotating-the-reality-key">key rotation</a>
+you add them there. And it names each of the server's <code>subscription</code>,
+<code>cdn_hosts</code>, <code>pools</code> and <code>direct</code> that the roster would change at the first
+<code>sync</code>: with <code>subscription</code> left out of the roster, for one, every device's
+subscription URL stops. Finish a <a href="#rotating-the-reality-key">key rotation</a>
 first: only the current key is taken. Once the manager has published, <code>adopt</code>
 refuses, since it would change the keys on every machine again; <code>--force</code> when
 that is meant.</p>
 <p>Then join every machine as above, the running server and relays included,
 with no options: the script finds them installed and only points them at the
-manager. Relays keep their own keys, so devices keep their relay links too.</p>
+manager. Relays keep their own keys, so devices keep their relay links too.
+Join the relays before the server: the server's document writes <code>relays</code>
+from the relays' facts, so a relay that hasn't joined yet is left out of it,
+and devices lose its links until it joins.</p>
 <h2 id="keep-it-current">Keep it current<a class="headerlink" href="#keep-it-current" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>dotdash-manager<span class="w"> </span>sync<span class="w"> </span>--dry-run<span class="w">   </span><span class="c1"># what would change</span>
 dotdash-manager<span class="w"> </span>sync
