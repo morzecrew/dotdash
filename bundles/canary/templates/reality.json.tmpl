@@ -7,18 +7,33 @@ split one as reality_split, and the manager hands devices the split. */ -}}
 {{- /* What an authority may set (the manifest's managed:) goes into the JSON
 of every template as it is, so a value that would end a string there is
 refused. Every template renders on every apply: this guards them all. */ -}}
-{{- range $name := split " " "dotdash_server dotdash_address dotdash_public_key" }}
+{{- range $name := split " " "dotdash_server dotdash_address dotdash_public_key dotdash_cdn_hosts dotdash_origin_host" }}
 {{- $v := index $.Parameters $name }}
 {{- if or (contains $v "\"") (contains $v "\\") (contains $v "{") (contains $v "}") (contains $v " ") (contains $v "\t") (contains $v "\n") (contains $v "\r") }}
 {{- required (printf "%s holds a quote, a backslash, a brace or a space, which no name, address or key has" $name) "" }}
 {{- end }}
 {{- end }}
+{{- /* A relay's CDNs, each a way through of its own: dotdash_cdn_hosts on
+the CDN path, disguised as the relay's CDN inbound expects, and
+dotdash_origin_host, a rented CDN at its door, plain with 4 KiB uploads, on
+its own path where it gives one, <name>/<path>. Each is shaped as devices'
+CDN outbounds are (the server's client-config.sh, cdn_outbound), behind an
+inbound of its own on 20000 + its place among the CDN hosts, 30000 + among
+the door's, which facts checks it through. */ -}}
+{{- $cdn := split "," .Parameters.dotdash_cdn_hosts }}{{ if eq .Parameters.dotdash_cdn_hosts "none" }}{{ $cdn = split "," "" }}{{ end }}
+{{- $door := split "," .Parameters.dotdash_origin_host }}{{ if eq .Parameters.dotdash_origin_host "none" }}{{ $door = split "," "" }}{{ end -}}
 {
   "log": {"loglevel": "warning", "access": "none"},
   "inbounds": [{"tag": "probe", "listen": "0.0.0.0", "port": 10809, "protocol": "http"},
                {"tag": "probe-split", "listen": "0.0.0.0", "port": 10810, "protocol": "http"},
                {"tag": "udp", "listen": "0.0.0.0", "port": 10811, "protocol": "dokodemo-door",
-                "settings": {"address": "{{ index (split ":" .Parameters.udp_target) 0 }}", "port": {{ index (split ":" .Parameters.udp_target) 1 }}, "network": "udp"}}],
+                "settings": {"address": "{{ index (split ":" .Parameters.udp_target) 0 }}", "port": {{ index (split ":" .Parameters.udp_target) 1 }}, "network": "udp"}}
+{{- range $i, $h := $cdn }},
+               {"tag": "cdn-{{ $i }}", "listen": "0.0.0.0", "port": {{ printf "2%04d" $i }}, "protocol": "http"}
+{{- end }}
+{{- range $i, $o := $door }},
+               {"tag": "door-{{ $i }}", "listen": "0.0.0.0", "port": {{ printf "3%04d" $i }}, "protocol": "http"}
+{{- end }}],
   "outbounds": [{
     "tag": "dotdash", "protocol": "vless",
     "settings": {
@@ -45,6 +60,37 @@ refused. Every template renders on every apply: this guards them all. */ -}}
       "password": "{{ .Parameters.dotdash_public_key }}",
       "shortId": {"$file": "/run/secrets/dotdash_short_id"}
     }, "finalmask": {"tcp": [{"type": "fragment", "settings": {"packets": "tlshello", "length": "100-200", "delay": "10-20"}}]}}
-  }],
-  "routing": {"rules": [{"type": "field", "inboundTag": ["probe-split"], "outboundTag": "dotdash-split"}]}
+  }
+{{- range $i, $h := $cdn }}, {
+    "tag": "dotdash-cdn-{{ $i }}", "protocol": "vless",
+    "settings": {"address": "{{ $h }}", "port": 443, "id": {"$file": "/run/secrets/dotdash_id"}, "encryption": {"$file": "/run/secrets/dotdash_encryption"}},
+    "streamSettings": {"network": "xhttp", "security": "tls",
+      "tlsSettings": {"serverName": "{{ $h }}", "alpn": ["h2"], "fingerprint": "chrome"},
+      "xhttpSettings": {"path": {"$file": "/run/secrets/dotdash_cdn_xhttp_path"}, "host": "{{ $h }}", "mode": "packet-up",
+        "uplinkHTTPMethod": "GET", "uplinkDataPlacement": "header", "uplinkChunkSize": 16384,
+        "scMaxEachPostBytes": 8192, "scMinPostsIntervalMs": 10,
+        "uplinkDataKey": "X-Part", "xPaddingBytes": "64-256", "xPaddingObfsMode": true, "xPaddingMethod": "tokenish",
+        "xPaddingPlacement": "cookie", "xPaddingKey": "csrftoken", "sessionIDPlacement": "cookie", "sessionIDKey": "sessionid",
+        "seqPlacement": "cookie", "seqKey": "seq"},
+      "sockopt": {"tcpUserTimeout": 15000}}
+  }
+{{- end }}
+{{- range $i, $o := $door }}{{ $h := index (split "/" $o) 0 }}{{ $p := slice $o (len $h) }}, {
+    "tag": "dotdash-door-{{ $i }}", "protocol": "vless",
+    "settings": {"address": "{{ $h }}", "port": 443, "id": {"$file": "/run/secrets/dotdash_id"}, "encryption": {"$file": "/run/secrets/dotdash_encryption"}},
+    "streamSettings": {"network": "xhttp", "security": "tls",
+      "tlsSettings": {"serverName": "{{ $h }}", "alpn": ["h2"], "fingerprint": "chrome"},
+      "xhttpSettings": {"path": {{ if $p }}"{{ $p }}"{{ else }}{"$file": "/run/secrets/dotdash_cdn_xhttp_path"}{{ end }}, "host": "{{ $h }}", "mode": "packet-up",
+        "uplinkHTTPMethod": "GET", "uplinkDataPlacement": "header", "uplinkChunkSize": 4096,
+        "scMaxEachPostBytes": 4096, "scMinPostsIntervalMs": 10},
+      "sockopt": {"tcpUserTimeout": 15000}}
+  }
+{{- end }}],
+  "routing": {"rules": [{"type": "field", "inboundTag": ["probe-split"], "outboundTag": "dotdash-split"}
+{{- range $i, $h := $cdn }},
+    {"type": "field", "inboundTag": ["cdn-{{ $i }}"], "outboundTag": "dotdash-cdn-{{ $i }}"}
+{{- end }}
+{{- range $i, $o := $door }},
+    {"type": "field", "inboundTag": ["door-{{ $i }}"], "outboundTag": "dotdash-door-{{ $i }}"}
+{{- end }}]}
 }

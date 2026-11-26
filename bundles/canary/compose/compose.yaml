@@ -39,7 +39,8 @@ services:
         target: /etc/xray/config.json
         read_only: true
         bind: {create_host_path: false}
-    secrets: [dotdash_id, dotdash_encryption, dotdash_short_id]
+    # dotdash_cdn_xhttp_path for the CDN checks, empty while they are off.
+    secrets: [dotdash_id, dotdash_encryption, dotdash_short_id, dotdash_cdn_xhttp_path]
 
   # One-shot behind a profile, started only by `morzer task run measure`. On
   # the project's network it reaches each transport's probe inbound, which is
@@ -71,6 +72,10 @@ services:
       FREEZE_URL: ${DOTDASH_CANARY_PARAM_FREEZE_URL:-https://speed.cloudflare.com/__down?bytes=65536}
       FREEZE_UP_URL: ${DOTDASH_CANARY_PARAM_FREEZE_UP_URL:-https://speed.cloudflare.com/__up}
       BURST_CHECK: ${DOTDASH_CANARY_PARAM_BURST_CHECK:-true}
+      # The CDNs in front of a relay, which facts checks through the reality
+      # service's inbounds for them (templates/reality.json.tmpl).
+      DOTDASH_CDN_HOSTS: ${DOTDASH_CANARY_PARAM_DOTDASH_CDN_HOSTS:-none}
+      DOTDASH_ORIGIN_HOST: ${DOTDASH_CANARY_PARAM_DOTDASH_ORIGIN_HOST:-none}
     volumes:
       - ${DOTDASH_CANARY_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image
@@ -91,3 +96,4 @@ secrets:
   dotdash_short_id: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/dotdash_short_id"}
   dotdash_xhttp_path: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/dotdash_xhttp_path"}
   dotdash_kcp_seed: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/dotdash_kcp_seed"}
+  dotdash_cdn_xhttp_path: {file: "${DOTDASH_CANARY_SECRETS_DIR:?set by morzer}/dotdash_cdn_xhttp_path"}

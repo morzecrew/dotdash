@@ -132,6 +132,16 @@ parameters:
     type: string
     description: The REALITY public key, the pbk of a dotdash REALITY link
     services: [reality, xhttp-reality]
+  dotdash_cdn_hosts:
+    type: string
+    default: none
+    description: "A relay's cdn_hosts, comma-separated: the names devices reach local CDNs in front of it at, each of which facts checks as a device's CDN link through it goes, on dotdash_cdn_xhttp_path, and gives under cdn; none for none"
+    services: [reality]
+  dotdash_origin_host:
+    type: string
+    default: none
+    description: "A relay's http_origin_host (origin= on its line), comma-separated <name>[/<path>]: a rented CDN at its door, each name checked as dotdash_cdn_hosts are, in the door's smaller uploads and on the path it gives, else dotdash_cdn_xhttp_path; none for none"
+    services: [reality]
   probe_url:
     type: string
     default: https://www.gstatic.com/generate_204
@@ -180,8 +190,8 @@ images:
 # server or relay this canary watches, from that machine's facts. None of
 # these reaches a command line or a hook.
 managed:
-  parameters: [dotdash_server, dotdash_address, dotdash_port, dotdash_xhttp_reality_port, dotdash_kcp_port, dotdash_kcp_header, dotdash_kcp_open, dotdash_hysteria2_port, dotdash_public_key]
-  secrets: [dotdash_id, dotdash_encryption, dotdash_short_id, dotdash_xhttp_path, dotdash_kcp_seed]
+  parameters: [dotdash_server, dotdash_address, dotdash_port, dotdash_xhttp_reality_port, dotdash_kcp_port, dotdash_kcp_header, dotdash_kcp_open, dotdash_hysteria2_port, dotdash_public_key, dotdash_cdn_hosts, dotdash_origin_host]
+  secrets: [dotdash_id, dotdash_encryption, dotdash_short_id, dotdash_xhttp_path, dotdash_kcp_seed, dotdash_cdn_xhttp_path]
 
 # What this machine tells the authority it follows when sync.recipient is set:
 # the facts task's JSON, run again before every fleet publish (morzer 0.17),
@@ -192,7 +202,7 @@ published:
 
 tasks:
   facts:
-    description: "Print as JSON, for the authority this canary follows, whether each transport gets through (freeze_url too) and whether control_url answers without dotdash"
+    description: "Print as JSON, for the authority this canary follows, whether each transport gets through (freeze_url too), and each CDN in front of a relay, and whether control_url answers without dotdash"
     service: measure
     command: ["sh", "/task/facts.sh"]
     timeout: 6m

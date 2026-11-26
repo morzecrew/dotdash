@@ -22,6 +22,13 @@
 # through the path's probe inbound by the Xray image's fetch, which checks an
 # https URL's certificate.
 #
+# cdn gives each CDN in front of a relay (dotdash_cdn_hosts, then
+# dotdash_origin_host), by its name, a gateway's path left off: up by the
+# same checks as a path, through the reality service's inbound for it, which
+# goes out through the CDN as a device's CDN link does. Devices reach a
+# cdn-only relay by these alone, and a path's freeze checks say whether a
+# CDN carries more than a fetch of a few hundred bytes either way.
+#
 # internet is whether control_url answers without dotdash, so a canary whose
 # own network is down is not read as its target blocked; null when
 # control_url is none.
@@ -59,10 +66,10 @@ up() { # <service> [port] [url]: prints the milliseconds of the fetch that succe
 }
 # fetch prints "<bytes> <ms>" and exits 0 for a whole body, 1 for no byte of
 # one, 3 for some bytes, then cut, nothing for -read-timeout, or -timeout.
-frozen() { # <service>: prints the bytes and succeeds when freeze_url stops partway twice
+frozen() { # <service> [port]: prints the bytes and succeeds when freeze_url stops partway twice
 	for try in 1 2; do
 		rc=0
-		got=$(/opt/xray/xray-entrypoint fetch -proxy "http://$1:10809" -read-timeout 8s -timeout 40s "$freeze_url" 2>/dev/null) || rc=$?
+		got=$(/opt/xray/xray-entrypoint fetch -proxy "http://$1:${2:-10809}" -read-timeout 8s -timeout 40s "$freeze_url" 2>/dev/null) || rc=$?
 		[ "$rc" = 3 ] || return 1
 		[ "$try" = 2 ] || sleep 1
 	done
@@ -78,10 +85,10 @@ udp_ok() { # <service>: a DNS question sent over UDP through it (its udp inbound
 	done
 	return 1
 }
-frozen_up() { # <service>: succeeds when a 64 KB upload to freeze_up_url gets no answer for 8 seconds, twice
+frozen_up() { # <service> [port]: succeeds when a 64 KB upload to freeze_up_url gets no answer for 8 seconds, twice
 	for try in 1 2; do
 		# -read-timeout times a write that blocks as well as the wait for the answer.
-		out=$(/opt/xray/xray-entrypoint fetch -proxy "http://$1:10809" -upload 65536 -read-timeout 8s -timeout 40s \
+		out=$(/opt/xray/xray-entrypoint fetch -proxy "http://$1:${2:-10809}" -upload 65536 -read-timeout 8s -timeout 40s \
 			"$freeze_up_url" 2>/dev/null) && return 1
 		[ "${out#* }" -ge 8000 ] || return 1
 		[ "$try" = 2 ] || sleep 1
@@ -128,6 +135,26 @@ for svc in reality xhttp xhttp-reality mkcp hysteria2; do
 	fi
 done
 [ -n "$paths" ] || { echo "no transport answers: is the canary running?" >&2; exit 1; }
+# Each CDN through the reality service's inbound for it: 20000 + its place
+# among dotdash_cdn_hosts, 30000 + among dotdash_origin_host, as
+# templates/reality.json.tmpl numbers them. Before the burst, which may
+# freeze what follows it.
+cdn=''
+cdn_check() { # <name> <port>
+	if up reality "$2" >/dev/null && { [ -z "$freeze_url" ] || ! frozen reality "$2" >/dev/null; } &&
+		{ [ -z "$freeze_up_url" ] || ! frozen_up reality "$2"; }; then ok=true; else ok=false; fi
+	cdn="${cdn:+$cdn, }$(str "${1%%/*}"): $ok"
+}
+i=0
+for h in $(printf '%s' "${DOTDASH_CDN_HOSTS:-none}" | sed 's/^none$//' | tr ',' ' '); do
+	cdn_check "$h" $((20000 + i))
+	i=$((i + 1))
+done
+i=0
+for o in $(printf '%s' "${DOTDASH_ORIGIN_HOST:-none}" | sed 's/^none$//' | tr ',' ' '); do
+	cdn_check "$o" $((30000 + i))
+	i=$((i + 1))
+done
 # REALITY with its ClientHello split into TLS records (templates/reality.json.tmpl):
 # getting through when REALITY itself doesn't is a block on the server's name.
 reality_split=null
@@ -179,6 +206,6 @@ case $paths in *'"reality": false'*)
 	esac ;;
 esac
 
-printf '{"server": %s, "address": %s, "public_key": %s, "checked_at": %s, "internet": %s, "paths": {%s}, "reality_split": %s, "burst": %s, "blocked_by": %s, "udp": {%s}, "ipv6": {%s}, "stalled": {%s}, "stalled_up": [%s], "latency_ms": {%s}, "direct_ms": %s}\n' \
-	"$(str "$DOTDASH_SERVER")" "$(str "$DOTDASH_ADDRESS")" "$(str "${DOTDASH_PUBLIC_KEY:-}")" "$(date +%s)" "$internet" "$paths" "$reality_split" "$burst" "$blocked_by" "$udp" "$ipv6" "$stalled" "$stalled_up" \
+printf '{"server": %s, "address": %s, "public_key": %s, "checked_at": %s, "internet": %s, "paths": {%s}, "cdn": {%s}, "reality_split": %s, "burst": %s, "blocked_by": %s, "udp": {%s}, "ipv6": {%s}, "stalled": {%s}, "stalled_up": [%s], "latency_ms": {%s}, "direct_ms": %s}\n' \
+	"$(str "$DOTDASH_SERVER")" "$(str "$DOTDASH_ADDRESS")" "$(str "${DOTDASH_PUBLIC_KEY:-}")" "$(date +%s)" "$internet" "$paths" "$cdn" "$reality_split" "$burst" "$blocked_by" "$udp" "$ipv6" "$stalled" "$stalled_up" \
 	"$latency" "$direct"
