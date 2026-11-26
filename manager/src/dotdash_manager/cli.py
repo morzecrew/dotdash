@@ -203,9 +203,13 @@ def rotate_key(
 def status(ctx: typer.Context) -> None:
     """What each machine applied and refused, and who has not joined."""
     o: Options = ctx.obj
-    net = roster.load(o.roster)
-    write_roster(o.morzer_roster, net)
-    r = subprocess.run([o.morzer, "state", "ls", *Morzer(net, o.morzer_roster, o.morzer).common], check=False)
+    # As sync opens them: who joined is in the state, and roster.yaml is
+    # written under the lock, never beside a sync writing it.
+    net, _ = o.open(dry_run=True)
+    mz = Morzer(net, o.morzer_roster, o.morzer)
+    r = mz.run("state", "ls", *mz.common)
+    sys.stdout.write(r.stdout)
+    sys.stderr.write(r.stderr)
     for m in net.machines:
         if not m.joined:
             print(f"{m.name} ({m.kind}): not joined; run join {m.name}")
