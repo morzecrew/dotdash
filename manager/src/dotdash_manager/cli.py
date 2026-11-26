@@ -303,7 +303,10 @@ def joined(ctx: typer.Context, name: str) -> None:
     if got is None:
         raise Refused(f"{name}'s script stopped before its last line: nothing kept. Fix what it says above and run it again")
     # The lock only now: the script ran for minutes, and a timer's sync waits on it.
-    _, st = o.open()
+    net, st = o.open()
+    # The script run on a machine joined already, under another name.
+    if other := next((m.name for m in net.machines if m.id == got[0] and m.name != name), None):
+        raise Refused(f"{name}'s script ran on {other}'s installation ({got[0]}): nothing kept. Run it on {name}")
     st.setdefault("joined", {})[name] = {"id": got[0], "key": got[1]}
     state.save(o.state, st)
     print(f"{name}: joined as {got[0]}; the next sync gives it its document")

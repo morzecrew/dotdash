@@ -117,3 +117,7 @@ def test_joined_keeps_the_id_and_key_and_the_roster_wins(tmp_path, monkeypatch):
     assert (net.find("r1").id, net.find("r1").key) == ("inst_01ab", "RWQabc=") and net.find("r1").joined
     assert net.find("r2").id == "inst_2" and not net.find("a").joined
     assert run(app, ["joined", "nobody"], input="").exit_code != 0
+    # The script for r1 run on r2's machine prints r2's installation.
+    r = run(app, ["joined", "r1"], input="dotdash-joined r1 inst_2 RW2\n")
+    assert r.exit_code != 0 and "ran on r2's installation (inst_2): nothing kept" in str(r.exception)
+    assert json.loads((tmp_path / "dotdash-state.json").read_text())["joined"]["r1"]["id"] == "inst_01ab"

@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The manager's `adopt` names the devices a server lists as `desktop` that the roster's `desktops` lacks. It dropped the kind silently, so after the first sync former desktops got CDN links, some paid by the gigabyte.
 
+- The manager refuses two machines on one installation id, in the roster or from `joined` run on the wrong machine. Each then got the other's document on every sync.
+
 ### Security
 
 - The manager refuses facts no bundle prints: whitespace, quotes, backslashes, braces or control characters in a value, or a field missing or of the wrong type. A tampered relay can no longer add lines to the servers' `relays`, crash every sync or write to the terminal, nor take another relay's address out of the pools.
