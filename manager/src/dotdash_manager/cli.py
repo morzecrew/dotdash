@@ -347,13 +347,14 @@ def adopt_server(
         print(f"Run on {name}, as root, and pipe what it prints here:\n\n"
               f"  ssh <{name}> {shlex.quote('sudo sh -c ' + shlex.quote(adopt.COMMAND))} | dotdash-manager adopt {name}")
         return
-    keys, ids, unnamed, desktops = adopt.parse(sys.stdin.read())
+    text = sys.stdin.read()
+    keys, ids, unnamed, desktops = adopt.parse(text)
     # A state made here is no hazard: the server's keys replace the new ones.
     o.new_state = True
     net, st = o.open()
     if st["published"] and not force:
         raise Refused("the manager already published its own keys: adopting now changes them again on every machine; --force if that is meant")
-    for line in adopt.take(st, net, keys, ids, unnamed, desktops):
+    for line in [*adopt.take(st, net, keys, ids, unnamed, desktops), *adopt.changes(net, m, adopt.settings(text))]:
         print(line)
     state.save(o.state, st)
 

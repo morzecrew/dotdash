@@ -12,10 +12,18 @@ from . import Refused
 from .roster import Network
 from .state import SHARED_KEYS, public_key
 
+# What the first sync sets on the server besides keys and devices. adopt reads
+# them as the server has them, since a difference reaches every device.
+SETTINGS = ("subscription", "cdn_hosts", "pools", "direct")
+
 # Run as root on the server: each shared key and vless_clients, one line each,
-# as its name and its rendered file's base64.
+# as its name and its rendered file's base64; then each of SETTINGS morzer
+# gives, as setting:<name> and its value's base64.
 COMMAND = ("cd /run/dotdash/secrets && for f in " + " ".join([*SHARED_KEYS, "vless_clients"])
-           + ' ; do b=$(base64 -w0 < "$f") || exit 1; printf "%s %s\\n" "$f" "$b"; done')
+           + ' ; do b=$(base64 -w0 < "$f") || exit 1; printf "%s %s\\n" "$f" "$b"; done'
+           + " ; for p in " + " ".join(SETTINGS)
+           + ' ; do v=$(morzer --product dotdash config get "$p" 2>/dev/null)'
+           + ' && printf "setting:%s %s\\n" "$p" "$(printf %s "$v" | base64 -w0)"; done; true')
 
 
 def parse(text: str) -> tuple[dict[str, str], dict[str, str], int, set[str]]:
@@ -27,6 +35,8 @@ def parse(text: str) -> tuple[dict[str, str], dict[str, str], int, set[str]]:
         if not line.strip():
             continue
         name, _, b64 = line.strip().partition(" ")
+        if name.startswith("setting:"):
+            continue
         if name not in SHARED_KEYS and name != "vless_clients":
             raise Refused(f"the server's output has a line for {name!r}, which is none of its shared keys: is it what `adopt` prints to run?")
         try:
@@ -88,4 +98,41 @@ def take(state: dict, net: Network, keys: dict[str, str], ids: dict[str, str], u
     if lacking := [n for n in kept if n in desktops and n not in net.desktops]:
         said.append("desktops on the server but not in the roster's desktops, getting CDN links at the next sync unless "
                     "added: " + ", ".join(lacking))
+    return said
+
+
+def settings(text: str) -> dict[str, str]:
+    """The server's SETTINGS from what COMMAND printed, by name: only those
+    morzer gave, as a release before one has none."""
+    have = {}
+    for line in text.splitlines():
+        name, _, b64 = line.strip().partition(" ")
+        if name.startswith("setting:") and name[8:] in SETTINGS:
+            try:
+                have[name[8:]] = base64.b64decode(b64, validate=True).decode().strip()
+            except (binascii.Error, UnicodeDecodeError):
+                raise Refused(f"the server's {name[8:]} is not base64 of text: is it what `adopt` prints to run?") from None
+    return have
+
+
+def changes(net: Network, server, have: dict[str, str]) -> list[str]:
+    """What the first sync changes on the server beyond its keys and devices,
+    each of which devices would otherwise find out: subscription URLs that
+    stop, CDN links that go, other pools. And the order to join in."""
+    hosts = lambda v: sorted(set(v.replace(",", " ").split()) - {"none"})
+    pools = lambda text: {f[0]: sorted(f[1:]) for f in (line.split() for line in re.sub("#.*", "", text).splitlines()) if len(f) > 1}
+    said = []
+    if "subscription" in have and have["subscription"] != str(net.subscription).lower():
+        said.append(f"subscription: the server has {have['subscription']}, the roster {str(net.subscription).lower()}, "
+                    "which the next sync sets" + (": every device's subscription URL stops" if have["subscription"] == "true" else ""))
+    if "cdn_hosts" in have and hosts(have["cdn_hosts"]) != sorted(server.cdn_hosts):
+        said.append(f"cdn_hosts: the server has {','.join(hosts(have['cdn_hosts'])) or 'none'}, its [[server]] "
+                    f"{','.join(server.cdn_hosts) or 'none'}, which the next sync sets")
+    if "pools" in have and pools(have["pools"]) != {p: sorted(m) for p, m in net.pools.items()}:
+        said.append("pools: the server's differ from the roster's [pools], which the next sync sets")
+    if net.direct is not None and have.get("direct") in ("true", "false") and have["direct"] != str(net.direct).lower():
+        said.append(f"direct: the server has {have['direct']}, the roster {str(net.direct).lower()}, which the next sync sets")
+    if net.relay:
+        said.append("join the relays before this server: until a relay's facts are in, the server's document leaves "
+                    "its line out of relays, and devices lose its links")
     return said
