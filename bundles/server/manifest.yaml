@@ -406,7 +406,7 @@ tasks:
     args: true
     timeout: 2m
   cdn-check:
-    description: "Tell whether each CDN in front of this server and its relays is refused a subscription, as it should be, by fetching a decoy one through it; changes nothing"
+    description: "Tell, for each CDN in front of this server and its relays (cdn_hosts, cdn=, origin=), whether it is refused a subscription, as it should be, and whether its links' path reaches Xray behind it, the site's 404, or nothing; changes nothing"
     service: cdn-check
     command: ["sh", "/task/cdn-check.sh"]
     timeout: 2m

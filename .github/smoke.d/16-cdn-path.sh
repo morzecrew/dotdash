@@ -6,7 +6,9 @@
 #
 # - the CDN link and outbound take the CDN path, not xhttp_path, disguised;
 # - a client still shaped as the CDN links were before (xhttp_path, plain)
-#   gets through a CDN name too, as configs imported by hand are.
+#   gets through a CDN name too, as configs imported by hand are;
+# - what cdn-check reads: a request with no session gets Xray's 400 on the
+#   CDN path and on xhttp_path, a path that leads nowhere the site's 404.
 # No link is printed: a failure names the step, not the credentials.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
@@ -55,3 +57,11 @@ got=$(curl -fsS --max-time 30 --retry 5 --retry-delay 2 --retry-all-errors \
   --socks5-hostname 127.0.0.1:11099 http://11.99.0.10:8000/ || true)
 [ "${got}" = ok ] || { sudo docker logs dotdash-rig-cdn-path 2>&1 | tail -5 >&2; die "a CDN client on xhttp_path, plain, did not get through"; }
 echo "${0##*/}: a CDN client still on xhttp_path, plain, gets through"
+
+# As a CDN in front would ask, under the domain here: cdn-check's verdicts.
+code() { curl -s -o /dev/null -w '%{http_code}' --max-time 10 --cacert /rig/clients/root.pem \
+  --resolve dotdash.test:443:127.0.0.1 "https://dotdash.test/$1" || true; }
+[ "$(code "${cdn_path}")" = 400 ] || die "a request with no session on the CDN path does not get Xray's 400: $(code "${cdn_path}")"
+[ "$(code "${xhttp_path}/$(cat /proc/sys/kernel/random/uuid)")" = 400 ] || die "a request with no session on xhttp_path does not get Xray's 400"
+[ "$(code ffffffffffffffffffffffff)" = 404 ] || die "a path that leads nowhere does not get the site's 404"
+echo "${0##*/}: no session gets Xray's 400 on either path, a path that leads nowhere the site's 404"

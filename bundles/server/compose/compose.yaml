@@ -295,8 +295,9 @@ services:
       - openflux:/var/lib/openflux:ro
 
   # One-shot behind a profile, started only by `morzer task run cdn-check`: a
-  # decoy subscription fetched through each CDN in front, from inside Xray's
-  # network namespace, so through the upstreams as devices' traffic leaves.
+  # decoy subscription and a request on its links' path fetched through each
+  # CDN in front, from inside Xray's network namespace, so through the
+  # upstreams as devices' traffic leaves.
   # The Xray image mounted for its probe, which speaks HTTPS through a proxy.
   cdn-check:
     <<: *hardened
@@ -315,7 +316,7 @@ services:
         target: /opt/xray
         image:
           subpath: usr/local/bin
-    secrets: [subscription_key]
+    secrets: [subscription_key, cdn_xhttp_path]
 
 networks:
   edge: {}

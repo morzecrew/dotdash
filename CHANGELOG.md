@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `cdn-check` also checks a relay's `origin=` names, and for every CDN name whether its links' path reaches Xray behind it, ends at the site's 404 (a stale path, or a door that refused the CDN), or gets a 5xx or nothing (the CDN doesn't reach its origin). It exits 1 on any of those too.
+
 - A `relays`, `pools` or `cdn_extra` line the server would leave out or cut down now fails the change that brings it, by its line number and field, and morzer rolls it back: a new `lists` health check. Devices used to just lose that line at their next subscription; `doctor` fails on one too.
 
 - The server's `cdn_hosts` links go by a path of their own (a new `cdn_xhttp_path` secret), disguised as a relay's CDN links are, so a CDN's logs show neither the direct XHTTP path nor its padding. Devices take them at their next subscription refresh; links imported by hand still work, as the plain path stays.
