@@ -6,6 +6,7 @@
 # - with http_origin_host set to two names, one with a gateway's path, the
 #   line ends in origin= with both, and the settings' path is the line's
 #   cdnpath;
+# - http-origin without own-site is refused;
 # - the door passes the CDNs' path on to Xray for an address in
 #   http_origin_from, answers any other path with a 404, and answers nobody
 #   with http_origin_from=none.
@@ -35,6 +36,10 @@ xray() { case $1 in 200 | 400) return 0 ;; *) return 1 ;; esac; }
 # Settings and parameters go in separate calls: morzer refuses them mixed.
 set_config installation.domains=relay.test
 set_config cert_issuer=internal http_origin_from=any
+# Without own-site there is no Caddy to be the door: refused, saying so.
+out=$(sudo morzer config set installation.profile=http-origin 2>&1) && die "the http-origin profile was taken without own-site"
+tr -s '[:space:]' ' ' <<<"${out}" | grep -qF 'installation.profile=own-site,http-origin' ||
+  die "http-origin without own-site was refused without saying why: ${out}"
 set_config installation.profile=own-site,http-origin
 out=$(entry)
 grep -q '^8880 (http_origin_port)' <<<"${out}" || die "relay-entry did not print the door's port: ${out}"

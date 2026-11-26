@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A relay run by the manager takes `via`, `via_link` and `via_fingerprint` from it. The relay never declared them managed, so morzer refused the whole document that set or unset them, and such a relay took no change from the manager after `join`.
 
+- A relay's `http-origin` profile without `own-site` is refused with a message that says to add `own-site`, in place of a Compose error about a service with no image.
+
 ## [0.17.0] - 2026-11-25
 
 ### Added

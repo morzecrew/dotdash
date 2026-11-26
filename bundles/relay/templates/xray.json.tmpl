@@ -12,6 +12,7 @@ from an authority, via built from other relays' facts. */ -}}
 {{- $kcp := has "mkcp" .Profiles -}}
 {{- $hy2 := has "hysteria2" .Profiles -}}
 {{- if and $hy2 (not $own) }}{{ required "the hysteria2 profile serves the relay's own site's certificate: installation.profile=own-site,hysteria2" "" }}{{ end -}}
+{{- if and (has "http-origin" .Profiles) (not $own) }}{{ required "the http-origin profile's door is the relay's own site's Caddy: installation.profile=own-site,http-origin" "" }}{{ end -}}
 {{- if and $hy2 $kcp (eq .Parameters.hysteria2_port .Parameters.kcp_port) }}{{ required "hysteria2_port must differ from kcp_port" "" }}{{ end -}}
 {{- $site := .Parameters.site -}}
 {{- if $own }}{{ $site = required "the own-site profile needs a domain: sudo morzer config set installation.domains=relay.example.net" .Installation.Domain }}
