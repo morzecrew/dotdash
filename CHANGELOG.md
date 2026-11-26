@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- A `relays`, `pools` or `cdn_extra` line the server would leave out or cut down now fails the change that brings it, by its line number and field, and morzer rolls it back: a new `lists` health check. Devices used to just lose that line at their next subscription; `doctor` fails on one too.
+
 - The server's `cdn_hosts` links go by a path of their own (a new `cdn_xhttp_path` secret), disguised as a relay's CDN links are, so a CDN's logs show neither the direct XHTTP path nor its padding. Devices take them at their next subscription refresh; links imported by hand still work, as the plain path stays.
 
 - The manager judges a CDN-only relay by its canaries' CDN checks and leaves it out of devices' links once none of its CDNs gets through, where it left it unwatched. Any relay whose CDN gets through is no longer burnt; a CDN failing alone is only reported.

@@ -78,12 +78,13 @@ fi
 # An own-site relay with CDNs in front (its relay-entry adds cdn=<host>,...): a
 # link per CDN, to the CDN on 443 under its name with the relay's path and
 # encryption, uploading by GET with the data in headers, and an outbound each.
-# The same CDNs on a relay without its XHTTP path, or a malformed field: none.
+# The relays with no CDN: none. (Lines naming CDNs they can't take are
+# refused at apply: 49-refused-lists.sh.)
 if sudo grep -q 'dotdash-cdn-relay-\$n-' /opt/dotdash/current/tasks/client-config.sh; then
   printf '%s\n' \
     "198.51.100.8 relay-c.test pbkC000000000000000000000000000000000000000 0123456789abcdef mlkem768x25519plus.native.0rtt.c own-site 00112233445566778899aabbccddeeff cdn=cdn-a.test,cdn-b.test" \
-    "198.51.100.10 site-e.test pbkE000000000000000000000000000000000000000 0011223344556677 mlkem768x25519plus.native.0rtt.e cdn=cdn-e.test" \
-    "198.51.100.11 relay-f.test pbkF000000000000000000000000000000000000000 0011223344556677 mlkem768x25519plus.native.0rtt.f own-site 00112233445566778899aabbccddeeff cdn=bad_name!" |
+    "198.51.100.10 site-e.test pbkE000000000000000000000000000000000000000 0011223344556677 mlkem768x25519plus.native.0rtt.e" \
+    "198.51.100.11 relay-f.test pbkF000000000000000000000000000000000000000 0011223344556677 mlkem768x25519plus.native.0rtt.f own-site 00112233445566778899aabbccddeeff" |
     sudo morzer config set --set-file relays=- >/dev/null
   text=$(out)
   clinks=$(grep '^vless://.*#relay%201%20%C2%B7%20cdn%20[0-9]$' <<<"${text}" || true)
@@ -95,7 +96,7 @@ if sudo grep -q 'dotdash-cdn-relay-\$n-' /opt/dotdash/current/tasks/client-confi
   [[ $(param "$l" extra) == *uplinkDataPlacement%22%3A%22header%22*uplinkHTTPMethod%22%3A%22GET%22* ]] ||
     die "the link through the relay's CDN does not upload by GET with the data in headers"
   ! grep -qE '#relay%20[23]%20%C2%B7%20cdn' <<<"${text}" ||
-    die "a relay without its XHTTP path, or with a malformed cdn= field, got CDN links"
+    die "a relay with no CDN got CDN links"
   awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"${text}" | jq -e '
     [.outbounds[].tag | select(startswith("dotdash-")) | startswith("dotdash-cdn-")] as $k
     | [.outbounds[] | select(.tag | startswith("dotdash-cdn-relay-1-"))] as $c
@@ -107,32 +108,32 @@ if sudo grep -q 'dotdash-cdn-relay-\$n-' /opt/dotdash/current/tasks/client-confi
         and .streamSettings.xhttpSettings.uplinkHTTPMethod == "GET"
         and .streamSettings.xhttpSettings.uplinkDataPlacement == "header"))' >/dev/null ||
     die "the config lacks a packet-up outbound per CDN in front of the relay, after every other outbound"
-  echo "46-relays.sh: CDNs in front of an own-site relay add a packet-up link and outbound each; none without its path"
+  echo "46-relays.sh: CDNs in front of an own-site relay add a packet-up link and outbound each"
 fi
 
 # A relay that serves its CDNs on a path of their own (its relay-entry adds
 # cdnpath=<path>): its CDN links and outbounds take that path, disguised as its
-# CDN inbound expects (session, sequence and padding in cookies); one whose
-# cdnpath= is not hex keeps its XHTTP path, plain.
+# CDN inbound expects (session, sequence and padding in cookies); one with
+# none, as a line from before 0.12.0, keeps its XHTTP path, plain.
 if sudo grep -q 'cdnpath=\*) cp=' /opt/dotdash/current/tasks/client-config.sh; then
   printf '%s\n' \
     "198.51.100.8 relay-c.test pbkC000000000000000000000000000000000000000 0123456789abcdef mlkem768x25519plus.native.0rtt.c own-site 00112233445566778899aabbccddeeff cdn=cdn-a.test cdnpath=aabbccddeeff001122334455" \
-    "198.51.100.11 relay-f.test pbkF000000000000000000000000000000000000000 0011223344556677 mlkem768x25519plus.native.0rtt.f own-site 00112233445566778899aabbccddeeff cdn=cdn-f.test cdnpath=not/hex" |
+    "198.51.100.11 relay-f.test pbkF000000000000000000000000000000000000000 0011223344556677 mlkem768x25519plus.native.0rtt.f own-site 00112233445566778899aabbccddeeff cdn=cdn-f.test" |
     sudo morzer config set --set-file relays=- >/dev/null
   text=$(out)
   l=$(grep -m1 '#relay%201%20%C2%B7%20cdn$' <<<"${text}") || die "no link through the CDN of the relay with a CDN path"
   [ "$(param "$l" path)" = "%2Faabbccddeeff001122334455" ] || die "the CDN link does not take the relay's CDN path: $(param "$l" path)"
   [[ $(param "$l" extra) == *xPaddingObfsMode%22%3Atrue*sessionIDPlacement%22%3A%22cookie%22*seqPlacement%22%3A%22cookie%22* ]] ||
     die "the CDN link by the relay's CDN path is not disguised"
-  l=$(grep -m1 '#relay%202%20%C2%B7%20cdn$' <<<"${text}") || die "no link through the CDN of the relay with a malformed CDN path"
+  l=$(grep -m1 '#relay%202%20%C2%B7%20cdn$' <<<"${text}") || die "no link through the CDN of the relay with no CDN path"
   [ "$(param "$l" path)" = "%2F00112233445566778899aabbccddeeff" ] && [[ $(param "$l" extra) != *xPaddingObfsMode* ]] ||
-    die "a relay with a malformed cdnpath= did not keep its XHTTP path, plain"
+    die "a relay with no cdnpath= did not keep its XHTTP path, plain"
   awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"${text}" | jq -e '
     [.outbounds[] | select(.tag == "dotdash-cdn-relay-1-1")][0].streamSettings.xhttpSettings
     | .path == "/aabbccddeeff001122334455" and .xPaddingObfsMode == true and .xPaddingMethod == "tokenish"
       and .sessionIDPlacement == "cookie" and .seqPlacement == "cookie" and .uplinkDataKey == "X-Part"' >/dev/null ||
     die "the config's outbound through the relay's CDN path is not disguised"
-  echo "46-relays.sh: a relay's CDN path gives disguised CDN links and outbounds; a malformed one the plain path"
+  echo "46-relays.sh: a relay's CDN path gives disguised CDN links and outbounds; none, the plain path"
 fi
 
 # A relay with mKCP (its relay-entry ends the line with kcp=<port>,<header>,
@@ -179,26 +180,24 @@ fi
 
 # A cdn-only relay (its relay-entry ends the line with cdn-only): devices get
 # its CDN link alone, and the config its CDN outbound alone, nothing to its own
-# address; the same flag on a relay with no CDN leaves it out, so the other is
-# the lone relay, named with no number.
+# address. (The same flag on a relay with no CDN is refused at apply.)
 if sudo grep -q 'cdn-only) only=cdn-only' /opt/dotdash/current/tasks/client-config.sh; then
   printf '%s\n' \
-    "198.51.100.12 relay-g.test pbkG000000000000000000000000000000000000000 0123456789abcdef mlkem768x25519plus.native.0rtt.g own-site 00112233445566778899aabbccddeeff kcp=9447,dtls,00112233445566778899aabbccddeeff cdn=cdn-g.test cdn-only" \
-    "198.51.100.13 site-h.test pbkH000000000000000000000000000000000000000 0011223344556677 mlkem768x25519plus.native.0rtt.h cdn-only" |
+    "198.51.100.12 relay-g.test pbkG000000000000000000000000000000000000000 0123456789abcdef mlkem768x25519plus.native.0rtt.g own-site 00112233445566778899aabbccddeeff kcp=9447,dtls,00112233445566778899aabbccddeeff cdn=cdn-g.test cdn-only" |
     sudo morzer config set --set-file relays=- >/dev/null
   text=$(out)
   links=$(relay_links "${text}")
   [ "$(grep -c . <<<"${links}")" = "${devices}" ] && ! grep -qv '#relay%20%C2%B7%20cdn$' <<<"${links}" ||
-    die "a cdn-only relay gave devices links besides its CDN's, or one with no CDN got links"
+    die "a cdn-only relay gave devices links besides its CDN's"
   [ "$(outbound_tags "${text}" | tr '\n' ' ')" = "dotdash-cdn-relay-1-1 " ] ||
     die "a cdn-only relay's outbounds are not its CDN's alone: $(outbound_tags "${text}" | tr '\n' ' ')"
-  echo "46-relays.sh: a cdn-only relay gives its CDN link and outbound alone, and one with no CDN nothing"
+  echo "46-relays.sh: a cdn-only relay gives its CDN link and outbound alone"
 fi
 
 # A relay with Hysteria2 (own-site, whose relay-entry adds hy2=<port>): a
 # Hysteria2 link through it, to that port under its site's name, and an
-# outbound logging in as the device; off=hysteria2 takes both, and a relay with no
-# site of its own, so no certificate, gets neither.
+# outbound logging in as the device; off=hysteria2 takes both. (hy2= on a
+# relay with no site of its own, so no certificate, is refused at apply.)
 if sudo grep -q 'dotdash-relay-\$n-hy2' /opt/dotdash/current/tasks/client-config.sh; then
   own="198.51.100.13 relay-h.test pbkH000000000000000000000000000000000000000 0123456789abcdef mlkem768x25519plus.native.0rtt.h own-site 00112233445566778899aabbccddeeff"
   printf '%s hy2=8443\n' "${own}" | sudo morzer config set --set-file relays=- >/dev/null
@@ -221,11 +220,7 @@ if sudo grep -q 'dotdash-relay-\$n-hy2' /opt/dotdash/current/tasks/client-config
   ! grep -q '#relay%20%C2%B7%20hy2$' <<<"${text}" || die "off=hysteria2 left a Hysteria2 link through the relay"
   tags=$(outbound_tags "${text}")
   ! grep -qx dotdash-relay-1-hy2 <<<"${tags}" || die "off=hysteria2 left a Hysteria2 outbound through the relay"
-  printf '%s\n' "198.51.100.13 relay-h.test pbkH000000000000000000000000000000000000000 0123456789abcdef mlkem768x25519plus.native.0rtt.h hy2=8443" |
-    sudo morzer config set --set-file relays=- >/dev/null
-  text=$(out)
-  ! grep -q '#relay%20%C2%B7%20hy2' <<<"${text}" || die "a relay with no site of its own got a Hysteria2 link"
-  echo "46-relays.sh: a relay with Hysteria2 adds a link and outbound through it; off=hysteria2 and no own site leave none"
+  echo "46-relays.sh: a relay with Hysteria2 adds a link and outbound through it; off=hysteria2 leaves none"
 fi
 
 # A relay whose canaries find some paths blocked (dotdash-manager's off=):
@@ -259,25 +254,19 @@ if sudo grep -q "split) sp='split'" /opt/dotdash/current/tasks/client-config.sh;
 fi
 
 # Relays named by name= (the relay's name parameter): their links carry the
-# name in place of "relay <n>"; a name an earlier relay took, or a malformed
-# one, leaves the relay its number, and is reported.
+# name in place of "relay <n>"; an unnamed one keeps its number. (A name an
+# earlier relay took, or a malformed one, is refused at apply.)
 if sudo grep -q 'name=\*) nm=' /opt/dotdash/current/tasks/client-config.sh; then
   printf '%s\n' \
     "relay-a.test site-a.test pbkA000000000000000000000000000000000000000 0011223344556677 mlkem768x25519plus.native.0rtt.a name=edge-1" \
-    "198.51.100.7 site-b.test pbkB000000000000000000000000000000000000000 8899aabbccddeeff mlkem768x25519plus.native.0rtt.b name=edge-1" \
-    "198.51.100.8 site-c.test pbkC000000000000000000000000000000000000000 0123456789abcdef mlkem768x25519plus.native.0rtt.c name=bad/name" |
+    "198.51.100.7 site-b.test pbkB000000000000000000000000000000000000000 8899aabbccddeeff mlkem768x25519plus.native.0rtt.b" |
     sudo morzer config set --set-file relays=- >/dev/null
   text=$(out)
   [ "$(grep -c '^vless://[^@]*@relay-a\.test:443?.*#edge-1%20%C2%B7%20reality$' <<<"${text}")" = "${devices}" ] ||
     die "a named relay's links do not carry its name"
   [ "$(grep -c '^vless://[^@]*@198\.51\.100\.7:443?.*#relay%202%20%C2%B7%20reality$' <<<"${text}")" = "${devices}" ] ||
-    die "a relay named as an earlier one is does not go by its number"
-  [ "$(grep -c '^vless://[^@]*@198\.51\.100\.8:443?.*#relay%203%20%C2%B7%20reality$' <<<"${text}")" = "${devices}" ] ||
-    die "a relay with a malformed name does not go by its number"
-  err=$(out 2>&1 >/dev/null)
-  grep -qF 'relays: 198.51.100.7 is named edge-1, as an earlier relay is' <<<"${err}" ||
-    die "a name an earlier relay took is not reported"
-  echo "46-relays.sh: a named relay's links carry its name; a taken or malformed name leaves its number"
+    die "an unnamed relay does not go by its number"
+  echo "46-relays.sh: a named relay's links carry its name; an unnamed one its number"
 fi
 
 # standby: a relay's links come last among the share links, and its

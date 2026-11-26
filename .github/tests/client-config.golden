@@ -1138,10 +1138,10 @@ connection reaches it; a link leaves DNS to the app's own settings:
 
 --- stderr
 cdn_hosts: bad_x is not a host name; left out
-pools: nobody.example.net is no device name, relay host or CDN host
-cdn_extra: Xray refuses the extra for cdn-r2.example.net; dotdash's own through it
-cdn_extra: bad"host is not a host; its line is left out
-cdn_extra: the extra for cdn-p.example.net is not a JSON object; dotdash's own through it
+pools: line 4: nobody.example.net is no device name, relay host or CDN host
+cdn_extra: line 6: Xray refuses the extra for cdn-r2.example.net; dotdash's own through it
+cdn_extra: line 7: it does not start with a host name; left out
+cdn_extra: line 8: the extra for cdn-p.example.net is not a JSON object; dotdash's own through it
 === the fleet, several servers and every profile, by uuid
 --- exit 0
 == desk ==
@@ -1425,10 +1425,10 @@ with upstream_udp=true, so point the client's DNS at DoH or TCP and lookups
 ride the tunnel.
 --- stderr
 cdn_hosts: bad_x is not a host name; left out
-pools: nobody.example.net is no device name, relay host or CDN host
-cdn_extra: Xray refuses the extra for cdn-r2.example.net; dotdash's own through it
-cdn_extra: bad"host is not a host; its line is left out
-cdn_extra: the extra for cdn-p.example.net is not a JSON object; dotdash's own through it
+pools: line 4: nobody.example.net is no device name, relay host or CDN host
+cdn_extra: line 6: Xray refuses the extra for cdn-r2.example.net; dotdash's own through it
+cdn_extra: line 7: it does not start with a host name; left out
+cdn_extra: line 8: the extra for cdn-p.example.net is not a JSON object; dotdash's own through it
 === the fleet, the URLs
 --- exit 0
 Subscription URLs, one per device, for v2rayN, v2rayNG, Hiddify, Happ or
@@ -1460,10 +1460,10 @@ through the relay s.example.com: https://s.example.com/3d19227544c893563ff340205
 
 --- stderr
 cdn_hosts: bad_x is not a host name; left out
-pools: nobody.example.net is no device name, relay host or CDN host
-cdn_extra: Xray refuses the extra for cdn-r2.example.net; dotdash's own through it
-cdn_extra: bad"host is not a host; its line is left out
-cdn_extra: the extra for cdn-p.example.net is not a JSON object; dotdash's own through it
+pools: line 4: nobody.example.net is no device name, relay host or CDN host
+cdn_extra: line 6: Xray refuses the extra for cdn-r2.example.net; dotdash's own through it
+cdn_extra: line 7: it does not start with a host name; left out
+cdn_extra: line 8: the extra for cdn-p.example.net is not a JSON object; dotdash's own through it
 === the fleet, direct=false
 --- exit 0
 == phone ==
@@ -1718,10 +1718,10 @@ connection reaches it; a link leaves DNS to the app's own settings:
 
 --- stderr
 cdn_hosts: bad_x is not a host name; left out
-pools: nobody.example.net is no device name, relay host or CDN host
-cdn_extra: Xray refuses the extra for cdn-r2.example.net; dotdash's own through it
-cdn_extra: bad"host is not a host; its line is left out
-cdn_extra: the extra for cdn-p.example.net is not a JSON object; dotdash's own through it
+pools: line 4: nobody.example.net is no device name, relay host or CDN host
+cdn_extra: line 6: Xray refuses the extra for cdn-r2.example.net; dotdash's own through it
+cdn_extra: line 7: it does not start with a host name; left out
+cdn_extra: line 8: the extra for cdn-p.example.net is not a JSON object; dotdash's own through it
 === relays lines said, then left out or cut down
 --- exit 0
 == phone ==
@@ -1899,19 +1899,19 @@ connection reaches it; a link leaves DNS to the app's own settings:
 }
 
 --- stderr
-relays: 203.0.113.11 is named twin, as an earlier relay is; it goes by its number
-relays: the kcp= field of 203.0.113.12 is not <port>,<header>,<seed>[,<open>]; no mKCP link through it
-relays: the name= field of 203.0.113.12 is not 1 to 24 letters, digits, dots, dashes or underscores; it goes by its number
-relays: the hy2= field of 203.0.113.13 is not a port; no Hysteria2 link through it
-relays: 203.0.113.14 names hy2= but no site of its own, whose certificate Hysteria2 needs; no Hysteria2 link through it
-relays: the cdn= field of 203.0.113.15 is not <host>[,<host>]; no CDN link through it
-relays: 203.0.113.16 names CDNs but no XHTTP path of its own site; no CDN link through it
-relays: the cdnpath= field of 203.0.113.17 is not hex; its CDN links take its XHTTP path
-relays: 203.0.113.18 names origin= but no cdnpath=, the path its door passes; no link through it
-relays: the origin= field of 203.0.113.19 is not <host>[/<path>][,<host>[/<path>]]; no link through it
-relays: the off= field of 203.0.113.20 is not <path>[,<path>]; ignored
-relays: the off= field of 203.0.113.21 names foo, not reality, xhttp, mkcp or hysteria2; ignored
-relays: 203.0.113.22 is cdn-only but has no CDN link; left out
+relays: line 2: 203.0.113.11 is named twin, as an earlier relay is; it goes by its number
+relays: line 3: the kcp= field of 203.0.113.12 is not <port>,<header>,<seed>[,<open>]; no mKCP link through it
+relays: line 3: the name= field of 203.0.113.12 is not 1 to 24 letters, digits, dots, dashes or underscores; it goes by its number
+relays: line 4: the hy2= field of 203.0.113.13 is not a port; no Hysteria2 link through it
+relays: line 5: 203.0.113.14 names hy2= but no site of its own, whose certificate Hysteria2 needs; no Hysteria2 link through it
+relays: line 6: the cdn= field of 203.0.113.15 is not <host>[,<host>]; no CDN link through it
+relays: line 7: 203.0.113.16 names CDNs but no XHTTP path of its own site; no CDN link through it
+relays: line 8: the cdnpath= field of 203.0.113.17 is not hex; its CDN links take its XHTTP path
+relays: line 9: 203.0.113.18 names origin= but no cdnpath=, the path its door passes; no link through it
+relays: line 10: the origin= field of 203.0.113.19 is not <host>[/<path>][,<host>[/<path>]]; no link through it
+relays: line 11: the off= field of 203.0.113.20 is not <path>[,<path>]; ignored
+relays: line 12: the off= field of 203.0.113.21 names foo, not reality, xhttp, mkcp or hysteria2; ignored
+relays: line 13: 203.0.113.22 is cdn-only but has no CDN link; left out
 relays: line 14: no field is named cdn_path=; ignored
 relays: line 15: its site is malformed; left out
 === direct=false, nothing else
@@ -2142,3 +2142,29 @@ xdns_resolvers takes udp://, tcp:// or https:// URLs: dns.example
 --- exit 1
 --- stderr
 entry_port is not a port: x
+=== --check, the fleet
+--- exit 0
+--- stderr
+cdn_hosts: bad_x is not a host name; left out
+pools: line 4: nobody.example.net is no device name, relay host or CDN host
+cdn_extra: line 6: Xray refuses the extra for cdn-r2.example.net; dotdash's own through it
+cdn_extra: line 7: it does not start with a host name; left out
+cdn_extra: line 8: the extra for cdn-p.example.net is not a JSON object; dotdash's own through it
+=== --check, every line said
+--- exit 0
+--- stderr
+relays: line 2: 203.0.113.11 is named twin, as an earlier relay is; it goes by its number
+relays: line 3: the kcp= field of 203.0.113.12 is not <port>,<header>,<seed>[,<open>]; no mKCP link through it
+relays: line 3: the name= field of 203.0.113.12 is not 1 to 24 letters, digits, dots, dashes or underscores; it goes by its number
+relays: line 4: the hy2= field of 203.0.113.13 is not a port; no Hysteria2 link through it
+relays: line 5: 203.0.113.14 names hy2= but no site of its own, whose certificate Hysteria2 needs; no Hysteria2 link through it
+relays: line 6: the cdn= field of 203.0.113.15 is not <host>[,<host>]; no CDN link through it
+relays: line 7: 203.0.113.16 names CDNs but no XHTTP path of its own site; no CDN link through it
+relays: line 8: the cdnpath= field of 203.0.113.17 is not hex; its CDN links take its XHTTP path
+relays: line 9: 203.0.113.18 names origin= but no cdnpath=, the path its door passes; no link through it
+relays: line 10: the origin= field of 203.0.113.19 is not <host>[/<path>][,<host>[/<path>]]; no link through it
+relays: line 11: the off= field of 203.0.113.20 is not <path>[,<path>]; ignored
+relays: line 12: the off= field of 203.0.113.21 names foo, not reality, xhttp, mkcp or hysteria2; ignored
+relays: line 13: 203.0.113.22 is cdn-only but has no CDN link; left out
+relays: line 14: no field is named cdn_path=; ignored
+relays: line 15: its site is malformed; left out

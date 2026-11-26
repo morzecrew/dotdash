@@ -5,16 +5,21 @@
 # config's local proxy, for apps on the phone that look for one. The output
 # is credentials: anyone
 # holding it can use this server, so send it only over a channel you would
-# send a password on.
+# send a password on. --check reads the parameters alone and stops: what it
+# says on stderr about a relays, pools or cdn_extra line, or any other, fails
+# the change that brought it (hooks/healthy lists), where devices would lose
+# that line or field.
 set -eu
 # shellcheck source=common.sh
 . /task/common.sh
 full=false
 local_auth=false
+check=false
 while :; do
   case ${1:-} in
   --full) full=true ;;
   --local-auth) full=true local_auth=true ;;
+  --check) check=true ;;
   *) break ;;
   esac
   shift
@@ -189,56 +194,56 @@ all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
     case $kh in none | dtls | srtp | utp | wechat | wireguard) ;; *) ok=false ;; esac
     case $ks in '' | *[!0-9a-f]*) ok=false ;; esac
     $ok || {
-      echo "relays: the kcp= field of $1 is not <port>,<header>,<seed>[,<open>]; no mKCP link through it" >&2
+      echo "relays: line $n: the kcp= field of $1 is not <port>,<header>,<seed>[,<open>]; no mKCP link through it" >&2
       kp=-; } ;;
   esac
   o=${6:-} p=${7:-}
   if [ "$o" != own-site ]; then o='' p=''; fi
   case $hy in
     -) ;;
-    *) if ! port_ok "$hy"; then echo "relays: the hy2= field of $1 is not a port; no Hysteria2 link through it" >&2; hy=-
-       elif [ -z "$o" ]; then echo "relays: $1 names hy2= but no site of its own, whose certificate Hysteria2 needs; no Hysteria2 link through it" >&2; hy=-; fi ;;
+    *) if ! port_ok "$hy"; then echo "relays: line $n: the hy2= field of $1 is not a port; no Hysteria2 link through it" >&2; hy=-
+       elif [ -z "$o" ]; then echo "relays: line $n: $1 names hy2= but no site of its own, whose certificate Hysteria2 needs; no Hysteria2 link through it" >&2; hy=-; fi ;;
   esac
   case $d in
     -) ;;
     '' | ,* | *, | *,,* | .* | *. | *..* | *,.* | *.,* | *[!A-Za-z0-9.,-]*)
-      echo "relays: the cdn= field of $1 is not <host>[,<host>]; no CDN link through it" >&2
+      echo "relays: line $n: the cdn= field of $1 is not <host>[,<host>]; no CDN link through it" >&2
       d=- ;;
     *) [ -n "$p" ] || {
-      echo "relays: $1 names CDNs but no XHTTP path of its own site; no CDN link through it" >&2
+      echo "relays: line $n: $1 names CDNs but no XHTTP path of its own site; no CDN link through it" >&2
       d=-; } ;;
   esac
   case $cp in
     -) ;;
-    '' | *[!0-9a-f]*) echo "relays: the cdnpath= field of $1 is not hex; its CDN links take its XHTTP path" >&2; cp=- ;;
+    '' | *[!0-9a-f]*) echo "relays: line $n: the cdnpath= field of $1 is not hex; its CDN links take its XHTTP path" >&2; cp=- ;;
   esac
   case $or in
     -) ;;
     *) if ! fronts_ok "$or"; then
-         echo "relays: the origin= field of $1 is not <host>[/<path>][,<host>[/<path>]]; no link through it" >&2; or=-
+         echo "relays: line $n: the origin= field of $1 is not <host>[/<path>][,<host>[/<path>]]; no link through it" >&2; or=-
        elif [ "$cp" = - ]; then
-         echo "relays: $1 names origin= but no cdnpath=, the path its door passes; no link through it" >&2; or=-
+         echo "relays: line $n: $1 names origin= but no cdnpath=, the path its door passes; no link through it" >&2; or=-
        elif [ "$d" = - ]; then d=$or
        else d="$d,$or"; fi ;;
   esac
-  case $x in *[!a-z0-9,-]*) echo "relays: the off= field of $1 is not <path>[,<path>]; ignored" >&2; x=- ;; esac
+  case $x in *[!a-z0-9,-]*) echo "relays: line $n: the off= field of $1 is not <path>[,<path>]; ignored" >&2; x=- ;; esac
   case ,$x, in ,-, | ,,) x=- ;; esac
   case ,$x, in *,mkcp,*) kp=- ;; esac
   case ,$x, in *,hysteria2,*) hy=- ;; esac
   for y in $(printf '%s' "$x" | tr ',' ' '); do
-    case $y in - | reality | xhttp | mkcp | hysteria2) ;; *) echo "relays: the off= field of $1 names $y, not reality, xhttp, mkcp or hysteria2; ignored" >&2 ;; esac
+    case $y in - | reality | xhttp | mkcp | hysteria2) ;; *) echo "relays: line $n: the off= field of $1 names $y, not reality, xhttp, mkcp or hysteria2; ignored" >&2 ;; esac
   done
   if [ "$only" = cdn-only ] && [ "$d" = - ]; then
-    echo "relays: $1 is cdn-only but has no CDN link; left out" >&2
+    echo "relays: line $n: $1 is cdn-only but has no CDN link; left out" >&2
     continue
   fi
   case $nm in
     -) ;;
     '' | ?????????????????????????* | *[!A-Za-z0-9._-]*)
-      echo "relays: the name= field of $1 is not 1 to 24 letters, digits, dots, dashes or underscores; it goes by its number" >&2
+      echo "relays: line $n: the name= field of $1 is not 1 to 24 letters, digits, dots, dashes or underscores; it goes by its number" >&2
       nm=- ;;
     *) case " ${taken:-} " in *" $nm "*)
-      echo "relays: $1 is named $nm, as an earlier relay is; it goes by its number" >&2
+      echo "relays: line $n: $1 is named $nm, as an earlier relay is; it goes by its number" >&2
       nm=- ;;
     esac ;;
   esac
@@ -299,9 +304,9 @@ pick() { # <device name> [<kind>]: the relays, CDN hosts and subscription relays
 # or CDN host in none, and so seen by every device: say so.
 names=$(awk '$1 !~ /^#/ && NF > 1 { print $2 }' /run/secrets/vless_clients)
 relay_names=$(printf '%s\n' "$all_relays" | awk '{ print $1; if ($12 != "-") { gsub(",", "\n", $12); gsub("/[^\n]*", "", $12); print $12 } }')
-for m in $(printf '%s\n' "$pools" | awk '{ $1 = ""; print }'); do
+printf '%s\n' "${POOLS:-}" | sed 's/#.*//' | awk 'NF > 1 { for (i = 2; i <= NF; i++) print NR, $i }' | while read -r n m; do
   printf '%s\n%s\n%s\n' "$names" "$all_cdns" "$relay_names" | grep -qxF -- "$m" ||
-    echo "pools: $m is no device name, relay host or CDN host" >&2
+    echo "pools: line $n: $m is no device name, relay host or CDN host" >&2
 done
 # Their edges take GET alone and no request body (some answer 413 to any),
 # so a device uploads in packet-up GETs with the data in headers. The server's
@@ -335,16 +340,17 @@ origin_extra=$(link_extra 4096 4096)
 # the object across lines; one line holds any.
 cdn_extras=$(printf '%s\n' "${CDN_EXTRA:-none}" | awk '
   !depth && /^[ \t]*(#|$)/ { next }
-  !depth { h = $1; sub(/^[ \t]*[^ \t]+[ \t]*/, ""); j = "" }
+  !depth { h = $1; n = NR; sub(/^[ \t]*[^ \t]+[ \t]*/, ""); j = "" }
   { sub(/^[ \t]+/, ""); sub(/[ \t]+$/, ""); j = j $0; t = $0; depth += gsub(/[{]/, "", t); t = $0; depth -= gsub(/[}]/, "", t) }
-  !depth { print h, j }
-  END { if (depth) print h, j }' | while read -r h j; do
+  !depth { print n, h, j }
+  END { if (depth) print n, h, j }' | while read -r n h j; do
   case $h in none) continue ;; esac
-  name_ok "$h" || { echo "cdn_extra: $h is not a host; its line is left out" >&2; continue; }
-  case $j in '{'*'}') ;; *) echo "cdn_extra: the extra for $h is not a JSON object; dotdash's own through it" >&2; continue ;; esac
+  # Not what it holds, which may be anything of the object's.
+  name_ok "$h" || { echo "cdn_extra: line $n: it does not start with a host name; left out" >&2; continue; }
+  case $j in '{'*'}') ;; *) echo "cdn_extra: line $n: the extra for $h is not a JSON object; dotdash's own through it" >&2; continue ;; esac
   printf '{"outbounds": [{"protocol": "vless", "settings": {"address": "%s", "port": 443, "id": "00000000-0000-0000-0000-000000000000", "encryption": "none"}, "streamSettings": {"network": "xhttp", "security": "tls", "xhttpSettings": {"path": "/", "mode": "packet-up", "extra": %s}}}]}' "$h" "$j" |
     /opt/xray/xray run -test -config stdin: >/dev/null 2>&1 ||
-    { echo "cdn_extra: Xray refuses the extra for $h; dotdash's own through it" >&2; continue; }
+    { echo "cdn_extra: line $n: Xray refuses the extra for $h; dotdash's own through it" >&2; continue; }
   echo "$h $j"
 done)
 # Percent-encoded whole, for a link.
@@ -759,6 +765,7 @@ $(outbounds "$1")$([ -z "${XDNS_DOMAIN:-}" ] || printf ',\n%s' "$(xdns_outbound 
 EOF
 }
 
+! $check || exit 0
 $full || cat <<EOF
 Subscription URLs, one per device, for v2rayN, v2rayNG, Hiddify, Happ or
 Streisand to fetch its links from and refresh them; --full prints the links

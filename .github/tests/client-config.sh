@@ -208,6 +208,18 @@ out=$(cc SUBSCRIPTION=false "RELAYS=$relay cdn_path=cccc3333" -- --full phone)
 grep -qF 'relays: line 1: no field is named cdn_path=; ignored' "$work/err" || fail "an unknown key= not said"
 [ "$out" = "$(cc SUBSCRIPTION=false "RELAYS=$relay" -- --full phone)" ] || fail "an unknown key= changed the output"
 
+echo "== --check: nothing on a clean list, each bad line by its number, nothing printed but that"
+out=$(cc "RELAYS=$relay" "POOLS=p1 phone 203.0.113.7" CDN_HOSTS=cdn1.example.net -- --check)
+[ -z "$out" ] && [ ! -s "$work/err" ] || fail "--check: output for clean lists"
+out=$(cc "RELAYS=$relay
+203.0.113.8 b.example.com ${pbk} ab12 ${enc} cdn=bad_name!" "POOLS=p1 phone ghost.example.net" \
+  'CDN_EXTRA=cdn.example.net {"mode": broken}' -- --check)
+[ -z "$out" ] || fail "--check: something on stdout"
+for w in 'relays: line 2: the cdn= field of 203.0.113.8' 'pools: line 1: ghost.example.net is no device name' \
+  'cdn_extra: line 1: Xray refuses the extra for cdn.example.net'; do
+  grep -qF "$w" "$work/err" || fail "--check: not said: $w"
+done
+
 echo "== servers naming none: this server alone, and said"
 [ "$(cc SUBSCRIPTION=false 'SERVERS= , ' -- --full phone)" = "$out_self" ] || fail "servers naming none: not this server alone"
 grep -qF 'servers names no server: this one alone' "$work/err" || fail "servers naming none: not said"
@@ -291,6 +303,8 @@ gold "no such client" -- --full nobody
 gold "xdns_tti out of range" XDNS_DOMAIN=t XDNS_TTI=5 -- --full phone
 gold "a bad xdns_resolvers" XDNS_DOMAIN=t XDNS_RESOLVERS=dns.example -- --full phone
 gold "entry_port not a port" ENTRY_PORT=x -- --full phone
+gold "--check, the fleet" SUBSCRIPTION=true "${profiles[@]}" "${fleet[@]}" -- --check
+gold "--check, every line said" "RELAYS=$bad" -- --check
 golden=.github/tests/client-config.golden
 if [ "${UPDATE_GOLDEN:-}" = 1 ]; then
   cp "$work/golden" "$golden"
