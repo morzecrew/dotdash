@@ -104,10 +104,11 @@ if sudo docker logs --since "${since}" "${client}" 2>&1 | grep -q 'through XRAY_
   die "under tun with no links, the subscription came by the entrypoint's direct fetch, not through the sub port"
 fi
 
-# DNS to a resolver on a network the machine is on, here docker0's address,
-# where nothing answers, goes into TUN too and gets a fake address: from any
-# process but root's, which Xray's own lookups are.
-out=$(sudo -u nobody nslookup example.com "${host}" 2>&1 || true)
+# DNS to a resolver on a network the machine is on, here the subscription
+# server's address on docker0, where nothing answers on port 53, goes into TUN
+# too and gets a fake address: from any process but root's, which Xray's own
+# lookups are.
+out=$(sudo -u nobody nslookup example.com "${target}" 2>&1 || true)
 grep -q 'Address:.*198\.1[89]\.' <<<"${out}" || { routes; die "DNS to a resolver on the LAN went around TUN: ${out}"; }
 
 # A gateway. A LAN device, a network namespace behind a veth with this machine
