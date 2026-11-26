@@ -45,8 +45,37 @@
 	# this domain's certificate rather than none. A CDN that checks it against
 	# its own name still fails; tell it to send this domain.
 	fallback_sni {$DOMAIN}
+	# Port 80's redirect is the http:// site below, as Caddy's own but
+	# without its Server header.
+	auto_https disable_redirects
+	# 443, which REALITY hands every connection without the relay's key,
+	# each behind a PROXY header naming the visitor (xver), so the site and a
+	# cover app see the visitor's address rather than Xray's. A header counts
+	# only from the private ranges Docker numbers its networks from, where
+	# Xray is; a connection without one, as the Hysteria2 masquerade's or a
+	# cover app's, is taken as before. First: Caddy applies the first
+	# servers block that matches.
+	servers :443 {
+		listener_wrappers {
+			proxy_protocol {
+				allow 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+			}
+			tls
+		}
+		protocols h1 h2
+	}
 	servers {
 		protocols h1 h2
+	}
+}
+
+# Port 80: the ACME HTTP-01 check, which Caddy answers before any route, and
+# for everything else the redirect to HTTPS Caddy would make itself.
+http:// {
+	header -Server
+	header Location https://{host}{uri}
+	respond 308 {
+		close
 	}
 }
 
@@ -65,6 +94,15 @@ http://127.0.0.1:8081 {
 # path, so the CDN, which reads every request here, never learns that one,
 # and VLESS Encryption keeps what the requests carry unreadable to it.
 http://:8091 {
+	# No word of Caddy, as on the site: neither its Server header nor the
+	# Via it adds to what it passes back.
+	header {
+		-Server
+		-Via
+	}
+	handle_errors {
+		header -Server
+	}
 	@door {
 		remote_ip {$HTTP_ORIGIN_FROM:192.0.2.1/32}
 		path /{file./run/secrets/cdn_xhttp_path}/*
@@ -112,9 +150,39 @@ http://:8090 {
 (headers) {
 	header {
 		-Server
+		# Caddy's own, on what it passes back from a cover app or a server.
+		-Via
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer
+	}
+}
+
+# What the site serves past its own routes: the operator's own files wherever
+# one is there; then their app (cover); otherwise the bundled page, titled
+# with the domain so no two machines serve one body.
+(cover) {
+	@own file {
+		root /srv/own
+		try_files {path} {path}/index.html
+	}
+	handle @own {
+		root * /srv/own
+		file_server
+	}
+	# The operator's app (cover), for everything else: a live site, which a
+	# probe or a reviewer finds behaving like one, rather than pages. Caddy
+	# has no conditional, so the matcher compares the value as the Caddyfile
+	# loads; with pages, the handler, whose upstream is then the word pages,
+	# is never reached.
+	@app expression `"{$COVER:pages}" != "pages"`
+	handle @app {
+		reverse_proxy {$COVER:pages}
+	}
+	handle {
+		root * /srv/default
+		templates
+		file_server
 	}
 }
 
@@ -201,33 +269,18 @@ http://:8090 {
 			transport http {
 				network_proxy url http://xray:10810
 			}
+			# A token no server has: the servers' 404 is a server's own site,
+			# which would tell this relay apart and might name the server.
+			# This relay's own site answers it instead, as any other path.
+			@unknown status 404
+			handle_response @unknown {
+				import cover
+			}
 		}
 	}
 
-	# The operator's own files wherever one is there; then their app (cover);
-	# otherwise the bundled page, titled with the domain so no
-	# two machines serve one body.
-	@own file {
-		root /srv/own
-		try_files {path} {path}/index.html
-	}
-	handle @own {
-		root * /srv/own
-		file_server
-	}
-	# The operator's app (cover), for everything else: a live site, which a
-	# probe or a reviewer finds behaving like one, rather than pages. Caddy
-	# has no conditional, so the matcher compares the value as the Caddyfile
-	# loads; with pages, the handler, whose upstream is then the word pages,
-	# is never reached.
-	@app expression `"{$COVER:pages}" != "pages"`
-	handle @app {
-		reverse_proxy {$COVER:pages}
-	}
 	handle {
-		root * /srv/default
-		templates
-		file_server
+		import cover
 	}
 }
 

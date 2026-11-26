@@ -264,11 +264,12 @@ images:
   caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:93c19f705c2218d5fca7f7dcb694cae1ed3889588678aabb7af34c8892e2f2bb
 
 # What an authority's desired-state document may set here (morzer 0.16): the
-# devices, this relay's own client of the servers, and the servers' facts.
+# devices, this relay's own client of the servers, the servers' facts, and
+# the relays it goes through (via), which the manager sets or unsets.
 # This relay's own keys stay its own; its facts carry their public halves.
 # None of these reaches a command line or a hook.
 managed:
-  parameters: [dotdash_servers, dotdash_address, dotdash_port, dotdash_public_key, dotdash_link, dotdash_xhttp_reality_port, ipv6]
+  parameters: [dotdash_servers, dotdash_address, dotdash_port, dotdash_public_key, dotdash_link, dotdash_xhttp_reality_port, ipv6, via, via_link, via_fingerprint]
   secrets: [vless_clients, dotdash_id, dotdash_encryption, dotdash_short_id, dotdash_xhttp_path]
 
 # What this machine tells the authority it follows, after every change, when

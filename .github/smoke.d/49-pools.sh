@@ -41,9 +41,9 @@ printf '%s\n%s pooled\n%s unpooled\n' "${before}" \
   "$(cat /proc/sys/kernel/random/uuid)" "$(cat /proc/sys/kernel/random/uuid)" |
   sudo morzer secret set vless_clients >/dev/null || die "could not add two devices"
 printf '%s\n' \
-  "relay-a.test site-a.test pbkA 0011223344556677 mlkem.a" \
-  "relay-b.test site-b.test pbkB 8899aabbccddeeff mlkem.b own-site" \
-  "relay-s.test site-s.test pbkS 0123456789abcdef mlkem.s" |
+  "relay-a.test site-a.test pbkA000000000000000000000000000000000000000 0011223344556677 mlkem768x25519plus.native.0rtt.a" \
+  "relay-b.test site-b.test pbkB000000000000000000000000000000000000000 8899aabbccddeeff mlkem768x25519plus.native.0rtt.b own-site" \
+  "relay-s.test site-s.test pbkS000000000000000000000000000000000000000 0123456789abcdef mlkem768x25519plus.native.0rtt.s" |
   sudo morzer config set --set-file relays=- >/dev/null || die "could not set relays"
 sudo morzer config set cdn_hosts=cdn-a.test,cdn-b.test,cdn-s.test >/dev/null || die "could not set cdn_hosts"
 printf '%s\n' "a pooled relay-a.test cdn-a.test" "b relay-b.test cdn-b.test nothing.test" |
@@ -76,7 +76,7 @@ echo "${0##*/}: with pools unset, every device gets everything"
 # no pool, pool a holding one of its CDNs and pool b another, pooled gets pool
 # a's and the one in no pool, unpooled all three, and neither is reported.
 if sudo grep -qE 'dotdash-(cdn-relay-\$n|relay-\$n-cdn)-' /opt/dotdash/current/tasks/client-config.sh; then
-  printf '%s\n' "relay-c.test site-c.test pbkC 0123456789abcdef mlkem.c own-site 00112233445566778899aabbccddeeff cdn=cdn-r1.test,cdn-r2.test,cdn-r3.test" |
+  printf '%s\n' "relay-c.test site-c.test pbkC000000000000000000000000000000000000000 0123456789abcdef mlkem768x25519plus.native.0rtt.c own-site 00112233445566778899aabbccddeeff cdn=cdn-r1.test,cdn-r2.test,cdn-r3.test" |
     sudo morzer config set --set-file relays=- >/dev/null || die "could not set relays"
   printf '%s\n' "a pooled cdn-r1.test" "b cdn-r2.test" |
     sudo morzer config set --set-file pools=- >/dev/null || die "could not set pools"

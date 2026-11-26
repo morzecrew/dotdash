@@ -62,13 +62,20 @@ parameters:
     default: letsencrypt
     description: "letsencrypt: the API on 443 under a certificate acme-dns takes for the zone's name through its own DNS; none: plain HTTP on 443, for a test machine only"
     services: [acme-dns]
+  # Off, /register is gone: anyone who reaches 443 could otherwise register,
+  # each time a bcrypt hash and a row on a small machine.
+  registration:
+    type: bool
+    default: false
+    description: "Whether the API takes new registrations: true only while you run the register task, then false again; registrations already made keep working either way"
+    services: [acme-dns]
 
 images:
   acme-dns: docker.io/joohoi/acme-dns:v2.0.2@sha256:8d327df58b1c9f6361c76734f9761a108fa4f12cf7ca94440a0404a28f75de62
 
 tasks:
   register:
-    description: "Register a parent domain, such as s.example.com: prints the CNAME to add at its DNS host and the JSON for the acme_dns secret of each server or relay under it"
+    description: "Register a parent domain, such as s.example.com, while registration=true: prints the CNAME to add at its DNS host and the JSON for the acme_dns secret of each server or relay under it"
     service: register
     command: ["/task/register.sh"]
     args: true

@@ -31,8 +31,8 @@ config() { sudo morzer task run client-config --output -- "$@"; }
 names_server() { grep -qF "${domain}" <<<"$1"; }
 
 printf '%s\n' \
-  "relay-o.test site-o.test pbkO 0011223344556677 mlkem.o own-site 00112233445566778899aabbccddeeff" \
-  "relay-p.test site-p.test pbkP 8899aabbccddeeff mlkem.p" |
+  "relay-o.test site-o.test pbkO000000000000000000000000000000000000000 0011223344556677 mlkem768x25519plus.native.0rtt.o own-site 00112233445566778899aabbccddeeff" \
+  "relay-p.test site-p.test pbkP000000000000000000000000000000000000000 8899aabbccddeeff mlkem768x25519plus.native.0rtt.p" |
   sudo morzer config set --set-file relays=- >/dev/null || die "could not set relays"
 sudo morzer config set cdn_hosts=cdn-d.test subscription=true >/dev/null || die "could not set cdn_hosts and subscription"
 sudo morzer config set direct=false >/dev/null || die "could not set direct=false"

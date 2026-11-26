@@ -13,7 +13,7 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `entry_host` | `none` | the address devices reach the relay at, its IP without a domain, for `relay-entry` with no address and for `facts`; `none` under `own-site` is the relay's domain |
 | `cdn_hosts` | `none` | with `own-site`, the names devices use for [local CDNs](../server/cdn.md#in-front-of-a-relay) in front of the relay, comma-separated; `relay-entry` adds them to the relay's line |
 | `http_origin_port` | `8880` | with the `http-origin` profile, the host TCP port of its door, published at `listen`: where a [CDN that fetches in plain HTTP](../server/cdn.md#a-cdn-that-fetches-in-plain-http) fetches the relay |
-| `http_origin_from` | `none` | with `http-origin`, the addresses the door answers, comma-separated IPs or CIDR ranges: the CDN's gateways; `any` answers every address, `none` no one |
+| `http_origin_from` | `none` | with `http-origin`, the addresses the door answers, comma-separated IPs or CIDR ranges: the CDN's gateways; `any` answers every address, `none` no one. The door sees the address that connects to it: over IPv6, which Docker forwards from an address of its own, or behind a proxy of yours in front of the port, only `any` works |
 | `http_origin_host` | `none` | with `http-origin`, the names devices reach that CDN at, comma-separated, each `<name>/<path>` where the CDN gives a path of its own; `relay-entry` adds it to the relay's line as `origin=`, and prints the `xhttpSettings` to give the CDN |
 | `cdn_only` | `false` | `true`: devices get the relay's CDN links alone, none to its own address, so it stays the [CDNs' origin](../server/cdn.md#the-cdns-origin-only); `relay-entry` ends the line with `cdn-only`, and refuses it without `cdn_hosts` |
 | `name` | `none` | a label of up to 24 letters, digits, dots, dashes or underscores that devices' links through the relay carry in place of `relay <n>`: `edge-1 · reality`. `relay-entry` ends the line with `name=`; a name an earlier line took goes by the number. Every device's app shows it, so pick one that says nothing about where the relay is hosted |
@@ -35,7 +35,23 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `listen` | empty | host address for `https_port` and `http_port`: empty for every address, IPv4 and IPv6; `0.0.0.0` for IPv4 alone; `127.0.0.1` beside your own web server |
 | `kcp_port` | `8447` | with `mkcp`, the UDP port devices reach the relay's mKCP on |
 | `kcp_header` | `dtls` | with `mkcp`, what its packets start with, as the server's [`kcp_header`](../server/mkcp.md) |
+| `kcp_open` | `none` | with `mkcp`, an opener in front of the flow, as the server's `kcp_open`: `quic` sends a packet shaped like a QUIC Initial first. `relay-entry` adds it to the relay's line, so devices' links through the relay match |
 | `hysteria2_port` | `443` | with `hysteria2`, the UDP port devices reach the relay's Hysteria2 on |
+
+### What changes the relay's line
+
+The servers know the relay by its line in `relays`. After changing any of
+these, print it again with `relay-entry` and replace it on every server
+(under the [manager](../manager.md), its next sync does that from the
+relay's facts): `entry_host` (or the address after `--`), `site`, the relay's
+domain under `own-site`, the `own-site`, `mkcp`, `hysteria2` and
+`http-origin` profiles, `kcp_port`, `kcp_header`, `kcp_open`,
+`hysteria2_port`, `cdn_hosts`, `http_origin_host`, `cdn_only`, `name`, and a
+rotated `reality_key`, `reality_short_id`, `vless_seed`, `xhttp_path`,
+`cdn_xhttp_path` or `kcp_seed`. The rest change nothing on the servers:
+`http_origin_port` (the CDN needs it, the servers don't), `http_origin_from`,
+`cover`, `tunnel_host`, `cert_issuer`, `https_port`, `http_port`, `listen`,
+`via`, the `dotdash_*` parameters and the rest.
 
 ## Profiles
 
@@ -52,6 +68,12 @@ requests never learns the other from
 ([CDN in front of a relay](../server/cdn.md#in-front-of-a-relay)). See
 [Set up a relay](install.md#1-pick-the-site).
 
+REALITY hands the site each connection with the visitor's address (a PROXY
+header), so a cover app sees each visitor's own address in
+`X-Forwarded-For`, not Xray's, and its per-address limits work. Visitors
+over the Hysteria2 port's HTTP/3 still show Xray's. A subscription token
+the servers don't have gets the site's own answer, as any other path does.
+
 `installation.profile=own-site,hysteria2`: the relay serves
 [Hysteria2](../server/hysteria2.md) on UDP `hysteria2_port` too, under its own
 site's certificate, each device's UUID its login, and carries it on to the
@@ -66,7 +88,8 @@ in plain HTTP on `http_origin_port`, a door for a
 [CDN that fetches in plain HTTP](../server/cdn.md#a-cdn-that-fetches-in-plain-http).
 It answers the addresses in `http_origin_from` alone, on the CDNs' path
 alone, which it passes on to Xray's XHTTP inbound; everyone else gets a 404.
-`relay-entry` then ends the relay's line with `cdnpath=<path>` and
+It needs `own-site`, whose Caddy is the door: without it the profile is
+refused. `relay-entry` then ends the relay's line with `cdnpath=<path>` and
 `origin=<http_origin_host>`, from which the server gives each device a
 `relay · cdn` link through that name. Where the CDN gives several names,
 set them all, comma-separated: each gets a link of its own, `cdn 1`,
@@ -104,10 +127,14 @@ starts Xray if it is down.
 | `reality_key` | yes | the relay's REALITY private key |
 | `reality_short_id` | yes | the relay's REALITY short id |
 | `kcp_seed` | yes | the key the relay's mKCP packets are encrypted under, with `mkcp` |
+| `xhttp_path` | yes | with `own-site`, the secret path the site routes to Xray's XHTTP inbound |
+| `cdn_xhttp_path` | yes | with `own-site`, the secret path CDNs in front fetch XHTTP by, apart from `xhttp_path` |
+| `dotdash_xhttp_path` | no | with `dotdash_link=xhttp-reality`, the `path=` of the servers' XHTTP links, from `relay-config` |
+| `acme_dns` | no | with `cert_issuer=acme-dns`, the [acme-dns](../acme-dns.md) registration as JSON |
 
 ## Tasks
 
 | Task | |
 | --- | --- |
 | `relay-entry --output -- <address>` | the relay's line for the server's `relays`, and how a canary checks the relay; with no address, at `entry_host` |
-| `facts --output` | the same line as JSON, which the relay publishes to an authority it [follows](../server/operations.md#managed-from-elsewhere) |
+| `facts --output` | the same line as JSON, which the relay publishes to an authority it [follows](../server/operations.md#managed-from-elsewhere); under `own-site` also `cert_days`, the whole days left on the site's certificate |
