@@ -57,6 +57,18 @@ unchanged || die "a refused via line changed the relay's config"
 grep -qF "a via line is <host> <site>" <<<"${out}" || die "a short via line was refused without saying why: ${out}"
 echo "${0##*/}: two via lines render an outbound each behind a balancer; a short one is refused"
 
+# The JSON takes a via line's fields and the servers' parameters as they
+# are: a quote in one, which would add a key, is refused and changes nothing.
+printf 'a.invalid a.invalid %s %s none","address":"evil.invalid\n' "${public}" "${sid}" >/rig/relay/via-quote
+out=$(sudo morzer config set --set-file via=/rig/relay/via-quote 2>&1) && die "a via line with a quote was taken"
+unchanged || die "a refused via line with a quote changed the relay's config"
+tr -s '[:space:]' ' ' <<<"${out}" | grep -qF 'take no quote' || die "a via line with a quote was refused without saying why: ${out}"
+pbk=$(sudo morzer config get dotdash_public_key)
+out=$(sudo morzer config set 'dotdash_public_key=x","address":"evil.invalid' 2>&1) && die "a dotdash_public_key with a quote was taken"
+[ "$(sudo morzer config get dotdash_public_key)" = "${pbk}" ] || die "a refused dotdash_public_key changed the parameter"
+tr -s '[:space:]' ' ' <<<"${out}" | grep -qF 'take no quote' || die "a dotdash_public_key with a quote was refused without saying why: ${out}"
+echo "${0##*/}: a quote in a via line or in dotdash_public_key is refused"
+
 # via_link=xhttp: XHTTP through the other relay's own site, on the path its
 # line carries after own-site; a line without one is refused. Planned only:
 # the stand-in has no site under a certificate the relay trusts.

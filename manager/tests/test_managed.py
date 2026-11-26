@@ -9,10 +9,9 @@ from dotdash_manager.render import render
 from dotdash_manager.roster import loads
 
 BUNDLES = Path(__file__).resolve().parents[2] / "bundles"
-# Sent today, not yet in their manifest's managed lists: the relay and server
-# bundles add them. Delete each once its manifest has it.
-PENDING = {("relay", "parameters", "via"), ("relay", "parameters", "via_link"),
-           ("relay", "parameters", "via_fingerprint"), ("server", "parameters", "hello_split")}
+# Sent today, not yet in their manifest's managed lists: the server bundle
+# adds it. Delete each once its manifest has it.
+PENDING = {("server", "parameters", "hello_split")}
 ROSTER = """
 target = "t"
 key = "k"
