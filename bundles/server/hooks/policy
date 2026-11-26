@@ -11,7 +11,8 @@
 #     handed addresses only (ForceIP, never UseIP's fallback to the name);
 #   - every VLESS inbound demands a listed client and VLESS decryption, no
 #     XHTTP inbound sets a flow, the Hysteria2 inbound demands a listed user,
-#     and anything else listens on loopback only;
+#     and anything else listens on loopback only, but exit-title's forwards
+#     and the OpenFlux exits' SOCKS hop, on Xray's internal networks;
 #   - the gate forwards its public inbounds to Xray only, carries Xray's hops
 #     to the upstreams lines alone, through balancers that pick among those
 #     lines and nothing else, and blocks everything else; its upstreams file
@@ -21,7 +22,8 @@
 #     publishes nothing; the hops beside the gate (vpn, warm), which reach
 #     the tunnels and proxies, and the OpenFlux exits (openflux), which reach
 #     their carriers, are not on inside, where Xray would reach them past the
-#     gate's routing; the gate publishes only https_port and, where it
+#     gate's routing (openflux reaches Xray's hop on flux, theirs alone); the
+#     gate publishes only https_port and, where it
 #     forwards them, 53 for the DNS tunnel, xhttp_reality_port, kcp_port and
 #     hysteria2_port,
 #     and Caddy only http_port;
@@ -63,7 +65,7 @@ jq() { # <filter> <file>: the filter's output, or why the file does not parse
 violations=$(jq '
   [.outbounds[]?.tag] as $tags
   | ([.inbounds[]?.tag] - ["reality", "xhttp", "xhttp-reality", "kcp", "hysteria2", "xdns", "probe",
-      "reality-second", "xhttp-reality-second", "title-ip", "title-info"]) as $extra
+      "reality-second", "xhttp-reality-second", "title-ip", "title-info", "openflux"]) as $extra
   | check($tags == ["upstream", "block"] or $tags == ["upstream", "block", "upstream6"];
       "the outbounds are \($tags), not upstream and block (and upstream6)"),
     (.outbounds[2]? // empty |
@@ -107,7 +109,10 @@ violations=$(jq '
       check(.protocol == "dokodemo-door" and (.settings.address | type) == "string" and .settings.address != ""
         and (.settings.followRedirect // false) == false and .settings.network == "tcp";
         "inbound \(.tag) is not a forward to one fixed host")),
-    (.inbounds[]? | select(.protocol != "vless" and .protocol != "hysteria" and (.tag | IN("title-ip", "title-info") | not)) |
+    # For the OpenFlux exits: a SOCKS hop into this routing, never a forward.
+    (.inbounds[]? | select(.tag == "openflux") |
+      check(.protocol == "socks"; "inbound openflux is not a SOCKS hop into Xray'"'"'s routing")),
+    (.inbounds[]? | select(.protocol != "vless" and .protocol != "hysteria" and (.tag | IN("title-ip", "title-info", "openflux") | not)) |
       check(.listen == "127.0.0.1"; "inbound \(.tag) (\(.protocol)) listens beyond loopback")),
     (.inbounds[]? | select(.tag | endswith("-second")) |
       check(.listen == "127.0.0.1"; "inbound \(.tag), the second key'"'"'s, listens beyond loopback"))

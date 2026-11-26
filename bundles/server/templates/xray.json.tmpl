@@ -314,6 +314,21 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
       "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
     },
 {{- end }}
+{{- if has "openflux" .Profiles }}
+    {{- /* The openflux profile's exits' way out (openflux/openflux.sh): their
+    connections take the routing devices' do, the blocks and resolve and
+    ipv6 included, then the upstream. On the flux network, which only
+    openflux shares with Xray, beside Xray's other internal networks; UDP as
+    upstream_udp says, the hop refusing it otherwise. */}}
+    {
+      "tag": "openflux",
+      "listen": "0.0.0.0",
+      "port": 1082,
+      "protocol": "socks",
+      "settings": {"auth": "noauth", "udp": {{ $udp }}},
+      "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
+    },
+{{- end }}
     {
       "tag": "probe",
       "listen": "127.0.0.1",
