@@ -191,13 +191,13 @@ sudo docker run -d --name relay-rig-xhttp --network host -v /rig/relay/xhttp:/et
   -v /rig/relay/xhttp-ca:/ca:ro "${xray}" >/dev/null
 gets_out 18084 || die "a device shaped for a CDN, disguised, did not get out by the CDNs' path: $(sudo docker logs relay-rig-xhttp 2>&1 | tail -2)"
 sudo docker rm -f relay-rig-xhttp >/dev/null
-sudo morzer task run facts --output 2>/dev/null | grep -qF "\"cdn_path\": \"${cp}\"" || die "the facts do not carry the CDNs' path"
+grep -qF "\"cdn_path\": \"${cp}\"" <(sudo morzer task run facts --output 2>/dev/null) || die "the facts do not carry the CDNs' path"
 echo "${0##*/}: relay-entry gives the CDNs' path, and a device disguised for a CDN gets out by it"
 # cdn_only: the line ends with cdn-only, the facts say so, and with no CDN
 # relay-entry refuses, as devices would get nothing through the relay.
 set_config cdn_only=true
 [[ $(entry) == *" cdn=${domain},cdn-b.test"*" cdn-only" ]] || die "relay-entry does not end the line with cdn-only under cdn_only=true"
-sudo morzer task run facts --output 2>/dev/null | grep -qF '"cdn_only": true' || die "the facts do not carry cdn_only"
+grep -qF '"cdn_only": true' <(sudo morzer task run facts --output 2>/dev/null) || die "the facts do not carry cdn_only"
 set_config cdn_hosts=none
 ! sudo morzer task run relay-entry --output -- 127.0.0.1 >/dev/null 2>&1 ||
   die "relay-entry prints a line under cdn_only=true with no CDN"

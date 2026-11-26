@@ -70,7 +70,7 @@ got=$(curl -fsS --max-time 30 --retry 5 --retry-delay 2 --retry-all-errors \
 echo "${0##*/}: a CDN sending its own name as SNI and Host gets through, the site answering under any name"
 
 sudo morzer config set cdn_hosts=none >/dev/null || die "could not unset cdn_hosts"
-! sudo morzer task run client-config --output -- --full | grep -q '%20%C2%B7%20cdn' ||
+! grep -q '%20%C2%B7%20cdn' <(sudo morzer task run client-config --output -- --full) ||
   die "a CDN link is still printed with cdn_hosts=none"
 sudo docker rm -f dotdash-rig-cdn >/dev/null
 echo "${0##*/}: with cdn_hosts=none, no CDN link"
