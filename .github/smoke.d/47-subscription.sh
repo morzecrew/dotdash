@@ -70,6 +70,27 @@ served=$(fetch "${url}" | base64 -d 2>/dev/null || true)
 [ "${served}" = "$(links_of)" ] || die "the subscription does not serve the links client-config prints"
 echo "${0##*/}: client-config prints a device's URL alone, and it serves exactly its links"
 
+# Restarted, the service writes every file again, each renamed over the old
+# one, never deleted first: a live URL keeps answering throughout.
+codes=$(mktemp)
+since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+(while :; do status "${url}" >>"${codes}"; echo >>"${codes}"; done) &
+poll=$!
+sudo docker restart "$(service_container subscription)" >/dev/null
+for _ in $(seq 60); do
+  sudo docker logs --since "${since}" "$(service_container subscription)" 2>&1 | grep -q '^subscription: ' && break
+  sleep 1
+done
+kill "${poll}"
+wait "${poll}" 2>/dev/null || true
+sudo docker logs --since "${since}" "$(service_container subscription)" 2>&1 | grep -q '^subscription: ' ||
+  die "the subscription service did not write the files again after a restart"
+[ -s "${codes}" ] || die "the live URL was never asked while the service wrote the files again"
+! grep -qvx 200 "${codes}" ||
+  die "a live URL answered other than 200 while the service wrote the files again: $(sort "${codes}" | uniq -c | tr '\n' ' ')"
+rm -f "${codes}"
+echo "${0##*/}: a live URL keeps answering while the service writes the files again"
+
 if sudo grep -qF '  exit_ipv4_url:' /opt/dotdash/current/manifest.yaml; then
   sudo morzer config set exit_ipv4_url=http://11.99.0.10:8000/ip4 exit_info_url=http://11.99.0.10:8000/info >/dev/null ||
     die "could not point the title at the rig's stand-ins"

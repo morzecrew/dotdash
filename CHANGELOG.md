@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A `servers` that names no server, such as ` , `, stopped `client-config` and the subscriptions with no message. It now means this server alone, as an empty `servers` does, with a warning.
 
+- Subscriptions fit about 1000 devices, up from about 10 to 30, on a new 512 MiB in-memory volume that takes only what the files fill. The 4 MiB `dotdash_subscription` before it is left behind, empty, for `sudo docker volume rm dotdash_subscription` after the update.
+
+- A device's subscription URL no longer answers 404 while the service writes the files again after a change: the files of deleted devices or a rotated key go first, and each live one is replaced in place. A full volume now leaves the last files served, where every URL used to go.
+
 ### Security
 
 - A server takes a `relays` line only when its host, site, public key, short id, VLESS encryption and XHTTP path each have their shape, and gives no mKCP link through a `kcp=` field that isn't whole. A bad line is left out and named by its line number, so a tampered one can't rewrite or break every device's config.

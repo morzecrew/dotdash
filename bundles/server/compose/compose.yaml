@@ -153,7 +153,7 @@ services:
       # 1777, and a fresh volume copies it, so uid 65532 can write there.
       - caddy_data:/data
       # Each device's subscription file, which the subscription service writes.
-      - subscription:/srv/sub:ro
+      - subscriptions:/srv/sub:ro
       # The subscriptions' title, the exit-title service's.
       - exit:/srv/exit:ro
     tmpfs:
@@ -225,7 +225,7 @@ services:
         target: /opt/xray
         image:
           subpath: usr/local/bin
-      - subscription:/sub
+      - subscriptions:/sub
     secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, subscription_key, kcp_seed]
     # Healthy once every device's file is written; restarted for a changed
     # secret or parameter, it is not until they are written again.
@@ -327,8 +327,13 @@ networks:
 volumes:
   caddy_data: {}
   # In memory: written at every start, and kept by nothing that outlives it.
-  subscription:
-    driver_opts: {type: tmpfs, device: tmpfs, o: "size=4m,uid=65532,gid=65532,mode=0700"}
+  # Room for about 1000 devices at some 420 KB each (three servers, eight
+  # relays, every profile); it takes only what the files fill, counted to
+  # the subscription service, which has no memory limit for them to hit.
+  # Named apart from the 4 MiB "subscription" before it, as Compose keeps an
+  # existing volume's options; that one is left behind, empty.
+  subscriptions:
+    driver_opts: {type: tmpfs, device: tmpfs, o: "size=512m,uid=65532,gid=65532,mode=0700"}
   exit:
     driver_opts: {type: tmpfs, device: tmpfs, o: "size=64k,uid=65532,gid=65532,mode=0700"}
   # The openflux profile's state: each device's key, rooms and link.
