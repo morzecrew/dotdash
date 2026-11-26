@@ -441,7 +441,7 @@ tasks:
     args: true
     timeout: 1m
   facts:
-    description: "Print this server's facts as JSON, which morzer publishes to the authority it follows: its domain and ports, the REALITY public key and the VLESS encryption string; no credentials"
+    description: "Print this server's facts as JSON, which morzer publishes to its authority: its domain and ports, REALITY public key, VLESS encryption and certificate's days left; no credentials"
     service: client-config
     command: ["sh", "/task/facts.sh"]
     timeout: 1m

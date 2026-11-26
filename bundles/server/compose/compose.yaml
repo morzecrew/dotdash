@@ -207,6 +207,8 @@ services:
         target: /opt/xray
         image:
           subpath: usr/local/bin
+      # Caddy's data, for the days left on the site's certificate (facts).
+      - caddy_data:/caddy-data:ro
     secrets: [vless_clients, vless_seed, xhttp_path, reality_key, reality_short_id, subscription_key, kcp_seed]
 
   # Writes each device's subscription into the subscription volume at start
