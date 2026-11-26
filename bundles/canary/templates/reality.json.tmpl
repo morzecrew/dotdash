@@ -4,6 +4,15 @@ probe-split (10810) with the ClientHello re-wrapped in TLS records of
 while the split one gets through is a box blocking the server's name by SNI,
 reassembling TCP but not TLS records (dotdash-lab #50): facts reports the
 split one as reality_split, and the manager hands devices the split. */ -}}
+{{- /* What an authority may set (the manifest's managed:) goes into the JSON
+of every template as it is, so a value that would end a string there is
+refused. Every template renders on every apply: this guards them all. */ -}}
+{{- range $name := split " " "dotdash_server dotdash_address dotdash_public_key" }}
+{{- $v := index $.Parameters $name }}
+{{- if or (contains $v "\"") (contains $v "\\") (contains $v "{") (contains $v "}") (contains $v " ") (contains $v "\t") (contains $v "\n") (contains $v "\r") }}
+{{- required (printf "%s holds a quote, a backslash, a brace or a space, which no name, address or key has" $name) "" }}
+{{- end }}
+{{- end }}
 {
   "log": {"loglevel": "warning", "access": "none"},
   "inbounds": [{"tag": "probe", "listen": "0.0.0.0", "port": 10809, "protocol": "http"},
