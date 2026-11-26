@@ -26,6 +26,7 @@ def test_a_minimal_roster_loads():
         '[[server]]\nname = "a"\ncdn_host = ["x"]',  # a mistyped field
         'devices = ["phone"]\n[[client]]\nname = "home"\ndevice = "phone"',  # no subscription
         'pools = { a = ["laptop", "a b"] }',
+        '[[server]]\nname = "a"\nid = "inst_A"\n[[relay]]\nname = "r1"\nid = "inst_A"',  # one installation, two machines
         '[[relay]]\nname = "x"\nvia = ["nobody"]',
         '[[relay]]\nname = "x"\nvia = ["x"]',
         '[[relay]]\nname = "x"\nvia = ["y"]\n[[relay]]\nname = "y"\nvia = ["z"]\n[[relay]]\nname = "z"\nvia = ["x"]',

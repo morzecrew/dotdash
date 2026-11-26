@@ -4,6 +4,8 @@ BURN_AFTER readings in a row. A canary refreshes its facts before every fleet
 publish, so a reading is its facts' checked_at, and the same one read again
 counts once."""
 
+import time
+
 from .roster import Network
 
 BURN_AFTER = 3
@@ -22,6 +24,12 @@ LATENCIES = 24
 # moment of its own, so one that missed a publish, or went quiet, falls out
 # rather than holding an old success against a fresh failure.
 FRESH = 90 * 60
+# A canary's clock may run this far ahead of the manager's. A reading from
+# further on is dropped: it would make every honest one look old (FRESH), and
+# until real time caught up, keep the verdict it gave (a reading counts once).
+AHEAD = 600
+# A site's certificate with fewer days left than this is said (certs).
+CERT_DAYS = 14
 
 
 def _watched(f: dict, kind: str) -> tuple[str, str]:
@@ -68,12 +76,14 @@ def record(h: dict, seen: list[dict]) -> None:
         del h["latency"][p][:-LATENCIES]
 
 
-def judge(net: Network, facts: dict, health: dict, rows: dict | None = None) -> tuple[set[str], list[str]]:
+def judge(net: Network, facts: dict, health: dict, rows: dict | None = None,
+          now: float | None = None) -> tuple[set[str], list[str]]:
     """Read the canaries' new verdicts into health, the state's record per
     machine, and return the burnt relays to leave out and what to say. rows,
     the machines' own fleet rows (Morzer.rows), say whether each looks
-    blocked or down."""
+    blocked or down. A reading from more than AHEAD past now is dropped."""
     rows = rows or {}
+    now = time.time() if now is None else now
     targets = [*net.server, *net.relay]
     for gone in set(health) - {t.name for t in targets}:
         del health[gone]
@@ -89,7 +99,8 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None) -> 
         # here; a canary offline itself says nothing about its target.
         seen = [f for c in net.canary if c.watches == t.name and (f := facts.get(c.name))
                 and (f.get("server"), f.get("address")) == expect and f.get("internet") is not False
-                and isinstance(f.get("checked_at"), int) and isinstance(f.get("paths"), dict)]
+                and isinstance(f.get("checked_at"), int) and f["checked_at"] <= now + AHEAD
+                and isinstance(f.get("paths"), dict)]
         if not seen:
             continue
         at = max(f["checked_at"] for f in seen)
@@ -116,7 +127,9 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None) -> 
             h["split"] = 0 if any(said) else h.get("split", 0) + 1
         else:
             h.pop("split", None)
-        if ups:
+        # A relay that gets through only with its hello split is reachable:
+        # devices' Xray configs split it (splits), so it is not burnt.
+        if ups or h.get("split") == 0:
             h["fails"] = 0
             h.pop("since", None)
         else:
@@ -179,15 +192,20 @@ def spares(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[se
 
 def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[dict[str, set[str]], list[str]]:
     """The paths (reality, xhttp, mkcp, hysteria2) each relay's canaries got through none
-    of in BURN_AFTER readings in a row while another path got through: devices
+    of in BURN_AFTER readings in a row while another path, or REALITY with its
+    hello split, got through: devices
     stop getting those through it, and keep the rest. A path blocked on every
     relay that has it is likelier the canaries' network refusing that transport
     than every relay losing it in the same hour: kept everywhere, and said.
     A server's are reported only, as for a burnt server."""
     def out(name: str) -> set[str]:
-        paths = health.get(name, {}).get("paths", {})
+        h = health.get(name, {})
+        paths = h.get("paths", {})
         gone = {p for p, n in paths.items() if n >= BURN_AFTER}
-        return gone if gone != set(paths) else set()
+        # Every path blocked burns it instead, unless its split hello gets
+        # through: then off= takes them from share links, and split keeps
+        # REALITY in devices' Xray configs.
+        return gone if gone != set(paths) or h.get("split") == 0 else set()
 
     judged = [r.name for r in net.relay if r.name not in burnt and r.name in facts and not facts[r.name].get("cdn_only")]
     off = {r: gone for r in judged if (gone := out(r))}
@@ -204,6 +222,23 @@ def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[d
     say += [f"blocked: server {s.name}: {', '.join(sorted(gone))} in {BURN_AFTER} readings; reported only"
             for s in net.server if s.name not in burnt and (gone := out(s.name))]
     return off, say
+
+
+def certs(net: Network, facts: dict) -> list[str]:
+    """A line for each server and relay whose site's certificate runs out in
+    under CERT_DAYS, by its facts' cert_days (absent: unknown, nothing said).
+    Renewal starts well before (a month ahead, for a 90-day certificate), so
+    this is renewal failing; once it runs out, XHTTP on the site, Hysteria2
+    and the CDN paths break while REALITY works, which canaries read as
+    censorship."""
+    out = []
+    for m in [*net.server, *net.relay]:
+        days = facts.get(m.name, {}).get("cert_days")
+        if isinstance(days, int) and days < CERT_DAYS:
+            left = f"ran out {-days} day(s) ago" if days < 0 else f"runs out in {days} day(s)"
+            out.append(f"certificate: {m.kind} {m.name}: its site's certificate {left}: renewal is failing, check its "
+                       "ACME (for acme-dns, that it runs and answers)")
+    return out
 
 
 def splits(net: Network, health: dict, burnt: set[str] | frozenset[str] = frozenset()) -> tuple[set[str], list[str]]:
@@ -228,17 +263,20 @@ def splits(net: Network, health: dict, burnt: set[str] | frozenset[str] = frozen
     return servers | relays, say
 
 
-def events(before: dict, after: dict, stood: dict, stands: dict, now: int) -> list[list]:
+def events(before: dict, after: dict, stood: dict, stands: dict, now: int,
+           roster: set[str] | frozenset[str] = frozenset()) -> list[list]:
     """What changed between two health records (judge's, before and after a
     sync), as [at, machine, what], for report: watched (its canaries' first
-    reading), burnt, back, gone (out of the roster), off:<path> and on:<path>;
-    and for a spare, stands-in:<relay> and waits, from health.spares' stands
-    before (stood) and now. at is the reading's checked_at, else now."""
+    reading), burnt, back, gone (out of the roster), unwatched (in the roster,
+    its servers' and relays' names, but judged no more: turned cdn-only),
+    off:<path> and on:<path>; and for a spare, stands-in:<relay> and waits,
+    from health.spares' stands before (stood) and now. at is the reading's
+    checked_at, else now."""
     out = []
     for name in sorted(set(before) | set(after)):
         b, a = before.get(name), after.get(name)
         if a is None:
-            out.append([now, name, "gone"])
+            out.append([now, name, "unwatched" if name in roster else "gone"])
             continue
         at = a.get("at") or now
         if b is None:

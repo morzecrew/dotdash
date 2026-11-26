@@ -95,6 +95,39 @@ def test_direct_false_sends_client_machines_through_an_own_site_relay(st, facts)
     assert docs["home"]["secrets"]["subscription_url"] == f"https://www.example.net/{token(st, 'phone')}"
 
 
+def test_direct_false_takes_the_first_own_site_relay_the_devices_pools_give_it(st, facts):
+    roster = lambda pools: loads(ROSTER.replace("subscription = true", "subscription = true\ndirect = false")
+                                 .replace('pools = { a = ["laptop", "203.0.113.5"] }', pools) + '[[relay]]\nname = "r2"\n')
+    own = {**RELAY, "own_site": {"xhttp_path": "X"}}
+    two = {**own, "entry_host": "198.51.100.9", "site": "two.example.net", "cdn_hosts": []}
+    render_ = lambda net, r2: render(net, {**st, "ids": {**st["ids"], "relay-r2": "id"}}, {**facts, "r1": own, "r2": r2})
+    # phone is in no pool: it sees every relay, r1 first.
+    docs, _ = render_(roster('pools = { a = ["laptop", "203.0.113.5"] }'), two)
+    assert docs["home"]["secrets"]["subscription_url"] == f"https://www.example.net/{token(st, 'phone')}"
+    # phone's pool holds r2; r1 is pool a's alone, which phone isn't in.
+    pooled = roster('pools = { a = ["laptop", "203.0.113.5"], b = ["phone", "198.51.100.9"] }')
+    docs, _ = render_(pooled, two)
+    assert docs["home"]["secrets"]["subscription_url"] == f"https://two.example.net/{token(st, 'phone')}"
+    # r2 without a site of its own: none phone sees fetches subscriptions.
+    docs, waiting = render_(pooled, {k: v for k, v in two.items() if k != "own_site"})
+    assert "home" not in docs and any(w.startswith("home: waits for an own-site relay that phone's pools give it")
+                                      for w in waiting)
+
+
+def test_servers_whose_ports_or_profiles_differ_are_said(net, st, facts):
+    pbk = facts["a"]["public_key"]
+    both = {**facts, "b": {**facts["a"], "domain": "b.example.net", "public_key": pbk}}
+    assert not any(w.startswith("servers differ") for w in render(net, st, both)[1])
+    kcp = {"port": 8447, "header": "dtls", "open": "none"}
+    both = {**both, "a": {**both["a"], "kcp": kcp, "hysteria2_port": 443},
+            "b": {**both["b"], "kcp": {**kcp, "open": "quic"}, "https_port": 8443}}
+    said = [w for w in render(net, st, both)[1] if w.startswith("servers differ")]
+    assert said == [("servers differ in https_port, kcp, hysteria2_port: each server's links name the others with its own, "
+                     "so some are dead; give every server the same profiles and ports; relays take 443, a's")]
+    # b not ready yet: nothing to compare.
+    assert not any(w.startswith("servers differ") for w in render(net, st, {**both, "b": {**both["b"], "public_key": "old"}})[1])
+
+
 def test_nothing_applied_yet(net, st):
     docs, waiting = render(net, st, {})
     assert set(docs) == {"a", "b"} and docs["a"]["unset"] == {"parameters": ["relays"]}
@@ -174,12 +207,15 @@ def test_a_relay_goes_via_another_which_lets_it_in(st, facts):
     # A release from before via says nothing of it: x waits rather than going to the servers.
     docs, waiting = render(net, st, {**facts, "x": {**RELAY, "entry_host": "198.51.100.9"}})
     assert "x" not in docs and "x: its release predates via: update it" in waiting
-    # Off via again, a release that takes it has it unset; one that doesn't is left alone.
+    # Off via again, one an earlier document gave via (the state's via) has it
+    # unset; any other is never told of via, which its release may refuse.
     plain = loads(ROSTER + '[[relay]]\nname = "x"\n')
-    docs, _ = render(plain, st, {**facts, "x": {**RELAY, "via": True}})
+    docs, _ = render(plain, {**st, "via": ["x"]}, {**facts, "x": {**RELAY, "via": True}})
     assert docs["x"]["unset"] == {"parameters": ["via", "via_link", "via_fingerprint"]} and "via" not in docs["x"]["parameters"]
-    docs, _ = render(plain, st, {**facts, "x": RELAY})
-    assert "unset" not in docs["x"] and "via" not in docs["x"]["parameters"]
+    for f in {**RELAY, "via": True}, RELAY:
+        docs, _ = render(plain, st, {**facts, "x": f})
+        assert "unset" not in docs["x"] and "via" not in docs["x"]["parameters"]
+        assert "unset" not in docs["r1"]
 
 
 def test_a_relay_waits_for_the_facts_of_the_relay_it_goes_via(st, facts):

@@ -13,17 +13,15 @@ import statistics
 import time
 from collections import Counter
 
+from .health import _median
 from .roster import Network
+from .traffic import day
 
 
 def span(seconds: float) -> str:
     seconds = int(max(seconds, 0))
     d, h, m = seconds // 86400, seconds % 86400 // 3600, seconds % 3600 // 60
     return f"{d}d {h}h" if d else f"{h}h {m}m" if h else f"{m}m"
-
-
-def day(t: int) -> str:
-    return time.strftime("%Y-%m-%d", time.gmtime(t))
 
 
 def history(events: list, name: str, now: int) -> dict:
@@ -37,7 +35,8 @@ def history(events: list, name: str, now: int) -> dict:
             h["watched"] = at
         elif what == "burnt":
             h["burns"].append([at, None])
-        elif what == "back" and h["burns"] and h["burns"][-1][1] is None:
+        elif what in ("back", "unwatched") and h["burns"] and h["burns"][-1][1] is None:
+            # Judged no more, it can't come back: its burn ends there.
             h["burns"][-1][1] = at
         elif what == "gone":
             h["gone"] = at
@@ -58,11 +57,6 @@ def history(events: list, name: str, now: int) -> dict:
 PATHS = ("reality", "xhttp", "xhttp-reality", "mkcp", "hysteria2")
 
 
-def _median(values: list) -> int:
-    values = sorted(values)
-    return values[(len(values) - 1) // 2]
-
-
 def paths(names: list[str], events: list, now: int, health: dict) -> list[str]:
     """How long each path of each server and relay lasted before it was first
     blocked, a burn included ("+": never yet, a lower bound), and per path
@@ -70,7 +64,6 @@ def paths(names: list[str], events: list, now: int, health: dict) -> list[str]:
     A machine's paths are those its canaries check (health) and those that
     ever went off (the log), so a gone relay's count too."""
     rows, blocked, never = [], {p: [] for p in PATHS}, {p: [] for p in PATHS}
-    relays = set()
     for name in names:
         h = history(events, name, now)
         if h["watched"] is None:
@@ -90,7 +83,6 @@ def paths(names: list[str], events: list, now: int, health: dict) -> list[str]:
                 cells.append(span(end - h["watched"]) + "+")
                 never[p].append(end - h["watched"])
         rows.append((name, cells))
-        relays.add(name)
     if not rows:
         return []
     width = max(len(p) for p in PATHS) + 1
@@ -185,7 +177,9 @@ def report(net: Network, events: list, now: int, stands: dict | None = None,
             continue
         kind = kinds.get(name, "gone")
         seen = h["watched"] is not None
-        status = ("gone" if h["gone"] else "burnt" if h["burnt_now"] else "standing" if name in stands
+        # Gone once out of the roster, whatever the log says: one written before
+        # unwatched says gone of a relay that turned cdn-only.
+        status = ("gone" if kind == "gone" else "burnt" if h["burnt_now"] else "standing" if name in stands
                   else "waiting" if kind == "spare" else "up" if seen else "unseen")
         lasted = "-" if h["lasted"] is None else span(h["lasted"]) + ("+" if h["lasting"] else "")
         off = ", ".join(f"{p}×{n}" for p, n in sorted(h["off"].items())) or "-"

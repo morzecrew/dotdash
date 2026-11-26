@@ -81,7 +81,9 @@ device = "phone"                            # the device whose subscription it f
 With `direct = false` the servers keep their addresses out of devices'
 links ([direct](server/devices.md#keeping-the-servers-out-of-devices-links)),
 and client machines fetch their subscription through an own-site relay,
-waiting for one. Left out, each server keeps its own setting.
+waiting for one: the first that their device's `pools` give it, as the
+servers choose a device's relays. Left out, each server keeps its own
+setting.
 
 A relay with `via` goes through those relays instead of the servers
 ([Through another relay](relay/operations.md#through-another-relay)): they
@@ -148,7 +150,9 @@ ssh root@a.example 'sudo sh -c …' | dotdash-manager adopt a
 
 It says which devices keep their links, which are new to the server, and
 which the server has but the roster doesn't, which lose access at the next
-`sync` unless you add them. Finish a [key rotation](#rotating-the-reality-key)
+`sync` unless you add them. It also names the server's desktops missing from
+the roster's `desktops`, which would get CDN links at the next `sync` unless
+you add them there. Finish a [key rotation](#rotating-the-reality-key)
 first: only the current key is taken. Once the manager has published, `adopt`
 refuses, since it would change the keys on every machine again; `--force` when
 that is meant.
@@ -169,14 +173,40 @@ dotdash-manager status           # what each machine applied and refused
 days: a document expires after seven. Run it from a timer to keep it ahead of
 that. A device added to `devices` reaches every server and relay at the next
 sync; one removed loses its access everywhere, each machine within its next
-cycle.
+cycle. The manager forgets its id at that sync, so a device added back later
+gets a new one: new links and a new subscription URL, and its old ones let no
+one in. The same goes for a relay's or canary's own id and a client machine's
+proxy password. That's how to revoke a device whose link leaked: take it out,
+`sync`, then add it back.
+
+Before it uses a machine's facts, `sync` checks them. Facts no release
+prints are refused: a value holding whitespace, a quote, a backslash, a brace
+or a control character, or a field missing or of the wrong type. `sync` names
+the machine and the field, and leaves the facts out. Two relays whose facts
+name the same host don't move it in the pools when one burns or stands in.
+
+When a machine's facts can't be read, or are refused, its last good facts
+stand in for up to a day, and `sync` prints why, the read's error included. A
+passing outage of the target, or a wrong `identity` file, then doesn't take a
+relay off every device at once. After a day the machine is left out of every
+document until a read succeeds, and `sync` says so in capitals.
 
 The manager keeps what it made in `dotdash-state.json` beside the roster: the
-shared keys, every device's id and the client machines' proxy passwords. It is
+shared keys, every device's id, the client machines' proxy passwords and each
+machine's last good facts. It is
 written with mode 0600 and holds every credential in the network: back it up
 like `authority.key`. One run at a time changes it: a run holds
 `dotdash-state.lock` beside it, and another started meanwhile, such as a timer's
 `sync` during a `rotate`, waits for it. `sync --dry-run` leaves it as it was.
+
+With no state beside a roster that names a joined machine, every command but
+`adopt` refuses: a new state would give every server new keys and cut every
+device off. That's a checkout the state wasn't copied to, so copy it there.
+To start over on new keys anyway, put `--new-state` before the command:
+
+```sh
+dotdash-manager --new-state sync
+```
 
 ## Burnt relays
 
@@ -208,6 +238,9 @@ replace it. A row that doesn't verify says nothing either way.
 - **A canary whose own network is down says nothing**, given a `control_url`:
   a site its network reaches without dotdash. A reading where that fails
   doesn't count. Without one, an offline canary looks like a burnt relay.
+- **A canary's clock may run ahead by ten minutes.** A reading stamped
+  further ahead of the manager's clock doesn't count, so a canary whose clock
+  is wrong can't burn a relay alone or keep it burnt.
 - **Every relay at once is kept.** If every relay would be left out in the
   same sync, the manager keeps them all and says to check the canaries'
   network instead.
@@ -257,8 +290,9 @@ knowing when you pick where the next one goes.
 ## How long relays last
 
 Every `sync` logs what changed: a server or relay its canaries start
-watching, one that burns or comes back, one that leaves the roster, a path
-going off or on, a spare standing in or waiting again. `report` reads that
+watching, one that burns or comes back, one that leaves the roster, a relay
+turning CDN-only (no longer judged, so a burn ends there), a path going off or
+on, a spare standing in or waiting again. `report` reads that
 log:
 
 ```sh
@@ -339,7 +373,7 @@ It names a device whose day reached five times its median day and at least
 2 GB, once it has 7 days to judge by:
 
 ```
-phone-2: 14.2 GB on 2026-12-03, against 0.4 GB on its usual day: if its link may have leaked, delete the device and add it again
+phone-2: 14.2 GB on 2026-12-03, against 0.4 GB on its usual day: if its link may have leaked, take the device out, sync, and add it back
 ```
 
 `sync` prints yesterday's and today's; `report` ends with the last 30 days'.
@@ -348,6 +382,22 @@ it ever did. A long video call or a big download can too, so ask before
 deleting the device. Only counts reach the manager, never an address. They
 are an hour behind at most, as the facts refresh hourly. A server or relay
 that restarts loses only what it counted since the last refresh.
+
+## Certificates
+
+The facts of servers and relays carry how many days their site's certificate
+has left (`cert_days`). Under 14, `sync` says so, and `report` too from the
+facts the last `sync` kept:
+
+```
+certificate: relay r1: its site's certificate runs out in 9 day(s): renewal is failing, check its ACME (for acme-dns, that it runs and answers)
+```
+
+Renewal starts well before that, so it has been failing. Once the
+certificate runs out, XHTTP on the site, Hysteria2 and the CDN links stop
+while REALITY keeps working, and canaries take those paths off as if they
+were blocked. A machine whose facts don't say, such as one on an earlier
+release, gets no warning.
 
 ## Rotating the REALITY key
 
@@ -371,7 +421,9 @@ dotdash-manager sync
   keeps the old one second. Subscriptions, client machines and relays move to
   the new key, and devices still on the old one keep getting in.
 - **`finish`** refuses for a week after `swap`, the devices' time to fetch
-  their subscriptions or get new links. It then turns the old key off.
+  their subscriptions or get new links. It then turns the old key off, and
+  removes it from the servers' secret stores, so their later backups no longer
+  hold it.
 - `rotate` alone says where it stands. `--force` skips the canary check or
   the week, when you know better.
 
@@ -422,7 +474,8 @@ split: server a: REALITY gets through only with its hello split into TLS records
 - **Relays too.** A relay's canaries can find the same of its site's name.
   Its line then gets `split` beside `off=reality`. Share links lose REALITY
   through it, as for any blocked path, while devices' Xray configs keep it,
-  split. A burnt relay stays out.
+  split. A relay with REALITY as its only path isn't burnt while its split
+  hello gets through. A burnt relay stays out.
 
 ## What it leaves alone
 
@@ -430,3 +483,8 @@ The upstreams, ports, profiles, domains and anything else a machine alone
 knows stay the operator's, set on that machine as before. A value the manager
 sets is refused by `config set` on the machine while sync is on; `--force`
 changes it until the next document.
+
+Give every server the same profiles and transport ports, though: each server's
+links and configs name the others with its own `https_port`, XHTTP with
+REALITY, mKCP (port, header and opener) and Hysteria2 ports. `sync` says when
+the servers that applied the keys differ in any of those.
