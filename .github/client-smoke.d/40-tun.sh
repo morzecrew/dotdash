@@ -205,7 +205,7 @@ through 15 || { routes; die "with the kill switch and Xray back, a plain request
 
 sudo morzer config unset installation.profile >/dev/null
 ip -o link show Meta >/dev/null 2>&1 && die "back on the base files, the TUN interface is still there"
-ip rule | grep -qE '^900[0-2]:' && { routes; die "back on the base files, the kill switch's rules are still there"; }
+ip rule | grep -qE '^(899[89]|900[0-2]):' && { routes; die "back on the base files, the kill switch's rules are still there"; }
 printf 'http://%s:8088/sub' "${host}" | sudo morzer secret set subscription_url >/dev/null
 sudo morzer config unset probe_url >/dev/null
 sudo morzer config unset direct_rules >/dev/null
