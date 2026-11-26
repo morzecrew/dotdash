@@ -10,10 +10,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qF 'device-traffic: [compose/device-traffic.yaml]' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
 secrets=/run/dotdash/secrets
 before=$(sudo cat "${secrets}/vless_clients")
 restore() {

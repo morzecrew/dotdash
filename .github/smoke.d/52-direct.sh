@@ -13,11 +13,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qx '  direct:' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates direct"
-  exit 0
-fi
-
 domain=$(sudo docker exec "$(service_container caddy)" printenv DOMAIN)
 restore() {
   sudo morzer config set direct=true >/dev/null 2>&1 || true

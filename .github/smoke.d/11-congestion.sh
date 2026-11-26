@@ -8,11 +8,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qF '  tcp_congestion:' /opt/dotdash/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
-
 target=http://11.99.0.10:8000/
 cc() { sudo docker inspect -f '{{index .HostConfig.Sysctls "net.ipv4.tcp_congestion_control"}}' "$(service_container gate)"; }
 gets_through() { # <socks port>
@@ -31,8 +26,6 @@ echo "11-congestion.sh: the gate sends on BBR in its own namespace, and on cubic
 
 # Path-MTU probing on every connection, and a cap on unsent bytes, beside it.
 sysctl() { sudo docker inspect -f "{{index .HostConfig.Sysctls \"$1\"}}" "$(service_container gate)"; }
-if sudo grep -qF 'tcp_mtu_probing' /opt/dotdash/current/compose/compose.yaml; then
-  [ "$(sysctl net.ipv4.tcp_mtu_probing)" = 2 ] || die "the gate's tcp_mtu_probing is '$(sysctl net.ipv4.tcp_mtu_probing)', not 2"
-  [ "$(sysctl net.ipv4.tcp_notsent_lowat)" = 131072 ] || die "the gate's tcp_notsent_lowat is '$(sysctl net.ipv4.tcp_notsent_lowat)', not 131072"
-  echo "11-congestion.sh: the gate probes the path's MTU on every connection and holds at most 128 KiB unsent"
-fi
+[ "$(sysctl net.ipv4.tcp_mtu_probing)" = 2 ] || die "the gate's tcp_mtu_probing is '$(sysctl net.ipv4.tcp_mtu_probing)', not 2"
+[ "$(sysctl net.ipv4.tcp_notsent_lowat)" = 131072 ] || die "the gate's tcp_notsent_lowat is '$(sysctl net.ipv4.tcp_notsent_lowat)', not 131072"
+echo "11-congestion.sh: the gate probes the path's MTU on every connection and holds at most 128 KiB unsent"

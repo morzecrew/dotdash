@@ -13,12 +13,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-# A release from before the site's headers covered errors has nothing to check.
-if ! sudo grep -qF 'handle_errors' /opt/dotdash/current/caddy/Caddyfile; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
-
 caddy=$(service_container caddy)
 domain=$(sudo docker exec "${caddy}" printenv DOMAIN)
 pid=$(sudo docker inspect -f '{{.State.Pid}}' "${caddy}")

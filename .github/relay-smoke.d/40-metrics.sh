@@ -10,11 +10,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qF 'metrics: [compose/metrics.yaml]' /opt/dotdash-relay/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
-
 dir=/rig/textfile
 sudo install -d -o 65532 -g 65532 -m 0755 "${dir}"
 sudo morzer config set "metrics_textfile=${dir}" >/dev/null || die "could not set metrics_textfile"

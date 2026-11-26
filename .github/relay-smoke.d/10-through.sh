@@ -44,26 +44,22 @@ echo "10-through.sh: a listed device gets out through the relay and dotdash; an 
 
 # ipv6=block: IPv6 destinations end at the relay, in a blackhole after the
 # servers' outbounds, and the listed device still gets out by name.
-if sudo grep -q '^  ipv6:$' /opt/dotdash-relay/current/manifest.yaml; then
-  sudo morzer config set ipv6=block >/dev/null || die "could not set ipv6=block"
-  sudo jq -e '.outbounds[-1] == {tag: "block", protocol: "blackhole"} and .outbounds[0].tag == "dotdash-0"
-    and .routing.rules[0] == {type: "field", ip: ["::/0"], outboundTag: "block"}' \
-    /etc/dotdash-relay/xray.json >/dev/null ||
-    { sudo morzer config set ipv6=allow >/dev/null 2>&1 || true
-      die "ipv6=block did not end IPv6 in a blackhole: $(sudo jq -c '{outbounds: [.outbounds[].tag], routing}' /etc/dotdash-relay/xray.json)"; }
-  code=$(fetch 18081)
-  sudo morzer config set ipv6=allow >/dev/null || die "could not set ipv6=allow"
-  [ "${code}" = 204 ] || die "with ipv6=block the listed device got ${code}, not 204"
-  sudo jq -e '.routing == null and ([.outbounds[].tag] | index("block") == null)' /etc/dotdash-relay/xray.json >/dev/null ||
-    die "back on ipv6=allow, the block remains"
-  echo "10-through.sh: ipv6=block ends IPv6 at the relay, and the device still gets out"
-fi
+sudo morzer config set ipv6=block >/dev/null || die "could not set ipv6=block"
+sudo jq -e '.outbounds[-1] == {tag: "block", protocol: "blackhole"} and .outbounds[0].tag == "dotdash-0"
+  and .routing.rules[0] == {type: "field", ip: ["::/0"], outboundTag: "block"}' \
+  /etc/dotdash-relay/xray.json >/dev/null ||
+  { sudo morzer config set ipv6=allow >/dev/null 2>&1 || true
+    die "ipv6=block did not end IPv6 in a blackhole: $(sudo jq -c '{outbounds: [.outbounds[].tag], routing}' /etc/dotdash-relay/xray.json)"; }
+code=$(fetch 18081)
+sudo morzer config set ipv6=allow >/dev/null || die "could not set ipv6=allow"
+[ "${code}" = 204 ] || die "with ipv6=block the listed device got ${code}, not 204"
+sudo jq -e '.routing == null and ([.outbounds[].tag] | index("block") == null)' /etc/dotdash-relay/xray.json >/dev/null ||
+  die "back on ipv6=allow, the block remains"
+echo "10-through.sh: ipv6=block ends IPv6 at the relay, and the device still gets out"
 # The relay ends devices' TCP, so it sends their downloads, on BBR in its own
 # namespace (tcp_congestion); running at all is the kernel's acceptance.
-if sudo grep -qF '  tcp_congestion:' /opt/dotdash-relay/current/manifest.yaml; then
-  cc=$(sudo docker inspect -f '{{index .HostConfig.Sysctls "net.ipv4.tcp_congestion_control"}}' "$(service_container xray)")
-  [ "${cc}" = bbr ] || die "the relay's congestion control is '${cc}', not bbr"
-  [ "$(fetch 18081)" = 204 ] || die "the listed device does not get out with the relay on BBR"
-  echo "10-through.sh: the relay sends on BBR in its own namespace"
-fi
+cc=$(sudo docker inspect -f '{{index .HostConfig.Sysctls "net.ipv4.tcp_congestion_control"}}' "$(service_container xray)")
+[ "${cc}" = bbr ] || die "the relay's congestion control is '${cc}', not bbr"
+[ "$(fetch 18081)" = 204 ] || die "the listed device does not get out with the relay on BBR"
+echo "10-through.sh: the relay sends on BBR in its own namespace"
 sudo docker rm -f relay-rig-phone >/dev/null

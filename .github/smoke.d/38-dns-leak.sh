@@ -15,10 +15,6 @@ set -euo pipefail
 
 out=$(sudo morzer task run client-config --output)
 config=$(awk '/^Xray client config/{on=1} on && /^\{$/{p=1} p{print} p && /^\}$/{exit}' <<<"${out}")
-if ! jq -e '.outbounds[] | select(.protocol == "dns")' <<<"${config}" >/dev/null; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
 sudo apk add --no-cache -q tcpdump bind-tools >/dev/null || die "could not add tcpdump and dig to the rig"
 
 xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)

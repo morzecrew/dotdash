@@ -20,11 +20,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -q '^  - name: upstreams$' /opt/dotdash/current/secrets.schema.yaml; then
-  echo "${0##*/}: skipped, the installed release predates the upstreams list"
-  exit 0
-fi
-
 xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)
 host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
 log6=/rig/upstream6-log/access.log

@@ -11,11 +11,6 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-if ! sudo grep -qF '  via:' /opt/dotdash-relay/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates via"
-  exit 0
-fi
-
 xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)
 [ -n "${xray}" ] || die "the bundle's pinned xray image is not in the rig"
 keys=$(sudo docker run --rm "${xray}" x25519)

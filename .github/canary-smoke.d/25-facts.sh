@@ -13,11 +13,6 @@
 . "${0%/*}/lib/sites.sh"
 set -euo pipefail
 
-if ! sudo grep -qF '  facts:' /opt/dotdash-canary/current/manifest.yaml; then
-  echo "${0##*/}: skipped, the installed release predates it"
-  exit 0
-fi
-
 facts() {
   local out
   out=$(sudo morzer task run facts --output 2>&1) || die "facts failed: ${out}"
