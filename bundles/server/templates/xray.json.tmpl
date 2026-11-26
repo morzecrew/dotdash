@@ -198,6 +198,33 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
       },
       "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
     },
+    {{- /* XHTTP for the CDNs in front (cdn_hosts), on a path of its own
+    (cdn_xhttp_path), disguised for a CDN, which reads every request, as a
+    relay's CDN inbound is: one path, the session, sequence and padding in
+    cookies (the padding a random token rather than a run of X), no
+    event-stream type on the download, and the upload in headers under a plain
+    name. Devices' CDN links carry the same settings (client-config); a
+    mismatch is a 400. */}}
+    {
+      "tag": "xhttp-cdn",
+      "listen": "0.0.0.0",
+      "port": 8082,
+      "protocol": "vless",
+      "settings": {
+        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
+      },
+      "streamSettings": {
+        "network": "xhttp",
+        "xhttpSettings": {"path": {"$file": "/run/secrets/cdn_xhttp_path"}, "mode": "packet-up",
+          "xPaddingBytes": "64-256", "xPaddingObfsMode": true, "xPaddingMethod": "tokenish",
+          "xPaddingPlacement": "cookie", "xPaddingKey": "csrftoken",
+          "sessionIDPlacement": "cookie", "sessionIDKey": "sessionid",
+          "seqPlacement": "cookie", "seqKey": "seq",
+          "uplinkDataKey": "X-Part", "noSSEHeader": true}
+      },
+      "sniffing": {"enabled": true, "destOverride": ["http", "tls", "quic"], "routeOnly": true}
+    },
 {{- if $xhttpReality }}
     {
       "tag": "xhttp-reality",

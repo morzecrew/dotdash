@@ -65,7 +65,7 @@ jq() { # <filter> <file>: the filter's output, or why the file does not parse
 
 violations=$(jq '
   [.outbounds[]?.tag] as $tags
-  | ([.inbounds[]?.tag] - ["reality", "xhttp", "xhttp-reality", "kcp", "hysteria2", "xdns", "probe",
+  | ([.inbounds[]?.tag] - ["reality", "xhttp", "xhttp-cdn", "xhttp-reality", "kcp", "hysteria2", "xdns", "probe",
       "reality-second", "xhttp-reality-second", "title-ip", "title-info", "openflux"]) as $extra
   | check($tags == ["upstream", "block"] or $tags == ["upstream", "block", "upstream6"];
       "the outbounds are \($tags), not upstream and block (and upstream6)"),

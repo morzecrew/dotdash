@@ -328,7 +328,7 @@ images:
   caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:93c19f705c2218d5fca7f7dcb694cae1ed3889588678aabb7af34c8892e2f2bb
   # The openvpn profile's OpenVPN client, whose kill switch drops the default
   # routes before anything runs (platform-images, images/openvpn).
-  openvpn: ghcr.io/morzecrew/openvpn:2.6.20@sha256:0892a6b6dfd2ce4369eb69c0d2701c24ced35ef9a2f4eee6ef5fa4d6f3684943
+  openvpn: ghcr.io/morzecrew/openvpn:2.6.23@sha256:01935c02f0e33ea184938553965ed45eff2eaca13c0fb05a16525d20f9cca1e7
   # The warm profile's keeper of ready connections to the upstreams' proxies
   # (platform-images, images/proxy-warm).
   warm: ghcr.io/morzecrew/proxy-warm:0.1.1@sha256:aa0121aa3baa668242f26c0eaf8337894c8724ae6432d8735cda86e797e952ad
@@ -406,7 +406,7 @@ tasks:
     args: true
     timeout: 2m
   cdn-check:
-    description: "Tell whether each CDN in front of this server and its relays is refused a subscription, as it should be, by fetching a decoy one through it; changes nothing"
+    description: "For each CDN in front of this server and its relays (cdn_hosts, cdn=, origin=): does it refuse subscriptions, and does its links' path reach Xray, the site's 404 or nothing; changes nothing"
     service: cdn-check
     command: ["sh", "/task/cdn-check.sh"]
     timeout: 2m
@@ -457,9 +457,15 @@ health:
     # egress fetches probe_url through Xray and the upstream, so healthy
     # means the whole way out works, not that a process is up; failing, it
     # names the layer (the upstream's address, its credentials, the
-    # destination, the exit). `doctor` fails while either check does.
+    # destination, the exit). `doctor` fails while any check does.
     - {name: cover-site, type: command, command: ["hooks/healthy", "cover-site"], timeout: 10s}
     - {name: egress, type: command, command: ["hooks/healthy", "egress"], timeout: 30s}
+    # A relays or cdn_extra line, or a field of one, that client-config
+    # would leave out fails it, by its line and field, so the change that
+    # brought it is rolled back; a field it doesn't know, a name taken twice
+    # or a pool member that names nothing only warns. A start period, so it
+    # fails at once rather than when the operation runs out of time.
+    - {name: lists, type: command, command: ["hooks/healthy", "lists"], timeout: 30s, start_period: 20s}
 
 # The release's invariants (hooks/policy), against what runs: `doctor` fails
 # when they drift. smoke_test checks them after every apply and update.

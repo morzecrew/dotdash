@@ -13,6 +13,7 @@ replace a generated one with `sudo morzer secret rotate <name>`.
 | `reality_key` | yes | REALITY private key (x25519) |
 | `reality_short_id` | yes | REALITY short id clients present alongside the key |
 | `xhttp_path` | yes | secret path Caddy routes to Xray's XHTTP inbound |
+| `cdn_xhttp_path` | yes | secret path the [CDNs](cdn.md) in front take to Xray's CDN inbound; this server's own, not shared |
 | `subscription_key` | yes | key the subscription URLs derive from |
 | `kcp_seed` | yes | key [mKCP](mkcp.md)'s packets are encrypted under |
 | `reality_key_second` | no | with `reality_second_key`, a second REALITY private key ([Rotating the REALITY key](#rotating-the-reality-key)) |
@@ -20,7 +21,7 @@ replace a generated one with `sudo morzer secret rotate <name>`.
 | `call_token` | no | with the `openflux` profile and `call_provider=tm`, the provider's API token ([Calls made for you](openflux.md#calls-made-for-you)) |
 
 Rotating `vless_seed`, `reality_key`, `reality_short_id` or `xhttp_path`
-changes every link, and `kcp_seed` the mKCP links: resend them, or let
+changes every link, `kcp_seed` the mKCP links and `cdn_xhttp_path` the CDN links: resend them, or let
 subscriptions pick it up.
 
 ## Rotating the REALITY key

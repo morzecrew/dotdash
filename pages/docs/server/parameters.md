@@ -40,7 +40,7 @@
 | `servers` | `self` | servers sharing these keys, comma-separated |
 | `cdn_hosts` | `none` | the names of local [CDNs](cdn.md#a-local-cdn-for-restricted-networks) in front of this server, comma-separated; a link through each |
 | `cdn_extra` | `none` | `<name> <JSON object>` for each CDN name that asks for [XHTTP settings of its own](cdn.md#a-cdn-that-fetches-in-plain-http), the object as the CDN gives it; links and outbounds through that name carry it in place of dotdash's |
-| `relays` | a comment | one `<host> <site> <public key> <short id> <encryption>` line per [relay](../relay/install.md), as its `relay-entry` prints it, with `own-site <path>`, `kcp=<port>,<header>,<seed>`, `hy2=<port>`, `cdn=<name>[,<name>]` and `name=<label>` after it where the relay has them; `off=<path>[,<path>]` (`reality`, `xhttp`, `mkcp`, `hysteria2`) leaves out paths its canaries find [blocked](../manager.md#blocked-paths), and `standby` makes it the [last resort](../relay/install.md#5-on-the-server-add-the-line-to-relays), unchecked |
+| `relays` | a comment | one `<host> <site> <public key> <short id> <encryption>` line per [relay](../relay/install.md), as its `relay-entry` prints it, with `own-site <path>`, `kcp=<port>,<header>,<seed>`, `hy2=<port>`, `cdn=<name>[,<name>]` and `name=<label>` after it where the relay has them; `off=<path>[,<path>]` (`reality`, `xhttp`, `mkcp`, `hysteria2`, or `cdn:<name>` for one CDN in front of it) leaves out paths its canaries find [blocked](../manager.md#blocked-paths), and `standby` makes it the [last resort](../relay/install.md#5-on-the-server-add-the-line-to-relays), unchecked |
 | `pools` | a comment | one `<pool> <member>...` line per [pool](devices.md#pools), the members device names, relay hosts and CDN hosts |
 | `direct` | `true` | `false`: no server's address in devices' links, configs or subscriptions, only [relays and CDN hosts](devices.md#keeping-the-servers-out-of-devices-links) |
 | `openflux_channels` | a comment | with the `openflux` profile, one `<device> <kind>[=<link>] ...` line per device that gets an [OpenFlux](openflux.md) channel |
@@ -48,7 +48,13 @@
 
 Set one with `sudo morzer config set <name>=<value>`, unset it with
 `sudo morzer config unset <name>`, edit `relays`, `pools`, `cdn_extra`, `happ_routing` or `openflux_channels`
-with `sudo morzer config edit <name>`. Profiles (`installation.profile`): `xdns`,
+with `sudo morzer config edit <name>`. A `relays` or `cdn_extra` line
+devices would lose, or lose a field of (a malformed field, an extra Xray
+refuses), fails the change that brings it, naming its line and field, and
+morzer puts the old value back: the `lists` health check, which `doctor` runs
+too. A field this release doesn't know, as a newer relay's line may carry, a
+name two relays share, or a pool member that names nothing is only a warning.
+`sudo morzer task run client-config --output -- --check` prints them all. Profiles (`installation.profile`): `xdns`,
 `xhttp-reality`, `mkcp`, `hysteria2`, `openvpn` (for an [OpenVPN line](upstreams.md#openvpn)),
 `warm` (for [warm connections](upstreams.md#warm-connections)),
 `openflux` (for [OpenFlux](openflux.md), with `openflux_channels`),

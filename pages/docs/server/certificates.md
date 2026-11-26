@@ -32,12 +32,17 @@ about where the servers are.
    would guess, such as `x7k2.s.example.net` for a server. Point it at the
    machine as usual, with an `A` record.
 2. **Registration,** once per parent, on the
-   [acme-dns server](#an-acme-dns-server):
+   [acme-dns server](#an-acme-dns-server), with its `registration` parameter
+   on for the while, and off again after, so nobody else registers meanwhile
+   ([acme-dns](../acme-dns.md)):
 
     ```sh
+    sudo morzer config set registration=true
     sudo morzer task run register --output -- s.example.net
+    sudo morzer config set registration=false
     ```
 
+    With registration off, `register` says to turn it on and does nothing.
     It prints the CNAME for step 3 and the `acme_dns` secret for step 4. Keep
     the secret as you keep the servers' keys: every machine under the parent
     shares it.
