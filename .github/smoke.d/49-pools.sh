@@ -5,8 +5,8 @@
 # - pooled gets pool a's relay and CDN host and those in no pool, as links
 #   and as outbounds, and nothing of pool b's;
 # - unpooled gets every relay and CDN host;
-# - a member that names nothing is reported;
 # - with pools unset, pooled gets everything again.
+# (A member that names nothing is refused at apply: 49-refused-lists.sh.)
 # No link is printed: a failure names the step, not the credentials.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
@@ -41,7 +41,7 @@ printf '%s\n' \
   "relay-s.test site-s.test pbkS000000000000000000000000000000000000000 0123456789abcdef mlkem768x25519plus.native.0rtt.s" |
   sudo morzer config set --set-file relays=- >/dev/null || die "could not set relays"
 sudo morzer config set cdn_hosts=cdn-a.test,cdn-b.test,cdn-s.test >/dev/null || die "could not set cdn_hosts"
-printf '%s\n' "a pooled relay-a.test cdn-a.test" "b relay-b.test cdn-b.test nothing.test" |
+printf '%s\n' "a pooled relay-a.test cdn-a.test" "b relay-b.test cdn-b.test" |
   sudo morzer config set --set-file pools=- >/dev/null || die "could not set pools"
 
 text=$(config pooled)
@@ -55,11 +55,6 @@ text=$(config unpooled)
 [ "$(hosts "${text}")" = "cdn-a.test cdn-b.test cdn-s.test relay-a.test relay-b.test relay-s.test " ] ||
   die "the device in no pool does not get every relay and CDN host: $(hosts "${text}")"
 echo "${0##*/}: a device in no pool gets every relay and CDN host"
-
-err=$(config pooled 2>&1 >/dev/null)
-grep -qF 'pools: nothing.test is no device name, relay host or CDN host' <<<"${err}" ||
-  die "a pool member that names nothing is not reported"
-echo "${0##*/}: a pool member that names nothing is reported"
 
 sudo morzer config unset pools >/dev/null || die "could not unset pools"
 text=$(config pooled)

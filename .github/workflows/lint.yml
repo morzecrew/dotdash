@@ -76,14 +76,20 @@ jobs:
           traffic() { sed -n '/^if .*DEVICE_TRAFFIC:-false}" = true/,/^fi$/p' "bundles/$1/tasks/facts.sh"; }
           [ -n "$(traffic server)" ] && [ "$(traffic server)" = "$(traffic relay)" ] ||
             { echo "facts.sh: the server's and the relay's device traffic differ"; exit 1; }
-          cc=bundles/server/tasks/client-config.sh
-          inbound=$(awk '/"tag": "devices-cdn"/ { p = 1 } p && /"xhttpSettings"/ { x = 1 } x { print } x && /noSSEHeader/ { exit }' \
-            bundles/relay/templates/xray.json.tmpl | sed '1s/^ *"xhttpSettings": //' | jq -c 'del(.path, .mode, .noSSEHeader)')
-          outbound=$(sed -n "s/^cdn_disguise='\(.*\)'\$/{\1}/p" "${cc}" | jq -c .)
-          extra=$(sed -n "s/^cdn_disguised_extra='\(.*\)'\$/\1/p" "${cc}")
-          extra=$(printf '%b' "${extra//%/\\x}" | jq -c .)
-          jq -en --argjson i "${inbound}" --argjson o "${outbound}" --argjson e "${extra}" \
-            '($i | length) > 0 and $i == $o and ([$i | to_entries[] | $e[.key] == .value] | all)' >/dev/null ||
-            { echo "the CDN disguise differs: relay inbound ${inbound}, client-config ${outbound}, link extra ${extra}"; exit 1; }
+          # The CDN disguise: client-config's (its links' extra is made from it),
+          # the relay's and the server's CDN inbounds, the canary's CDN outbounds.
+          xhttp() { # <file> <tag>: the xhttpSettings after that tag, as one JSON line
+            awk -v t="\"tag\": \"$2" 'index($0, t) { p = 1 } p && /"xhttpSettings"/ { x = 1 } x { print } x && /}(,)? *$/ && /"(noSSEHeader|seqKey)"/ { exit }' "$1" |
+              sed '1s/^ *"xhttpSettings": //; $s/,$//' | jq -c .
+          }
+          want=$(sed -n "s/^cdn_disguise='\(.*\)'\$/{\1}/p" bundles/server/tasks/client-config.sh | jq -c .)
+          for c in "bundles/relay/templates/xray.json.tmpl devices-cdn" "bundles/server/templates/xray.json.tmpl xhttp-cdn" \
+            "bundles/canary/templates/reality.json.tmpl dotdash-cdn-"; do
+            # shellcheck disable=SC2086 # file and tag, split on purpose
+            got=$(xhttp $c)
+            jq -en --argjson w "${want}" --argjson g "${got}" \
+              '($w | length) > 0 and ($g | with_entries(select(.key as $k | $w | has($k)))) == $w' >/dev/null ||
+              { echo "the CDN disguise differs: client-config ${want}, ${c% *} ${got}"; exit 1; }
+          done
           [ "$(grep -rhoE '"type": "hex", "packet": "[0-9a-f]+"' bundles | sort -u | wc -l)" = 1 ] ||
             { echo "the QUIC opener's copies differ:"; grep -rnoE '"type": "hex", "packet": "[0-9a-f]+"' bundles; exit 1; }

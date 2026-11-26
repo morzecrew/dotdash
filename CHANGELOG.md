@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A `relays` line's `off=` takes `cdn:<name>` for a CDN in front of that relay which gets nothing through: devices lose that CDN's links and outbounds and keep the relay's others, and a cdn-only relay left with no CDN drops out. Until now a `cdn:` token voided the whole `off=` field.
+
 - A canary checks each CDN in front of the relay it watches, through the CDN as a device's CDN link goes, and gives each under `cdn` in its facts. The manager hands it the names and CDN path; by hand, set `dotdash_cdn_hosts`, `dotdash_origin_host` and the `dotdash_cdn_xhttp_path` secret.
 
 - The manager's `status` prints a line per machine: its release, whether it applied, refused (naming what) or still waits for its newest document, its health, its facts' age and its canaries' verdicts, then the topology. `status --wait` waits until every machine applied or refused it.
@@ -32,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A server's facts carry `cert_days`, the whole days left on the certificate Caddy serves for its domain, so the authority can warn before a failed renewal breaks XHTTP, Hysteria2 and the CDN paths while REALITY keeps working. Left out while there is no certificate yet.
 
 ### Changed
+
+- `cdn-check` also checks a relay's `origin=` names, and for every CDN name whether its links' path reaches Xray behind it, ends at the site's 404 (a stale path, or a door that refused the CDN), or gets a 5xx or nothing (the CDN doesn't reach its origin). It exits 1 on any of those too.
+
+- A `relays` or `cdn_extra` line, or a field of one, that the server would leave out now fails the change that brings it, by its line number and field, and morzer rolls it back: a new `lists` health check, which `doctor` runs too. A field it doesn't know, a taken name or a pool member naming nothing still only warns.
+
+- The server's `cdn_hosts` links go by a path of their own (a new `cdn_xhttp_path` secret), disguised as a relay's CDN links are, so a CDN's logs show neither the direct XHTTP path nor its padding. Devices take them at their next subscription refresh; links imported by hand still work, as the plain path stays.
 
 - The manager judges a CDN-only relay by its canaries' CDN checks and leaves it out of devices' links once none of its CDNs gets through, where it left it unwatched. Any relay whose CDN gets through is no longer burnt; a CDN failing alone is only reported.
 
