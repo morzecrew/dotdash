@@ -18,9 +18,10 @@ COMMAND = ("cd /run/dotdash/secrets && for f in " + " ".join([*SHARED_KEYS, "vle
            + ' ; do b=$(base64 -w0 < "$f") || exit 1; printf "%s %s\\n" "$f" "$b"; done')
 
 
-def parse(text: str) -> tuple[dict[str, str], dict[str, str], int]:
-    """The shared keys, the ids by device name, and how many vless_clients
-    lines name no device, from what COMMAND printed."""
+def parse(text: str) -> tuple[dict[str, str], dict[str, str], int, set[str]]:
+    """The shared keys, the ids by device name, how many vless_clients lines
+    name no device, and the devices whose line says desktop, from what COMMAND
+    printed."""
     values = {}
     for line in text.splitlines():
         if not line.strip():
@@ -43,7 +44,7 @@ def parse(text: str) -> tuple[dict[str, str], dict[str, str], int]:
         public_key(keys["reality_key"])
     except (ValueError, binascii.Error):
         raise Refused("the server's reality_key is not an X25519 private key") from None
-    ids, unnamed = {}, 0
+    ids, unnamed, desktops = {}, 0, set()
     for line in values["vless_clients"].splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
@@ -61,13 +62,17 @@ def parse(text: str) -> tuple[dict[str, str], dict[str, str], int]:
             raise Refused(f"the server's vless_clients names {fields[1]} twice")
         else:
             ids[fields[1]] = fields[0]
-    return keys, ids, unnamed
+            if fields[2:3] == ["desktop"]:
+                desktops.add(fields[1])
+    return keys, ids, unnamed, desktops
 
 
-def take(state: dict, net: Network, keys: dict[str, str], ids: dict[str, str], unnamed: int) -> list[str]:
+def take(state: dict, net: Network, keys: dict[str, str], ids: dict[str, str], unnamed: int,
+         desktops: set[str] | frozenset[str] = frozenset()) -> list[str]:
     """Puts the server's keys and the ids of the roster's names into the state,
-    and says what devices keep their links, which ones get new ones, and which
-    lose access at the next sync."""
+    and says what devices keep their links, which ones get new ones, which
+    lose access at the next sync, and which desktops the roster doesn't call
+    one, so they would get CDN links."""
     state["keys"].update(keys)
     names = net.clients_of("server")
     kept = [n for n in names if n in ids]
@@ -80,4 +85,7 @@ def take(state: dict, net: Network, keys: dict[str, str], ids: dict[str, str], u
         said.append("on the server but not in the roster, losing access at the next sync unless added: " + ", ".join(gone))
     if unnamed:
         said.append(f"{unnamed} line(s) of the server's vless_clients name no device: they lose access at the next sync")
+    if lacking := [n for n in kept if n in desktops and n not in net.desktops]:
+        said.append("desktops on the server but not in the roster's desktops, getting CDN links at the next sync unless "
+                    "added: " + ", ".join(lacking))
     return said

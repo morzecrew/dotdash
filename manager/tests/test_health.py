@@ -84,6 +84,22 @@ def test_a_quiet_canarys_old_success_does_not_hold_a_relay_up():
     assert health["r1"]["fails"] == 0
 
 
+def test_a_canary_whose_clock_runs_ahead_neither_burns_a_relay_nor_holds_it():
+    net = loads(ROSTER.replace('name = "c2"\nwatches = "r2"', 'name = "c2"\nwatches = "r1"')
+                + '[[canary]]\nname = "c3"\nwatches = "r2"\n')
+    health, now = {}, 10_000
+    for n in range(BURN_AFTER + 1):
+        # c2 says it read a year on, failing; c1, on time, gets through.
+        facts = {"r1": R1, "r2": R2, "c1": canary(R1, now + n * 3600, True), "c2": canary(R1, now + 365 * 86400, False),
+                 "c3": canary(R2, now + n * 3600, True)}
+        burnt, _ = judge(net, facts, health, None, now + n * 3600)
+    assert burnt == set() and health["r1"]["fails"] == 0 and health["r1"]["at"] == now + BURN_AFTER * 3600
+    # A few minutes ahead still counts.
+    facts["c1"] = canary(R1, now + BURN_AFTER * 3600 + 900, False)
+    judge(net, facts, health, None, now + BURN_AFTER * 3600 + 400)
+    assert health["r1"]["fails"] == 1
+
+
 def test_every_relay_failing_at_once_drops_none():
     net, health = loads(ROSTER), {}
     for at in range(1, BURN_AFTER):
@@ -111,6 +127,22 @@ def test_a_burnt_relays_door_names_leave_the_pools_too():
     facts = {"s": {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
                    "encryption": "E"}, "r1": r1, "r2": R2}
     assert render(net, st, facts, {"r1"})[0]["s"]["parameters"]["pools"] == "a phone"
+
+
+def test_a_burnt_or_held_relay_claiming_anothers_host_moves_it_in_no_pool():
+    net = loads(SPARES)
+    st = state.load(Path("/nonexistent"), net)
+    server = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
+              "encryption": "E"}
+    # r2 burnt and r3, a spare held back, both name r1's address and CDN host.
+    liar = {**R2, "cdn_hosts": ["c.example.net"], "origin_host": "203.0.113.5"}
+    facts = {"s": server, "r1": R1, "r2": liar, "r3": {**R3, "entry_host": "203.0.113.5"}, "r4": R4}
+    docs, waiting = render(net, st, facts, {"r2", "r3", "r4"})
+    assert docs["s"]["parameters"]["pools"] == "a phone 203.0.113.5 c.example.net\nb 203.0.113.5"
+    assert "203.0.113.5: more than one relay's facts name it, so no burnt relay or spare moves it in the pools" in waiting
+    # Nor does a spare standing in for it carry its own hosts into r1's pools.
+    docs, _ = render(net, st, facts, {"r2", "r3"}, None, {"r4": "r2"})
+    assert docs["s"]["parameters"]["pools"] == "a phone 203.0.113.5 c.example.net\nb 203.0.113.5"
 
 
 def test_a_cdn_only_relay_carries_the_flag_is_never_judged_and_serves_no_subscription():
@@ -341,6 +373,27 @@ watches = "r2"
     assert splits(net, health, burnt={"r1"})[0] == set()  # a burnt relay stays out
 
 
+def test_a_reality_only_relay_through_only_split_is_split_not_burnt():
+    from dotdash_manager.health import splits
+
+    net = loads(ROSTER)
+    health: dict = {}
+    for at in range(1, BURN_AFTER + 2):
+        c1 = {"server": R1["site"], "address": R1["entry_host"], "checked_at": at, "internet": True,
+              "paths": {"reality": False}, "reality_split": True, "blocked_by": "sni"}
+        facts = {"r1": R1, "r2": R2, "c1": c1, "c2": canary(R2, at, True)}
+        burnt, say = judge(net, facts, health)
+    assert burnt == set() and health["r1"]["fails"] == 0 and not any(line.startswith("burnt:") for line in say)
+    off, _ = blocked(net, facts, health, burnt)
+    on, _ = splits(net, health, burnt)
+    assert off == {"r1": {"reality"}} and on == {"r1"}
+    # The split failing too: every path blocked, and it burns.
+    for at in range(BURN_AFTER + 2, 2 * BURN_AFTER + 2):
+        c1 = {**c1, "checked_at": at, "reality_split": False}
+        burnt, _ = judge(net, {**facts, "c1": c1, "c2": canary(R2, at, True)}, health)
+    assert burnt == {"r1"} and blocked(net, facts, health, burnt)[0] == {}
+
+
 def test_a_burnt_verdict_says_what_blocks_it():
     net = loads('''
 target = "t"
@@ -393,3 +446,103 @@ watches = "r1"
     burnt, _ = judge(net, {"r1": relay, "c1": c1}, health)
     assert burnt == set() and health["r1"]["cause"] == "burst" and health["r1"]["paths"] == {"reality": 1, "xhttp": 0}
     assert "page opens several connections" in CAUSES["burst"]
+
+
+def test_a_certificate_running_out_is_said_and_one_unknown_is_not():
+    from dotdash_manager.health import CERT_DAYS, certs
+
+    net = loads(ROSTER)
+    server = {"domain": "s.example.net", "https_port": 443, "public_key": "P", "encryption": "E", "cert_days": 3}
+    facts = {"s": server, "r1": {**R1, "cert_days": -2}, "r2": {**R2, "cert_days": CERT_DAYS}}
+    check = ": renewal is failing, check its ACME (for acme-dns, that it runs and answers)"
+    assert certs(net, facts) == [f"certificate: server s: its site's certificate runs out in 3 day(s){check}",
+                                 f"certificate: relay r1: its site's certificate ran out 2 day(s) ago{check}"]
+    assert certs(net, {"s": {**server, "cert_days": None}, "r1": R1}) == []
+
+
+def test_report_says_the_certificates_running_out_from_the_kept_facts(tmp_path, monkeypatch):
+    from dotdash_manager import cli
+    from typer.testing import CliRunner
+
+    (tmp_path / "network.toml").write_text(ROSTER)
+    st = state.load(Path("/nonexistent"), loads(ROSTER))
+    st["facts"] = {"r1": {"id": "inst_R1", "at": 0, "facts": {**R1, "cert_days": 5}}}
+    state.save(tmp_path / "dotdash-state.json", st)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(state, "lock", lambda path: 0)
+    r = CliRunner().invoke(cli.app, ["report"])
+    assert r.exit_code == 0 and r.output.splitlines()[-1].startswith("certificate: relay r1: its site's certificate runs out in 5")
+
+
+def sync_with(tmp_path, monkeypatch, roster: str, st: dict, facts: dict):
+    """sync in tmp_path against a stand-in morzer: run(code) answers every
+    publish with code, and returns sync's exit code, the documents it
+    published by name and the state it kept."""
+    import json
+    import subprocess
+
+    from dotdash_manager import cli
+    from typer.testing import CliRunner
+
+    (tmp_path / "network.toml").write_text(roster)
+    state.save(tmp_path / "dotdash-state.json", st)
+    sent, answer = {}, {"code": 0}
+
+    class Stand:
+        def __init__(self, *_):
+            pass
+
+        def gather(self, *_):
+            return facts
+
+        def rows(self):
+            return {}
+
+        def publish(self, m, doc, dry_run):
+            sent[m.name] = doc
+            return subprocess.CompletedProcess([], answer["code"], "", "target down")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(state, "lock", lambda path: 0)
+    monkeypatch.setattr(cli, "Morzer", Stand)
+
+    def run(code: int = 0):
+        answer["code"] = code
+        sent.clear()
+        r = CliRunner().invoke(cli.app, ["sync"])
+        return r.exit_code, dict(sent), json.loads((tmp_path / "dotdash-state.json").read_text())
+    return run
+
+
+def test_a_server_whose_publish_failed_stays_split_for_the_next_sync(tmp_path, monkeypatch):
+    roster = 'target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[server]]\nname = "a"\nid = "inst_A"\nkey = "RWa"\n'
+    st = {**state.load(Path("/nonexistent"), loads(roster)), "split": ["a"]}
+    run = sync_with(tmp_path, monkeypatch, roster, st, {})
+    # No longer split: hello_split off, which a failed publish never delivered.
+    code, sent, kept = run(1)
+    assert code == 1 and sent["a"]["parameters"]["hello_split"] == "false" and kept["split"] == ["a"]
+    assert "inst_A" not in kept["published"]
+    code, sent, kept = run(0)
+    assert code == 0 and sent["a"]["parameters"]["hello_split"] == "false" and kept["split"] == []
+    assert "inst_A" in kept["published"]
+    assert "hello_split" not in run(0)[1]["a"]["parameters"]
+
+
+def test_via_is_unset_only_on_a_relay_a_document_gave_it(tmp_path, monkeypatch):
+    roster = ('target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[server]]\nname = "s"\nid = "inst_S"\nkey = "RWs"\n'
+              '[[relay]]\nname = "r1"\nid = "inst_R1"\nkey = "RW1"\n[[relay]]\nname = "r2"\nid = "inst_R2"\nkey = "RW2"\n')
+    via = roster + 'via = ["r1"]\n'
+    st = state.load(Path("/nonexistent"), loads(roster))
+    server = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
+              "encryption": "E"}
+    run = sync_with(tmp_path, monkeypatch, via, st, {"s": server, "r1": {**R1, "via": True}, "r2": {**R2, "via": True}})
+    _, sent, kept = run(0)
+    assert "via" in sent["r2"]["parameters"] and kept["via"] == ["r2"]
+    assert "unset" not in sent["r1"], "r1 never had via: a release that doesn't manage it would refuse the document"
+    (tmp_path / "network.toml").write_text(roster)
+    _, sent, kept = run(1)
+    assert sent["r2"]["unset"] == {"parameters": ["via", "via_link", "via_fingerprint"]} and kept["via"] == ["r2"]
+    _, sent, kept = run(0)
+    assert "unset" in sent["r2"] and kept["via"] == []
+    assert "unset" not in run(0)[1]["r2"]
+

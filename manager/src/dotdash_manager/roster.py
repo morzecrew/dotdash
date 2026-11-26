@@ -132,10 +132,17 @@ class Network(Strict):
     @model_validator(mode="after")
     def _references(self) -> "Network":
         names: set[str] = set()
+        ids: dict[str, str] = {}
         for m in self.machines:
             if m.name in names:
                 raise ValueError(f"[[{m.kind}]] name {m.name!r} is taken")
             names.add(m.name)
+            # Two machines on one installation would republish each other's
+            # document on every sync.
+            if m.id and m.id in ids:
+                raise ValueError(f"{m.name} has the installation id of {ids[m.id]}")
+            if m.id:
+                ids[m.id] = m.name
         for d in self.devices:
             if d in names or d.startswith(("relay-", "canary-")):
                 raise ValueError(f"device {d!r} is not a free name (relay- and canary- are the manager's)")

@@ -10,6 +10,7 @@ on:
       - manager/**
       - bundles/server/**
       - .github/manager/**
+      - .github/smoke.d/pre-apply/**
       - .github/workflows/manager.yml
   push:
     branches: [main]
@@ -17,6 +18,7 @@ on:
       - manager/**
       - bundles/server/**
       - .github/manager/**
+      - .github/smoke.d/pre-apply/**
       - .github/workflows/manager.yml
   workflow_dispatch:
 
@@ -85,7 +87,7 @@ jobs:
           mkdir -p .manager-hooks && cp -R .github/smoke.d/pre-apply .manager-hooks/
           from=ghcr.io/morzecrew/dotdash-server:main
           bash .bundle-ci/scripts/rehearse.sh --from "${from}" --keep
-          GITHUB_TOKEN= bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal \
+          GITHUB_TOKEN='' bash .bundle-ci/scripts/rig.sh exec dotdash-rehearsal \
             sh -c 'bash /rig/smoke.sh update "$(ls /rig/dist/*.tar.zst | head -1)"'
 
       - name: A server follows the manager

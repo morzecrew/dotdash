@@ -28,6 +28,23 @@ def test_load_keeps_what_it_made_and_save_is_private(tmp_path):
     assert state.load(path, net) == json.loads(path.read_text()) == first
 
 
+def test_one_taken_out_and_added_again_gets_a_new_id_and_password(tmp_path):
+    head = 'target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\nsubscription = true\n'
+    full = loads(head + 'devices = ["phone", "tv"]\n[[relay]]\nname = "r1"\n[[canary]]\nname = "c1"\nwatches = "r1"\n'
+                 '[[client]]\nname = "home"\ndevice = "phone"\n')
+    path = tmp_path / "dotdash-state.json"
+    first = state.load(path, full)
+    state.save(path, first)
+    gone = state.load(path, loads(head + 'devices = ["tv"]\n'))
+    assert set(gone["ids"]) == {"tv"} and gone["passwords"] == {}
+    assert gone["ids"]["tv"] == first["ids"]["tv"] and gone["keys"] == first["keys"]
+    state.save(path, gone)
+    back = state.load(path, full)
+    for name in "phone", "relay-r1", "canary-c1":
+        assert back["ids"][name] != first["ids"][name]
+    assert back["passwords"]["home"] != first["passwords"]["home"]
+
+
 def test_save_leaves_nothing_beside_the_state(tmp_path):
     path = tmp_path / "dotdash-state.json"
     state.save(path, {"a": 1})
@@ -45,6 +62,20 @@ def test_one_run_at_a_time(tmp_path):
     os.close(held)
     fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
     os.close(other)
+
+
+def test_no_state_beside_a_joined_roster_is_refused_unless_new_state(tmp_path, monkeypatch):
+    from dotdash_manager import Refused
+
+    monkeypatch.setattr(state, "lock", lambda path: 0)
+    roster = tmp_path / "network.toml"
+    roster.write_text('target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[server]]\nname = "a"\nid = "inst_A"\nkey = "RWa"\n')
+    for dry_run in False, True:
+        with pytest.raises(Refused, match="names a joined: a new state gives every server new keys"):
+            Options(roster, "morzer").open(dry_run)
+    assert not (tmp_path / "dotdash-state.json").exists()
+    keys = Options(roster, "morzer", new_state=True).open()[1]["keys"]
+    assert Options(roster, "morzer").open()[1]["keys"] == keys, "once there, it is the state"
 
 
 def test_a_dry_run_keeps_no_state(tmp_path):

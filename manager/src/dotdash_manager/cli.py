@@ -34,6 +34,7 @@ app = typer.Typer(
 class Options:
     roster: Path
     morzer: str
+    new_state: bool = False
     locked: bool = False
 
     @property
@@ -48,11 +49,18 @@ class Options:
         """The roster and the state, under the state's lock for the rest of the
         run, the state kept before anything goes out: a key published and then
         lost is a network to redo. A dry run publishes nothing, and keeps
-        nothing."""
+        nothing. No state while the roster names a joined machine is likelier
+        a checkout the state wasn't copied to than a new network: a new state
+        would give every server new keys, cutting every device off."""
         net = roster.load(self.roster)
         if not self.locked:
             state.lock(self.state)
             self.locked = True
+        joined = [m.name for m in net.machines if m.joined]
+        if joined and not self.new_state and not self.state.exists():
+            raise Refused(f"no {self.state} beside the roster, which names {', '.join(joined)} joined: a new state "
+                          "gives every server new keys, cutting every device off. Copy the state here, or --new-state "
+                          "if new keys are meant")
         st = state.load(self.state, net)
         if not dry_run:
             state.save(self.state, st)
@@ -66,8 +74,10 @@ def options(
     ctx: typer.Context,
     roster_path: Annotated[Path, typer.Option("--roster", help="the roster")] = Path("network.toml"),
     morzer: Annotated[str, typer.Option(help="the morzer binary")] = "morzer",
+    new_state: Annotated[bool, typer.Option(
+        "--new-state", help="make a state though the roster names joined machines: new keys for every server")] = False,
 ) -> None:
-    ctx.obj = Options(roster_path, morzer)
+    ctx.obj = Options(roster_path, morzer, new_state)
 
 
 @app.command()
@@ -76,9 +86,10 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     o: Options = ctx.obj
     net, st = o.open(dry_run)
     mz = Morzer(net, o.morzer_roster, o.morzer)
-    facts = mz.gather()
+    now = int(time.time())
+    facts = mz.gather(st.setdefault("facts", {}), now)
     before = copy.deepcopy(st.setdefault("health", {}))
-    burnt, verdicts = health.judge(net, facts, st["health"], mz.rows())
+    burnt, verdicts = health.judge(net, facts, st["health"], mz.rows(), now)
     held, stands, more = health.spares(net, facts, st["health"], burnt)
     verdicts += more
     off, more = health.blocked(net, facts, st["health"], burnt)
@@ -86,24 +97,19 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     split, more = health.splits(net, st["health"], burnt)
     verdicts += more
     log = st.setdefault("events", [])
-    log += health.events(before, st["health"], st.get("stands", {}), stands, int(time.time()))
+    log += health.events(before, st["health"], st.get("stands", {}), stands, now,
+                         {t.name for t in [*net.server, *net.relay]})
     del log[:-health.EVENTS]
     labels(net, st)
     st["stands"] = stands
-    now = int(time.time())
     traffic.record(st.setdefault("traffic", {}), facts, now)
     # Yesterday's whole day and today's so far.
     verdicts += traffic.unusual(st["traffic"], since=traffic.day(now - 86400))
-    if not dry_run:
-        state.save(o.state, st)
+    verdicts += health.certs(net, facts)
     for v in verdicts:
         print(v)
     docs, waiting = render(net, st, facts, burnt | held, off, stands, split)
-    # After render, which turns hello_split off where the last sync had it on.
-    st["split"] = sorted(split)
-    if not dry_run:
-        state.save(o.state, st)
-    failed = 0
+    failed, holds = [], set()
     for m in net.machines:
         doc = docs.get(m.name)
         if doc is None:
@@ -115,19 +121,35 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
         last = st["published"].get(m.id, {})
         if last.get("digest") == digest and time.time() - last.get("at", 0) < RENEW_AFTER:
             print(f"{m.name}: unchanged")
+            holds.add(m.name)
             continue
         r = mz.publish(m, doc, dry_run)
         if r.returncode != 0:
-            failed += 1
+            failed.append(m.name)
             print(f"{m.name}: publish failed: {(r.stderr or r.stdout).strip()}", file=sys.stderr)
             continue
         print(f"{m.name}: {'would publish' if dry_run else 'published'}")
-        if not dry_run:
-            st["published"][m.id] = {"digest": digest, "at": int(time.time())}
-            state.save(o.state, st)
+        holds.add(m.name)
+        st["published"][m.id] = {"digest": digest, "at": int(time.time())}
+    # Who was sent hello_split and via, for the next render to take them off
+    # where they no longer hold, and to name them nowhere else.
+    names = {m.name for m in net.machines}
+    for key, has in (("split", split), ("via", {n for n, d in docs.items() if "via" in d.get("parameters", {})})):
+        st[key] = sorted(sent(set(st.get(key, [])), holds, has) & names)
+    # Once, at the end: the keys were kept before anything went out (open),
+    # and the rest a sync that stops short reads again from the same facts.
+    if not dry_run:
+        state.save(o.state, st)
     for w in waiting:
         print(f"waiting: {w}")
     raise typer.Exit(1 if failed else 0)
+
+
+def sent(had: set[str], holds: set[str], has: set[str]) -> set[str]:
+    """The machines holding something after a sync: those it went to in a
+    document that is now theirs (holds: published, or unchanged), and the
+    rest as they were (had)."""
+    return (had - holds) | (has & holds)
 
 
 def labels(net: Network, st: dict) -> None:
@@ -147,7 +169,8 @@ def report(ctx: typer.Context) -> None:
     how long it was burnt, which paths went off, how long each path lasted,
     lifetimes per provider, and each path's latency against the canaries' own
     network; from what sync logged. With device-traffic, the devices that
-    moved far more than usual on a day."""
+    moved far more than usual on a day. Then the certificates running out, by
+    the facts the last sync kept."""
     o: Options = ctx.obj
     net, st = o.open()
     labels(net, st)
@@ -158,6 +181,8 @@ def report(ctx: typer.Context) -> None:
         print(f"\ndevices far above their usual day, the last {len(st['traffic']['days'])} days (device-traffic):")
         for line in traffic.unusual(st["traffic"]) or ["none"]:
             print(f"  {line}")
+    if lines := health.certs(net, {n: k["facts"] for n, k in st.get("facts", {}).items()}):
+        print("", *lines, sep="\n")
 
 
 @app.command(name="rotate")
@@ -179,7 +204,8 @@ def rotate_key(
     if step == "start":
         said = rotate.start(st, now)
     elif step == "swap":
-        said = rotate.swap(st, net, Morzer(net, o.morzer_roster, o.morzer).gather(), now, force)
+        facts = Morzer(net, o.morzer_roster, o.morzer).gather(st.setdefault("facts", {}), now)
+        said = rotate.swap(st, net, facts, now, force)
     elif step == "finish":
         said = rotate.finish(st, now, force)
     else:
@@ -192,9 +218,13 @@ def rotate_key(
 def status(ctx: typer.Context) -> None:
     """What each machine applied and refused, and who has not joined."""
     o: Options = ctx.obj
-    net = roster.load(o.roster)
-    write_roster(o.morzer_roster, net)
-    r = subprocess.run([o.morzer, "state", "ls", *Morzer(net, o.morzer_roster, o.morzer).common], check=False)
+    # As sync opens them: who joined is in the state, and roster.yaml is
+    # written under the lock, never beside a sync writing it.
+    net, _ = o.open(dry_run=True)
+    mz = Morzer(net, o.morzer_roster, o.morzer)
+    r = mz.run("state", "ls", *mz.common)
+    sys.stdout.write(r.stdout)
+    sys.stderr.write(r.stderr)
     for m in net.machines:
         if not m.joined:
             print(f"{m.name} ({m.kind}): not joined; run join {m.name}")
@@ -218,11 +248,13 @@ def adopt_server(
         print(f"Run on {name}, as root, and pipe what it prints here:\n\n"
               f"  ssh <{name}> {shlex.quote('sudo sh -c ' + shlex.quote(adopt.COMMAND))} | dotdash-manager adopt {name}")
         return
-    keys, ids, unnamed = adopt.parse(sys.stdin.read())
+    keys, ids, unnamed, desktops = adopt.parse(sys.stdin.read())
+    # A state made here is no hazard: the server's keys replace the new ones.
+    o.new_state = True
     net, st = o.open()
     if st["published"] and not force:
         raise Refused("the manager already published its own keys: adopting now changes them again on every machine; --force if that is meant")
-    for line in adopt.take(st, net, keys, ids, unnamed):
+    for line in adopt.take(st, net, keys, ids, unnamed, desktops):
         print(line)
     state.save(o.state, st)
 
@@ -247,7 +279,7 @@ def join(
     recipient = subprocess.run(["age-keygen", "-y", net.identity], capture_output=True, text=True, check=True).stdout.strip()
     doc = None
     if m.kind != "server":
-        docs, waiting = render(net, st, Morzer(net, o.morzer_roster, o.morzer).gather())
+        docs, waiting = render(net, st, Morzer(net, o.morzer_roster, o.morzer).gather(st.setdefault("facts", {})))
         doc = docs.get(m.name)
         if doc is None:
             raise Refused(f"{m.name} can't come up yet: " + "; ".join(w for w in waiting if w.startswith(m.name + ":")))
@@ -276,7 +308,10 @@ def joined(ctx: typer.Context, name: str) -> None:
     if got is None:
         raise Refused(f"{name}'s script stopped before its last line: nothing kept. Fix what it says above and run it again")
     # The lock only now: the script ran for minutes, and a timer's sync waits on it.
-    _, st = o.open()
+    net, st = o.open()
+    # The script run on a machine joined already, under another name.
+    if other := next((m.name for m in net.machines if m.id == got[0] and m.name != name), None):
+        raise Refused(f"{name}'s script ran on {other}'s installation ({got[0]}): nothing kept. Run it on {name}")
     st.setdefault("joined", {})[name] = {"id": got[0], "key": got[1]}
     state.save(o.state, st)
     print(f"{name}: joined as {got[0]}; the next sync gives it its document")

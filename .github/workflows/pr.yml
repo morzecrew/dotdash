@@ -5,6 +5,13 @@ name: pr
 
 on:
   pull_request:
+    paths:
+      - bundles/server/**
+      - .github/smoke.d/**
+      - .github/tests/**
+      - .github/workflows/pr.yml
+      - .github/workflows/main.yml
+      - .github/workflows/release.yml
 
 permissions: {}
 
@@ -28,7 +35,9 @@ jobs:
       signing: ephemeral
       # The key that signs, shipped as minisign.pub: init trusts it on first use.
       ship-pubkey: true
-      runs-on: ${{ vars.RUNS_ON || 'ubuntu-24.04' }}
+      # GitHub-hosted, never vars.RUNS_ON: a fork's pull request must not reach
+      # a self-hosted runner or its image cache.
+      runs-on: ubuntu-24.04
       components: ""
       probe-paths: ""
       operator-secrets: upstreams

@@ -39,17 +39,22 @@ def public_key(reality_key: str) -> str:
 
 
 def load(path: Path, net: Network) -> dict:
-    """The state, with whatever the roster now needs and it lacks made."""
+    """The state, with whatever the roster now needs and it lacks made, and
+    the ids and passwords of whoever left it dropped: one taken out and added
+    again gets a new id (so new links and subscription URL) or password, and
+    what leaked of the old ones lets no one in."""
     state = json.loads(path.read_text()) if path.exists() else {}
     keys = state.setdefault("keys", {})
     for name, make in SHARED_KEYS.items():
         keys.setdefault(name, make())
-    ids = state.setdefault("ids", {})
-    for name in net.clients_of("server"):
+    names = net.clients_of("server")
+    ids = state["ids"] = {n: i for n, i in state.get("ids", {}).items() if n in names}
+    for name in names:
         ids.setdefault(name, str(uuid.uuid4()))
-    passwords = state.setdefault("passwords", {})
-    for c in net.client:
-        passwords.setdefault(c.name, secrets.token_urlsafe(18))
+    clients = {c.name for c in net.client}
+    passwords = state["passwords"] = {n: p for n, p in state.get("passwords", {}).items() if n in clients}
+    for name in clients:
+        passwords.setdefault(name, secrets.token_urlsafe(18))
     state.setdefault("published", {})
     return state
 
