@@ -153,7 +153,11 @@ all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   case $line in '' | '#'*) continue ;; esac
   c=- d=- only=- x=- sp=- hy=- nm=- cp=- sb=- or=- rest=
   for f in $line; do
-    case $f in kcp=*) c=${f#kcp=} ;; hy2=*) hy=${f#hy2=} ;; cdn=*) d=${f#cdn=} ;; cdnpath=*) cp=${f#cdnpath=} ;; origin=*) or=${f#origin=} ;; cdn-only) only=cdn-only ;; off=*) x=${f#off=} ;; split) sp='split' ;; name=*) nm=${f#name=} ;; standby) sb=standby ;; *) rest="$rest $f" ;; esac
+    case $f in kcp=*) c=${f#kcp=} ;; hy2=*) hy=${f#hy2=} ;; cdn=*) d=${f#cdn=} ;; cdnpath=*) cp=${f#cdnpath=} ;; origin=*) or=${f#origin=} ;; cdn-only) only=cdn-only ;; off=*) x=${f#off=} ;; split) sp='split' ;; name=*) nm=${f#name=} ;; standby) sb=standby ;;
+      # No other field holds "=": a typo, such as cdn_path=, would drop a transport unsaid.
+      *=*) case ${f%%=*} in *[!A-Za-z0-9_-]*) k='?' ;; *) k=${f%%=*} ;; esac
+        echo "relays: line $n: no field is named $k=; ignored" >&2 ;;
+      *) rest="$rest $f" ;; esac
   done
   # shellcheck disable=SC2086 # one field per word
   set -- $rest

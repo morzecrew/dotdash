@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- A `relays` line with a field the server doesn't know, such as a mistyped `cdn_path=`, gets a warning naming the field and the line, where the relay used to lose that transport unsaid.
+
 ### Security
 
 - A server takes a `relays` line only when its host, site, public key, short id, VLESS encryption and XHTTP path each have their shape, and gives no mKCP link through a `kcp=` field that isn't whole. A bad line is left out and named by its line number, so a tampered one can't rewrite or break every device's config.

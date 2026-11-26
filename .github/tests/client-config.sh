@@ -193,6 +193,11 @@ out=$(cc SUBSCRIPTION=false "RELAYS=203.0.113.9 c.example.com ${pbk} 01 none kcp
 [ "$(grep -c 'kcp= field of' "$work/err")" = 2 ] || fail "a kcp= field with more after its seed, or a port from 0: not said"
 grep -qE 'evil|#relay%20[0-9]%20%C2%B7%20kcp' <<<"$out" && fail "a malformed kcp= field still gives an mKCP link"
 
+echo "== an unknown key= in a relays line: said, and ignored"
+out=$(cc SUBSCRIPTION=false "RELAYS=$relay cdn_path=cccc3333" -- --full phone)
+grep -qF 'relays: line 1: no field is named cdn_path=; ignored' "$work/err" || fail "an unknown key= not said"
+[ "$out" = "$(cc SUBSCRIPTION=false "RELAYS=$relay" -- --full phone)" ] || fail "an unknown key= changed the output"
+
 echo "== subscriptions on: the URL alone without --full, one per device"
 [ "$(cc SUBSCRIPTION=true -- | grep -cE '^https://s\.example\.com/[0-9a-f]{32}$')" = 3 ] || fail "subscription: not one URL per device"
 
