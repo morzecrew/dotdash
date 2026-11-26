@@ -371,10 +371,11 @@ def join(
         doc = docs.get(m.name)
         if doc is None:
             raise Refused(f"{m.name} can't come up yet: " + "; ".join(w for w in waiting if w.startswith(m.name + ":")))
+    # Its own credential where the roster gives one, else the network's.
+    creds = m.credentials or net.credentials
     sys.stdout.write(joining.script(
         m, net.target, net.authority, recipient, recovery or recipient, doc, domain, site, entry_host,
-        upstreams.read_text() if upstreams else None,
-        Path(net.credentials).read_text() if net.credentials else None))
+        upstreams.read_text() if upstreams else None, Path(creds).read_text() if creds else None))
     print(f"The script holds credentials: send it only to {m.name}, as root, and its output back here:\n"
           f"  dotdash-manager join {m.name} … | ssh <{m.name}> sudo sh | dotdash-manager joined {m.name}", file=sys.stderr)
 

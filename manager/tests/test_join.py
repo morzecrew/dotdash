@@ -124,3 +124,21 @@ def test_joined_keeps_the_id_and_key_and_the_roster_wins(tmp_path, monkeypatch):
     r = run(app, ["joined", "r1"], input="dotdash-joined r1 inst_2 RW2\n")
     assert r.exit_code != 0 and "ran on r2's installation (inst_2): nothing kept" in str(r.exception)
     assert json.loads((tmp_path / "dotdash-state.json").read_text())["joined"]["r1"]["id"] == "inst_01ab"
+
+
+def test_join_hands_a_machine_its_own_credential_where_the_roster_gives_one(tmp_path, monkeypatch):
+    (tmp_path / "net.yaml").write_text("access_key_id: NET\n")
+    (tmp_path / "a.yaml").write_text("access_key_id: A\n")
+    (tmp_path / "up").write_text("socks5://u:p@203.0.113.1:1080\n")
+    (tmp_path / "network.toml").write_text('target = "s3://b/net"\ncredentials = "net.yaml"\nkey = "k"\nidentity = "i"\n'
+                                           'authority = "a"\n[[server]]\nname = "a"\ncredentials = "a.yaml"\n'
+                                           '[[server]]\nname = "b"\n')
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(state, "lock", lambda path: 0)
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: subprocess.CompletedProcess(a, 0, "age1me\n", ""))
+    run = CliRunner().invoke
+    a = run(app, ["join", "a", "--domain", "a.example", "--upstreams", "up"])
+    assert a.exit_code == 0, a.output
+    assert "access_key_id: A" in a.output and "NET" not in a.output
+    b = run(app, ["join", "b", "--domain", "b.example", "--upstreams", "up"])
+    assert "access_key_id: NET" in b.output

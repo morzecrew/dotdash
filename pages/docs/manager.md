@@ -68,6 +68,7 @@ address_since = 2026-11-01                  # optional: since when it has this a
 standby = true                              # optional: devices use it only once every other link fails
 via = ["r0"]                                # optional: relays it goes through instead of the servers
 via_link = "xhttp"                          # optional, with via: reality (the default) or xhttp through their own sites
+credentials = "./r1-credential.yaml"        # optional, on any machine: its own credential document (Bucket credentials)
 
 [[canary]]
 name = "c1"
@@ -134,6 +135,40 @@ too, so its backups outlive it.
 The script holds the machine's credentials: send it to that machine only. A
 roster entry's own `id` and `key`, as earlier releases had you write them,
 still win over what `joined` kept.
+
+## Bucket credentials
+
+`join` hands each machine the network's `credentials`, the same document the
+manager uses, unless the machine's roster entry names one of its own. With
+one credential for all, a seized relay can delete or overwrite every
+server's documents, fleet rows, facts and backups. Signatures keep it from
+forging them, not from destroying them. A credential per machine, scoped to
+its own prefixes on the target, bounds that:
+
+| Whose | List | Read | Write | Delete |
+| --- | --- | --- | --- | --- |
+| the manager's (`credentials` at the top) | the target | `fleet/`, `state/` | `state/` | `state/`, to prune old documents |
+| a machine's (its `credentials`) | the target | `state/<product>/<installation-id>/`, and each backup's manifest | `fleet/<product>/<installation-id>/` (its row and facts), and its backups | none |
+
+The product is `dotdash`, `dotdash-relay`, `dotdash-canary` or
+`dotdash-client`; the installation id is the one `joined` kept, which
+`morzer installation describe` on the machine prints.
+
+Backups are the gap. morzer keeps every machine's backups at the target's
+root, one directory per backup named by the second it was taken, so a
+machine needs write there, beside the others' backups. Its retention lists
+every backup at the root and prunes by count, whichever machine took them.
+So:
+
+- **Give machines no delete.** Retention then fails with a warning, and
+  the bucket's own lifecycle rules expire old backups instead. With delete,
+  a relay's retention prunes the servers' backups too, the shared
+  credential included.
+- **Turn on versioning or Object Lock** where the bucket has them, so a
+  machine overwriting another's backup leaves the old version.
+
+To move a joined machine to its own credential, name it in the roster and
+run its `join` again: the script replaces the credential it holds.
 
 ## Moving a running network
 
