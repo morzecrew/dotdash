@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The manager refuses facts no bundle prints: whitespace, quotes, backslashes, braces or control characters in a value, or a field missing or of the wrong type. A tampered relay can no longer add lines to the servers' `relays`, crash every sync or write to the terminal, nor take another relay's address out of the pools.
 
+- A device taken out of the manager's roster loses its id at the next sync, so added back it gets new links and a new subscription URL, and its leaked ones let no one in. Before, it got the same id and token back. Relays' and canaries' own ids and client machines' passwords are dropped the same way.
+
 ## [0.17.0] - 2026-11-25
 
 ### Added

@@ -169,7 +169,11 @@ dotdash-manager status           # what each machine applied and refused
 days: a document expires after seven. Run it from a timer to keep it ahead of
 that. A device added to `devices` reaches every server and relay at the next
 sync; one removed loses its access everywhere, each machine within its next
-cycle.
+cycle. The manager forgets its id at that sync, so a device added back later
+gets a new one: new links and a new subscription URL, and its old ones let no
+one in. The same goes for a relay's or canary's own id and a client machine's
+proxy password. That's how to revoke a device whose link leaked: take it out,
+`sync`, then add it back.
 
 Before it uses a machine's facts, `sync` checks them. Facts no release
 prints are refused: a value holding whitespace, a quote, a backslash, a brace
@@ -345,7 +349,7 @@ It names a device whose day reached five times its median day and at least
 2 GB, once it has 7 days to judge by:
 
 ```
-phone-2: 14.2 GB on 2026-12-03, against 0.4 GB on its usual day: if its link may have leaked, delete the device and add it again
+phone-2: 14.2 GB on 2026-12-03, against 0.4 GB on its usual day: if its link may have leaked, take the device out, sync, and add it back
 ```
 
 `sync` prints yesterday's and today's; `report` ends with the last 30 days'.

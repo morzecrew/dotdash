@@ -28,6 +28,23 @@ def test_load_keeps_what_it_made_and_save_is_private(tmp_path):
     assert state.load(path, net) == json.loads(path.read_text()) == first
 
 
+def test_one_taken_out_and_added_again_gets_a_new_id_and_password(tmp_path):
+    head = 'target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\nsubscription = true\n'
+    full = loads(head + 'devices = ["phone", "tv"]\n[[relay]]\nname = "r1"\n[[canary]]\nname = "c1"\nwatches = "r1"\n'
+                 '[[client]]\nname = "home"\ndevice = "phone"\n')
+    path = tmp_path / "dotdash-state.json"
+    first = state.load(path, full)
+    state.save(path, first)
+    gone = state.load(path, loads(head + 'devices = ["tv"]\n'))
+    assert set(gone["ids"]) == {"tv"} and gone["passwords"] == {}
+    assert gone["ids"]["tv"] == first["ids"]["tv"] and gone["keys"] == first["keys"]
+    state.save(path, gone)
+    back = state.load(path, full)
+    for name in "phone", "relay-r1", "canary-c1":
+        assert back["ids"][name] != first["ids"][name]
+    assert back["passwords"]["home"] != first["passwords"]["home"]
+
+
 def test_save_leaves_nothing_beside_the_state(tmp_path):
     path = tmp_path / "dotdash-state.json"
     state.save(path, {"a": 1})
