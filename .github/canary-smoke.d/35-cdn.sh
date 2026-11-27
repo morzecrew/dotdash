@@ -24,7 +24,7 @@ fi
 xray=$(sudo docker image ls --digests --format '{{.Repository}}@{{.Digest}}' ghcr.io/morzecrew/xray | sed -n 1p)
 [ -n "${xray}" ] || die "the bundle's pinned xray image is not in the rig"
 # The servers' and relays' Caddy, as their manifests pin it.
-caddy=ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:ade990affb797eb565007e52fc6fe3d34deed0d9300d1b3f4153643299a0de4c
+caddy=ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:5e3625892d50b2dd0b9cf5ce15e8b1d4585852fae88e675207b811a96d63e69c
 id=$(sudo jq -r '.inbounds[0].settings.clients[0].id' /rig/server/config.json)
 path=$(openssl rand -hex 12)
 network=$(sudo docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}' "$(service_container reality)")
