@@ -9,17 +9,24 @@
 # or field of relays, cdn_extra or any other that devices would lose, which
 # it says on stderr, fails the change that brought it (hooks/healthy lists);
 # what costs them nothing it marks "warning: " (warn), and that passes.
+# --relay <relay> prints only what goes through that relay: its subscription
+# URL and, with --full, its links, for the device to take by hand; the
+# device's subscription still carries every relay it gets.
 set -eu
 # shellcheck source=common.sh
 . /task/common.sh
 full=false
 local_auth=false
 check=false
+only_relay=
 while :; do
   case ${1:-} in
   --full) full=true ;;
   --local-auth) full=true local_auth=true ;;
   --check) check=true ;;
+  --relay) only_relay=${2:-}
+    [ -n "$only_relay" ] || { echo "--relay takes a relay's name: client-config -- --relay <relay> [<device>]" >&2; exit 1; }
+    shift ;;
   *) break ;;
   esac
   shift
@@ -102,30 +109,40 @@ path=$(cat /run/secrets/xhttp_path)
 sid=$(cat /run/secrets/reality_short_id)
 pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # The dotdash-relay machines in front of this server (the relays parameter),
-# one "<host> <site> <public key> <short id> <encryption> [own-site [<xhttp
-# path>]] [kcp=<port>,<header>,<seed>[,<open>]] [hy2=<port>] [cdn=<host>[,<host>]]
-# [cdnpath=<path>] [origin=<host>[/<path>][,<host>[/<path>]]] [cdn-only] [off=<path>[,<path>]] [split] [name=<label>]
-# [standby]" per
-# line; blank lines, "#" comments and shorter lines are not relays. own-site:
-# the site is the relay's own, which fetches subscriptions from here and, given
-# its path, routes XHTTP to the relay's Xray. kcp=: the relay serves mKCP on
-# that UDP port too, with the opener <open> (quic) if it names one. hy2=: an
-# own-site relay serves Hysteria2 on that UDP port, under its site's
-# certificate. cdn=:
+# one per line, as its relay-entry prints it: "relay/1 <name> <nonce> <host>
+# <site> <public key> <short id> <encryption> [xhttp=<path>]
+# [kcp=<port>,<header>,<seed>[,<open>]] [hy2=<port>] [cdn=<host>[,<host>]]
+# [cdnpath=<path>] [origin=<host>[/<path>][,<host>[/<path>]]] [cdn-only]".
+# Its name names its links; the nonce is the image's (xray.json.tmpl), with
+# which it derives the relay's id. For this release, a line of the one
+# before is read too: "<host> <site> <public key> <short id> <encryption>
+# [own-site [<xhttp path>]] [kcp=...] [hy2=...] [cdn=...] [cdnpath=...]
+# [origin=...] [cdn-only] [off=<path>[,<path>]] [split] [name=<label>]
+# [standby]", its relay let in by its client in vless_clients.
+# Blank lines, "#" comments and shorter lines are not relays. xhttp= (own-site
+# <path> before): the site is the relay's own, which fetches subscriptions
+# from here and, given its path, routes XHTTP to the relay's Xray. kcp=: the
+# relay serves mKCP on that UDP port too, with the opener <open> (quic) if it
+# names one. hy2=: an own-site relay serves Hysteria2 on that UDP port, under
+# its site's certificate. cdn=:
 # local CDNs front the relay's own site, as cdn_hosts fronts this server's;
 # they need its XHTTP path. cdnpath=: the relay serves CDNs on a path of its
 # own, disguised for a CDN (its CDN inbound), which its CDN links then take,
 # so a CDN never learns the path devices reach the relay by directly; without
 # it they take that one, plain. cdn-only: devices get the relay's CDN links alone,
-# so its own address reaches none of them. off=: the paths its canaries find
+# so its own address reaches none of them.
+# What this server decides about a relay is relay_flags', by its name, one
+# "<name> <flag>..." line per relay, which a line of before may carry itself:
+# off=: the paths its canaries find
 # blocked (reality, xhttp, mkcp, hysteria2; dotdash-manager sets it), which devices then
 # don't get through it; its CDN links stay, but for a cdn:<name> it names, a
 # CDN in front that gets nothing through, whose links go. split: its canaries got REALITY
 # through only with its hello split into TLS records (dotdash-manager sets it):
 # the Xray config devices get keeps a REALITY outbound through it, split, even
-# with off=reality, which share links can't carry. name=: the operator's
-# label for the relay (its name parameter), which its links carry in place of
-# "relay <n>"; one an earlier relay took is left out, so names stay unique.
+# with off=reality, which share links can't carry. name= (a line of before):
+# the operator's label for the relay (its name parameter), which its links
+# carry in place of "relay <n>"; one an earlier relay took, or a relay/1
+# line's, is left out, so names stay unique.
 # standby: devices hold the relay's links but use them only when every other
 # fails, and don't check them meanwhile, so the relay carries nothing while
 # the rest get through: its share links come last, and in the Xray config its
@@ -140,8 +157,8 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # ks and ko kcp='s port, header, seed and opener; d its CDN hosts, the
 # origin's among them, but those off= takes, comma-separated, which pick then
 # cuts down to a device's, and dall all of them; rn its route, which its links are named by;
-# or its origin hosts. awk reads $2 the site, $6 own-site, $13 cdn-only, $19
-# standby and $21 all the CDN hosts.
+# or its origin hosts. awk reads $2 the site, $6 own-site, $13 cdn-only, $17
+# the route, $19 standby and $21 all the CDN hosts.
 cols='h s k i e o p kp kh ks ko d only off sp hy rn cp sb or dall'
 # fronts_ok <list>: whether it is "<host>[/<path>]", comma-separated.
 fronts_ok() {
@@ -152,17 +169,50 @@ fronts_ok() {
     case ${fe#"$fh"} in *[!A-Za-z0-9._~/-]*) return 1 ;; esac
   done
 }
+# relay_flags, by a relay's name; flags_of <name>: its flags, the well-formed
+# ones (the check further down says the rest).
+relay_flags=$(printf '%s\n' "${RELAY_FLAGS:-}" | sed 's/#.*//' | awk 'NF')
+flags_of() {
+  printf '%s\n' "$relay_flags" | awk -v r="$1" '$1 == r { for (i = 2; i <= NF; i++)
+    if ($i == "standby" || $i == "split" || $i ~ /^off=[A-Za-z0-9.:,-]+$/) printf "%s ", $i }'
+}
+# The relay/1 lines' names, lower-cased, which a line of before's name= may
+# not take; and the devices' names, lower-cased, as the image refuses a relay
+# whose client name, relay-<name>, is a device's.
+v1_names=$(printf '%s\n' "${RELAYS:-}" | awk '$1 == "relay/1" && NF >= 8 { print tolower($2) }')
+device_names=$(awk '$1 !~ /^#/ && NF > 1 { print tolower($2) }' /run/secrets/vless_clients)
 # shellcheck disable=SC2030 # its columns, which the readers of the rows name too
-all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
+all_relays=$(set -f; n=0 seen=; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   n=$((n + 1))
   case $line in '' | '#'*) continue ;; esac
-  c=- d=- only=- x=- sp=- hy=- nm=- cp=- sb=- or=- rest=
+  c=- d=- only=- x=- sp=- hy=- nm=- cp=- sb=- or=- rest= v1=false xp=
+  # shellcheck disable=SC2086 # one field per word
+  set -- $line
+  if [ "$1" = relay/1 ]; then
+    v1=true
+    if [ $# -lt 8 ]; then
+      echo "relays: line $n: a relay/1 line starts with 8 fields, relay/1 <name> <nonce> <host> <site> <public key> <short id> <encryption>; left out" >&2
+      continue
+    fi
+    nm=$2 nonce=$3 rest="$4 $5 $6 $7 $8"
+    shift 8
+    line=$*
+  fi
   for f in $line; do
-    case $f in kcp=*) c=${f#kcp=} ;; hy2=*) hy=${f#hy2=} ;; cdn=*) d=${f#cdn=} ;; cdnpath=*) cp=${f#cdnpath=} ;; origin=*) or=${f#origin=} ;; cdn-only) only=cdn-only ;; off=*) x=${f#off=} ;; split) sp='split' ;; name=*) nm=${f#name=} ;; standby) sb=standby ;;
+    case $f in kcp=*) c=${f#kcp=} ;; hy2=*) hy=${f#hy2=} ;; cdn=*) d=${f#cdn=} ;; cdnpath=*) cp=${f#cdnpath=} ;; origin=*) or=${f#origin=} ;; cdn-only) only=cdn-only ;;
+      xhttp=*) if $v1; then xp=${f#xhttp=}; else warn "relays: line $n: no field is named xhttp=; ignored"; fi ;;
+      off=* | split | standby) if $v1; then warn "relays: line $n: ${f%%=*} goes in relay_flags for a relay/1 line; ignored"
+        else case $f in off=*) x=${f#off=} ;; split) sp='split' ;; standby) sb=standby ;; esac; fi ;;
+      name=*) if $v1; then warn "relays: line $n: a relay/1 line's name is its second field; name= ignored"; else nm=${f#name=}; fi ;;
       # No other field holds "=": a typo, such as cdn_path=, would drop a transport unsaid.
       *=*) case ${f%%=*} in *[!A-Za-z0-9_-]*) k='?' ;; *) k=${f%%=*} ;; esac
         warn "relays: line $n: no field is named $k=; ignored" ;;
-      *) rest="$rest $f" ;; esac
+      *) if $v1; then warn "relays: line $n: a word that is no field of a relay/1 line; ignored"; else rest="$rest $f"; fi ;; esac
+  done
+  [ -z "$xp" ] || rest="$rest own-site $xp"
+  # relay_flags, by its name, beside what a line of before carries itself.
+  [ "$nm" = - ] || for f in $(flags_of "$nm"); do
+    case $f in off=*) x=${x#-}; x=${x:+$x,}${f#off=} ;; split) sp='split' ;; standby) sb=standby ;; esac
   done
   # shellcheck disable=SC2086 # one field per word
   set -- $rest
@@ -170,9 +220,19 @@ all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   # Each field Xray or a link reads: one that could close its string, or that
   # a device's Xray would refuse along with its whole config, leaves the line
   # out, so a tampered line can neither rewrite nor break every device's.
-  # Checked last to first, so the first bad one is named.
+  # Checked last to first, so the first bad one is named. A relay/1 line's,
+  # as the image checks them (xray.json.tmpl), which refuses the whole config
+  # over one.
   why=
-  [ "${6:-}" != own-site ] || case ${7:-} in *[!0-9a-f]*) why='XHTTP path' ;; esac
+  if [ "${6:-}" = own-site ]; then
+    xp=${7:-}
+    if $v1; then
+      case $xp in '' | *[!A-Za-z0-9._~-]*) why='xhttp= path' ;; esac
+      [ ${#xp} -le 128 ] || why='xhttp= path'
+    else
+      case $xp in *[!0-9a-f]*) why='XHTTP path' ;; esac
+    fi
+  fi
   case $5 in none | mlkem768x25519plus.*) ;; *) why=encryption ;; esac
   case $5 in *[!A-Za-z0-9._-]*) why=encryption ;; esac
   case $4 in '' | *[!0-9a-f]*) why='short id' ;; esac
@@ -180,11 +240,31 @@ all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
   case $3 in *[!A-Za-z0-9_-]*) why='public key' ;; esac
   [ ${#3} = 43 ] || why='public key'
   name_ok "$2" || why=site
+  # A relay/1 line's site is a name, not an address.
+  if $v1; then case $2 in *[!0-9.]*) ;; *) why=site ;; esac; fi
   # The host may be an IPv6 address too.
   name_ok "$1" || case $1 in *:*:*) case $1 in *[!0-9A-Fa-f:.]*) why=host ;; esac ;; *) why=host ;; esac
+  if $v1; then
+    case $nonce in *[!0-9a-f]*) why=nonce ;; esac
+    [ ${#nonce} = 16 ] || why=nonce
+    case $nm in *[!A-Za-z0-9._-]*) why=name ;; esac
+    [ ${#nm} -le 24 ] || why=name
+  fi
   if [ -n "$why" ]; then
     echo "relays: line $n: its $why is malformed; left out" >&2
     continue
+  fi
+  if $v1; then
+    lc=$(printf '%s' "$nm" | tr '[:upper:]' '[:lower:]')
+    case " $seen " in *" $lc "*)
+      echo "relays: line $n: its name is an earlier relay/1 line's, ignoring case; left out" >&2
+      continue ;;
+    esac
+    seen="$seen $lc"
+    if printf '%s\n' "$device_names" | grep -qxF "relay-$lc"; then
+      echo "relays: line $n: a device in vless_clients is named relay-$nm, as $nm comes in; left out" >&2
+      continue
+    fi
   fi
   # kcp=<port>,<header>,<seed>[,quic], whole, in its parts.
   kp=- kh=- ks=- ko=-
@@ -250,15 +330,18 @@ all_relays=$(set -f; n=0; printf '%s\n' "${RELAYS:-}" | while read -r line; do
     echo "relays: line $n: $1 is cdn-only but has no CDN link; left out" >&2
     continue
   fi
-  case $nm in
+  $v1 || case $nm in
     -) ;;
     '' | ?????????????????????????* | *[!A-Za-z0-9._-]*)
       warn "relays: line $n: the name= field of $1 is not 1 to 24 letters, digits, dots, dashes or underscores; it goes by its number"
       nm=- ;;
-    *) case " ${taken:-} " in *" $nm "*)
-      warn "relays: line $n: $1 is named $nm, as an earlier relay is; it goes by its number"
-      nm=- ;;
-    esac ;;
+    *) if printf '%s\n' "$v1_names" | grep -qxF "$(printf '%s' "$nm" | tr '[:upper:]' '[:lower:]')"; then
+        warn "relays: line $n: $1 is named $nm, as a relay/1 line is; it goes by its number"
+        nm=-
+      else case " ${taken:-} " in *" $nm "*)
+        warn "relays: line $n: $1 is named $nm, as an earlier relay is; it goes by its number"
+        nm=- ;;
+      esac; fi ;;
   esac
   taken="${taken:-} $nm"
   echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $kp $kh $ks $ko $d $only $x $sp $hy $nm $cp $sb $or $dall"
@@ -309,6 +392,11 @@ pick() { # <device name> [<kind>]: the relays, CDN hosts and subscription relays
   done)
   cdns=
   [ "${2:-}" = desktop ] || cdns=$(for h in $all_cdns; do if sees "$h"; then echo "$h"; fi; done)
+  # --relay: that relay alone, if the device gets it.
+  if [ -n "$only_relay" ]; then
+    relays=$(printf '%s\n' "$relays" | awk -v r="$only_relay" '$17 == r')
+    cdns=
+  fi
   # The own-site relays' domains, where a device inside the restricted network
   # fetches its subscription; not a cdn-only one's, whose address stays out.
   sub_relays=$(printf '%s\n' "$relays" | awk '$6 == "own-site" && $13 != "cdn-only" { print $2 }')
@@ -321,6 +409,19 @@ printf '%s\n' "${POOLS:-}" | sed 's/#.*//' | awk 'NF > 1 { for (i = 2; i <= NF; 
   printf '%s\n%s\n%s\n' "$names" "$all_cdns" "$relay_names" | grep -qxF -- "$m" ||
     warn "pools: line $n: $m is no device name, relay host or CDN host"
 done
+# A relay_flags line that names no relay, or a word that is no flag, costs
+# devices nothing: said. A malformed off= leaves the paths it names open.
+printf '%s\n' "${RELAY_FLAGS:-}" | sed 's/#.*//' | awk 'NF { print NR, $0 }' | { set -f; while read -r n r rest; do
+  printf '%s\n' "$all_relays" | awk -v r="$r" '$17 == r { f = 1 } END { exit !f }' ||
+    warn "relay_flags: line $n: no relay in relays is named $r"
+  for w in $rest; do
+    case $w in
+      standby | split) ;;
+      off=*) case ${w#off=} in '' | *[!A-Za-z0-9.:,-]*) echo "relay_flags: line $n: the off= of $r is not <path>[,<path>]; ignored" >&2 ;; esac ;;
+      *) warn "relay_flags: line $n: $w is not standby, split or off=<path>[,<path>]; ignored" ;;
+    esac
+  done
+done; }
 # Their edges take GET alone and no request body (some answer 413 to any),
 # so a device uploads in packet-up GETs with the data in headers. The server's
 # inbound reads that as it is: its placement is auto. Edges cap a request's
@@ -397,17 +498,20 @@ extra_of() { # <host>: its cdn_extra object in ex, for a link in exu; empty for 
 # mode auto: measured on wire-sized captures with a round trip, packet-up was
 # flagged no less often (neither was, by nDPI or the lab's classifier) and
 # loaded pages up to an eighth slower.
-# Each link is named "<route> · <transport>": the route "server", a relay's
-# name= or "relay", and the transport reality, xhttp, kcp, hy2, or "cdn" for
+# Each link is named "<route> · <transport>": the route this server group's
+# name (the name parameter), or "server" without one, a relay's name or
+# "relay", and the transport reality, xhttp, kcp, hy2, or "cdn" for
 # XHTTP through a CDN, in front of this server or of the relay. The device's
 # own name is left out: its subscription is its own. Each is numbered only
-# where there are several: "server <n>" with several servers, "relay <n>" with
-# several relays lines, "cdn <n>" with several cdn_hosts or several cdn= hosts
+# where there are several: "<name> <n>" with several servers, "relay <n>" with
+# several unnamed relays lines, "cdn <n>" with several cdn_hosts or several cdn= hosts
 # on the relay. The numbers are a server's place in servers, a relay's among
 # the relays lines, and a CDN's in cdn_hosts or among its relay's cdn= hosts:
 # the same on every device, whichever of them its pools give it, and no host
 # name shows in the app.
 sep='%20%C2%B7%20'
+own_route=server
+[ "$group" = none ] || own_route=$group
 # is_origin <origin hosts|-> <cdn host>: whether that CDN host is one of the
 # relay's door's (origin=), whose links upload in 4 KiB GETs.
 is_origin() { case ,$1, in *,"$2",*) return 0 ;; esac; return 1; }
@@ -513,9 +617,9 @@ relay_links() { # <id> <device> <normal|standby>: per relay of that group, "<rou
   done
 }
 
-cdn_links() { # <id> <device>: one per CDN, named "server · cdn[ <n>]"
+cdn_links() { # <id> <device>: one per CDN, named "<name> · cdn[ <n>]"
   for h in $cdns; do
-    link_cdn "$1" "$h" "$enc" "$cdn_path" disguised server "$(cdn_no "$h")" ''
+    link_cdn "$1" "$h" "$enc" "$cdn_path" disguised "$own_route" "$(cdn_no "$h")" ''
   done
 }
 
@@ -671,14 +775,21 @@ sub_through() { # <token>: the same subscription through each own-site relay
 
 client() { # <id> <label>
   echo "== $2 =="
+  if [ -n "$only_relay" ] && [ -z "$relays" ]; then
+    echo "$2: nothing through $only_relay: its pools leave the relay out, or it is a desktop and the relay offers CDN links alone" >&2
+    return 0
+  fi
   if [ "${SUBSCRIPTION:-false}" = true ]; then
     # As subscription.sh names the device's file.
     token=$(printf '%s:%s' "$(cat /run/secrets/subscription_key)" "$1" | sha256sum | cut -c1-32)
     if [ "${HTTPS_PORT}" = 443 ]; then at=; else at=":${HTTPS_PORT}"; fi
     own="https://${DOMAIN}${at}/${token}"
-    [ "$direct" != false ] || own=
-    [ -n "$own$sub_relays" ] ||
+    [ "$direct" != false ] && [ -z "$only_relay" ] || own=
+    if [ -n "$only_relay" ] && [ -z "$sub_relays" ]; then
+      echo "$2: no subscription URL through $only_relay, which has no site of its own or offers CDN links alone" >&2
+    elif [ -z "$own$sub_relays" ]; then
       echo "$2: no subscription URL: direct=false keeps this server's out, and the device gets no own-site relay" >&2
+    fi
     if ! $full; then
       [ -z "$own" ] || echo "$own"
       sub_through "$token"
@@ -694,6 +805,11 @@ EOF
     [ -z "$own" ] || [ -z "$sub_relays" ] || echo "An app takes one: a device inside the restricted network gets one through a relay."
     echo
   fi
+  if [ -n "$only_relay" ]; then
+    relay_links "$1" "$2" normal
+    relay_links "$1" "$2" standby
+    return 0
+  fi
   if [ "$direct" = false ] && [ -z "$relays" ] && [ -z "$cdns" ]; then
     echo "$2: no links: direct=false keeps the servers out, and the device gets no relay or CDN host" >&2
     return 0
@@ -701,7 +817,7 @@ EOF
   n=0
   for s in $servers; do
     n=$((n + 1))
-    if [ "$count" -gt 1 ]; then at="server%20$n"; else at=server; fi
+    if [ "$count" -gt 1 ]; then at="${own_route}%20$n"; else at=$own_route; fi
     links "$1" "$2" "$s" "$at"
   done
   relay_links "$1" "$2" normal
@@ -779,7 +895,11 @@ EOF
 }
 
 ! $check || exit 0
-$full || cat <<EOF
+if [ -n "$only_relay" ] && ! printf '%s\n' "$all_relays" | awk -v r="$only_relay" '$17 == r { f = 1 } END { exit !f }'; then
+  echo "no relay named '$only_relay' in relays" >&2
+  exit 1
+fi
+$full || [ -n "$only_relay" ] || cat <<EOF
 Subscription URLs, one per device, for v2rayN, v2rayNG, Hiddify, Happ or
 Streisand to fetch its links from and refresh them; --full prints the links
 and the Xray config too.
@@ -798,7 +918,7 @@ while read -r id name kind _ || [ -n "${id:-}" ]; do
 done </run/secrets/vless_clients
 [ -n "$found" ] || { echo "no client named '$want' in vless_clients" >&2; exit 1; }
 
-$full && [ -n "${XDNS_DOMAIN:-}" ] || exit 0
+$full && [ -n "${XDNS_DOMAIN:-}" ] && [ -z "$only_relay" ] || exit 0
 cat <<EOF
 The config's "xdns" outbound, the DNS tunnel, is slow, for networks where only
 DNS works. Its resolvers are the server's xdns_resolvers; where the network

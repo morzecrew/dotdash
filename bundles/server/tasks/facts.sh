@@ -16,6 +16,8 @@ str() {
 }
 
 printf '{"domain": %s, "https_port": %s' "$(str "$DOMAIN")" "$HTTPS_PORT"
+# This server group's name, which relays know it by, once it has one.
+[ "$group" = none ] || printf ', "name": %s' "$(str "$group")"
 printf ', "public_key": %s' "$(str "$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)")"
 printf ', "encryption": %s' "$(str "$(/opt/xray/xray-entrypoint vless-encryption /run/secrets/vless_seed)")"
 printf ', "subscription": %s' "$([ "${SUBSCRIPTION:-false}" = true ] && echo true || echo false)"

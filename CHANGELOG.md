@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The server reads `relay/1` lines in `relays`, as a gateway relay's `relay-entry` will print them: `relay/1 <name> <nonce> <host> <site> <public key> <short id> <encryption>`, then `xhttp=<path>` and the other transports' fields. Each relay comes in by an id the image derives from a new generated secret, `relay_seed`, and the relay's name and nonce, so nobody adds a relay to `vless_clients` again, and deleting its line revokes it. Copy `relay_seed` to every server in `servers`, as the keys.
+
+- A server `name` parameter, the server group's: relays know the group by it, and the servers' own links are named by it in place of `server` (`s1 · reality`, `s1 2 · xhttp` with several servers). Unset, links read as before.
+
+- `relay-config -- <relay>` prints the one `server/1` line that relay keeps for this server group: the servers, their port and keys, the relay's id here, and `xr=` under the `xhttp-reality` profile. It needs `name` and the relay's `relay/1` line. For a relay of the release before, named as its client in `vless_clients`, it prints what it did.
+
+- A `relay_flags` parameter, one `<name> [standby] [off=<path>[,<path>]] [split]` line per relay: what the server or the manager decides about a relay, kept off its line, so a change restarts no Xray.
+
+- `client-config -- --relay <relay> [<device>]` prints only that relay's subscription URL and, with `--full`, its links. The subscription still carries every relay the device gets.
+
+- The server's facts carry its `name`.
+
+### Changed
+
+- **Breaking for anything that reads link names:** with `name` set, the servers' own links are named by it, not `server`.
+
+- An edit to `relays` restarts the server's Xray, which now lets the `relay/1` lines' relays in. The lines of the release before still print links for this release, their relays still coming in by their clients in `vless_clients`; `standby`, `off=`, `split` and `name=` on a `relay/1` line are warned of and ignored (they go in `relay_flags`, and the name is the line's second field).
+
+- Two `relay/1` lines with one name, ignoring case, or one whose client name, `relay-<name>`, a device in `vless_clients` has, fail the change that brings them, as Xray refuses them too. A relay's old line in `vless_clients` named exactly `relay-<name>` has to be renamed or dropped before its `relay/1` line goes in.
+
 ### Fixed
 
 - A cover app's own headers reach visitors, on the server and on own-site relays: Caddy no longer replaces its `Referrer-Policy`, adds HSTS or `X-Content-Type-Options` over its own, or removes its `Server`. It sets those three only where the app sends none, and removes only its own `Server` and the `Via` it adds. Every site had answered with the same set, whatever the app, which no install of a stock app such as Vaultwarden does.

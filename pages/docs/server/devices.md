@@ -55,8 +55,10 @@ Per device it prints:
   relay by its place among the `relays` lines, a CDN by its place in
   `cdn_hosts` (or in its relay's `cdn=`), the same on every device, so an
   app shows no host name; with several servers, `server 1`, `server 2` and
-  on, in the order of `servers`. A relay with a
-  [name](../relay/reference.md#parameters) goes by it instead: `edge-1 · reality`;
+  on, in the order of `servers`. With [`name`](parameters.md) set, the
+  servers' links go by it in place of `server`: `s1 · reality`, `s1 2 · xhttp`.
+  A relay with a name, as every `relay/1` line has, goes by it instead:
+  `edge-1 · reality`;
 - an Xray config for v2rayN or v2rayNG (as a custom config) that uses
   whichever link answers fastest, drops a dead one within about 30 s, and
   falls back to the [DNS tunnel](dns-tunnel.md) when it is on, or to a
@@ -64,6 +66,14 @@ Per device it prints:
 
 !!! warning "The output is a password"
     Anyone holding a device's links can use the server as that device.
+
+`--relay <name>` prints only what goes through that relay: its subscription
+URL, and with `--full` its links, for a device to take by hand. The device's
+subscription still carries every relay it gets:
+
+```sh
+sudo morzer task run client-config --output -- --relay r1 phone
+```
 
 As QR codes in the terminal, with `qrencode`:
 
