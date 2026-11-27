@@ -2357,8 +2357,10 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
   relay by its place among the <code>relays</code> lines, a CDN by its place in
   <code>cdn_hosts</code> (or in its relay's <code>cdn=</code>), the same on every device, so an
   app shows no host name; with several servers, <code>server 1</code>, <code>server 2</code> and
-  on, in the order of <code>servers</code>. A relay with a
-  <a href="../../relay/reference/#parameters">name</a> goes by it instead: <code>edge-1 · reality</code>;</li>
+  on, in the order of <code>servers</code>. With <a href="../parameters/"><code>name</code></a> set, the
+  servers' links go by it in place of <code>server</code>: <code>s1 · reality</code>, <code>s1 2 · xhttp</code>.
+  A relay with a name, as every <code>relay/1</code> line has, goes by it instead:
+  <code>edge-1 · reality</code>;</li>
 <li>an Xray config for v2rayN or v2rayNG (as a custom config) that uses
   whichever link answers fastest, drops a dead one within about 30 s, and
   falls back to the <a href="../dns-tunnel/">DNS tunnel</a> when it is on, or to a
@@ -2368,6 +2370,11 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
 <p class="admonition-title">The output is a password</p>
 <p>Anyone holding a device's links can use the server as that device.</p>
 </div>
+<p><code>--relay &lt;name&gt;</code> prints only what goes through that relay: its subscription
+URL, and with <code>--full</code> its links, for a device to take by hand. The device's
+subscription still carries every relay it gets:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>client-config<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>--relay<span class="w"> </span>r1<span class="w"> </span>phone
+</code></pre></div>
 <p>As QR codes in the terminal, with <code>qrencode</code>:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>client-config<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>phone<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s1">'^vless://'</span><span class="w"> </span><span class="p">|</span>
 <span class="w">  </span><span class="k">while</span><span class="w"> </span><span class="nb">read</span><span class="w"> </span>-r<span class="w"> </span>link<span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span>qrencode<span class="w"> </span>-t<span class="w"> </span>ansiutf8<span class="w"> </span><span class="s2">"</span><span class="nv">$link</span><span class="s2">"</span><span class="p">;</span><span class="w"> </span><span class="k">done</span>

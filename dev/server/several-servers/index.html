@@ -2149,11 +2149,12 @@
 and transport parameters. Links then cover every server, and the Xray config
 fails over between them. Add and revoke devices on each.</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># on the first server; sudo on b.example.com must not prompt</span>
-<span class="k">for</span><span class="w"> </span>s<span class="w"> </span><span class="k">in</span><span class="w"> </span>vless_clients<span class="w"> </span>vless_seed<span class="w"> </span>reality_key<span class="w"> </span>reality_short_id<span class="w"> </span>xhttp_path<span class="w"> </span>kcp_seed<span class="w"> </span>subscription_key<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="k">for</span><span class="w"> </span>s<span class="w"> </span><span class="k">in</span><span class="w"> </span>vless_clients<span class="w"> </span>vless_seed<span class="w"> </span>reality_key<span class="w"> </span>reality_short_id<span class="w"> </span>xhttp_path<span class="w"> </span>kcp_seed<span class="w"> </span>subscription_key<span class="w"> </span>relay_seed<span class="p">;</span><span class="w"> </span><span class="k">do</span>
 <span class="w">  </span>sudo<span class="w"> </span>cat<span class="w"> </span>/run/dotdash/secrets/<span class="nv">$s</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>ssh<span class="w"> </span>b.example.com<span class="w"> </span>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">$s</span>
 <span class="k">done</span>
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>get<span class="w"> </span>relays<span class="w"> </span><span class="p">|</span><span class="w"> </span>ssh<span class="w"> </span>b.example.com<span class="w"> </span>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>--set-file<span class="w"> </span><span class="nv">relays</span><span class="o">=</span>-
 <span class="c1"># on every server</span>
-sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">servers</span><span class="o">=</span>example.com,b.example.com
+sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">servers</span><span class="o">=</span>example.com,b.example.com<span class="w"> </span><span class="nv">name</span><span class="o">=</span>s1
 </code></pre></div>
 <ul>
 <li><strong>The same profiles and transport parameters.</strong> Each server prints every
@@ -2169,6 +2170,10 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w">
   key there the URL gets a 404.</li>
 <li>While <a href="../secrets/#rotating-the-reality-key">rotating the REALITY key</a>,
   copy <code>reality_key_second</code> and <code>reality_short_id_second</code> too.</li>
+<li><strong><code>relay_seed</code>, <code>relays</code> and <code>name</code>:</strong> a relay's id is derived from
+  <code>relay_seed</code>, so every server lets it in by the same id and prints it the
+  same <code>server/1</code> line, which names the group by <code>name</code>. Copy <code>relay_flags</code>
+  too where you use it.</li>
 </ul>
 
 
