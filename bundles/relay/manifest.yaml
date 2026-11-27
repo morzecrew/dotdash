@@ -258,7 +258,7 @@ images:
   jq: ghcr.io/jqlang/jq:1.8.2@sha256:b9c68867e5766576263a222e91db3de422d802069c7af70440e667a95344e486
   # The relay-entry task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.38.0@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
-  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:6e966ac98e0d87767871367ec581885c90770eb74dae6eb0379e15a371c9fb9e
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:0105eea74fbd5a8227619b7a220ee0a493a5799065bf54ea2b8b7a3c824eed30
   # The own-site profile's site; dotdash's own. Upstream's Caddy with the
   # acme-dns DNS module, for cert_issuer=acme-dns.
   caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:ade990affb797eb565007e52fc6fe3d34deed0d9300d1b3f4153643299a0de4c

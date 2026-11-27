@@ -1,25 +1,57 @@
 #!/bin/sh
-# Prints what a dotdash-relay machine needs to carry devices on to this server
-# as the client named in $1: the init command and its secrets, among them the
-# devices it lets in. The output is every device's credentials.
+# Prints the server/1 line the relay named in $1, by its relay/1 line in
+# relays, keeps in its servers secret for this server group:
+#
+#   server/1 <name> <host>[,<host>...] <port> <public key> <short id> <encryption> <relay id> [xr=<port>,<path>]
+#
+# the group's name (the name parameter), every server sharing these keys
+# (servers), the port they take REALITY on, their keys as devices' links
+# carry them, and the relay's id here, which the image derives from
+# relay_seed and the relay's name and nonce, as Xray's REALITY inbounds let
+# it in (xray.json.tmpl); xr= under the xhttp-reality profile, its port and
+# path. The id is the relay's way in, so the line is as secret as a link.
+#
+# A relay of the release before has no relay/1 line: named as its client in
+# vless_clients, it gets what it did, the init command and its copy of every
+# device, which is every device's credentials.
 set -eu
-: "${DOMAIN:?}" "${HTTPS_PORT:?}"
-# The port others dial: entry_port, when a proxy on this machine passes the
-# domain through to https_port.
-case ${ENTRY_PORT:-none} in none) ;; '' | *[!0-9]*) echo "entry_port is not a port: ${ENTRY_PORT}" >&2; exit 1 ;; *) HTTPS_PORT=$ENTRY_PORT ;; esac
-want=${1:?name the client the relay uses, as in vless_clients: relay-config -- <name>}
+# shellcheck source=common.sh
+. /task/common.sh
+want=${1:?name the relay, as its relay/1 line in relays names it: relay-config -- <relay>}
+
+line=$(printf '%s\n' "${RELAYS:-}" | awk -v r="$want" '$1 == "relay/1" && $2 == r { print; exit }')
+if [ -n "$line" ]; then
+  [ "$group" != none ] || {
+    echo "this server group has no name: set one first, the same on every server in servers (sudo morzer config set name=<name>)" >&2
+    exit 1; }
+  # shellcheck disable=SC2086 # one field per word
+  set -f && set -- $line
+  # The image checks the name and nonce, and refuses a seed of another shape.
+  id=$(/opt/xray/xray-entrypoint relay-id /run/secrets/relay_seed "$2" "$3")
+  xr=
+  [ -z "${XHTTP_REALITY_PORT:-}" ] || xr=" xr=${XHTTP_REALITY_PORT},$(cat /run/secrets/xhttp_path)"
+  echo "server/1 ${group} $(server_list | tr '\n' ',' | sed 's/,$//') ${HTTPS_PORT}" \
+    "$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key) $(cat /run/secrets/reality_short_id)" \
+    "$(/opt/xray/xray-entrypoint vless-encryption /run/secrets/vless_seed) ${id}${xr}"
+  echo "On the relay $2: sudo EDITOR=nano morzer secret edit servers, and add this line there, in place of any line of ${group}'s." >&2
+  exit 0
+fi
 
 id=
 while read -r line_id name _ || [ -n "${line_id:-}" ]; do
   case $line_id in '' | '#'*) continue ;; esac
   [ "$want" = "${name:-}" ] && { id=$line_id; break; }
 done </run/secrets/vless_clients
-[ -n "$id" ] || { echo "no client named '$want' in vless_clients" >&2; exit 1; }
+[ -n "$id" ] || { echo "no relay/1 line in relays names '$want', nor does a client in vless_clients" >&2; exit 1; }
 # Every server sharing these keys (the servers parameter), self as this one:
 # the relay uses whichever answers fastest.
-servers=$(printf '%s\n' "${SERVERS:-self}" | tr ',' '\n' | sed -e 's/^ *//' -e 's/ *$//' -e '/^$/d' -e "s/^self\$/${DOMAIN}/" | tr '\n' ',' | sed 's/,$//')
+servers=$(server_list | tr '\n' ',' | sed 's/,$//')
 
 cat <<EOF
+For a relay of the release before, which has no relay/1 line: a relay of
+this one prints that line with relay-entry, which goes into relays, and then
+gets its server/1 line here, relay-config -- <its name>.
+
 On the relay machine, inside the restricted network (scripts/bootstrap.sh
 installs what it needs). init trusts the signing key the release ships, as for
 dotdash itself.

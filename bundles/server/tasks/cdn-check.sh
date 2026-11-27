@@ -36,12 +36,15 @@ names=$({
   cp=
   [ "${CDN_HOSTS:-none}" = none ] || cp=$(cat /run/secrets/cdn_xhttp_path)
   for h in $(printf '%s' "${CDN_HOSTS:-none}" | tr ',' ' '); do [ "$h" = none ] || echo "cdn $h $cp"; done
+  # A relay/1 line names its own site's path by xhttp=, a line of before by
+  # own-site <path>.
   printf '%s\n' "${RELAYS:-}" | awk '!/^[ \t]*(#|$)/ {
-    n = 0; c = ""; cp = ""; o = ""
+    n = 0; c = ""; cp = ""; o = ""; x = ""
     for (i = 1; i <= NF; i++)
       if ($i ~ /^cdn=/) c = substr($i, 5); else if ($i ~ /^cdnpath=/) cp = substr($i, 9)
-      else if ($i ~ /^origin=/) o = substr($i, 8); else if ($i !~ /=/ && $i != "cdn-only" && $i != "split" && $i != "standby") f[++n] = $i
-    p = (n >= 7 && f[6] == "own-site") ? f[7] "/" : ""
+      else if ($i ~ /^origin=/) o = substr($i, 8); else if ($i ~ /^xhttp=/) x = substr($i, 7)
+      else if ($i !~ /=/ && $i != "cdn-only" && $i != "split" && $i != "standby") f[++n] = $i
+    p = ($1 == "relay/1") ? (x != "" ? x "/" : "") : (n >= 7 && f[6] == "own-site") ? f[7] "/" : ""
     k = split(c, a, ","); for (j = 1; j <= k; j++) print "cdn", a[j], (cp != "" ? cp : p)
     k = split(o, a, ","); for (j = 1; j <= k; j++) { h = a[j]; sub(/\/.*/, "", h); q = substr(a[j], length(h) + 2)
       if (q == "") q = cp; if (q != "") { sub(/\/*$/, "/", q); print "origin", h, q } } }'

@@ -44,7 +44,7 @@ services:
     tmpfs:
       # Where the image writes the config with secrets resolved; never disk.
       - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
-    secrets: [vless_clients, vless_seed, xhttp_path, cdn_xhttp_path, reality_key, reality_short_id, kcp_seed, reality_key_second, reality_short_id_second]
+    secrets: [vless_clients, vless_seed, xhttp_path, cdn_xhttp_path, reality_key, reality_short_id, kcp_seed, reality_key_second, reality_short_id_second, relay_seed]
     # REALITY on 443 inside too (Xray warns on any other port), as uid 65532
     # with no capabilities.
     sysctls: {net.ipv4.ip_unprivileged_port_start: 0}
@@ -194,7 +194,9 @@ services:
       SUBSCRIPTION: ${DOTDASH_PARAM_SUBSCRIPTION:-false}
       DIRECT: ${DOTDASH_PARAM_DIRECT:-true}
       HELLO_SPLIT: ${DOTDASH_PARAM_HELLO_SPLIT:-false}
+      NAME: ${DOTDASH_PARAM_NAME:-none}
       RELAYS: ${DOTDASH_PARAM_RELAYS:-}
+      RELAY_FLAGS: ${DOTDASH_PARAM_RELAY_FLAGS:-}
       CDN_HOSTS: ${DOTDASH_PARAM_CDN_HOSTS:-none}
       CDN_EXTRA: ${DOTDASH_PARAM_CDN_EXTRA:-none}
       POOLS: ${DOTDASH_PARAM_POOLS:-}
@@ -209,7 +211,8 @@ services:
           subpath: usr/local/bin
       # Caddy's data, for the days left on the site's certificate (facts).
       - caddy_data:/caddy-data:ro
-    secrets: [vless_clients, vless_seed, xhttp_path, cdn_xhttp_path, reality_key, reality_short_id, subscription_key, kcp_seed]
+    # relay_seed for relay-config, which prints a relay its id here.
+    secrets: [vless_clients, vless_seed, xhttp_path, cdn_xhttp_path, reality_key, reality_short_id, subscription_key, kcp_seed, relay_seed]
 
   # Writes each device's subscription into the subscription volume at start
   # (tasks/subscription.sh), as client-config would print its links, and then
@@ -374,3 +377,5 @@ secrets:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/reality_short_id_second
   subscription_key:
     file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/subscription_key
+  relay_seed:
+    file: ${DOTDASH_SECRETS_DIR:-/run/dotdash/secrets}/relay_seed

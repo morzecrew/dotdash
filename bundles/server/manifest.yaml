@@ -227,12 +227,23 @@ parameters:
     default: self
     description: "Servers with these same secrets, comma-separated; self is this one. client-config prints links for each and, with more than one, a config that uses whichever answers fastest"
     services: [subscription]
+  # A server group's name: relays know it by it, and its links are named by it.
+  name:
+    type: string
+    default: none
+    description: "This server group's name, 1 to 16 lowercase letters and digits starting with a letter, the same on every server in servers: the name relays know these servers by, in the server/1 line relay-config prints them, and the one devices' links to these servers are named by in place of \"server\". Apps show it, so pick an opaque one. none for none, which relay-config refuses"
+    services: [subscription]
   relays:
     type: text
     # morzer wants a default for every parameter it doesn't ask for at init,
     # so a comment, which client-config skips, that shows the line's form.
-    default: "# One relay per line, as its relay-entry task prints it: <host> <site> <public key> <short id> <encryption>"
-    description: "The dotdash-relay machines devices also reach this server through, one \"<host> <site> <public key> <short id> <encryption> [own-site]\" line per relay, as a relay's relay-entry task prints it, ending with own-site <xhttp path> and kcp=<port>,<header>,<seed>[,<open>] where the relay serves them (the <open> field names its mKCP opener, quic, when it runs one), and cdn=<host>[,<host>] for local CDNs in front of its own site, then cdn-only when devices get those CDN links alone, and [standby] for a relay devices use only when every other link fails, and don't check meanwhile; client-config and the subscriptions add a link through each, and client-config the subscription URL through each own-site relay"
+    default: "# One relay per line, as its relay-entry task prints it: relay/1 <name> <nonce> <host> <site> <public key> <short id> <encryption> ..."
+    description: "The dotdash-relay machines devices also reach this server through, one line per relay, as a relay's relay-entry task prints it: \"relay/1 <name> <nonce> <host> <site> <public key> <short id> <encryption>\", then xhttp=<path> where the relay has a site of its own, kcp=<port>,<header>,<seed>[,quic], hy2=<port>, cdn=<host>[,<host>], cdnpath=<path>, origin=<host>[/<path>][,...] and cdn-only where it serves them. Each such relay is let in by an id these servers derive from relay_seed and its name and nonce, which relay-config prints it in a server/1 line, so it has no line in vless_clients; deleting its line here revokes it. The lines of the release before, \"<host> <site> <public key> <short id> <encryption> ...\", are read too, for this release, their relays let in by their clients in vless_clients as before. client-config and the subscriptions add a link through each, and client-config the subscription URL through each relay with a site of its own"
+    services: [xray, subscription]
+  relay_flags:
+    type: text
+    default: "# One relay per line: <name> [standby] [off=<path>[,<path>]] [split]"
+    description: "What this server decides about each relay, by its name, one \"<name> <flag>...\" line per relay: standby, a relay devices use only when every other link fails, and don't check meanwhile; off=<path>[,<path>], the paths its canaries find blocked (reality, xhttp, mkcp, hysteria2, or cdn:<host> for one CDN in front of it), which devices then don't get through it; split, REALITY through it with its hello split, which its canaries got through only so (dotdash-manager sets off= and split). A change restarts no Xray, as an edit to relays does"
     services: [subscription]
   cdn_hosts:
     type: string
@@ -322,7 +333,7 @@ images:
   # hooks/policy reads the rendered config with it, run with no network, so
   # the host needs no jq of its own.
   jq: ghcr.io/jqlang/jq:1.8.2@sha256:b9c68867e5766576263a222e91db3de422d802069c7af70440e667a95344e486
-  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:6e966ac98e0d87767871367ec581885c90770eb74dae6eb0379e15a371c9fb9e
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:0105eea74fbd5a8227619b7a220ee0a493a5799065bf54ea2b8b7a3c824eed30
   # Upstream's Caddy with the acme-dns DNS module, for cert_issuer=acme-dns;
   # otherwise as upstream's image, whose shell the tasks also use.
   caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:ade990affb797eb565007e52fc6fe3d34deed0d9300d1b3f4153643299a0de4c
@@ -379,8 +390,8 @@ operations:
 # from its canaries' included. Not the upstreams or anything else this
 # machine alone knows. None of these reaches a command line or a hook.
 managed:
-  parameters: [servers, relays, cdn_hosts, cdn_extra, pools, subscription, direct, reality_second_key, hello_split]
-  secrets: [vless_clients, reality_key, vless_seed, reality_short_id, xhttp_path, kcp_seed, subscription_key, reality_key_second, reality_short_id_second]
+  parameters: [servers, name, relays, relay_flags, cdn_hosts, cdn_extra, pools, subscription, direct, reality_second_key, hello_split]
+  secrets: [vless_clients, reality_key, vless_seed, reality_short_id, xhttp_path, kcp_seed, subscription_key, relay_seed, reality_key_second, reality_short_id_second]
 
 # What this machine tells the authority it follows, after every change, when
 # sync.recipient is set: the facts task's JSON.
@@ -394,7 +405,7 @@ published:
 
 tasks:
   client-config:
-    description: "Print client settings, for every client or the one named after --: a link per transport and an Xray config; with subscriptions on, the URL alone unless --full (output is credentials)"
+    description: "Print client settings, for every client or the one named after --: links and an Xray config; with subscriptions on, the URL unless --full; --relay <relay>, its own alone (output is credentials)"
     service: client-config
     command: ["sh", "/task/client-config.sh"]
     args: true
@@ -446,7 +457,7 @@ tasks:
     command: ["sh", "/task/facts.sh"]
     timeout: 1m
   relay-config:
-    description: "Print the init command and secrets for a dotdash-relay machine carrying devices on to this server as the client named after -- (output is every device's credentials)"
+    description: "Print the server/1 line for the relay/1 relay named after --, for its servers secret; for an older relay, named as its client in vless_clients, its init and device copy (output is credentials)"
     service: client-config
     command: ["sh", "/task/relay-config.sh"]
     args: true

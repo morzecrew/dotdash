@@ -4,6 +4,12 @@
 # The port others dial: entry_port, when a proxy on this machine passes the
 # domain through to https_port.
 case ${ENTRY_PORT:-none} in none) ;; '' | *[!0-9]*) echo "entry_port is not a port: ${ENTRY_PORT}" >&2; exit 1 ;; *) HTTPS_PORT=$ENTRY_PORT ;; esac
+# This server group's name (the name parameter), or none: what relays know
+# these servers by, and what their own links are named by. As the image's
+# group names: no dash, which would read as a tag prefix on a relay.
+group=${NAME:-none}
+case $group in none) ;; [a-z]*) case $group in *[!a-z0-9]* | ?????????????????*) group= ;; esac ;; *) group= ;; esac
+[ -n "$group" ] || { echo "name is not 1 to 16 lowercase letters and digits starting with a letter: ${NAME}" >&2; exit 1; }
 
 # warn <message>: on stderr, for what costs devices nothing: a field this
 # release doesn't know, a name taken twice, a pool member that names nothing.

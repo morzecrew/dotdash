@@ -6,6 +6,13 @@ with the server key derived from that seed, and {"$vlessClients": "<path>"}
 with the client list in that file, before starting Xray (platform-images#125,
 #130). No secret value is ever in this file.
 
+The REALITY inbounds also let the relays in (the relays parameter's relay/1
+lines): $vlessClients's object form yields vless_clients's clients, then one
+per relay, its id derived from relay_seed and the relay's name and nonce, its
+name relay-<name> (platform-images#202). So no relay has a line in
+vless_clients, and deleting its line in relays revokes it. Relays come in on
+REALITY alone, raw or under XHTTP, as their server/1 line has them.
+
 REALITY owns the public TLS port. A client holding the key gets Xray; anything
 else (browsers, scanners, ACME, a CDN) is relayed to Caddy, which serves the
 cover site with its own certificate and passes the XHTTP path back here.
@@ -97,6 +104,22 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
 {{- if and (eq .Parameters.cert_issuer "acme-dns") (gt (len $labels) 2) }}{{ $cert = printf "wildcard_.%s" (join (slice $labels 1) ".") }}{{ end -}}
 {{- if and $hy2 $kcp (eq .Parameters.hysteria2_port .Parameters.kcp_port) }}{{ required "hysteria2_port must differ from kcp_port" "" }}{{ end -}}
 {{- $kcpOpen := and $kcp (eq .Parameters.kcp_open "quic") -}}
+{{- /* The relay/1 lines, as JSON strings, each line's fields joined by one
+space: the image checks every field and refuses a malformed line by its
+number, so Xray does not start on one. A line of the release before, which
+has no tag, is client-config's alone: that relay comes in on its client in
+vless_clients, as it did. A backslash would end a string early; no field holds
+one. */ -}}
+{{- $relayLines := "" -}}
+{{- range lines .Parameters.relays -}}
+{{- $f := split " " (replace . "\t" " ") -}}
+{{- if $f }}{{ if eq (index $f 0) "relay/1" -}}
+{{- if contains . "\\" }}{{ required "relays: a relay/1 line holds a backslash" "" }}{{ end -}}
+{{- if $relayLines }}{{ $relayLines = printf "%s, " $relayLines }}{{ end -}}
+{{- $relayLines = printf "%s%s" $relayLines (quote (join $f " ")) -}}
+{{- end }}{{ end -}}
+{{- end -}}
+{{- $clients := printf `{"$vlessClients": {"devices": "/run/secrets/vless_clients", "relays": [%s], "seed": "/run/secrets/relay_seed"}}` $relayLines -}}
 {{- $xdns := .Parameters.xdns_domain -}}
 {{- if not (contains $xdns ".") }}{{ $xdns = printf "%s.%s" $xdns $domain }}{{ end -}}
 {
@@ -139,7 +162,7 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
       "port": 443,
       "protocol": "vless",
       "settings": {
-        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "clients": {{ $clients }},
         "flow": "xtls-rprx-vision",
         "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
       },
@@ -164,7 +187,7 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
       "port": 4430,
       "protocol": "vless",
       "settings": {
-        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "clients": {{ $clients }},
         "flow": "xtls-rprx-vision",
         "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
       },
@@ -232,7 +255,7 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
       "port": 8443,
       "protocol": "vless",
       "settings": {
-        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "clients": {{ $clients }},
         "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
       },
       "streamSettings": {
@@ -257,7 +280,7 @@ with acme-dns the wildcard over the domain's parent (caddy.env.tmpl). */ -}}
       "port": 4431,
       "protocol": "vless",
       "settings": {
-        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "clients": {{ $clients }},
         "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
       },
       "streamSettings": {

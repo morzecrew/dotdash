@@ -30,6 +30,7 @@ printf 'aaaa1111bbbb2222' >"$work/secrets/xhttp_path"
 printf seedkcp >"$work/secrets/kcp_seed"
 printf subkey >"$work/secrets/subscription_key"
 printf 0011223344556677889900aa >"$work/secrets/cdn_xhttp_path"
+printf 0000000000000000000000000000000000000000000000000000000000000000 >"$work/secrets/relay_seed"
 printf '0593b52c-b345-41cb-96b8-134724f6ca65 phone\n1b2c3d4e-5f60-4718-8a9b-0c1d2e3f4a5b laptop mobile\n# a comment\n2c3d4e5f-6071-4829-9bac-1d2e3f4a5b6c desk desktop\n' >"$work/secrets/vless_clients"
 chmod 644 "$work"/secrets/*
 # A relay's public key and encryption, in the shapes relay-entry prints.
@@ -234,6 +235,109 @@ grep -qF 'servers names no server: this one alone' "$work/err" || fail "servers 
 echo "== subscriptions on: the URL alone without --full, one per device"
 [ "$(cc SUBSCRIPTION=true -- | grep -cE '^https://s\.example\.com/[0-9a-f]{32}$')" = 3 ] || fail "subscription: not one URL per device"
 
+echo "== a relay/1 line: the links its relay's line of before gives, named by its name"
+v1="relay/1 r1 0123456789abcdef 203.0.113.30 r1.example.com ${pbk} ab12 ${enc} xhttp=aaaa1111bbbb2222 kcp=9447,dtls,aa hy2=8443 cdn=cdn-r.example.net cdnpath=cccc3333"
+old="203.0.113.30 r1.example.com ${pbk} ab12 ${enc} own-site aaaa1111bbbb2222 kcp=9447,dtls,aa hy2=8443 cdn=cdn-r.example.net cdnpath=cccc3333 name=r1"
+a=$(cc SUBSCRIPTION=true "RELAYS=$v1" -- --full phone)
+[ ! -s "$work/err" ] || fail "relay/1: said something: $(cat "$work/err")"
+[ "$a" = "$(cc SUBSCRIPTION=true "RELAYS=$old" -- --full phone)" ] || fail "relay/1: not the links of the same relay's line of before"
+printf '%s\n' "$a" | links | grep -q '@203\.0\.113\.30:443?.*#r1%20%C2%B7%20reality$' || fail "relay/1: no REALITY link named r1 · reality"
+
+echo "== relay_flags: what a line of before carried itself, by the relay's name"
+v2="relay/1 r2 fedcba9876543210 203.0.113.31 r2.example.com ${pbk} ab12 ${enc}"
+a=$(cc SUBSCRIPTION=false "RELAYS=$v1
+$v2" "RELAY_FLAGS=# flags
+r1 off=reality,mkcp split
+r2 standby" -- --full phone)
+[ ! -s "$work/err" ] || fail "relay_flags: said something: $(cat "$work/err")"
+[ "$a" = "$(cc SUBSCRIPTION=false "RELAYS=$old off=reality,mkcp split
+203.0.113.31 r2.example.com ${pbk} ab12 ${enc} name=r2 standby" -- --full phone)" ] ||
+  fail "relay_flags: not what the same flags on lines of before give"
+out=$(cc SUBSCRIPTION=false "RELAYS=$v2 standby off=reality" -- --full phone)
+grep -qF 'relays: line 1: standby goes in relay_flags for a relay/1 line; ignored' "$work/err" &&
+  grep -qF 'relays: line 1: off goes in relay_flags for a relay/1 line; ignored' "$work/err" ||
+  fail "relay_flags: a flag on a relay/1 line not said"
+printf '%s\n' "$out" | links | grep -q '#r2%20%C2%B7%20reality$' || fail "relay_flags: a flag on a relay/1 line took effect"
+out=$(cc "RELAYS=$v2" "RELAY_FLAGS=ghost standby
+r2 fast off=bad!" -- --check)
+grep -q '^warning: relay_flags: line 1: no relay in relays is named ghost' "$work/err" &&
+  grep -q '^warning: relay_flags: line 2: fast is not standby' "$work/err" &&
+  grep -q '^relay_flags: line 2: the off= of r2 is not' "$work/err" ||
+  fail "relay_flags: a name, word or off= that is wrong not said as it should be: $(cat "$work/err")"
+
+echo "== malformed relay/1 lines: each left out, by its line number, and fails --check"
+cc "RELAYS=relay/1 r3 0123456789abcdeF 203.0.113.32 r3.example.com ${pbk} ab12 ${enc}
+relay/1 bad/name 0123456789abcdef 203.0.113.33 r4.example.com ${pbk} ab12 ${enc}
+relay/1 r5 0123456789abcdef 203.0.113.34 203.0.113.34 ${pbk} ab12 ${enc}
+relay/1 r6 0123456789abcdef 203.0.113.35 r6.example.com ${pbk} ab12
+$v2
+relay/1 R2 0123456789abcdef 203.0.113.36 r7.example.com ${pbk} ab12 ${enc}
+relay/1 Phone 0123456789abcdef 203.0.113.37 r8.example.com ${pbk} ab12 ${enc} xhttp=a/b
+relay/1 r9 0123456789abcdef 203.0.113.38 r9.example.com ${pbk} ab12 ${enc}
+203.0.113.39 l.example.com ${pbk} ab12 ${enc} name=r9" -- --check >/dev/null || true
+for w in '1: its nonce is malformed' '2: its name is malformed' '3: its site is malformed' '4: a relay/1 line starts with 8 fields' \
+  "6: its name is an earlier relay/1 line's" '7: its xhttp= path is malformed'; do
+  grep -q "^relays: line $w" "$work/err" || fail "malformed relay/1: line ${w%%:*} not said, or said as a warning"
+done
+grep -q '^warning: relays: line 9: 203.0.113.39 is named r9, as a relay/1 line is' "$work/err" ||
+  fail "a line of before named as a relay/1 line is: not a warning"
+printf '0593b52c-b345-41cb-96b8-134724f6ca65 relay-r2\n' >"$work/secrets/vless_clients.alt"
+docker run --rm -v "$work/secrets:/run/secrets:ro" -v "$work/secrets/vless_clients.alt:/run/secrets/vless_clients:ro" \
+  -v "$work/xray:/opt/xray:ro" -v "$root/bundles/server/tasks:/task:ro" -e DOMAIN=s.example.com -e HTTPS_PORT=443 \
+  -e "RELAYS=$v2" "$caddy" sh /task/client-config.sh --check 2>&1 | grep -q '^relays: line 1: a device in vless_clients is named relay-r2' ||
+  fail "a relay/1 line whose client name a device has: not said"
+
+echo "== name: the server's own links named by it, numbered with several servers; a bad one refused"
+out=$(cc SUBSCRIPTION=false NAME=s1 CDN_HOSTS=cdn1.example.net -- --full phone)
+[ "$(printf '%s\n' "$out" | links | grep -cE '#s1%20%C2%B7%20(xhttp|reality|cdn)$')" = 3 ] || fail "name: the links are not named s1"
+printf '%s\n' "$out" | links | grep -q '#server%20' && fail "name: a link still named server"
+[ "$(cc SUBSCRIPTION=false NAME=s1 "SERVERS=self,s2.example.com" -- --full phone | links | grep -c '#s1%20[12]%20%C2%B7%20reality$')" = 2 ] ||
+  fail "name: several servers not numbered s1 1, s1 2"
+for bad in S1 1s s-1 abcdefghijklmnopq; do
+  cc NAME=$bad -- --check >/dev/null 2>&1 && fail "name: $bad not refused"
+  grep -q '^name is not 1 to 16 lowercase letters and digits' "$work/err" || fail "name: $bad refused unsaid"
+done
+
+echo "== --relay: that relay's URL and links alone"
+out=$(cc SUBSCRIPTION=true "RELAYS=$v1
+$v2" -- --relay r1 phone)
+[ "$(printf '%s\n' "$out" | grep -c '^through the relay r1\.example\.com: https://r1\.example\.com/[0-9a-f]\{32\}$')" = 1 ] &&
+  ! printf '%s\n' "$out" | grep -qE 'https://s\.example\.com|vless://' || fail "--relay: not the URL through r1 alone"
+out=$(cc SUBSCRIPTION=true "RELAYS=$v1
+$v2" -- --full --relay r1 phone)
+[ -n "$(printf '%s\n' "$out" | links)" ] && ! printf '%s\n' "$out" | links | grep -qv '#r1%20%C2%B7%20' &&
+  ! printf '%s\n' "$out" | grep -q '^{$' || fail "--full --relay: not r1's links alone, or a config"
+out=$(cc SUBSCRIPTION=true "RELAYS=$v2" -- --relay r2 phone)
+grep -qF 'phone: no subscription URL through r2' "$work/err" || fail "--relay: a relay with no site of its own not said"
+cc "RELAYS=$v2" -- --relay ghost phone >/dev/null 2>&1 && fail "--relay: an unknown relay not refused"
+grep -qF "no relay named 'ghost' in relays" "$work/err" || fail "--relay: an unknown relay refused unsaid"
+out=$(cc SUBSCRIPTION=false "RELAYS=$v1
+$v2" "POOLS=p1 laptop 203.0.113.30
+p2 phone" -- --full --relay r1 phone)
+[ -z "$(printf '%s\n' "$out" | links)" ] && grep -qF 'phone: nothing through r1' "$work/err" || fail "--relay: a pooled-out device got links"
+
+echo "== relay-config: the server/1 line, its relay id the vectors' (relay-id.json)"
+cp "$work/secrets/vless_clients" "$work/vless_clients.keep"
+n=0
+while read -r seed name nonce id; do
+  n=$((n + 1))
+  printf '%s' "$seed" >"$work/secrets/relay_seed"
+  line=$(docker run --rm -v "$work/secrets:/run/secrets:ro" -v "$work/xray:/opt/xray:ro" -v "$root/bundles/server/tasks:/task:ro" \
+    -e DOMAIN=s.example.com -e HTTPS_PORT=443 -e NAME=s1 -e "SERVERS=self, s2.example.com" -e XHTTP_REALITY_PORT=8443 \
+    -e "RELAYS=# a comment
+relay/1 ${name} ${nonce} 203.0.113.30 r1.example.com ${pbk} ab12 ${enc}" "$caddy" sh /task/relay-config.sh "$name" 2>"$work/err") ||
+    fail "relay-config, vector $n: failed: $(cat "$work/err")"
+  set -- $line
+  [ "$#" = 9 ] && [ "$1 $2 $3 $4 $6" = "server/1 s1 s.example.com,s2.example.com 443 ab12" ] && [ "$8" = "$id" ] &&
+    [ "$9" = xr=8443,aaaa1111bbbb2222 ] && [ "${7#mlkem768x25519plus.}" != "$7" ] ||
+    fail "relay-config, vector $n: not server/1 s1 <hosts> 443 <pbk> ab12 <enc> $id xr=8443,<path>: $line"
+done < <(jq -r '.vectors[] | "\(.seed) \(.name) \(.nonce) \(.id)"' .github/tests/relay-id.json)
+[ "$n" -ge 6 ] || fail "relay-config: fewer than 6 vectors read"
+docker run --rm -v "$work/secrets:/run/secrets:ro" -v "$work/xray:/opt/xray:ro" -v "$root/bundles/server/tasks:/task:ro" \
+  -e DOMAIN=s.example.com -e HTTPS_PORT=443 -e "RELAYS=$v2" "$caddy" sh /task/relay-config.sh r2 >/dev/null 2>"$work/err" &&
+  fail "relay-config: no name, and not refused"
+grep -qF 'this server group has no name' "$work/err" || fail "relay-config: no name, refused unsaid"
+
 echo "== the golden: every transport, profile and relays field, pools, cdn_extra, kinds, direct=false, several servers"
 gold() { # <case> <env assignments...> -- <client-config arguments...>: the case's exit code, stdout and stderr, appended to $work/golden
   local name=$1 rc=0
@@ -320,6 +424,15 @@ gold "off= names CDNs" "POOLS=p1 phone a.example.net d1.example.net" "RELAYS=203
 203.0.113.4 d.example.com ${pbk} 02 ${enc} own-site 0c0d cdn=d1.example.net,d2.example.net cdn-only off=cdn:d1.example.net
 203.0.113.5 e.example.com ${pbk} 03 ${enc} off=reality,cdn:a..b
 203.0.113.6 f.example.com ${pbk} 04 ${enc} off=cdn:Bad_host!" -- --full phone
+gold "relay/1 lines, relay_flags, a name, beside a line of before" SUBSCRIPTION=true NAME=s1 "SERVERS=self,s2.example.com" KCP_PORT=8447 \
+  "RELAYS=$v1
+$v2
+relay/1 r3 0011223344556677 2001:db8::30 r3.example.com ${pbk} 0a ${enc} xhttp=0a0b cdn=cdn-3.example.net cdn-only
+203.0.113.40 l.example.com ${pbk} 0b ${enc} own-site 0c0d name=old" "RELAY_FLAGS=r1 off=hysteria2 split
+r2 standby
+old off=xhttp" -- --full
+gold "--relay r1, the URLs" SUBSCRIPTION=true NAME=s1 "RELAYS=$v1
+$v2" -- --relay r1
 golden=.github/tests/client-config.golden
 if [ "${UPDATE_GOLDEN:-}" = 1 ]; then
   cp "$work/golden" "$golden"
