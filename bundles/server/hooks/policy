@@ -2,10 +2,12 @@
 # The release's invariants, checked against what actually runs rather than the
 # templates that should produce it:
 #
-#   - Xray's traffic leaves through the upstream only: two outbounds, the
-#     upstream (a SOCKS hop to the gate, with no credentials) and block, and
-#     with ipv6=separate a third, upstream6, the same hop to the gate's IPv6
-#     egress; no freedom anywhere, and the upstream the explicit last rule;
+#   - Xray's traffic leaves through the upstream only: the upstream (a SOCKS
+#     hop to the gate, with no credentials) and block, with ipv6=separate
+#     upstream6, the same hop to the gate's IPv6 egress, and sub, a freedom
+#     that goes to Caddy's internal listener alone, which only relays' users
+#     reach and only for sub.dotdash.internal; no other freedom, and the
+#     upstream the explicit last rule;
 #   - names are resolved either by the upstream (no DNS in Xray, names passed
 #     on, and no direct line, which would resolve them on this machine), or
 #     here over DoH routed through the upstream, with the upstream handed
@@ -67,15 +69,19 @@ violations=$(jq '
   [.outbounds[]?.tag] as $tags
   | ([.inbounds[]?.tag] - ["reality", "xhttp", "xhttp-cdn", "xhttp-reality", "kcp", "hysteria2", "xdns", "probe",
       "reality-second", "xhttp-reality-second", "title-ip", "title-info", "openflux"]) as $extra
-  | check($tags == ["upstream", "block"] or $tags == ["upstream", "block", "upstream6"];
-      "the outbounds are \($tags), not upstream and block (and upstream6)"),
-    (.outbounds[2]? // empty |
+  | check($tags == ["upstream", "block", "sub"] or $tags == ["upstream", "block", "upstream6", "sub"];
+      "the outbounds are \($tags), not upstream, block (and upstream6) and sub"),
+    (.outbounds[] | select(.tag == "upstream6") |
       check(.protocol == "socks" and .settings.address == "gate" and .settings.port == 1081 and .settings.user == null;
         "the upstream6 outbound is not a SOCKS hop to the gate'"'"'s IPv6 egress without credentials")),
     check(.outbounds[0] | .protocol == "socks" and .settings.address == "gate" and .settings.user == null;
       "the upstream outbound is not a SOCKS hop to the gate without credentials"),
     check(.outbounds[1].protocol == "blackhole"; "the block outbound is not a blackhole"),
-    check([.. | objects | .protocol? // empty] | index("freedom") == null; "a freedom outbound sends traffic out directly"),
+    check([.. | objects | select(.protocol? == "freedom")] | all(.tag == "sub" and .settings == {redirect: "caddy:8085", finalRules: [{action: "allow", network: "tcp", port: "8085"}]});
+      "a freedom outbound sends traffic out directly"),
+    check([.routing.rules[] | select(.outboundTag == "sub")]
+      | . == [{domain: ["domain:sub.dotdash.internal"], user: ["regexp:^relay-"], outboundTag: "sub"}];
+      "the sub outbound, to Caddy'"'"'s internal listener, takes more than relays'"'"' internal names"),
     ((.outbounds[0].targetStrategy // "AsIs") | ascii_downcase) as $target
     | (if has("dns") then
         # resolve=gateway: DoH only, routed (not "+local"), and the upstream
@@ -85,7 +91,7 @@ violations=$(jq '
           "Xray asks DNS other than DoH through the upstream (\([.dns.servers[]? | if type == "string" then . else .address end]))"),
         check($target | startswith("forceip");
           "Xray resolves names, but the upstream outbound can still hand it a name (targetStrategy \($target))"),
-        (.outbounds[2]? // empty | (.targetStrategy // "AsIs" | ascii_downcase) |
+        (.outbounds[] | select(.tag == "upstream6") | (.targetStrategy // "AsIs" | ascii_downcase) |
           check(. == "forceipv6"; "the upstream6 outbound can hand the IPv6 proxy a name or an IPv4 address (targetStrategy \(.))"))
       else
         # resolve=upstream: names go to the upstream as they are.

@@ -12,6 +12,9 @@
 # off it leaves the directory empty. Then it marks the directory done for the
 # healthcheck (.ready, which Caddy never serves: only 32-hex names), and waits.
 #
+# It also writes each relay's device list, whether or not subscriptions are
+# on (below), into .lists, which only Caddy's internal listener serves.
+#
 # The files of a token no device has any more go first: a deleted device's,
 # or every one after a rotated key. The rest stay served while they are
 # written again, each to a new file renamed over the old, so a device's URL
@@ -67,8 +70,60 @@ if [ "${SUBSCRIPTION:-false}" = true ]; then
   esac
   echo "subscription: ${n} device(s)"
 else
-  find "$out" -mindepth 1 -delete
+  # The relays' lists stay, written again below: one gone even for a moment
+  # answers 404, which tells a relay these servers no longer list it.
+  find "$out" -mindepth 1 ! -path "$out/.lists" ! -path "$out/.lists/*" -delete
   echo "subscription: off"
 fi
+
+# Each relay/1 line's device list (relays), which the relay fetches every
+# minute through its tunnel from list.sub.dotdash.internal/<list token>, and
+# Xray hands to Caddy's internal listener for relays' users alone
+# (xray.json.tmpl, caddy/Caddyfile). The list token is the first 32 hex
+# characters of sha256("<relay id>:list"), the id the image derives for the
+# relay from relay_seed (relay-id). A list holds every device, with the first
+# 12 hex characters of its subscription token while subscriptions are on, by
+# which the relay routes the device's subscription here, and the other relays,
+# for one that goes through this relay:
+#
+#   # dotdash relay list v1
+#   <id> [<name> [<first 12 hex of its subscription token>]]
+#   <id> relay-<another relay's name>
+#
+# A device with no name is named by the first 8 hex of its id's sha256 where
+# a prefix follows, which needs a name before it. Kinds stay off: the relay
+# makes no links. In a dotdir, which the public site never serves.
+lists=$out/.lists
+mkdir -p "$lists"
+rm -f "$lists"/*.new
+relays=$(printf '%s\n' "${RELAYS:-}" | awk '$1 == "relay/1" && NF >= 8 { print $2, $3 }' | while read -r name nonce; do
+  # The lists health check names a malformed line; Xray refuses it too.
+  id=$(/opt/xray/xray-entrypoint relay-id /run/secrets/relay_seed "$name" "$nonce" 2>/dev/null) ||
+    { echo "subscription: no list for the relay/1 line of $name, whose name or nonce is malformed" >&2; continue; }
+  echo "$id $name $(printf '%s:list' "$id" | sha256sum | cut -c1-32)"
+done)
+key=
+[ "${SUBSCRIPTION:-false}" != true ] || key=$(cat /run/secrets/subscription_key)
+devices=$(while read -r id name _ || [ -n "${id:-}" ]; do
+  case $id in '' | '#'*) continue ;; esac
+  if [ -z "$key" ]; then echo "$id${name:+ $name}"; continue; fi
+  [ -n "${name:-}" ] || name=$(printf '%s' "$id" | sha256sum | cut -c1-8)
+  echo "$id $name $(printf '%s:%s' "$key" "$id" | sha256sum | cut -c1-12)"
+done </run/secrets/vless_clients)
+printf '%s\n' "$relays" | while read -r rid _ token; do
+  [ -n "$rid" ] || continue
+  { echo '# dotdash relay list v1'
+    printf '%s\n' "$devices" | sed '/^$/d'
+    printf '%s\n' "$relays" | awk -v me="$rid" 'NF && $1 != me { print $1, "relay-" $2 }'
+  } >"$lists/$token.new"
+  mv "$lists/$token.new" "$lists/$token"
+done
+# The lists of relays no longer in relays go: their relays drop these
+# servers' devices at their next fetch.
+for f in "$lists"/*; do
+  [ -e "$f" ] || continue
+  printf '%s\n' "$relays" | awk -v t="${f##*/}" '$3 == t { k = 1 } END { exit !k }' || rm -f "$f"
+done
+echo "subscription: $(printf '%s\n' "$relays" | grep -c .) relay list(s)"
 : >"$out/.ready"
 exec sleep 2147483647

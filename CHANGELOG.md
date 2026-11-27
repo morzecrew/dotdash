@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The server's facts carry its `name`.
 
+- The server writes each `relay/1` relay's device list, whether or not subscriptions are on: every device's id and name, the first 12 hex characters of its subscription token with `subscription` on, and the other relays' ids. A relay fetches it through its own tunnel at `list.sub.dotdash.internal/<list token>`, the token the first 32 hex characters of `sha256("<relay id>:list")`, and a device's subscription at `<prefix>.sub.dotdash.internal/<token>`. Xray hands those names to Caddy's new internal listener on port 8085, never published, for relays' users alone (a fixed freedom outbound, `sub`), and blocks every other user asking for a `dotdash.internal` name. The public site never serves a list.
+
 ### Changed
 
 - **Breaking for anything that reads link names:** with `name` set, the servers' own links are named by it, not `server`.
