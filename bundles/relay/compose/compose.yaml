@@ -1,8 +1,11 @@
 # dotdash-relay. One Xray, on port 443: devices holding this relay's keys get
-# VLESS with REALITY under the name of a site next to it, and every connection
-# goes on to the dotdash server, as one client of its own. Anything else gets
-# the site's real handshake. Nothing leaves here except to dotdash: the server
-# decides where traffic exits, as it does for its own devices.
+# VLESS with REALITY under the name of a site next to it, and each connection
+# goes on to its device's own dotdash server group, as this relay's own client
+# there. Anything else gets the site's real handshake. Nothing leaves here
+# except to dotdash: each group's servers decide where its traffic exits, as
+# they do for their own devices. The gateway's agent, Xray's parent in the
+# image, fetches each group's device list through that group's tunnel every
+# minute and keeps Xray's devices current through its API.
 #
 # Compose sees only what morzer gives it: DOTDASH_RELAY_IMAGE_*,
 # DOTDASH_RELAY_PARAM_*, DOTDASH_RELAY_RELEASE_DIR, DOTDASH_RELAY_SECRETS_DIR.
@@ -24,26 +27,32 @@ services:
     pids_limit: 256
     mem_limit: 256m
     environment:
-      # The config's loopback-only http inbound, which goes to dotdash like
-      # every device does.
-      XRAY_HEALTHCHECK_PROXY: http://127.0.0.1:10809
-      XRAY_HEALTHCHECK_URL: ${DOTDASH_RELAY_PARAM_PROBE_URL:-https://www.gstatic.com/generate_204}
       # Go's soft memory limit at about 90% of mem_limit: Go collects garbage harder
       # near it rather than let the kernel kill Xray at the cap (dotdash-lab #49).
       GOMEMLIMIT: 230MiB
-      XRAY_HEALTHCHECK_TIMEOUT: 7s
     volumes:
       # Long form, so a missing file fails the start rather than becoming a
-      # directory morzer cannot render over.
+      # directory morzer cannot render over. The device inbounds, then the
+      # way to the server groups ($gateway), merged in that order.
       - type: bind
         source: /etc/dotdash-relay/xray.json
         target: /etc/xray/config.json
         read_only: true
         bind: {create_host_path: false}
+      - type: bind
+        source: /etc/dotdash-relay/gateway.json
+        target: /etc/xray/gateway.json
+        read_only: true
+        bind: {create_host_path: false}
+      # The gateway's agent writes each group's state here
+      # (/run/gateway/status.json), which the tasks and the metrics read.
+      - gateway:/run/gateway
     tmpfs:
-      # Where the image writes the config with secrets resolved; never disk.
-      - /run/xray:uid=65532,gid=65532,mode=0700,size=1m
-    secrets: [vless_clients, vless_seed, reality_key, reality_short_id, xhttp_path, cdn_xhttp_path, kcp_seed, dotdash_id, dotdash_encryption, dotdash_short_id, dotdash_xhttp_path]
+      # Where the image writes the config with secrets resolved, every
+      # group's device ids among them, and stages a restart's beside it:
+      # never disk.
+      - /run/xray:uid=65532,gid=65532,mode=0700,size=16m
+    secrets: [servers, via, vless_seed, reality_key, reality_short_id, xhttp_path, cdn_xhttp_path, kcp_seed]
     # REALITY on 443 inside too (Xray warns on any other port), as uid 65532
     # with no capabilities. It ends devices' TCP, so it sends their downloads:
     # on BBR (tcp_congestion), in this container's namespace alone.
@@ -60,7 +69,8 @@ services:
     ports: ["${DOTDASH_RELAY_PARAM_LISTEN-}:${DOTDASH_RELAY_PARAM_HTTPS_PORT:-443}:443"]
     # No healthcheck here: hooks/healthy runs the probe itself (see there).
 
-  # One-shot behind a profile, started only by `morzer task run relay-entry`.
+  # One-shot behind a profile, started only by `morzer task run relay-entry`,
+  # and `servers` and `facts`, which read the gateway's status.
   relay-entry:
     <<: *hardened
     image: ${DOTDASH_RELAY_IMAGE_BUSYBOX:?set by morzer}
@@ -74,7 +84,7 @@ services:
       CDN_HOSTS: ${DOTDASH_RELAY_PARAM_CDN_HOSTS:-none}
       CDN_ONLY: ${DOTDASH_RELAY_PARAM_CDN_ONLY:-false}
       ENTRY_HOST: ${DOTDASH_RELAY_PARAM_ENTRY_HOST:-none}
-      NAME: ${DOTDASH_RELAY_PARAM_NAME:-none}
+      NAME: ${DOTDASH_RELAY_PARAM_NAME:-}
     volumes:
       - ${DOTDASH_RELAY_RELEASE_DIR:?set by morzer}/tasks:/task:ro
       - type: image
@@ -82,12 +92,17 @@ services:
         target: /opt/xray
         image:
           subpath: usr/local/bin
-    # vless_clients for the count and digest of the devices it lets in.
-    secrets: &entry-secrets [vless_clients, vless_seed, reality_key, reality_short_id, xhttp_path, cdn_xhttp_path, kcp_seed]
+      # jq, for the gateway's status: the jq image whole, at /jq.
+      - type: image
+        source: ${DOTDASH_RELAY_IMAGE_JQ:?set by morzer}
+        target: /jq
+      - gateway:/run/gateway:ro
+    secrets: &entry-secrets [nonce, vless_seed, reality_key, reality_short_id, xhttp_path, cdn_xhttp_path, kcp_seed]
 
   # One-shot behind a profile, started only by `morzer task run entry-check`:
-  # an Xray client of each of this relay's entries, as a device's, in Xray's
-  # own namespace, which reaches its inbounds on loopback (tasks/entry-check.sh).
+  # an Xray client of each of this relay's entries, as each group's checker,
+  # in Xray's own namespace, which reaches its inbounds on loopback
+  # (tasks/entry-check.sh).
   # Like relay-entry under device-traffic, it starts Xray if it is down.
   entry-check:
     <<: *hardened
@@ -106,19 +121,25 @@ services:
         target: /opt/xray
         image:
           subpath: usr/local/bin
+      - type: image
+        source: ${DOTDASH_RELAY_IMAGE_JQ:?set by morzer}
+        target: /jq
+      - gateway:/run/gateway:ro
       # busybox has no CA certificates; fetching an https probe_url needs them.
       - type: image
         source: ${DOTDASH_RELAY_IMAGE_XRAY:?set by morzer}
         target: /etc/ssl/certs
         image:
           subpath: etc/ssl/certs
-    # The client's config, which holds the relay's keys and a device's id.
+    # The client's config, which holds the relay's keys and a checker's id.
     tmpfs:
       - /tmp:uid=65532,gid=65532,mode=0700,size=1m
     secrets: *entry-secrets
 
 secrets:
-  vless_clients: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/vless_clients"}
+  servers: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/servers"}
+  via: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/via"}
+  nonce: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/nonce"}
   kcp_seed: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/kcp_seed"}
   vless_seed: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/vless_seed"}
   reality_key: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/reality_key"}
@@ -126,7 +147,11 @@ secrets:
   xhttp_path: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/xhttp_path"}
   cdn_xhttp_path: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/cdn_xhttp_path"}
   acme_dns: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/acme_dns"}
-  dotdash_id: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/dotdash_id"}
-  dotdash_encryption: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/dotdash_encryption"}
-  dotdash_short_id: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/dotdash_short_id"}
-  dotdash_xhttp_path: {file: "${DOTDASH_RELAY_SECRETS_DIR:?set by morzer}/dotdash_xhttp_path"}
+
+volumes:
+  # The gateway's status, which its agent writes and the tasks and the
+  # metrics profile's exporter read: in memory, never on disk, as it names
+  # each group's servers. A backup stops Xray first (the volume is cold),
+  # which unmounts it, so it captures it empty.
+  gateway:
+    driver_opts: {type: tmpfs, device: tmpfs, o: "size=1m,uid=65532,gid=65532,mode=0755"}

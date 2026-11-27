@@ -44,7 +44,7 @@ echo "${0##*/}: relay-entry prints the door's port and settings, and asks for th
 
 set_config http_origin_host=cdn-door.test,alt-door.test/e/tok/s/
 out=$(entry)
-line=$(grep -m1 '^127\.0\.0\.1 ' <<<"${out}" || true)
+line=$(grep -m1 '^relay/1 ' <<<"${out}" || true)
 grep -q ' origin=cdn-door\.test,alt-door\.test/e/tok/s/' <<<"${line}" || die "the line does not end in origin= with both names, the second's path kept: ${line}"
 path=$(grep -o 'cdnpath=[^ ]*' <<<"${line}" | cut -d= -f2)
 [ -n "${path}" ] || die "the line carries no cdnpath: ${line}"

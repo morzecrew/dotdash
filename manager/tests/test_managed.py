@@ -46,6 +46,12 @@ RELAY = {"entry_host": "203.0.113.5", "site": "r1.example.net", "public_key": "P
          "cdn_hosts": ["c.example.net"], "cdn_path": "y", "origin_host": "o.example.org", "via": True}
 
 
+RELAY_BEFORE_GATEWAY = {
+    *(("parameters", n) for n in ("dotdash_servers", "dotdash_address", "dotdash_port", "dotdash_public_key", "via")),
+    *(("secrets", n) for n in ("vless_clients", "dotdash_id", "dotdash_encryption", "dotdash_short_id")),
+}
+
+
 def managed(kind: str) -> dict[str, set[str]]:
     """The managed lists of the bundle's manifest, each one flow sequence."""
     block = (BUNDLES / kind / "manifest.yaml").read_text().split("\nmanaged:\n", 1)[1]
@@ -81,4 +87,9 @@ def test_every_name_a_document_carries_is_managed_by_its_bundle():
                                             ("relay", "secrets"), ("canary", "parameters"), ("canary", "secrets"),
                                             ("client", "secrets")}
     unmanaged = sorted((k, s, n) for k, s, n in sent if n not in managed(k).get(s, set()))
+    # The relay's names from before its gateway, which render sends until the
+    # manager knows server groups (the relay gateway design's PR 8): a relay
+    # from 0.19.0 on refuses such a document. Equal, so that PR drops this.
+    assert {(s, n) for k, s, n in unmanaged if k == "relay"} == RELAY_BEFORE_GATEWAY
+    unmanaged = [u for u in unmanaged if u[0] != "relay"]
     assert unmanaged == [], f"a machine refuses a document naming these, which its manifest's managed lacks: {unmanaged}"

@@ -6,7 +6,7 @@ metadata:
   name: dotdash-relay
   # Stamped by `morzer release build --version X`, together with VERSION.
   version: 0.0.0
-  description: A relay inside a network that lets only some addresses through, that carries devices on to a dotdash server
+  description: A relay inside a network that lets only some addresses through, that carries each device on to its own dotdash server group
   vendor: morzecrew
   release_notes: RELEASE.md
 
@@ -48,7 +48,12 @@ configuration:
   - template: templates/xray.json.tmpl
     target: /etc/dotdash-relay/xray.json
     mode: "0644"
-  # The servers the own-site profile's Caddy fetches subscriptions from.
+  # The way to the server groups ($gateway), from the servers and via
+  # secrets: a file of its own, as the image takes it.
+  - template: templates/gateway.json.tmpl
+    target: /etc/dotdash-relay/gateway.json
+    mode: "0644"
+  # The own-site profile's Caddy: its certificate and the http-origin door.
   - template: templates/caddy.env.tmpl
     target: /etc/dotdash-relay/caddy.env
     mode: "0644"
@@ -63,7 +68,10 @@ compatibility:
   # checks requirements.ports by address, protocol and profile, and lets
   # listen default to empty.
   min_manager_version: "0.18.0"
-  rollback_safe: true
+  # This release drops values the one before requires (dotdash_servers,
+  # dotdash_public_key, vless_clients and dotdash_id among them), so going
+  # back is a restore of the pre-update backup, never morzer rollback.
+  rollback_safe: false
   # No database, which an unattended update needs declared.
   database: none
 
@@ -84,8 +92,8 @@ requirements:
     - '{{ if has "hysteria2" .Profiles }}{{ .Parameters.hysteria2_port }}/udp{{ end }}'
     - '{{ if has "http-origin" .Profiles }}{{ .Parameters.listen }}:{{ .Parameters.http_origin_port }}{{ end }}'
 
-# `morzer task run relay-config -- <client>` on the dotdash server prints the
-# init command and the secrets for this machine.
+# Each dotdash server group's relay-config prints its server/1 line for the
+# servers secret; relay-entry prints this relay's relay/1 line for theirs.
 parameters:
   # Required unless the own-site profile, whose site is the relay's own.
   site:
@@ -158,7 +166,7 @@ parameters:
   tunnel_host:
     type: string
     default: none
-    description: "With the own-site profile, one host a cover app on dotdash-relay_edge may call through the tunnel, at http://caddy:8090 with no TLS: Caddy sends it on as HTTPS inside the link to the dotdash servers, or to the relays in via, so this machine shows one TLS client, Xray's. For an app whose own calls go to a site on a relay this one goes through; none: no such way"
+    description: "With the own-site profile, one host a cover app on dotdash-relay_edge may call through the tunnel, at http://caddy:8090 with no TLS: Caddy sends it on as HTTPS inside the link to tunnel_group's servers, or through the relays in via, so this machine shows one TLS client, Xray's. For an app whose own calls go to a site on a relay this one goes through; none: no such way"
     services: [caddy]
   cert_issuer:
     type: enum
@@ -184,61 +192,34 @@ parameters:
   # No services: relay-entry and facts, tasks, are all that read it.
   name:
     type: string
-    default: none
-    description: "A label for this relay, up to 24 letters, digits, dots, dashes or underscores, that devices' links through it carry in place of relay <n>; relay-entry carries it to the server's relays line as name=. Every device's app shows it, so pick one that says nothing about where the relay is hosted. none for none"
+    required: true
+    description: "This relay's name, 1 to 24 letters, digits, dots, dashes or underscores, unique among the relays of each server group it serves: relay-entry puts it in this relay's relay/1 line, each server derives the relay's id from it and the nonce secret, and devices' links through the relay carry it (<name> · reality). Every device's app shows it, so pick one that says nothing about where the relay is hosted"
   metrics_textfile:
     type: string
     default: /var/lib/prometheus/node-exporter
     description: "Under the metrics profile, the node exporter's textfile directory, the one morzer's metrics.textfile names, which the exporters write dotdash-dotdash-relay-xray.prom into; it has to exist and be writable by 65532 (sudo setfacl -m u:65532:rwx <it>)"
-  dotdash_servers:
-    type: string
-    required: true
-    description: "The dotdash servers sharing one set of keys (dotdash's servers), comma-separated domains, each sent as its TLS server name; with several, the relay uses whichever answers fastest"
-    services: [xray]
-  dotdash_address:
-    type: string
-    # morzer wants a default for every parameter it doesn't ask for at init.
-    default: none
-    description: Where to connect when dotdash_servers names one server, if not to its name, such as an IP; none reaches each server by its name
-    services: [xray]
-  dotdash_port:
-    type: port
-    default: 443
-    description: The dotdash server's https_port
-    services: [xray]
-  dotdash_public_key:
-    type: string
-    description: The dotdash server's REALITY public key, the pbk of its REALITY links
-    services: [xray]
-  dotdash_link:
+  server_link:
     type: enum
     values: [reality, xhttp-reality]
     default: reality
-    description: "How this relay reaches the servers. reality: REALITY with Vision on dotdash_port, a connection for each device's. xhttp-reality: XHTTP with REALITY on dotdash_xhttp_reality_port, connections reused across devices, about 100 ms sooner to a page's first byte for about twice the CPU here and on the server; needs the servers' xhttp-reality profile and the dotdash_xhttp_path secret"
-    services: [xray]
-  dotdash_xhttp_reality_port:
-    type: port
-    default: 8443
-    description: The dotdash server's xhttp_reality_port, for dotdash_link=xhttp-reality
-    services: [xray]
-  via:
-    type: text
-    # morzer wants a default for every parameter it doesn't ask for at init,
-    # so a comment, which the template skips, that shows the line's form.
-    default: "# Relays to go through instead of the servers, one per line, as its relay-entry task prints it: <host> <site> <public key> <short id> <encryption>"
-    description: "Other dotdash relays this one goes through instead of the servers, one line per relay as its relay-entry task prints it, \"<host> <site> <public key> <short id> <encryption>\" (the rest of the line is ignored); with several, it uses whichever answers fastest. Each has to let this relay's dotdash_id in. The servers still serve subscriptions, through them. Empty, it goes to the servers"
+    description: "How this relay reaches each group's servers. reality: REALITY with Vision, a connection for each device's. xhttp-reality: XHTTP with REALITY on the port and path a servers line's xr= gives, connections reused across devices, about 100 ms sooner to a page's first byte for about twice the CPU here and on the server; a line without xr= (a server without the xhttp-reality profile) keeps REALITY"
     services: [xray]
   via_link:
     type: enum
     values: [reality, xhttp]
     default: reality
-    description: "How this relay reaches the relays in via. reality: REALITY with Vision, a connection for each device's, as devices' reality links to a relay. xhttp: XHTTP through each relay's own site, under its certificate, connections reused across devices, as devices' xhttp links to a relay; each via line has to carry own-site <path>"
+    description: "How this relay reaches the relays in the via secret. reality: REALITY with Vision, a connection for each device's, as devices' reality links to a relay. xhttp: XHTTP through each relay's own site, under its certificate, connections reused across devices, as devices' xhttp links to a relay; each via line has to carry xhttp=<path>"
     services: [xray]
   via_fingerprint:
     type: enum
     values: [chrome, firefox, safari, edge, ios, android, random, none]
     default: chrome
     description: "The TLS client hello the xhttp via leg shows the relay it goes through (via_link=xhttp only; the reality leg and the servers' leg are unaffected). The browser values mimic that browser. none uses Xray's own Go TLS stack, which looks like a server-side HTTP client rather than a browser and so fits one datacenter machine fetching from another; random picks a browser per connection. chrome keeps the earlier behaviour"
+    services: [xray]
+  tunnel_group:
+    type: string
+    default: ""
+    description: "The server group, by the name its servers line gives, whose servers a cover app's tunnel_host is reached through; empty: the first line's group"
     services: [xray]
   ipv6:
     type: enum
@@ -249,7 +230,7 @@ parameters:
   probe_url:
     type: string
     default: https://www.gstatic.com/generate_204
-    description: What the health check fetches through dotdash; any 2xx is healthy
+    description: "What this relay fetches through each server, every 30 seconds, to pick the fastest of a group's servers; any 2xx counts"
     services: [xray]
 
 images:
@@ -258,20 +239,22 @@ images:
   jq: ghcr.io/jqlang/jq:1.8.2@sha256:b9c68867e5766576263a222e91db3de422d802069c7af70440e667a95344e486
   # The relay-entry task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.38.0@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
-  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:0105eea74fbd5a8227619b7a220ee0a493a5799065bf54ea2b8b7a3c824eed30
+  # From platform-images #204 on: $gateway, $gatewayClients and the gateway's agent.
+  xray: ghcr.io/morzecrew/xray:26.11.9@sha256:a11c68c66c74d3dd97024c591eb4702e922441f9ebbfc5621ec91334077407fb
   # The own-site profile's site; dotdash's own. Upstream's Caddy with the
   # acme-dns DNS module, for cert_issuer=acme-dns.
   caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:5e3625892d50b2dd0b9cf5ce15e8b1d4585852fae88e675207b811a96d63e69c
 
 # What an authority's desired-state document may set here (morzer 0.16): the
-# devices, this relay's own client of the servers, the servers' facts, and
-# the relays it goes through (via), which the manager sets or unsets.
-# This relay's own keys stay its own; its facts carry their public halves.
-# None of these reaches a command line or a hook.
+# server groups (servers, a server/1 line per group, each with this relay's
+# id there), the relays it goes through (via), and how it reaches both.
+# The devices are no longer here: the relay fetches each group's list
+# through its own tunnel. Its own keys, name and nonce stay its own; its
+# facts carry the public halves. None of these reaches a command line or a
+# hook.
 managed:
-  parameters: [dotdash_servers, dotdash_address, dotdash_port, dotdash_public_key, dotdash_link, dotdash_xhttp_reality_port, ipv6, via, via_link, via_fingerprint]
-  secrets: [vless_clients, dotdash_id, dotdash_encryption, dotdash_short_id, dotdash_xhttp_path]
-
+  parameters: [ipv6, server_link, via_link, via_fingerprint, tunnel_group]
+  secrets: [servers, via]
 # What this machine tells the authority it follows, after every change, when
 # sync.recipient is set: the facts task's JSON.
 published:
@@ -284,28 +267,38 @@ published:
 
 tasks:
   relay-entry:
-    description: "Print this relay's line for the dotdash server's relays parameter, and how a dotdash-canary checks it; argument: the address devices reach this machine at, else entry_host"
+    description: "Print this relay's relay/1 line for each dotdash server group's relays parameter, and how a dotdash-canary checks it; argument: the address devices reach this machine at, else entry_host"
     service: relay-entry
     command: ["sh", "/task/relay-entry.sh"]
     args: true
     timeout: 1m
+  servers:
+    description: "Print each server group's state, a line each, as the relay last found it: live, down, refused or starting, each of its servers, how many devices its list holds and how old that list is"
+    service: relay-entry
+    command: ["sh", "/task/servers.sh"]
+    timeout: 1m
   facts:
-    description: "Print relay-entry's line as JSON for the authority this relay follows: entry_host, site, public key, the short id, XHTTP path and mKCP seed links carry (output is credentials), and the Hysteria2 port"
+    description: "Print relay-entry's line as JSON, with each server group's state, for the authority this relay follows: the short id, XHTTP path and mKCP seed links carry (output is credentials)"
     service: relay-entry
     command: ["sh", "/task/facts.sh"]
     timeout: 1m
   entry-check:
-    description: "Check each entry end to end as a device reaches it, and the http-origin door by its log of the last hour: a line each, with why it fails"
+    description: "Check each entry end to end as a device of each live server group reaches it, and the http-origin door by its log of the last hour: a line each, with why it fails"
     service: entry-check
     command: ["sh", "/task/entry-check.sh"]
-    timeout: 3m
+    timeout: 5m
 
 health:
   checks:
-    # Fetches probe_url through dotdash, up to three tries, so healthy means the
-    # way on to dotdash works. Whether devices can reach this machine is not
-    # something it can see: only a device on such a network can (a canary).
-    - {name: through-dotdash, type: command, command: ["hooks/healthy"], timeout: 2m}
+    # The relay's own machinery: Xray runs on the servers and via it was
+    # given, and its gateway's agent reached Xray's API in the last two
+    # minutes. Not whether any server group answers: each group's state is
+    # the servers task's, the facts' and the metrics' (dotdash_group_live),
+    # so an idle relay, or one whose groups are all down, is healthy, and a
+    # servers line a server doesn't take yet rolls nothing back. Whether
+    # devices can reach this machine only a device on such a network sees
+    # (a canary).
+    - {name: gateway, type: command, command: ["hooks/healthy"], timeout: 2m}
     # With the own-site profile, Caddy, the site probes meet, is healthy.
     - {name: cover-site, type: command, command: ["hooks/cover-site"], timeout: 10s}
 

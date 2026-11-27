@@ -1,17 +1,18 @@
-# Setting up a relay: what moves between the server, the relay and devices.
+# Setting up a relay: the two lines that pass between it and each server.
 # Rendered by render.sh.
 shape: sequence_diagram
 
 you: You
-server: dotdash server
 relay: Relay machine
+server: Each dotdash server
 devices: Devices
 
-you -> server: "1. a <uuid> relay line in vless_clients"
-you -> server: "2. relay-config -- relay"
-server -> you: "init command, keys, every device"
-you -> relay: "3. init, secrets, apply"
-you -> relay: "4. relay-entry -- <relay address>"
-relay -> you: "one line"
-you -> server: "5. that line in relays"
+you -> relay: "1. init with a name, apply"
+you -> relay: "2. relay-entry -- <relay address>"
+relay -> you: "its relay/1 line"
+you -> server: "3. that line in relays"
+you -> server: "4. relay-config -- <relay name>"
+server -> you: "a server/1 line for the relay"
+you -> relay: "5. those lines in servers"
+relay -> server: "every minute: the group's devices"
 server -> devices: "6. a [relay] link each"

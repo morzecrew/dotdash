@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# A relay through another relay (via): with the stand-in server stopped, the
-# relay still gets out, through a stand-in for another relay that lets its
-# dotdash_id in on 443, as a relay lets devices in, and logs what it carries.
-# The stand-in sits on the relay's own network, where its name resolves: 443
-# on the rig is the relay's. Two lines render an outbound each behind a
-# balancer in the plan; a short line, and via with dotdash_link=xhttp-reality,
-# fail the render, which a plan doesn't, so a real change is refused and the
-# relay stays as it was. Then the relay is back on the stand-in server.
+# A relay through another relay (the via secret, relay/1 lines): the relay's
+# way to group s1 is then that relay alone. A stand-in for it, which lets
+# this relay in by its id on s1, as s1's list for a real one would, and
+# carries it on to s1's stand-in server, sits on the relay's own network,
+# where its name resolves: 443 on the rig is the relay's. Through it the
+# device gets out, and s1's list comes in; with it stopped, s1 is down, so
+# the way goes through it alone. Two lines make a way each. A malformed
+# line, or via_link=xhttp with a line without xhttp=, keeps Xray from
+# starting, and config apply puts what was there back. Then via is empty,
+# and the relay is back on the server.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -18,94 +20,87 @@ private=$(sed -n 's/^PrivateKey: //p' <<<"${keys}")
 public=$(sed -n 's/^Password (PublicKey): //p' <<<"${keys}")
 [ -n "${private}" ] && [ -n "${public}" ] || die "xray x25519 printed no key pair: ${keys}"
 sid=$(openssl rand -hex 8)
-id=$(sudo cat /run/dotdash-relay/secrets/dotdash_id)
+# shellcheck disable=SC2046 # one field per word
+set -- $(cat /rig/relay/server-line)
+spbk=$5 ssid=$6 id=$8 saddr=${10#address=}
+restore() {
+  printf '# none\n' | sudo morzer secret set via >/dev/null 2>&1 || true
+  sudo morzer config unset via_link via_fingerprint >/dev/null 2>&1 || true
+  sudo docker rm -f relay-rig-middle relay-rig-via >/dev/null 2>&1 || true
+}
+trap restore EXIT
 
 mkdir -p /rig/relay/middle
-jq -n --arg id "${id}" --arg key "${private}" --arg sid "${sid}" '
+jq -n --arg id "${id}" --arg key "${private}" --arg sid "${sid}" --arg spbk "${spbk}" --arg ssid "${ssid}" --arg saddr "${saddr}" '
   {log: {loglevel: "warning"},
    inbounds: [{listen: "0.0.0.0", port: 443, protocol: "vless",
      settings: {clients: [{id: $id, flow: "xtls-rprx-vision"}], decryption: "none"},
      streamSettings: {network: "raw", security: "reality", realitySettings:
        {target: "www.gstatic.com:443", serverNames: ["www.gstatic.com"], privateKey: $key, shortIds: [$sid]}}}],
-   outbounds: [{protocol: "freedom"}]}' >/rig/relay/middle/config.json
+   outbounds: [{protocol: "vless",
+     settings: {address: $saddr, port: 9443, id: $id, encryption: "none", flow: "xtls-rprx-vision"},
+     streamSettings: {network: "raw", security: "reality", realitySettings:
+       {serverName: "www.gstatic.com", fingerprint: "chrome", password: $spbk, shortId: $ssid}}}]}' >/rig/relay/middle/config.json
 chmod -R a+rX /rig/relay/middle
 sudo docker rm -f relay-rig-middle >/dev/null 2>&1 || true
 sudo docker run -d --name relay-rig-middle --network dotdash-relay_default \
   -v /rig/relay/middle:/etc/xray:ro "${xray}" >/dev/null
 
-line="relay-rig-middle www.gstatic.com ${public} ${sid} none"
-printf '# the other relays\n%s own-site 0123 name=mid\nb.invalid b.invalid %s %s none\n' "${line}" "${public}" "${sid}" \
-  >/rig/relay/via-two
-plan=$(sudo morzer config set --set-file via=/rig/relay/via-two --dry-run 2>&1) || die "could not plan two via lines: ${plan}"
-for want in '"address": "relay-rig-middle", "port": 443' '"address": "b.invalid", "port": 443' \
-  "\"password\": \"${public}\", \"shortId\": \"${sid}\"" '"balancerTag": "dotdash"'; do
-  grep -qF -- "${want}" <<<"${plan}" || die "the plan for two via lines renders no ${want}: $(tail -n 40 <<<"${plan}")"
-done
-printf 'a.invalid a.invalid %s %s\n' "${public}" "${sid}" >/rig/relay/via-short
-# A refused change keeps neither the config nor the values.
-unchanged() {
-  sudo jq -e '.outbounds[0].settings.address != "relay-rig-middle"' /etc/dotdash-relay/xray.json >/dev/null &&
-    [ "$(sudo morzer config get via_link)" = reality ] && ! sudo morzer config get via | grep -q relay-rig-middle
+mkdir -p /rig/relay/via
+jq '.inbounds[0].port = 18086' /rig/relay/phone/config.json >/rig/relay/via/config.json
+chmod -R a+rX /rig/relay/via
+sudo docker run -d --name relay-rig-via --network host -v /rig/relay/via:/etc/xray:ro "${xray}" >/dev/null
+fetch() { # <retries>
+  curl -s -o /dev/null -w '%{http_code}' --max-time 10 --retry "$1" --retry-delay 3 --retry-all-errors \
+    --proxy http://127.0.0.1:18086 https://www.gstatic.com/generate_204 || true
 }
-out=$(sudo morzer config set --set-file via=/rig/relay/via-short 2>&1) && die "a via line of four fields was taken"
-unchanged || die "a refused via line changed the relay's config"
-grep -qF "a via line is <host> <site>" <<<"${out}" || die "a short via line was refused without saying why: ${out}"
-echo "${0##*/}: two via lines render an outbound each behind a balancer; a short one is refused"
+servers() { sudo morzer task run servers --output 2>&1 || true; }
+wait_for() { # <regex>: the servers task prints a matching line within 90 s
+  for _ in $(seq 30); do
+    out=$(servers)
+    grep -Eq "$1" <<<"${out}" && return 0
+    sleep 3
+  done
+  return 1
+}
 
-# The JSON takes a via line's fields and the servers' parameters as they
-# are: a quote in one, which would add a key, is refused and changes nothing.
-printf 'a.invalid a.invalid %s %s none","address":"evil.invalid\n' "${public}" "${sid}" >/rig/relay/via-quote
-out=$(sudo morzer config set --set-file via=/rig/relay/via-quote 2>&1) && die "a via line with a quote was taken"
-unchanged || die "a refused via line with a quote changed the relay's config"
-tr -s '[:space:]' ' ' <<<"${out}" | grep -qF 'take no quote' || die "a via line with a quote was refused without saying why: ${out}"
-pbk=$(sudo morzer config get dotdash_public_key)
-out=$(sudo morzer config set 'dotdash_public_key=x","address":"evil.invalid' 2>&1) && die "a dotdash_public_key with a quote was taken"
-[ "$(sudo morzer config get dotdash_public_key)" = "${pbk}" ] || die "a refused dotdash_public_key changed the parameter"
-tr -s '[:space:]' ' ' <<<"${out}" | grep -qF 'take no quote' || die "a dotdash_public_key with a quote was refused without saying why: ${out}"
-echo "${0##*/}: a quote in a via line or in dotdash_public_key is refused"
+mid="relay/1 mid 0123456789abcdef relay-rig-middle www.gstatic.com ${public} ${sid} none"
+printf '# the other relays\n%s\nrelay/1 far fedcba9876543210 b.invalid b.invalid %s %s none\n' "${mid}" "${public}" "${sid}" |
+  sudo morzer secret set via >/dev/null || die "could not set two via lines"
+wait_for '^s1 +live +relay-rig-middle ok [0-9]+ ms, b\.invalid down ' ||
+  die "with two via lines, s1 is not live through the first with the second down: ${out}"
+echo "${0##*/}: two via lines make a way each to s1, the one that answers serving its list"
 
-# via_link=xhttp: XHTTP through the other relay's own site, on the path its
-# line carries after own-site; a line without one is refused. Planned only:
-# the stand-in has no site under a certificate the relay trusts.
-out=$(sudo morzer config set via_link=xhttp --set-file via=/rig/relay/via-two 2>&1) && die "via_link=xhttp took a line without own-site"
-grep -qF "has no own-site <path>" <<<"${out}" || die "a via line without own-site was refused without saying why: ${out}"
-unchanged || die "a refused via_link=xhttp changed the relay's config"
-printf '%s own-site 0123abcd name=mid\n' "${line}" >/rig/relay/via-site
-plan=$(sudo morzer config set via_link=xhttp --set-file via=/rig/relay/via-site --dry-run 2>&1) ||
-  die "could not plan via_link=xhttp: ${plan}"
-for want in '"streamSettings": {"network": "xhttp", "security": "tls"' \
-  '"xhttpSettings": {"path": "/0123abcd", "host": "www.gstatic.com", "mode": "auto"}' \
-  '"alpn": ["h2"], "fingerprint": "chrome"'; do
-  grep -qF -- "${want}" <<<"${plan}" || die "the plan for via_link=xhttp renders no ${want}: $(tail -n 40 <<<"${plan}")"
-done
-echo "${0##*/}: via_link=xhttp renders XHTTP through the other relay's own site"
+printf '%s\n' "${mid}" | sudo morzer secret set via >/dev/null || die "could not set one via line"
+wait_for '^s1 +live +relay-rig-middle ok [0-9]+ ms;' || die "with one via line, s1 is not live through it: ${out}"
+[ "$(fetch 10)" = 204 ] || die "the device does not get out through the other relay"
+sudo docker stop relay-rig-middle >/dev/null
+wait_for '^s1 +down +relay-rig-middle down' || die "with the other relay stopped, s1 is not down: ${out}"
+[ "$(fetch 0)" != 204 ] || die "with the other relay stopped, the device still got out: the way does not go through it alone"
+sudo docker start relay-rig-middle >/dev/null
+wait_for '^s1 +live +relay-rig-middle ok' || die "once the other relay is back, s1 is not live through it: ${out}"
+[ "$(fetch 10)" = 204 ] || die "once the other relay is back, the device does not get out through it"
+echo "${0##*/}: through the other relay alone, the device gets out and s1's list comes in"
 
-# via_fingerprint=none empties the field, so the leg uses Xray's own Go TLS
-# stack rather than a browser's client hello.
-plan=$(sudo morzer config set via_link=xhttp via_fingerprint=none --set-file via=/rig/relay/via-site --dry-run 2>&1) ||
-  die "could not plan via_fingerprint=none: ${plan}"
-grep -qF -- '"alpn": ["h2"], "fingerprint": ""' <<<"${plan}" ||
-  die "via_fingerprint=none did not empty the xhttp leg's fingerprint: $(tail -n 40 <<<"${plan}")"
-echo "${0##*/}: via_fingerprint=none renders the xhttp leg with Xray's own TLS stack"
+# What config apply puts back when Xray doesn't start: the via line before.
+refused() { # <what> <change document>
+  local out
+  if out=$(printf '%s' "$2" | sudo morzer config apply 2>&1); then die "config apply took $1"; fi
+  [ "$(sudo cat /run/dotdash-relay/secrets/via)" = "${mid}" ] || die "after $1 was refused, via is not the line before"
+  [ "$(sudo morzer config get via_link)" = reality ] || die "after $1 was refused, via_link is not reality"
+}
+refused "a via line of six fields" $'secrets:\n  via: |\n    relay/1 short 0123456789abcdef a.invalid a.invalid\n'
+refused "via_link=xhttp with a line without xhttp=" $'parameters:\n  via_link: xhttp\n'
+wait_for '^s1 +live +relay-rig-middle ok' || die "after the refusals, s1 is not live through the other relay: ${out}"
+echo "${0##*/}: a malformed via line, and via_link=xhttp with a line without xhttp=, are refused, and via stays"
 
-sudo docker stop relay-rig-server >/dev/null
-printf '%s\n' "${line}" >/rig/relay/via-one
-sudo morzer config set --set-file via=/rig/relay/via-one >/dev/null ||
-  die "with the server stopped, the relay did not get out through the other relay: the apply's health check failed"
-sudo jq -e '(.outbounds | length) == 1 and .outbounds[0].settings.address == "relay-rig-middle" and (.routing == null)' \
-  /etc/dotdash-relay/xray.json >/dev/null || die "one via line renders a balancer or another way out"
-sudo morzer doctor >/dev/null 2>&1 || die "doctor fails through the other relay"
-out=$(sudo morzer config set dotdash_link=xhttp-reality 2>&1) && die "via took dotdash_link=xhttp-reality"
-grep -qF "not through via" <<<"${out}" || die "xhttp-reality with via was refused without saying why: ${out}"
-echo "${0##*/}: with the server stopped, the relay gets out through the other relay"
+# via_link and via_fingerprint reach the gateway's config, as the image takes them.
+plan=$(sudo morzer config set via_link=xhttp via_fingerprint=none --dry-run 2>&1) || die "could not plan via_link=xhttp: ${plan}"
+grep -qF '"viaLink": "xhttp", "viaFingerprint": "none"' <<<"${plan}" ||
+  die "the plan for via_link=xhttp via_fingerprint=none does not render them: $(tail -n 20 <<<"${plan}")"
+echo "${0##*/}: via_link and via_fingerprint render into the gateway's config"
 
-sudo docker start relay-rig-server >/dev/null
-printf '# none\n' >/rig/relay/via-none
-sudo morzer config set --set-file via=/rig/relay/via-none >/dev/null || die "could not empty via"
-sudo docker rm -f relay-rig-middle >/dev/null
-for _ in $(seq 15); do
-  sudo morzer doctor >/dev/null 2>&1 && break
-  sleep 2
-done
-out=$(sudo morzer doctor 2>&1) || die "back on the stand-in server, the relay does not get out: ${out}"
+restore
+trap - EXIT
+wait_for '^s1 +live +www\.gstatic\.com ok' || die "with via empty, s1 is not back on its server: ${out}"
 echo "${0##*/}: with via empty, the relay is back on the server"

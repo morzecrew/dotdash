@@ -162,12 +162,12 @@ http://:8091 {
 	respond 404
 }
 
-# A cover app's way to one host of its choosing (tunnel_host), as
-# subscriptions go: through Xray's subscriptions inbound, so Caddy's TLS to
-# the host rides inside the link to the dotdash servers, or to the relays
-# this one goes through (via), and the network sees one TLS client from this
-# machine, Xray's. Never published; the app reaches it on the edge network.
-# Without tunnel_host, the site's 404.
+# A cover app's way to one host of its choosing (tunnel_host): through
+# Xray's tunnel inbound, which goes to tunnel_group's servers, so Caddy's TLS
+# to the host rides inside the link to them, or through the relays this one
+# goes through (via), and the network sees one TLS client from this machine,
+# Xray's. Never published; the app reaches it on the edge network. Without
+# tunnel_host, the site's 404.
 http://:8090 {
 	@tunnel expression "{$TUNNEL_HOST:none}" != "none"
 	handle @tunnel {
@@ -176,7 +176,7 @@ http://:8090 {
 			transport http {
 				tls
 				tls_server_name {$TUNNEL_HOST:none}
-				network_proxy url http://xray:10810
+				network_proxy url http://xray:10811
 			}
 		}
 	}
@@ -202,7 +202,7 @@ http://:8090 {
 
 # What the site serves past its own routes: the operator's own files wherever
 # one is there; then their app (cover); otherwise the bundled page, titled
-# with the domain so no two machines serve one body.
+# with the domain so no two machines serve one body, and a 404 past it.
 (cover) {
 	@own file {
 		root /srv/own
@@ -221,10 +221,20 @@ http://:8090 {
 	handle @app {
 		reverse_proxy {$COVER:pages}
 	}
-	handle {
+	@page file {
+		root /srv/default
+		try_files {path} {path}/index.html
+	}
+	handle @page {
 		root * /srv/default
 		templates
 		file_server
+	}
+	# A path it has no file for: its 404, as a response rather than an
+	# error, so the cover serves the same from an error route (the
+	# subscriptions' handle_errors below) as from any other.
+	handle {
+		respond 404
 	}
 }
 
@@ -234,6 +244,13 @@ http://:8090 {
 	import headers
 	handle_errors {
 		import headers
+		# A subscription whose token's prefix no group's list has: Xray's
+		# last rule blocks it, closing the connection, which reverse_proxy
+		# takes as a 502 of its own. The site answers it as any other path.
+		@unrouted expression `{http.error.status_code} == 502 && {http.request.uri.path}.matches("^/[0-9a-f]{32}(\\.json)?$")`
+		handle @unrouted {
+			import cover
+		}
 	}
 
 	# XHTTP: the secret path to Xray's XHTTP inbound, as the server's site
@@ -252,18 +269,20 @@ http://:8090 {
 	}
 
 	# A device's subscription, 32 hex characters as the server names it (and
-	# with .json, its Xray config), fetched from the dotdash servers through this relay's own tunnel: Xray's
-	# subscriptions inbound, which dotdash carries as it carries devices. A
-	# device that reaches only this machine still refreshes its links, and
-	# nothing between it and the server reads them. The first server that
-	# answers serves it; the servers share their keys, so any has the file.
-	# The device's address stays here. A request a CDN in front passed on,
-	# which says so in one of these headers, gets the site's 404 instead, as
-	# on the server: a device's links never pass through a CDN. So does one
-	# under any name but this relay's domain, which a device always asks by:
-	# a CDN that strips those headers is told apart by the Host it sends.
+	# with .json, its Xray config), fetched from its own server group through
+	# this relay's tunnel: Xray's subscriptions inbound, which routes
+	# <first 12 hex>.sub.dotdash.internal to the group whose device list holds
+	# that prefix, whose server hands the name to its own Caddy. So the URL
+	# never changes, and this relay never holds a whole token. A device that
+	# reaches only this machine still refreshes its links, and nothing between
+	# it and the server reads them. The device's address stays here. A request
+	# a CDN in front passed on, which says so in one of these headers, gets
+	# the site instead, as on the server: a device's links never pass through
+	# a CDN. So does one under any name but this relay's domain, which a
+	# device always asks by: a CDN that strips those headers is told apart by
+	# the Host it sends.
 	@subscription {
-		path_regexp ^/[0-9a-f]{32}(\.json)?$
+		path_regexp sub ^/([0-9a-f]{12})[0-9a-f]{20}(\.json)?$
 		host {$DOMAIN}
 		not header X-Forwarded-For *
 		not header X-Forwarded-Host *
@@ -275,24 +294,23 @@ http://:8090 {
 		not header CDN-Loop *
 	}
 	handle @subscription {
-		reverse_proxy {$SUBSCRIPTION_UPSTREAMS} {
-			lb_policy first
-			lb_try_duration 15s
-			fail_duration 30s
+		# No scheme: Caddy takes a placeholder in an upstream only without
+		# one. The Host names the prefix, which Xray routes by.
+		reverse_proxy {re.sub.1}.sub.dotdash.internal:80 {
+			header_up Host {re.sub.1}.sub.dotdash.internal
 			header_up -X-Forwarded-For
 			header_up -X-Forwarded-Host
 			header_up -X-Forwarded-Proto
-			# Caddy adds Via to what it passes on, and the server serves a
-			# subscription only to a request without one, as it tells a CDN's
-			# from a device's: without this, it gave the relay its site.
 			header_up -Via
 			transport http {
 				network_proxy url http://xray:10810
 			}
-			# A token no server has: the servers' 404 is a server's own site,
-			# which would tell this relay apart and might name the server.
-			# This relay's own site answers it instead, as any other path.
-			@unknown status 404
+			# A token no group has (no route, so Xray's block), a group whose
+			# servers are all down (Xray's 503), or a token its server lacks
+			# (404): this relay's own site answers, as for any other path. A
+			# server's own 404 page would tell this relay apart and might name
+			# the server; Xray's 503 would tell a relay.
+			@unknown status 404 5xx
 			handle_response @unknown {
 				import cover
 			}

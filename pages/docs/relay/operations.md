@@ -1,45 +1,27 @@
 # Running a relay
 
-The relay keeps copies of what it got from the server: the devices, and the
-server's keys. Whatever changes one side has to reach the other.
+The relay keeps one line per server group, in `servers`, and each server
+keeps the relay's line in `relays`. Its devices it fetches from each group's
+servers by itself.
 
 ## Devices
 
-A device added to or deleted from the server's `vless_clients` has to
-change on the relay too. After the change on the server, `relay-config`
-prints the relay's new copy:
-
-```sh
-# on the server
-sudo morzer task run relay-config --output -- relay
-# on the relay: the vless_clients block of that output
-sudo morzer secret set vless_clients <<'END'
-…
-END
-```
-
-A relay copy you forget rejects a device added on the server, and still lets
-in one deleted there. To check, compare the digests: `relay-config` ends with
-the devices its copy lets in and their digest, and the relay's `relay-entry`
-prints the same of its own copy:
-
-```
-The devices this copy lets in: 14, digest 3f9a1c2b.     # relay-config, on the server
-The devices it lets in: 14, digest 3f9a1c2b.            # relay-entry, on the relay
-```
-
-The same digest means the same devices. The relay's facts carry it too, and
-under the [manager](../manager.md#status), `status` says when a relay's list
-isn't the one the manager sent. It is taken over the devices' ids alone, and
-reveals none of them.
+Nothing to do on the relay. A device added to or deleted from its server's
+`vless_clients` reaches the relay within a minute. A deleted device still
+connected restarts the relay's Xray, which alone cuts its open connections;
+every device's connections then drop once. The `servers` task gives each
+group's device count and the digest of its list, and the facts carry the
+same.
 
 ## Keys
 
 | What changed | What to do |
 | --- | --- |
-| The server's `reality_key`, `vless_seed` or `reality_short_id` | Run `relay-config` again, and on the relay set `dotdash_public_key`, `dotdash_encryption` and `dotdash_short_id` from it. Until then the relay can't reach the server. |
-| The relay's own keys (`secret rotate` on the relay) | Run `relay-entry` again, replace the relay's line in the server's `relays`, and send devices their links again (subscriptions pick them up). |
-| The relay's address | The same: `relay-entry -- <new address>`, then replace the line. |
+| A server group's `reality_key`, `vless_seed` or `reality_short_id` | Run `relay-config -- <relay>` on one of its servers again, and replace that group's line in the relay's `servers`. Until then the group shows `down` there. |
+| A group's `relay_seed` | The same, for every relay of the group: each has a new id there. |
+| The relay's own keys (`secret rotate` on the relay) | Run `relay-entry` again, replace the relay's line in every server's `relays`, and send devices their links again (subscriptions pick them up). Its `servers` lines stay. |
+| The relay's `nonce` or `name` | The same, then `relay-config` on each server again, as the relay's id there changes: replace its `servers` lines. |
+| The relay's address | `relay-entry -- <new address>`, then replace the line on every server. |
 
 ## Undo a change
 
@@ -47,8 +29,7 @@ morzer's journal names each change but not the value it replaced, so note
 the old value before a change (`sudo morzer config get <name>`). To undo it,
 set that value again. If the parameter goes into the relay's line
 ([which do](reference.md#what-changes-the-relays-line)), run `relay-entry`
-and replace the line on every server too. Under the
-[manager](../manager.md#a-relays-transports), the next `sync` does that.
+and replace the line on every server too.
 
 ## A site of its own, later
 
@@ -61,55 +42,71 @@ sudo morzer config set installation.profile=own-site
 sudo morzer task run relay-entry --output -- 198.51.100.7
 ```
 
-The site in the line changes and the line gains `own-site`, so replace the
-relay's line in the server's `relays`, and send devices their links again
+The site in the line changes and the line gains `xhttp=`, so replace the
+relay's line in every server's `relays`, and send devices their links again
 (subscriptions pick them up), with the subscription URL through the relay for
 those inside the restricted network.
 `sudo morzer config unset installation.profile` goes back to the borrowed
 site.
 
-## Servers
+## Server groups
 
-The relay goes to every server in `dotdash_servers` and uses whichever
-answers fastest. With a [new server](../server/several-servers.md) sharing
-the keys:
+`servers` holds one `server/1` line per group, each as one of the group's
+servers prints it with `relay-config -- <relay>`. To add a group: its
+servers' `name`, the relay's line in their `relays`, then its line here.
+To drop one, delete its line. Either way:
 
 ```sh
-sudo morzer config set dotdash_servers=example.com,b.example.com
+sudo EDITOR=nano morzer secret edit servers
 ```
 
-Under `own-site`, `sudo morzer apply` afterwards: the site fetches
-subscriptions from these servers, and only an apply restarts it with the new
-list.
+Xray restarts on it, and every device's connections drop once. A line Xray
+can't read keeps it from starting: `doctor` fails, and Xray's log names the
+line. `config apply` puts the old value back by itself when the change
+fails:
+
+```sh
+printf 'secrets:\n  servers: |\n    server/1 a …\n    server/1 b …\n' | sudo morzer config apply
+```
+
+A [new server](../server/several-servers.md) sharing a group's keys goes
+into that group's line, which its `relay-config` prints with every server of
+the group. The relay uses whichever of a group's servers answers fastest,
+and the group stays live while one serves its list.
+
+`server_link=xhttp-reality` reaches each group's servers over XHTTP with
+REALITY, on the port and path the line's `xr=` gives, which a server under
+its [`xhttp-reality`](../server/xhttp-reality.md) profile prints: a few
+connections reused across devices, about 100 ms sooner to a page's first
+byte for about twice the CPU on both machines. A line without `xr=` keeps
+REALITY.
 
 ## Through another relay
 
 A relay on an address you can't afford to lose can go through another relay
 instead of to the servers. Its one connection out is then to that relay,
-which carries it on as one of its devices, and the servers never see its
+which carries it on as one of its own, and the servers never see its
 address.
 
-1. On the server, a client for this relay in `vless_clients`, and the relay
-   installed from `relay-config`, as for any relay.
-2. The other relay lets this one in by that client's id. Its copy of
-   `vless_clients` holds every client but its own: after adding this relay's
-   client on the server, set the other relay's copy again from its own
-   `relay-config` ([Devices](#devices)).
-3. On the other relay, its line:
+1. On the other relay, its line:
 
     ```sh
     sudo morzer task run relay-entry --output -- <its address>
     ```
 
-4. On this relay, that line in `via`:
+2. On this relay, that line in `via`, before `servers`:
 
     ```sh
-    sudo morzer config edit via
+    sudo EDITOR=nano morzer secret edit via
     ```
 
-The apply's health check goes through the other relay, and morzer rolls back
-a line it can't get through. With two lines, it uses whichever relay answers
-fastest, so one going down doesn't cut it off.
+3. On each server of each group, both relays' lines in `relays`. The other
+   relay lets this one in because its group's list holds this relay's id; a
+   group the other relay doesn't serve shows `down` here.
+
+With two lines in `via`, it uses whichever relay answers fastest, so one
+going down doesn't cut it off. `servers` then names the relays on the way
+for each group.
 
 How it reaches the other relay, `via_link`:
 
@@ -120,7 +117,7 @@ How it reaches the other relay, `via_link`:
   device's `xhttp` link to a relay. To whoever watches this relay, that is a
   machine fetching from a website, rather than as many connections as its
   devices make. The other relay needs `own-site`, and its line then carries
-  `own-site <path>`, which this one needs.
+  `xhttp=<path>`, which this one needs.
 
 On the `xhttp` leg, `via_fingerprint` sets the TLS client hello this relay
 shows the other one. The default, `chrome`, mimics that browser, as the leg
@@ -135,31 +132,17 @@ the `reality` leg or on the way to the servers.
 ### Both ways at once
 
 While the other relay's address gets through, devices can reach it directly
-and leave this one idle; once it doesn't, they go through this one. Put both
-relays' lines in the server's `relays`, the other relay's first: devices get
-the other relay's links and this one's, which go through it. A
-[`name`](reference.md) on each says which is which in the apps, such as
-`name=y` on the other relay and `name=y-via-x` on this one: `y · reality`,
-`y · xhttp`, `y-via-x · reality`. In apps where you pick a link, pick the
-other relay's and keep this one's for when they stop working; Xray configs
-that pick the fastest pick the shorter way while it works, though they check
-every link every 30 seconds, this one's too.
+and leave this one idle; once it doesn't, they go through this one. With
+both relays' lines in the servers' `relays`, devices get the other relay's
+links and this one's, which go through it, each named by its relay's name:
+`y · reality`, `y · xhttp`, `y-via-x · reality`. In apps where you pick a
+link, pick the other relay's and keep this one's for when they stop working;
+Xray configs that pick the fastest pick the shorter way while it works,
+though they check every link every 30 seconds, this one's too.
 
-- `dotdash_servers` and the server's keys stay as they are: under
-  `own-site`, the site still fetches devices' subscriptions from the servers,
-  through the other relay.
-- Or the other relay has no line in the server's `relays`: then no device
-  gets a link to it and only this relay knows its address, so its firewall
-  can let in this relay alone (with `cert_issuer=acme-dns`, which needs no
-  port 80). Either way, the server's firewall can let in the relays alone.
 - Each relay on the way adds its round trip to every new connection.
-- `dotdash_link=xhttp-reality` is a way to the servers only: with `via`,
-  the link is `reality`.
-- Devices added on the server go into this relay's copy as before. The other
-  relay's copy needs this relay's client, and its own devices if any.
-
-With the [manager](../manager.md), `via` in the relay's entry of
-`network.toml` does all of this.
+- `server_link=xhttp-reality` is a way to the servers only: with `via`, the
+  link is `via_link`'s.
 
 ## Move a relay
 
@@ -185,15 +168,26 @@ sudo morzer update oci://ghcr.io/morzecrew/dotdash-relay:stable
 
 Point the relay's domain at the new address, and open 443, and 80 under
 `own-site`. Shut the old machine down: two live relays with one installation
-id confuse each other's backups. A relay whose links name its IP needs a new
-line from `relay-entry` in the server's `relays`, and new links for devices.
-Under the manager, the imported relay has a new signing key and age
-identity: [join it again](../manager.md#a-rebuilt-machine).
+id confuse each other's backups. The imported relay keeps its name and
+nonce, so its id on every server and its `servers` lines stay. A relay whose
+links name its IP needs a new line from `relay-entry` in every server's
+`relays`, and new links for devices. Under the manager, the imported relay
+has a new signing key and age identity:
+[join it again](../manager.md#a-rebuilt-machine).
 
 ## Watching it
 
-`doctor` and each `apply` fetch `probe_url` through dotdash, so they fail
-when the relay can't reach the server. Have them alert you:
+`doctor` and each `apply` check the relay's own machinery: Xray runs, and
+its agent reached Xray within the last two minutes. They no longer say
+whether a server group answers, which each group's state does
+([Health per group](gateway.md#health-per-group)):
+
+```sh
+sudo morzer task run servers --output
+```
+
+Under the `metrics` profile, alert on `dotdash_group_live == 0`, and have
+`doctor` alert on the machinery:
 
 ```sh
 sudo morzer notify target add https://hooks.example/morzer
@@ -201,33 +195,37 @@ sudo morzer notify target add https://hooks.example/morzer
 
 What the relay can't see is whether devices reach it: only a machine on the
 networks devices use can. A [canary on a mobile line](../canary/index.md#on-a-mobile-line)
-checks the relay as it checks a server, with the commands `relay-entry` prints.
+checks the relay as it checks a server, as a device of one group, with the
+commands `relay-entry` prints.
 
 ## Check each entry
 
-`entry-check` tries each of the relay's entries as a device would, end to
-end, and says why one fails:
+`entry-check` tries each of the relay's entries as a device of each live
+server group would, end to end, a line per entry per group, and says why one
+fails:
 
 ```sh
 sudo morzer task run entry-check --output
 ```
 
 ```
-servers  ok: the relay reaches the servers, or the relays in via
-reality  ok: a device's REALITY link under relay.example.net gets through
-xhttp    ok: the site passes the XHTTP path on to Xray, under its own certificate
-mkcp     ok: mKCP answers on UDP 8447
-hy2      ok: Hysteria2 answers on UDP 443, under the site's certificate
-cdn      not checked here: a CDN's half takes a fetch through it, which cdn-check on a server makes
-door     FAIL: all 41 requests in the last hour refused, all from 172.19.0.1, Docker's own address: docker-proxy hides the CDN's (over IPv6, or with its userland proxy). Set http_origin_from=any, or listen=0.0.0.0 to publish the door on IPv4 alone
+servers@a        ok: a.example.com ok
+reality@a        ok: a device's REALITY link under relay.example.net gets through
+xhttp@a          ok: the site passes the XHTTP path on to Xray, under its own certificate
+mkcp@a           ok: mKCP answers on UDP 8447
+hy2@a            ok: Hysteria2 answers on UDP 443, under the site's certificate
+servers@b        FAIL: b is down: b.example.com down (503 Service Unavailable); its entries are not checked, as every one fails with it (the servers task says more)
+cdn              not checked here: a CDN's half takes a fetch through it, which cdn-check on a server makes
+door             FAIL: all 41 requests in the last hour refused, all from 172.19.0.1, Docker's own address: docker-proxy hides the CDN's (over IPv6, or with its userland proxy). Set http_origin_from=any, or listen=0.0.0.0 to publish the door on IPv4 alone
 ```
 
 - **The entries.** An Xray client inside the relay dials each of its
-  inbounds with the relay's own keys and the first device's id, and fetches
-  `probe_url` through it, on to the servers. `servers` goes straight to the
-  servers first: when it fails, every entry fails with it, and `doctor`
-  says more. The site's TLS is pinned to the certificate Caddy holds, so a
-  failure there names what Xray saw.
+  inbounds with the relay's own keys, as the group's checker, a user the
+  relay adds to each group with a random id, so no device's id is needed,
+  and fetches `probe_url` through it, on to that group's servers. A group
+  that is not live has its entries left out, as every one fails with it. The
+  site's TLS is pinned to the certificate Caddy holds, so a failure there
+  names what Xray saw.
 - **The door.** Under `http-origin`, Caddy logs each request to the door,
   its address and status alone, never its path or headers, in memory, the
   newest megabyte or two. The check reads the last hour of it. No request at
@@ -246,8 +244,9 @@ door     FAIL: all 41 requests in the last hour refused, all from 172.19.0.1, Do
 
 With morzer's own metrics in the node exporter's textfile directory
 ([`metrics.textfile`](https://github.com/morzecrew/morzer/tree/main/pages/docs/operating)),
-the `metrics` profile adds the relay's, in the same directory: its traffic per inbound and outbound, and with several servers its verdicts on each. Nothing is
-counted per device. The exporters run as 65532, so the directory has to be
+the `metrics` profile adds the relay's, in the same directory: its traffic
+per inbound and outbound, its verdicts on each server, and each server
+group's state. Nothing is counted per device. The exporters run as 65532, so the directory has to be
 writable by it:
 
 ```sh
@@ -264,9 +263,15 @@ sudo morzer config set installation.profile=metrics    # beside own-site or mkcp
 | `dotdash_observatory_alive` | `role`, `outbound` | 1 when the last check got through a server |
 | `dotdash_observatory_delay_seconds` | `role`, `outbound` | that check's time, while it gets through |
 | `dotdash_xray_heap_bytes` | `role` | Xray's Go heap, beside its `GOMEMLIMIT` |
+| `dotdash_group_live` | `role`, `group` | 1 while one of the group's servers serves the relay its list |
+| `dotdash_group_devices` | `role`, `group` | the group's devices the relay lets in |
+| `dotdash_group_list_age_seconds` | `role`, `group` | the age of the group's list the relay holds |
 
 Every series also carries `product`. `rate(dotdash_inbound_bytes_total[5m])`
-per inbound shows which transport devices use.
+per inbound shows which transport devices use. Each server's outbound is
+tagged `<group>-<n>`, so group names reach whoever scrapes the metrics.
+Alert on `dotdash_group_live == 0`: morzer's own alerts fire only when the
+relay's machinery fails.
 
 ## Updates
 

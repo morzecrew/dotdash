@@ -1,0 +1,21 @@
+{{- /* The relay's way to its server groups: the image's $gateway, which builds
+from the servers secret (a server/1 line per group, as each group's
+relay-config prints it) and the via secret (relay/1 lines, the relays this
+one goes through) every outbound, balancer, observatory and routing rule,
+and the subscriptions (10810), tunnel (10811) and probe (127.0.0.1, 10900 up)
+inbounds. Its three rules that fail closed are the image's own, so no edit
+here can drop one: the default outbound is a blackhole, a group whose
+servers are all down falls back to its own first, never to another group's,
+and the last rule blocks what no other took. Its agent fetches each group's
+device list through that group's tunnel every minute, and keeps the device
+inbounds (xray.json.tmpl, $gatewayClients) and the routing current through
+Xray's API. Alone in a file of its own, as the image takes it: no other file
+may hold outbounds or routing. A value written into this JSON holds no quote,
+backslash, brace or whitespace, which would end its string. */ -}}
+{{- define "plain" }}{{ if or (contains . "\"") (contains . "\\") (contains . "{") (contains . "}") (contains . " ") (contains . "\t") (contains . "\n") (contains . "\r") }}
+{{- required (printf "probe_url and tunnel_group take no quote, backslash, brace or whitespace: %q" .) "" }}{{ end }}{{ end -}}
+{{- template "plain" .Parameters.probe_url -}}
+{{- template "plain" .Parameters.tunnel_group -}}
+{"$gateway": {"servers": "/run/secrets/servers", "via": "/run/secrets/via",
+  "serverLink": "{{ .Parameters.server_link }}", "viaLink": "{{ .Parameters.via_link }}", "viaFingerprint": "{{ .Parameters.via_fingerprint }}",
+  "ipv6": "{{ .Parameters.ipv6 }}", "probeURL": "{{ .Parameters.probe_url }}", "tunnelGroup": "{{ .Parameters.tunnel_group }}"}}

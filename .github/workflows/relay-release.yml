@@ -48,9 +48,12 @@ jobs:
       smoke-hooks: .github/relay-smoke.d
       components: ""
       probe-paths: ""
-      operator-secrets: vless_clients dotdash_id dotdash_encryption dotdash_short_id
+      # As _bundle.yml's: the dotdash_* placeholders are for smoke-update's
+      # install of the published release from before the gateway, whose
+      # secrets the pre-apply hook sets.
+      operator-secrets: ""
       init-args: >-
-        --set site=www.gstatic.com --set dotdash_servers=www.gstatic.com
+        --set site=www.gstatic.com --set name=r1 --set dotdash_servers=www.gstatic.com
         --set dotdash_address=rig.invalid --set dotdash_public_key=set-by-the-rig
       release-pubkey: ${{ vars.MINISIGN_RELEASE_PUBKEY }}
     secrets:

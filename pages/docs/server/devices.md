@@ -167,7 +167,7 @@ sudo morzer task run client-config --output -- --full phone    # plus links and 
   would otherwise keep sending requests down for a minute.
 - A URL is as secret as the links. `sudo morzer secret rotate subscription_key`
   moves every URL; any other path gets the site's 404.
-- A [relay](../relay/install.md#6-devices) with a site of its own serves the
+- A [relay](../relay/install.md#8-devices) with a site of its own serves the
   same subscription inside the restricted network: `client-config` adds a
   `through the relay …` URL under the server's. An app takes one URL, so give
   a device inside the restricted network the relay's.

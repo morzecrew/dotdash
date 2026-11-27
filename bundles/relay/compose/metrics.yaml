@@ -1,5 +1,6 @@
-# The metrics profile: the relay's traffic per inbound and outbound, and its
-# verdicts on the servers, every minute into the node exporter's textfile
+# The metrics profile: the relay's traffic per inbound and outbound, its
+# verdicts on the servers, and each server group's state from the gateway's
+# status (dotdash_group_*), every minute into the node exporter's textfile
 # directory (metrics_textfile), as dotdash-dotdash-relay-xray.prom. The
 # exporter reaches Xray's metrics on a network of its own, internal, where
 # Xray listens under a name it has there alone (xray-metrics), so nowhere
@@ -33,6 +34,9 @@ x-exporter: &exporter
       source: ${DOTDASH_RELAY_PARAM_METRICS_TEXTFILE:-/var/lib/prometheus/node-exporter}
       target: /textfile
       bind: {create_host_path: false}
+    # The gateway's status (compose.yaml), which metrics.sh reads when it is
+    # there.
+    - gateway:/gateway:ro
 
 services:
   xray:

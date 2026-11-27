@@ -1,16 +1,20 @@
 #!/bin/sh
-# Prints this relay's line for the dotdash server's relays parameter, and how a
-# dotdash-canary inside the restricted network checks the relay: the one kind of check
-# that sees what devices see. The address devices reach this machine at comes
-# after --, or from entry_host (entry.sh).
+# Prints this relay's relay/1 line, the one line every dotdash server group
+# it serves keeps in its relays parameter, and how a dotdash-canary inside
+# the restricted network checks the relay: the one kind of check that sees
+# what devices see. The address devices reach this machine at comes after
+# --, or from entry_host (entry.sh).
+#
+#   relay/1 <name> <nonce> <host> <site> <public key> <short id> <encryption> [xhttp=<path>]
+#     [kcp=<port>,<header>,<seed>[,quic]] [hy2=<port>] [cdn=<host>,...] [cdnpath=<path>]
+#     [origin=<host>[/<path>],...] [cdn-only]
+#
+# The same line for every server: nothing in it depends on one. A server
+# derives this relay's id from its name and nonce, and its own relay_seed.
 set -eu
 # shellcheck source=entry.sh
 . /task/entry.sh
 
-own=${path:+ own-site $path}
-# Last on the line, where a server from before them reads no field: kcp= with
-# a fourth field naming the opener under kcp_open=quic, hy2=, cdn= and the
-# CDNs' path as cdnpath=, origin=, then name=.
 kcp=
 if [ -n "$kcp_seed" ]; then
   kcp=" kcp=${KCP_PORT},${KCP_HEADER:-dtls},${kcp_seed}"
@@ -18,15 +22,18 @@ if [ -n "$kcp_seed" ]; then
 fi
 
 cat <<EOF
-On the dotdash server, add this line to the relays parameter (sudo morzer
-config edit relays):
-${host} ${SITE} ${pbk} ${sid} ${enc}${own}${kcp}${hy2_port:+ hy2=$hy2_port}${cdn:+ cdn=$cdn}${cdn_path:+ cdnpath=$cdn_path}${origin:+ origin=$origin}${only}${name:+ name=$name}
+On each dotdash server group this relay is to carry devices to, add this
+line to the relays parameter (sudo morzer config edit relays):
+relay/1 ${name} ${nonce} ${host} ${SITE} ${pbk} ${sid} ${enc}${path:+ xhttp=$path}${kcp}${hy2_port:+ hy2=$hy2_port}${cdn:+ cdn=$cdn}${cdn_path:+ cdnpath=$cdn_path}${origin:+ origin=$origin}${only}
 
-The devices it lets in: ${clients}, digest ${clients_digest}. relay-config on the
-server prints the same of the copy it hands out; a different one is stale.
+Then the server/1 line that server prints for this relay goes here, one line
+per server group, in place of any line of that group's:
+sudo morzer task run relay-config --output -- ${name}   # on the server
+sudo EDITOR=nano morzer secret edit servers               # here
+sudo morzer task run servers --output                     # here, within a minute
 
-A dotdash-canary checks this relay as it checks the server, without the xhttp
-profiles, with the dotdash_id of any device on the relay:
+A dotdash-canary checks this relay as it checks a server, without the xhttp
+profiles, as a device of one server group behind it, with that device's id:
 sudo morzer config set dotdash_server=${SITE} dotdash_address=${host} dotdash_port=443 dotdash_public_key=${pbk}
 sudo morzer secret set dotdash_encryption <<'END'
 ${enc}

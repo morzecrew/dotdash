@@ -42,6 +42,7 @@ nav = [
     { "Relay" = [
         "relay/index.md",
         "relay/install.md",
+        "relay/gateway.md",
         "relay/operations.md",
         "relay/reference.md",
     ] },

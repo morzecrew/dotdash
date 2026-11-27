@@ -76,6 +76,6 @@ accident.
 When every link failed its last check, as just after the server was down,
 traffic takes the subscription's first link rather than waiting up to two
 minutes for the next check, so the client carries traffic again as soon as
-the server is back. With a [standby relay](../relay/install.md#5-on-the-server-add-the-line-to-relays),
+the server is back. With a [standby relay](../relay/install.md#4-on-each-server-the-relays-line-in-relays),
 its links come first and are never checked: the client goes through it only
 then.

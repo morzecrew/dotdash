@@ -3,11 +3,12 @@
 Some networks let only a set list of addresses through, for a region or for
 mobile data. A device there can't reach a dotdash server outside at all. The
 `dotdash-relay` bundle (`ghcr.io/morzecrew/dotdash-relay`) runs on a machine
-inside that network, whose address does get through, and carries devices on
-to the server.
+inside that network, whose address does get through, and carries each device
+on to its own server group: one server, or several sharing keys. One relay
+can serve several groups ([gateway](gateway.md)).
 
-![A phone connects to the relay inside the restricted network on 443 under the name of a site next to it; the relay carries it on to whichever dotdash server answers fastest](../assets/diagrams/relay.light.svg#only-light)
-![A phone connects to the relay inside the restricted network on 443 under the name of a site next to it; the relay carries it on to whichever dotdash server answers fastest](../assets/diagrams/relay.dark.svg#only-dark)
+![A phone of group a connects to the relay inside the restricted network on 443 under the name of its site; the relay carries it on to group a's fastest server, and devices of group b to group b's](../assets/diagrams/relay.light.svg#only-light)
+![A phone of group a connects to the relay inside the restricted network on 443 under the name of its site; the relay carries it on to group a's fastest server, and devices of group b to group b's](../assets/diagrams/relay.dark.svg#only-dark)
 
 ## How it works
 
@@ -17,17 +18,19 @@ to the server.
   parameter). To the network, the connection looks like one to that site.
 - Anyone probing the relay's 443 without its keys meets that site: its own,
   with a certificate for its name, or the borrowed site's real handshake.
-- The relay has keys of its own, and its own copy of the devices allowed in.
-  A device uses the same id as on the server, with a separate link per relay,
-  `relay · reality`, numbered with several relays (`relay 2 · reality`) by
-  its place in the server's `relays`, or named after the relay's `name`.
-- The relay goes on to the server as one client of its own, a line in the
-  server's `vless_clients`. With [several servers](../server/several-servers.md),
-  it uses whichever answers fastest, so a ban on one address doesn't cut it off.
+- The relay has keys of its own. A device uses the same id as on its server,
+  with a separate link per relay, named after the relay: `r1 · reality`. The
+  relay fetches each group's devices from its servers every minute, through
+  its own tunnel, so nobody copies them by hand.
+- The relay goes on to each group's servers as one client of its own, by an
+  id each server derives from its own secret and the relay's line. With
+  [several servers](../server/several-servers.md) in a group, it uses
+  whichever answers fastest, so a ban on one address doesn't cut it off.
 - It can go through another relay instead (`via`), so the servers never
   see its address: [Through another relay](operations.md#through-another-relay).
 - Nothing leaves the relay except to dotdash: traffic still exits through
-  the server's upstream proxy.
+  its group's upstream proxy, and a device never reaches another group's
+  servers or exit.
 
 It can also help where home and mobile lines slow down TLS to faraway
 hosting: devices then reach only a nearby address, and the relay's own
