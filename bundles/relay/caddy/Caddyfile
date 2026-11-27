@@ -184,13 +184,19 @@ http://:8090 {
 }
 
 (headers) {
+	# Caddy's own Server; a cover app's, such as a stock one's, passes as a
+	# stock proxy passes it.
 	header {
 		-Server
+		match header Server Caddy
+	}
+	header {
 		# Caddy's own, on what it passes back from a cover app or a server.
 		-Via
-		Strict-Transport-Security "max-age=31536000"
-		X-Content-Type-Options nosniff
-		Referrer-Policy no-referrer
+		# Defaults, where a cover app sends none of its own.
+		?Strict-Transport-Security "max-age=31536000"
+		?X-Content-Type-Options nosniff
+		?Referrer-Policy no-referrer
 	}
 }
 

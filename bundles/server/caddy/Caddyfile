@@ -77,14 +77,20 @@ http://127.0.0.1:8081 {
 # On every answer, errors too: those skip the site's own routes, so without
 # handle_errors a 404 or 405 would name the server and drop the rest. The
 # Via that reverse_proxy adds to an app's answers names Caddy as Server
-# would; a deletion waits until the answer is written, so it goes too.
+# would; a deletion waits until the answer is written, so it goes too. A
+# cover app's own headers pass as a stock proxy passes them, its Server
+# among them: these are defaults where it sends none, and only Caddy's own
+# Server goes, since an app such as a stock one is known by its own set.
 (headers) {
 	header {
 		-Server
+		match header Server Caddy
+	}
+	header {
 		-Via
-		Strict-Transport-Security "max-age=31536000"
-		X-Content-Type-Options nosniff
-		Referrer-Policy no-referrer
+		?Strict-Transport-Security "max-age=31536000"
+		?X-Content-Type-Options nosniff
+		?Referrer-Policy no-referrer
 	}
 }
 
