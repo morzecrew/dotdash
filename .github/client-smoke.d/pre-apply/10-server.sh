@@ -16,7 +16,7 @@
 set -euo pipefail
 
 xray=ghcr.io/morzecrew/xray:26.11.9@sha256:0105eea74fbd5a8227619b7a220ee0a493a5799065bf54ea2b8b7a3c824eed30
-caddy=ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:ade990affb797eb565007e52fc6fe3d34deed0d9300d1b3f4153643299a0de4c
+caddy=ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:5e3625892d50b2dd0b9cf5ce15e8b1d4585852fae88e675207b811a96d63e69c
 sudo docker pull -q "${xray}" >/dev/null || die "pulling ${xray} failed"
 sudo docker pull -q "${caddy}" >/dev/null || die "pulling ${caddy} failed"
 host=$(ip -4 -o addr show docker0 | awk '{ sub("/.*", "", $4); print $4 }')
