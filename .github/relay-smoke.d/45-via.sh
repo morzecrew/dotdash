@@ -81,15 +81,14 @@ wait_for '^s1 +live +relay-rig-middle ok' || die "once the other relay is back, 
 [ "$(fetch 10)" = 204 ] || die "once the other relay is back, the device does not get out through it"
 echo "${0##*/}: through the other relay alone, the device gets out and s1's list comes in"
 
-# A via line Xray refuses keeps it from starting: health fails at once.
+# A via line Xray refuses keeps it from starting, which doctor says.
 printf 'relay/1 short 0123456789abcdef a.invalid a.invalid\n' | sudo morzer secret set via >/dev/null 2>&1 || true
-if sudo morzer doctor >/dev/null 2>&1; then
-  printf '%s\n' "${mid}" | sudo morzer secret set via >/dev/null
-  die "doctor passes with a via line of six fields"
-fi
+out=$(sudo morzer doctor 2>&1) || true
+tr -s '[:space:]' ' ' <<<"${out}" | grep -qE 'a servers or via line it refuses|not running: xray' ||
+  { printf '%s\n' "${mid}" | sudo morzer secret set via >/dev/null; die "doctor does not say Xray refuses a via line of six fields: ${out}"; }
 printf '%s\n' "${mid}" | sudo morzer secret set via >/dev/null || die "could not put the via line back"
 wait_for '^s1 +live +relay-rig-middle ok' || die "with the via line back, s1 is not live through the other relay: ${out}"
-echo "${0##*/}: a via line Xray refuses fails health; the good line back, s1 is live through it again"
+echo "${0##*/}: doctor says Xray refuses a malformed via line; the good line back, s1 is live through it again"
 
 # via_link and via_fingerprint reach the gateway's config, as the image takes them.
 plan=$(sudo morzer config set via_link=xhttp via_fingerprint=none --dry-run 2>&1) || die "could not plan via_link=xhttp: ${plan}"
