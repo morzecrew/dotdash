@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A cover app's own headers reach visitors, on the server and on own-site relays: Caddy no longer replaces its `Referrer-Policy`, adds HSTS or `X-Content-Type-Options` over its own, or removes its `Server`. It sets those three only where the app sends none, and removes only its own `Server` and the `Via` it adds. Every site had answered with the same set, whatever the app, which no install of a stock app such as Vaultwarden does.
+
 - The manager refuses two ids that differ only in bytes 6 and 7, of devices, canaries or relays. Xray zeroes those bytes before it looks an id up, so it took both for one device, logged and routed as the one listed last. `adopt` refuses such a pair from a server, `sync` sends none out (`renew` one of the two), and the ids `sync` and `renew` make never collide that way.
 
 ## [0.18.0] - 2026-11-26

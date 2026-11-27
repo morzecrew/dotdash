@@ -3,7 +3,8 @@
 # answering "cover app", on Caddy's network as cover-app:
 # - the site's pages are the app's, and a subscription's path stays Caddy's
 #   (a guessed one gets the app's answer, as any other path does), with no
-#   Via naming Caddy;
+#   Via naming Caddy, and the app's own Server and Referrer-Policy kept, as a
+#   stock proxy keeps a stock app's;
 # - doctor passes, and with the app stopped fails, naming it;
 # - another, published on a host port only, is reached as host.docker.internal;
 # - the app sees the visitor's address, which no visitor and nothing but Xray
@@ -27,13 +28,16 @@ page() { # <path>: the body Caddy answers on the public port
 }
 
 sudo docker run -d --name dotdash-rig-cover-app --network "${network}" --network-alias cover-app \
-  "${image}" caddy respond --listen :8080 --body "cover app" >/dev/null
+  "${image}" caddy respond --listen :8080 --body "cover app" \
+  --header "Server: Rocket" --header "Referrer-Policy: same-origin" >/dev/null
 sudo morzer config set cover=http://cover-app:8080 >/dev/null || die "could not set cover"
 [ "$(page /)" = "cover app" ] || die "the site is not the app's: $(page / | head -c 200)"
 [ "$(page "/$(openssl rand -hex 16)")" = "cover app" ] || die "a guessed subscription path is not passed to the app"
-! curl --noproxy '*' -sk --max-time 10 -D - -o /dev/null --resolve "${domain}:443:127.0.0.1" "https://${domain}/" | grep -qi '^via:' ||
-  die "an answer from the app names Caddy in Via"
-echo "${0##*/}: the site is the app's, a guessed subscription path included, and no Via names Caddy"
+headers=$(curl --noproxy '*' -sk --max-time 10 -D - -o /dev/null --resolve "${domain}:443:127.0.0.1" "https://${domain}/" | tr -d '\r')
+! grep -qi '^via:' <<<"${headers}" || die "an answer from the app names Caddy in Via"
+grep -qix 'server: Rocket' <<<"${headers}" || die "the app's own Server header is not kept: ${headers}"
+grep -qix 'referrer-policy: same-origin' <<<"${headers}" || die "the app's own Referrer-Policy is replaced: ${headers}"
+echo "${0##*/}: the site is the app's, a guessed subscription path included, with its own headers and no Via naming Caddy"
 
 sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the app up: $(sudo morzer doctor 2>&1 | tail -5)"
 sudo docker stop -t 1 dotdash-rig-cover-app >/dev/null
