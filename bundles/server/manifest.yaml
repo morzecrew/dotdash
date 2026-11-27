@@ -339,7 +339,7 @@ images:
   caddy: ghcr.io/morzecrew/caddy-acmedns:2.11.9@sha256:5e3625892d50b2dd0b9cf5ce15e8b1d4585852fae88e675207b811a96d63e69c
   # The openvpn profile's OpenVPN client, whose kill switch drops the default
   # routes before anything runs (platform-images, images/openvpn).
-  openvpn: ghcr.io/morzecrew/openvpn:2.6.23@sha256:fc453525119ed714e3910d8f09691defcf7c9d11bf888c955fd7016eb7d9ef92
+  openvpn: ghcr.io/morzecrew/openvpn:2.6.23@sha256:6830aeaa800418f18af9cb218fea18164cfd0a93ef0d83674244a387c46ad54d
   # The warm profile's keeper of ready connections to the upstreams' proxies
   # (platform-images, images/proxy-warm).
   warm: ghcr.io/morzecrew/proxy-warm:0.1.1@sha256:7ce8e127864784f2b3d722dfa4ce93ad8e163f42f7c732c082fa6e71d2551d4d
