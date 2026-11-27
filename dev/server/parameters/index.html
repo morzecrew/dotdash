@@ -2465,6 +2465,16 @@ share <code>relay_seed</code>. Rotating <code>relay_seed</code> revokes every re
 once; each then needs its line printed again. For a relay of the release
 before, which has no <code>relay/1</code> line, <code>relay-config -- &lt;its client's name&gt;</code>
 prints what it did.</p>
+<p>Each relay fetches its device list from these servers through its tunnel,
+so a device added or deleted in <code>vless_clients</code> reaches the relay with no
+copy by hand. The list is named by a token only the relay's id gives, and
+only a relay's Xray user can ask for it: Xray hands names under
+<code>sub.dotdash.internal</code> to Caddy's internal listener on port 8085, which is
+never published, for those users alone, and blocks every other user asking
+for such a name. The list holds every device's id and name and, with
+<code>subscription</code> on, the first 12 hex characters of its subscription token,
+by which the relay's own site passes a device's subscription on to these
+servers. The public site never serves a list.</p>
 
 
 

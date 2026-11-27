@@ -4130,6 +4130,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>
 <p>The server's facts carry its <code>name</code>.</p>
 </li>
+<li>
+<p>The server writes each <code>relay/1</code> relay's device list, whether or not subscriptions are on: every device's id and name, the first 12 hex characters of its subscription token with <code>subscription</code> on, and the other relays' ids. A relay fetches it through its own tunnel at <code>list.sub.dotdash.internal/&lt;list token&gt;</code>, the token the first 32 hex characters of <code>sha256("&lt;relay id&gt;:list")</code>, and a device's subscription at <code>&lt;prefix&gt;.sub.dotdash.internal/&lt;token&gt;</code>. Xray hands those names to Caddy's new internal listener on port 8085, never published, for relays' users alone (a fixed freedom outbound, <code>sub</code>), and blocks every other user asking for a <code>dotdash.internal</code> name. The public site never serves a list.</p>
+</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
