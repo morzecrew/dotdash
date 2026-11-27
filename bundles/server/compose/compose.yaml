@@ -156,7 +156,9 @@ services:
       # The ACME account and certificates. The image's /data/caddy is mode
       # 1777, and a fresh volume copies it, so uid 65532 can write there.
       - caddy_data:/data
-      # Each device's subscription file, which the subscription service writes.
+      # Each device's subscription file, which the subscription service
+      # writes, and each relay's device list, in .lists, which only the
+      # internal listener serves.
       - subscriptions:/srv/sub:ro
       # The subscriptions' title, the exit-title service's.
       - exit:/srv/exit:ro
@@ -235,7 +237,8 @@ services:
         image:
           subpath: usr/local/bin
       - subscriptions:/sub
-    secrets: [vless_clients, vless_seed, xhttp_path, cdn_xhttp_path, reality_key, reality_short_id, subscription_key, kcp_seed]
+    # relay_seed for the relays' lists, named by each relay's id here.
+    secrets: [vless_clients, vless_seed, xhttp_path, cdn_xhttp_path, reality_key, reality_short_id, subscription_key, kcp_seed, relay_seed]
     # Healthy once every device's file is written; restarted for a changed
     # secret or parameter, it is not until they are written again.
     healthcheck:

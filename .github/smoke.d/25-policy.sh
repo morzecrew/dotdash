@@ -33,6 +33,11 @@ caught() { # <jq edit> <phrase the violation must carry> [gate]: edit Xray's con
 }
 caught '.outbounds += [{tag: "direct", protocol: "freedom"}]' "a freedom outbound"
 caught '.outbounds[0].protocol = "freedom"' "a freedom outbound"
+# sub, the one freedom: to Caddy's internal listener alone, for relays' users
+# asking for sub.dotdash.internal alone.
+caught '(.outbounds[] | select(.tag == "sub")).settings.redirect = "1.1.1.1:443"' "a freedom outbound"
+caught '(.outbounds[] | select(.tag == "sub")).settings.finalRules[0].port = "1-65535"' "a freedom outbound"
+caught '.routing.rules = [{network: "tcp", outboundTag: "sub"}] + .routing.rules' "takes more than relays"
 # The rig runs resolve=gateway, the default: DoH through the upstream, which
 # is handed addresses only. Each edit breaks that one way.
 caught '.dns.servers = ["1.1.1.1"]' "DNS other than DoH"
