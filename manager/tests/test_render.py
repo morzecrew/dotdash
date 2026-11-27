@@ -74,6 +74,12 @@ def test_servers(net, st, facts):
     assert "b: has not applied the keys yet" in waiting
 
 
+def test_ids_xray_takes_for_one_go_out_to_no_one(net, st, facts):
+    phone = st["ids"]["phone"]
+    with pytest.raises(Refused, match="phone and laptop have ids that differ only in bytes 6 and 7"):
+        render(net, {**st, "ids": {**st["ids"], "laptop": phone[:14] + "0000" + phone[18:]}}, facts)
+
+
 def test_only_a_server_that_applied_the_keys_carries_relays_and_clients(net, st, facts):
     docs, _ = render(net, st, facts)
     r1 = docs["r1"]
