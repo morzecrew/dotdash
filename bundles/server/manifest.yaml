@@ -346,7 +346,7 @@ images:
   # The openflux profile's exits, OpenFlux's core built from a release tag's
   # source, its exit's UDP kept behind its upstream proxy (platform-images,
   # images/openflux).
-  openflux: ghcr.io/morzecrew/openflux:0.17.1@sha256:91f13dc2a82ec5ec48ec48cc93e9eb85ac5f7ea76f5fe0b1802ab636246a28a2
+  openflux: ghcr.io/morzecrew/openflux:0.17.1@sha256:12abf728095ef3a0549d3e6de3939bc662737631cbb0e0a8c9cb05ab0edd5ab6
 
 # Xray's config. Morzer renders one file Compose can mount (<etc>/application.yaml);
 # its content is JSON, which is also YAML. Secrets are not in it: it holds
