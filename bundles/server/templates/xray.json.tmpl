@@ -42,8 +42,14 @@ clients file), and a connection that brings none is answered by the cover
 site over HTTP/3. Its congestion control is BBR, or Brutal at hysteria2_up
 Mbit/s toward a device that asks for it.
 
-There is no direct (freedom) outbound: if the upstream proxy is down, traffic
-stops rather than leaving from this server's own IP. Nor could there be one:
+There is no direct outbound: if the upstream proxy is down, traffic
+stops rather than leaving from this server's own IP. The one freedom outbound,
+sub, goes to Caddy's internal listener and nowhere else (redirect), for the
+relays alone: a relay's Xray user (relay-<name>) asking for a name under
+sub.dotdash.internal is handed to Caddy on 8085, which serves the relay its
+device list and a device its subscription by the token's prefix
+(caddy/Caddyfile); anyone else asking for a dotdash.internal name is blocked,
+before every other rule. Nor could there be one:
 this container sits on internal networks only, and its one way out is the
 gate (gate.json.tmpl), which dials the upstream with the credentials this
 container never holds. The last routing rule
@@ -420,14 +426,20 @@ one. */ -}}
   ],
   "outbounds": [
     {"tag": "upstream", "protocol": "socks", "settings": {"address": "gate", "port": 1080}{{ if $gateway }}, "targetStrategy": "{{ if or $v6 $block6 }}ForceIPv4{{ else }}ForceIPv4v6{{ end }}"{{ end }}},
-    {"tag": "block", "protocol": "blackhole"}
-{{- if $v6 }},
-    {"tag": "upstream6", "protocol": "socks", "settings": {"address": "gate", "port": 1081}{{ if $gateway }}, "targetStrategy": "ForceIPv6"{{ end }}}
+    {"tag": "block", "protocol": "blackhole"},
+{{- if $v6 }}
+    {"tag": "upstream6", "protocol": "socks", "settings": {"address": "gate", "port": 1081}{{ if $gateway }}, "targetStrategy": "ForceIPv6"{{ end }}},
 {{- end }}
+    {{- /* finalRules: freedom refuses a private address to what came in on
+    VLESS, Caddy's among them, unless a rule lets it; redirect makes Caddy's
+    8085 the one place this outbound goes. */}}
+    {"tag": "sub", "protocol": "freedom", "settings": {"redirect": "caddy:8085", "finalRules": [{"action": "allow", "network": "tcp", "port": "8085"}]}}
   ],
   "routing": {
     "domainStrategy": "{{ if $gateway }}IPOnDemand{{ else }}AsIs{{ end }}",
     "rules": [
+      {"domain": ["domain:sub.dotdash.internal"], "user": ["regexp:^relay-"], "outboundTag": "sub"},
+      {"domain": ["domain:dotdash.internal"], "outboundTag": "block"},
 {{- if $gateway }}
       {"inboundTag": ["dns"], "outboundTag": "upstream"},
 {{- end }}

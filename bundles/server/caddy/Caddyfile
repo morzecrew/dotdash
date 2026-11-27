@@ -94,6 +94,63 @@ http://127.0.0.1:8081 {
 	}
 }
 
+# A device's subscription, as the subscription service wrote it in /srv/sub:
+# what the public site serves under its 32-hex token, and the internal
+# listener under the same token for a relay's Caddy.
+(subscription) {
+	root * /srv/sub
+	# no-store: neither a CDN nor a relay keeps a copy, which would outlive
+	# a revocation and hold every link.
+	# Asked for exactly as JSON, as dotdash-client's Xray asks, the URL
+	# serves the Xray config, so a device's one URL does for an app and for
+	# dotdash-client alike. An app asks for */* or nothing, and gets links.
+	@json {
+		path_regexp ^/[0-9a-f]{32}$
+		header Accept application/json
+	}
+	rewrite @json {path}.json
+	# The links as the apps read them; the .json goes as JSON, by its name.
+	@links {
+		path_regexp ^/[0-9a-f]{32}$
+		not header Accept application/json
+	}
+	header @links Content-Type "text/plain; charset=utf-8"
+	# An app on Apple's network stack, by its User-Agent, gets the links
+	# with Safari's hello (subscription.sh), as its platform's own: a
+	# Chrome hello from an iPhone fits neither its TCP nor its browser.
+	@apple {
+		path_regexp ^/[0-9a-f]{32}$
+		not header Accept application/json
+		header_regexp User-Agent (?i)(cfnetwork|darwin|iphone|ipad|ios|macintosh)
+	}
+	rewrite @apple {path}.apple
+	# The subscription's name in the apps that show one (Happ, Hiddify):
+	# this server's exit, its country's flag and IPv4, in place of this
+	# domain, once exit-title has written it.
+	@titled {
+		path_regexp ^/[0-9a-f]{32}$
+		file {
+			root /srv/exit
+			try_files /title
+		}
+	}
+	header @titled Profile-Title "base64:{file./srv/exit/title}"
+	# How often the apps that read it (Happ, Hiddify) fetch it
+	# again, in hours: a new relay, a rotated key or a revoked device
+	# reaches them within that, where an app left alone may never refetch.
+	header Profile-Update-Interval 6
+	# Happ's routing profile (happ_routing), while subscription.sh has
+	# written one: Happ adds it and turns it on, and takes it again with
+	# every refresh. Other apps ignore the header.
+	@routed file {
+		root /srv/sub
+		try_files /.routing
+	}
+	header @routed Routing "happ://routing/onadd/{file./srv/sub/.routing}"
+	header Cache-Control no-store
+	file_server
+}
+
 # The site, its routes and the XHTTP path: served under this domain, and
 # under any name a CDN in front sends as Host (below).
 (site) {
@@ -127,57 +184,7 @@ http://127.0.0.1:8081 {
 		}
 	}
 	handle @subscription {
-		root * /srv/sub
-		# no-store: neither a CDN nor a relay keeps a copy, which would outlive
-		# a revocation and hold every link.
-		# Asked for exactly as JSON, as dotdash-client's Xray asks, the URL
-		# serves the Xray config, so a device's one URL does for an app and for
-		# dotdash-client alike. An app asks for */* or nothing, and gets links.
-		@json {
-			path_regexp ^/[0-9a-f]{32}$
-			header Accept application/json
-		}
-		rewrite @json {path}.json
-		# The links as the apps read them; the .json goes as JSON, by its name.
-		@links {
-			path_regexp ^/[0-9a-f]{32}$
-			not header Accept application/json
-		}
-		header @links Content-Type "text/plain; charset=utf-8"
-		# An app on Apple's network stack, by its User-Agent, gets the links
-		# with Safari's hello (subscription.sh), as its platform's own: a
-		# Chrome hello from an iPhone fits neither its TCP nor its browser.
-		@apple {
-			path_regexp ^/[0-9a-f]{32}$
-			not header Accept application/json
-			header_regexp User-Agent (?i)(cfnetwork|darwin|iphone|ipad|ios|macintosh)
-		}
-		rewrite @apple {path}.apple
-		# The subscription's name in the apps that show one (Happ, Hiddify):
-		# this server's exit, its country's flag and IPv4, in place of this
-		# domain, once exit-title has written it.
-		@titled {
-			path_regexp ^/[0-9a-f]{32}$
-			file {
-				root /srv/exit
-				try_files /title
-			}
-		}
-		header @titled Profile-Title "base64:{file./srv/exit/title}"
-		# How often the apps that read it (Happ, Hiddify) fetch it
-		# again, in hours: a new relay, a rotated key or a revoked device
-		# reaches them within that, where an app left alone may never refetch.
-		header Profile-Update-Interval 6
-		# Happ's routing profile (happ_routing), while subscription.sh has
-		# written one: Happ adds it and turns it on, and takes it again with
-		# every refresh. Other apps ignore the header.
-		@routed file {
-			root /srv/sub
-			try_files /.routing
-		}
-		header @routed Routing "happ://routing/onadd/{file./srv/sub/.routing}"
-		header Cache-Control no-store
-		file_server
+		import subscription
 	}
 
 	# XHTTP through a CDN in front (cdn_hosts): a path of its own, so the CDN
@@ -252,6 +259,69 @@ http://127.0.0.1:8081 {
 # CDN works on its defaults. The secret path, not the name, lets a device in.
 https:// {
 	import site
+}
+
+# The relays' internal listener: plain HTTP on 8085, never published, which
+# Xray's sub outbound alone reaches, for its relays' users (xray.json.tmpl):
+# list.sub.dotdash.internal/<list token> is a relay's device list
+# (subscription.sh), and <prefix>.sub.dotdash.internal/<token> a device's
+# subscription, as the public site serves it, which a relay's Caddy asks for
+# by the token's first 12 hex characters. Its requests come from relays, so no
+# proxy header is refused. A request from anywhere but Xray's network
+# (XRAY_NET, caddy/start.sh) gets nothing: a cover app on edge reaches this
+# Caddy too.
+http://:8085 {
+	import headers
+	handle_errors {
+		import headers
+	}
+	@outside not remote_ip {$XRAY_NET}
+	handle @outside {
+		abort
+	}
+	@list host list.sub.dotdash.internal
+	handle @list {
+		header Cache-Control no-store
+		# While the subscription service writes the lists again, a 503: the
+		# relay keeps the list it has, where a 404 tells it these servers no
+		# longer list it, and it drops their devices.
+		@writing not file {
+			root /srv/sub
+			try_files /.ready
+		}
+		handle @writing {
+			respond 503
+		}
+		@listed {
+			path_regexp ^/[0-9a-f]{32}$
+			file {
+				root /srv/sub/.lists
+				try_files {path}
+			}
+		}
+		handle @listed {
+			root * /srv/sub/.lists
+			header Content-Type "text/plain; charset=utf-8"
+			file_server
+		}
+		handle {
+			respond 404
+		}
+	}
+	@subscription {
+		host *.sub.dotdash.internal
+		path_regexp ^/[0-9a-f]{32}(\.json)?$
+		file {
+			root /srv/sub
+			try_files {path}
+		}
+	}
+	handle @subscription {
+		import subscription
+	}
+	handle {
+		respond 404
+	}
 }
 
 # Port 80 (http_port): the redirect to HTTPS Caddy makes of its own, the same
