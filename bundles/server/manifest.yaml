@@ -342,7 +342,7 @@ images:
   openvpn: ghcr.io/morzecrew/openvpn:2.6.23@sha256:fc453525119ed714e3910d8f09691defcf7c9d11bf888c955fd7016eb7d9ef92
   # The warm profile's keeper of ready connections to the upstreams' proxies
   # (platform-images, images/proxy-warm).
-  warm: ghcr.io/morzecrew/proxy-warm:0.1.1@sha256:3d116030cc278e48f92c3b52c5918d0888278a3526e3ef868e09cf6d763769cb
+  warm: ghcr.io/morzecrew/proxy-warm:0.1.1@sha256:7ce8e127864784f2b3d722dfa4ce93ad8e163f42f7c732c082fa6e71d2551d4d
   # The openflux profile's exits, OpenFlux's core built from a release tag's
   # source, its exit's UDP kept behind its upstream proxy (platform-images,
   # images/openflux).
