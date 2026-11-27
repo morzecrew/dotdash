@@ -12,20 +12,29 @@
 # After a start the agent's first round comes a second after Xray's, and
 # takes up to 10 s for each server that doesn't answer, so the check waits
 # up to 90 s for it, within its 2 minutes; but not for an Xray that isn't
-# running, which says so at once.
+# running, or that Docker keeps restarting, which it says at once. The
+# status file outlives a start that fails before Xray runs, so a round it
+# names counts only while the container has not been restarted since the
+# check began.
 set -euo pipefail
 
 project=${DOTDASH_RELAY_COMPOSE_PROJECT:-dotdash-relay}
-running() { # fails, saying why, unless Xray's container runs
-  local state
-  state=$(docker compose -p "$project" ps -a --format '{{.Service}} {{.State}}' | awk '$1 == "xray" { print $2 }')
-  [ "$state" = running ] && return 0
-  echo "xray is ${state:-not there}: a servers or via line it refuses keeps it from starting, and docker compose logs xray names the line" >&2
-  return 1
+refused() {
+  echo "xray $1: a servers or via line it refuses keeps it from starting, and docker compose logs xray names the line" >&2
+  exit 1
 }
-running || exit 1
+cid=$(docker compose -p "$project" ps -aq xray)
+[ -n "$cid" ] || refused "is not there"
+state() { docker inspect -f '{{.State.Status}} {{.RestartCount}}' "$cid"; }
+was=$(state)
+[ "${was% *}" = running ] || refused "is ${was% *}"
+sleep 2
 for _ in $(seq 30); do
-  if out=$(docker compose -p "$project" exec -T xray /usr/local/bin/xray-entrypoint gateway-status 2>&1); then
+  out=$(docker compose -p "$project" exec -T xray /usr/local/bin/xray-entrypoint gateway-status 2>&1) && ok=true || ok=false
+  now=$(state)
+  [ "${now% *}" = running ] || refused "is ${now% *}"
+  [ "$now" = "$was" ] || refused "keeps restarting"
+  if $ok; then
     # One line a group, and gateway: last round …; the groups' states alone.
     awk '$1 != "gateway:" && $1 != "dropped:" && NF >= 2 && $2 ~ /^(live|down|refused|starting)$/ { n++; s[$2]++ }
       END { if (!n) { print "the relay works, with no server group yet: it lets nobody in"; exit }
@@ -34,7 +43,6 @@ for _ in $(seq 30); do
             print "" }' <<<"$out"
     exit 0
   fi
-  running || exit 1
   sleep 3
 done
 echo "the relay's gateway is not working: ${out##*$'\n'}" >&2
