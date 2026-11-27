@@ -160,10 +160,9 @@ sudo EDITOR=nano morzer secret edit servers
 
 One line per group, each as its `relay-config` printed it. Xray restarts with
 every group, and within a minute it has fetched each group's devices through
-that group's own servers. A line Xray can't read keeps it from starting, and
-`doctor` fails, naming the line in Xray's log; fix it and save again.
-`sudo morzer config apply` with the line in a `secrets:` block puts the old
-one back by itself on such a failure.
+that group's own servers. A line Xray can't read keeps it from starting:
+`doctor` says so at once, and `sudo docker compose -p dotdash-relay logs
+xray` names the line. Fix it and save again.
 
 ## 7. Check
 

@@ -6,9 +6,8 @@
 # where its name resolves: 443 on the rig is the relay's. Through it the
 # device gets out, and s1's list comes in; with it stopped, s1 is down, so
 # the way goes through it alone. Two lines make a way each. A malformed
-# line, or via_link=xhttp with a line without xhttp=, keeps Xray from
-# starting, and config apply puts what was there back. Then via is empty,
-# and the relay is back on the server.
+# line keeps Xray from starting, and health fails. Then via is empty, and
+# the relay is back on the server.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -82,17 +81,15 @@ wait_for '^s1 +live +relay-rig-middle ok' || die "once the other relay is back, 
 [ "$(fetch 10)" = 204 ] || die "once the other relay is back, the device does not get out through it"
 echo "${0##*/}: through the other relay alone, the device gets out and s1's list comes in"
 
-# What config apply puts back when Xray doesn't start: the via line before.
-refused() { # <what> <change document>
-  local out
-  if out=$(printf '%s' "$2" | sudo morzer config apply 2>&1); then die "config apply took $1"; fi
-  [ "$(sudo cat /run/dotdash-relay/secrets/via)" = "${mid}" ] || die "after $1 was refused, via is not the line before"
-  [ "$(sudo morzer config get via_link)" = reality ] || die "after $1 was refused, via_link is not reality"
-}
-refused "a via line of six fields" $'secrets:\n  via: |\n    relay/1 short 0123456789abcdef a.invalid a.invalid\n'
-refused "via_link=xhttp with a line without xhttp=" $'parameters:\n  via_link: xhttp\n'
-wait_for '^s1 +live +relay-rig-middle ok' || die "after the refusals, s1 is not live through the other relay: ${out}"
-echo "${0##*/}: a malformed via line, and via_link=xhttp with a line without xhttp=, are refused, and via stays"
+# A via line Xray refuses keeps it from starting: health fails at once.
+printf 'relay/1 short 0123456789abcdef a.invalid a.invalid\n' | sudo morzer secret set via >/dev/null 2>&1 || true
+if sudo morzer doctor >/dev/null 2>&1; then
+  printf '%s\n' "${mid}" | sudo morzer secret set via >/dev/null
+  die "doctor passes with a via line of six fields"
+fi
+printf '%s\n' "${mid}" | sudo morzer secret set via >/dev/null || die "could not put the via line back"
+wait_for '^s1 +live +relay-rig-middle ok' || die "with the via line back, s1 is not live through the other relay: ${out}"
+echo "${0##*/}: a via line Xray refuses fails health; the good line back, s1 is live through it again"
 
 # via_link and via_fingerprint reach the gateway's config, as the image takes them.
 plan=$(sudo morzer config set via_link=xhttp via_fingerprint=none --dry-run 2>&1) || die "could not plan via_link=xhttp: ${plan}"

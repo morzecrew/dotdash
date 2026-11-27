@@ -61,13 +61,8 @@ sudo EDITOR=nano morzer secret edit servers
 ```
 
 Xray restarts on it, and every device's connections drop once. A line Xray
-can't read keeps it from starting: `doctor` fails, and Xray's log names the
-line. `config apply` puts the old value back by itself when the change
-fails:
-
-```sh
-printf 'secrets:\n  servers: |\n    server/1 a …\n    server/1 b …\n' | sudo morzer config apply
-```
+can't read keeps it from starting: `doctor` says so at once, and Xray's log
+(`sudo docker compose -p dotdash-relay logs xray`) names the line.
 
 A [new server](../server/several-servers.md) sharing a group's keys goes
 into that group's line, which its `relay-config` prints with every server of

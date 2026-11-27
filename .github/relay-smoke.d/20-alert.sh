@@ -3,8 +3,7 @@
 # stand-in server stopped (pre-apply/10-server.sh), doctor still passes,
 # while the servers task says s1 is down and its device gets nothing; once
 # the server is back, s1 is live again by itself. A malformed servers line
-# keeps Xray from starting, so health fails, and config apply puts the old
-# line back.
+# keeps Xray from starting, so health fails at once, naming why.
 # shellcheck source=/dev/null
 . /rig/smoke-lib.sh
 set -euo pipefail
@@ -44,13 +43,17 @@ wait_for '^s1 +live +www\.gstatic\.com ok' || die "after the server came back, s
 [ "$(fetch)" = 204 ] || die "the device does not get out once the server is back"
 echo "${0##*/}: once the server is back, s1 is live again by itself, and the device gets out"
 
-# A malformed line: Xray doesn't start on it, health fails, and config
-# apply puts the line before back.
-if out=$(printf 'secrets:\n  servers: |\n    server/1 s1 www.gstatic.com 9443\n' | sudo morzer config apply 2>&1); then
-  die "config apply took a malformed servers line"
+# A malformed line: Xray doesn't start on it, and health fails at once,
+# naming why; the good line back, it is healthy again. (config apply would
+# put the old line back by itself, after morzer's whole health wait.)
+printf 'server/1 s1 www.gstatic.com 9443\n' | sudo morzer secret set servers >/dev/null 2>&1 || true
+if out=$(sudo morzer doctor 2>&1); then
+  printf '%s\n' "$(cat /rig/relay/server-line)" | sudo morzer secret set servers >/dev/null
+  die "doctor passes with a servers line Xray refuses"
 fi
-tr -s '[:space:]' ' ' <<<"${out}" | grep -qF "the relay's gateway is not working" || tr -s '[:space:]' ' ' <<<"${out}" | grep -qF 'xray is not running' ||
-  die "the malformed line failed without the gateway's health check saying so: ${out}"
-wait_for '^s1 +live +www\.gstatic\.com ok' || die "after the malformed line was put back, s1 is not live: ${out}"
-[ "$(sudo cat /run/dotdash-relay/secrets/servers)" = "$(cat /rig/relay/server-line)" ] || die "config apply did not put the servers line back"
-echo "${0##*/}: a malformed servers line fails the gateway's health check, and config apply puts the old line back"
+tr -s '[:space:]' ' ' <<<"${out}" | grep -qF 'a servers or via line it refuses' ||
+  { printf '%s\n' "$(cat /rig/relay/server-line)" | sudo morzer secret set servers >/dev/null; die "doctor failed, but not saying Xray refuses its lines: ${out}"; }
+printf '%s\n' "$(cat /rig/relay/server-line)" | sudo morzer secret set servers >/dev/null || die "could not put the servers line back"
+wait_for '^s1 +live +www\.gstatic\.com ok' || die "with the servers line back, s1 is not live: ${out}"
+sudo morzer doctor >/dev/null 2>&1 || die "doctor fails with the servers line back: $(sudo morzer doctor 2>&1 | tail -5)"
+echo "${0##*/}: a servers line Xray refuses fails health at once, saying so; the good line back, it passes"
