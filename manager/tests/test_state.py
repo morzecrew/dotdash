@@ -3,6 +3,7 @@ import fcntl
 import json
 import os
 import stat
+import uuid
 
 import pytest
 from dotdash_manager import state
@@ -43,6 +44,20 @@ def test_one_taken_out_and_added_again_gets_a_new_id_and_password(tmp_path):
     for name in "phone", "relay-r1", "canary-c1":
         assert back["ids"][name] != first["ids"][name]
     assert back["passwords"]["home"] != first["passwords"]["home"]
+
+
+def test_ids_that_differ_only_in_bytes_6_and_7_are_one_to_xray(monkeypatch):
+    from dotdash_manager import Refused
+    a = "3f2c1f0e-8a4b-4c1d-9e2f-0a1b2c3d4e5f"
+    a67, fresh = a[:14] + "ffff" + a[18:], "6b1d2c3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
+    for other in a, a67, a67.upper():
+        with pytest.raises(Refused, match="phone and tv have ids that differ only in bytes 6 and 7"):
+            state.check_ids({"phone": a, "tv": other})
+    state.check_ids({"phone": a, "tv": a[:12] + "0" + a[13:], "pc": a[:19] + "0" + a[20:]})
+    # A new one is drawn again until Xray tells it from the others.
+    made = iter([uuid.UUID(a67), uuid.UUID(fresh)])
+    monkeypatch.setattr(state.uuid, "uuid4", lambda: next(made))
+    assert state.new_id({"phone": a}) == fresh
 
 
 def test_save_leaves_nothing_beside_the_state(tmp_path):

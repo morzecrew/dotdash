@@ -7,7 +7,7 @@ from collections import Counter
 
 from . import rotate
 from .roster import Network
-from .state import public_key
+from .state import check_ids, public_key
 
 # What a server's facts say that client-config takes for every server alike.
 SHARED = ("https_port", "xhttp_reality_port", "kcp", "hysteria2_port")
@@ -129,6 +129,7 @@ def render(net: Network, state: dict, facts: dict, burnt: set[str] | frozenset[s
     as a server released before it refuses it. A relay in split goes on its
     line with split."""
     keys, ids = state["keys"], state["ids"]
+    check_ids(ids)
     pbk = public_key(keys["reality_key"])
     known = [s for s in net.server if s.name in facts]
     ready = applied_keys(net, state, facts)

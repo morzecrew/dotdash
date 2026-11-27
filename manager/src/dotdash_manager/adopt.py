@@ -10,7 +10,7 @@ import uuid
 
 from . import Refused
 from .roster import Network
-from .state import SHARED_KEYS, public_key
+from .state import SHARED_KEYS, check_ids, public_key
 
 # What the first sync sets on the server besides keys and devices. adopt reads
 # them as the server has them, since a difference reaches every device.
@@ -88,6 +88,7 @@ def take(state: dict, net: Network, keys: dict[str, str], ids: dict[str, str], u
     kept = [n for n in names if n in ids]
     for n in kept:
         state["ids"][n] = ids[n]
+    check_ids(state["ids"])
     said = [f"adopted: the server's keys; ids of {len(kept)} of the roster's {len(names)} names"]
     if new := [n for n in names if n not in ids]:
         said.append("new to the server, so new links: " + ", ".join(new))

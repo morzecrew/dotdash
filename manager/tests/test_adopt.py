@@ -61,6 +61,13 @@ def test_take_keeps_the_roster_names_and_says_who_moves():
     assert said[3].startswith("1 line(s)")
 
 
+def test_take_refuses_ids_xray_takes_for_one():
+    st = {"keys": {}, "ids": {}}
+    keys, ids, unnamed, _ = adopt.parse(server_output(f"{PHONE} phone\n{PHONE[:14]}ffff{PHONE[18:]} laptop\n"))
+    with pytest.raises(Refused, match="phone and laptop have ids that differ only in bytes 6 and 7"):
+        adopt.take(st, loads(ROSTER), keys, ids, unnamed)
+
+
 def test_cli_adopts_once_and_not_after_a_publish(tmp_path, monkeypatch):
     (tmp_path / "network.toml").write_text(ROSTER)
     monkeypatch.chdir(tmp_path)

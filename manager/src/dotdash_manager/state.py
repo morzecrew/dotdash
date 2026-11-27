@@ -14,6 +14,7 @@ from pathlib import Path
 
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
 
+from . import Refused
 from .roster import Network
 
 # Each secret the servers share, as its generator in bundles/server/secrets.schema.yaml makes it.
@@ -38,6 +39,32 @@ def public_key(reality_key: str) -> str:
     return b64url(X25519PrivateKey.from_private_bytes(private).public_key().public_bytes_raw())
 
 
+def xray_id(i: str) -> str:
+    """An id as Xray looks it up: bytes 6 and 7, its third group, zeroed
+    (ProcessUUID, Xray's proxy/vless/validator.go). Two ids equal here are one
+    user to it, logged and routed as the one listed last, and the xray image
+    refuses the list."""
+    i = i.lower()
+    return i[:14] + "0000" + i[18:]
+
+
+def new_id(ids: dict[str, str]) -> str:
+    """A random id that none in ids is to Xray, a device's old one included."""
+    taken = {xray_id(i) for i in ids.values()}
+    while xray_id(i := str(uuid.uuid4())) in taken:
+        pass
+    return i
+
+
+def check_ids(ids: dict[str, str]) -> None:
+    """Refuses two ids that are one to Xray, as a server's image would."""
+    seen: dict[str, str] = {}
+    for name, i in ids.items():
+        if (first := seen.setdefault(xray_id(i), name)) != name:
+            raise Refused(f"{first} and {name} have ids that differ only in bytes 6 and 7, which Xray ignores, so it "
+                          f"would take both for one device and the xray image refuses them: renew one of them")
+
+
 def load(path: Path, net: Network) -> dict:
     """The state, with whatever the roster now needs and it lacks made, and
     the ids and passwords of whoever left it dropped: one taken out and added
@@ -50,7 +77,8 @@ def load(path: Path, net: Network) -> dict:
     names = net.clients_of("server")
     ids = state["ids"] = {n: i for n, i in state.get("ids", {}).items() if n in names}
     for name in names:
-        ids.setdefault(name, str(uuid.uuid4()))
+        if name not in ids:
+            ids[name] = new_id(ids)
     clients = {c.name for c in net.client}
     passwords = state["passwords"] = {n: p for n, p in state.get("passwords", {}).items() if n in clients}
     for name in clients:

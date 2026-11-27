@@ -9,7 +9,6 @@ import shutil
 import subprocess
 import sys
 import time
-import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
@@ -322,7 +321,7 @@ def renew(ctx: typer.Context, device: str) -> None:
     net, st = o.open()
     if device not in net.devices:
         raise Refused(f"{device} is not in {o.roster}'s devices")
-    st["ids"][device] = str(uuid.uuid4())
+    st["ids"][device] = state.new_id(st["ids"])
     state.save(o.state, st)
     print(f"{device}: a new id. Run sync and status --wait; its old links and URL stop once every server and relay "
           "applied it. Its new " + ("URLs:" if net.subscription else "links: client-config on a server, after the sync"))

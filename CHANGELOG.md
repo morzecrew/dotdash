@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The manager refuses two ids that differ only in bytes 6 and 7, of devices, canaries or relays. Xray zeroes those bytes before it looks an id up, so it took both for one device, logged and routed as the one listed last. `adopt` refuses such a pair from a server, `sync` sends none out (`renew` one of the two), and the ids `sync` and `renew` make never collide that way.
+
 ## [0.18.0] - 2026-11-26
 
 ### Added
