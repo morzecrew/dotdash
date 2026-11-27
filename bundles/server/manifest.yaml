@@ -405,7 +405,7 @@ published:
 
 tasks:
   client-config:
-    description: "Print client settings, for every client or the one named after --: a link per transport and an Xray config; with subscriptions on, the URL alone unless --full; with --relay <relay> first, that relay's subscription URL and links alone (output is credentials)"
+    description: "Print client settings, for every client or the one named after --: links and an Xray config; with subscriptions on, the URL unless --full; --relay <relay>, its own alone (output is credentials)"
     service: client-config
     command: ["sh", "/task/client-config.sh"]
     args: true
@@ -457,7 +457,7 @@ tasks:
     command: ["sh", "/task/facts.sh"]
     timeout: 1m
   relay-config:
-    description: "Print the server/1 line for the relay named after --, by its relay/1 line in relays, which goes into that relay's servers secret: these servers, their keys and the relay's id here (output is the relay's way in); for a relay of the release before, named as its client in vless_clients, its init command and its copy of every device (output is every device's credentials)"
+    description: "Print the server/1 line for the relay/1 relay named after --, for its servers secret; for an older relay, named as its client in vless_clients, its init and device copy (output is credentials)"
     service: client-config
     command: ["sh", "/task/relay-config.sh"]
     args: true
