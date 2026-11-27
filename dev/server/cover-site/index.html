@@ -2321,6 +2321,11 @@ bridge address only.</p>
   Where Docker relays the port itself, as for IPv6 without its NAT or behind
   a web server of your own on this machine, every visitor shows as Docker's
   bridge address.</li>
+<li>The app's own headers reach visitors as a stock reverse proxy passes them,
+  its <code>Server</code> and <code>Referrer-Policy</code> included. Caddy adds HSTS,
+  <code>X-Content-Type-Options</code> and <code>Referrer-Policy</code> only where the app sends
+  none, and takes out only its own <code>Server</code> and the <code>Via</code> it adds, so a
+  stock app looks like any other install of it.</li>
 <li><code>doctor</code> checks that the app answers, asking it from inside Caddy, as Caddy
   does. Any HTTP answer counts, a 401 from a login wall included. With no
   answer, visitors get a 502, so the cover-site check fails, and
