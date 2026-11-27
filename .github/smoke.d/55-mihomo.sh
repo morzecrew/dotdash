@@ -11,7 +11,7 @@
 . /rig/smoke-lib.sh
 set -euo pipefail
 
-mihomo=ghcr.io/morzecrew/mihomo:1.19.34@sha256:2754abcb25d423c8f7c51c66a951c39bf482eedfa008be4445e1cf69135fd788
+mihomo=ghcr.io/morzecrew/mihomo:1.19.34@sha256:7908728447921ba4cb2bf34c561a63ece9d072171f4cb68daea53867f592d0f9
 target=http://11.99.0.10:8000/
 dir=/rig/mihomo
 mkdir -p "${dir}"
