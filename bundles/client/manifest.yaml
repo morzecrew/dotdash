@@ -151,7 +151,7 @@ images:
   # (killswitch/killswitch.sh): iproute2's ip and nft in an Alpine shell,
   # which the OpenVPN image carries; busybox's ip has no
   # suppress_prefixlength and no oif rules.
-  killswitch: ghcr.io/morzecrew/openvpn:2.6.23@sha256:fc453525119ed714e3910d8f09691defcf7c9d11bf888c955fd7016eb7d9ef92
+  killswitch: ghcr.io/morzecrew/openvpn:2.6.23@sha256:6830aeaa800418f18af9cb218fea18164cfd0a93ef0d83674244a387c46ad54d
   # The proxy-config task's shell; Xray's image has none.
   busybox: docker.io/library/busybox:1.38.0@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
   xray: ghcr.io/morzecrew/xray:26.11.9@sha256:0105eea74fbd5a8227619b7a220ee0a493a5799065bf54ea2b8b7a3c824eed30
