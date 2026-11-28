@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The server writes each `relay/1` relay's device list, whether or not subscriptions are on: every device's id and name, the first 12 hex characters of its subscription token with `subscription` on, and the other relays' ids. A relay fetches it through its own tunnel at `list.sub.dotdash.internal/<list token>`, the token the first 32 hex characters of `sha256("<relay id>:list")`, and a device's subscription at `<prefix>.sub.dotdash.internal/<token>`. Xray hands those names to Caddy's new internal listener on port 8085, never published, for relays' users alone (a fixed freedom outbound, `sub`), and blocks every other user asking for a `dotdash.internal` name. The public site never serves a list.
 
+- `client-config --check` warns of each relay line of 0.18 left in `relays`, which the next release won't read, and of a client in `vless_clients` named as a `relay/1` line's relay: likely that relay's client of 0.18, which nothing needs once the relay runs this release.
+
 ### Changed
 
 - **Breaking for relays:** a relay's `dotdash_servers`, `dotdash_address`, `dotdash_port`, `dotdash_public_key`, `dotdash_link` and `dotdash_xhttp_reality_port` parameters and its `vless_clients`, `dotdash_id`, `dotdash_encryption`, `dotdash_short_id` and `dotdash_xhttp_path` secrets are gone: the `servers` secret takes their place. `via` is now a secret of `relay/1` lines, and `name` is required. Update the servers first, as a relay needs a server of this release: a server still reads the relay lines of the release before. A relay idles from its update until its `servers` line is in. `morzer rollback` from a relay of this release is refused, as it drops values the one before requires: restore its pre-update backup instead. The steps are in the relay's docs, under One relay, several server groups: Moving from 0.18.
@@ -58,6 +60,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Two `relay/1` lines with one name, ignoring case, or one whose client name, `relay-<name>`, a device in `vless_clients` has, fail the change that brings them, as Xray refuses them too. A relay's old line in `vless_clients` named exactly `relay-<name>` has to be renamed or dropped before its `relay/1` line goes in.
 
 ### Fixed
+
+- `client-config` prints no subscription URL through a relay whose every path is off in `relay_flags`, a burnt relay or a spare the manager holds back, as it already printed no link through it: the URL gave devices the address of a relay they were not to use.
+
+- `relay-config`, for a relay of 0.18, prints that release's `init` (`dotdash-relay:0.18.0`): `stable` is now a gateway relay, which refuses the `dotdash_*` values it sets.
 
 - A cover app's own headers reach visitors, on the server and on own-site relays: Caddy no longer replaces its `Referrer-Policy`, adds HSTS or `X-Content-Type-Options` over its own, or removes its `Server`. It sets those three only where the app sends none, and removes only its own `Server` and the `Via` it adds. Every site had answered with the same set, whatever the app, which no install of a stock app such as Vaultwarden does.
 

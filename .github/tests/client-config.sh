@@ -210,8 +210,9 @@ grep -qF 'relays: line 1: no field is named cdn_path=; ignored' "$work/err" || f
 [ "$out" = "$(cc SUBSCRIPTION=false "RELAYS=$relay" -- --full phone)" ] || fail "an unknown key= changed the output"
 
 echo "== --check: nothing on a clean list, each bad line by its number, nothing printed but that"
-out=$(cc "RELAYS=$relay" "POOLS=p1 phone 203.0.113.7" CDN_HOSTS=cdn1.example.net -- --check)
-[ -z "$out" ] && [ ! -s "$work/err" ] || fail "--check: output for clean lists"
+out=$(cc "RELAYS=relay/1 edge 0123456789abcdef 203.0.113.7 r.example.com ${pbk} ab12 ${enc} xhttp=aaaa1111bbbb2222 cdn=cdn.example.net cdnpath=cccc3333dddd4444 origin=o.example.org" \
+  "POOLS=p1 phone 203.0.113.7" CDN_HOSTS=cdn1.example.net -- --check)
+[ -z "$out" ] && [ ! -s "$work/err" ] || fail "--check: output for clean lists: $(cat "$work/err")"
 out=$(cc "RELAYS=$relay
 203.0.113.8 b.example.com ${pbk} ab12 ${enc} cdn=bad_name!" "POOLS=p1 phone ghost.example.net" \
   'CDN_EXTRA=cdn.example.net {"mode": broken}' -- --check)
@@ -227,6 +228,15 @@ grep -q '^relays: line 2: the cdn= field' "$work/err" || fail "--check: a droppe
 out=$(cc "RELAYS=$relay future=1
 203.0.113.8 b.example.com ${pbk} ab12 ${enc} name=edge" "POOLS=p1 phone ghost.example.net" -- --check)
 [ -s "$work/err" ] && ! grep -qv '^warning: ' "$work/err" || fail "--check: an unknown field, a taken name or a stray pool member is not a warning alone"
+
+echo "== --check, migrating from 0.18: a line of 0.18 left in relays, and a client named as a relay/1 line's relay, warned of alone"
+out=$(cc "RELAYS=$relay
+relay/1 Phone 0123456789abcdef 203.0.113.8 b.example.com ${pbk} ab12 ${enc}" -- --check)
+grep -q "^warning: relays: line 1: 203.0.113.7's line is of 0.18" "$work/err" || fail "--check: a line of 0.18 not warned of"
+grep -q "^warning: vless_clients: phone is named as a relay/1 line's relay" "$work/err" || fail "--check: a relay's client of 0.18 not warned of"
+[ "$(grep -c . "$work/err")" = 2 ] || fail "--check, migrating: more than the two warnings: $(cat "$work/err")"
+cc "RELAYS=$relay" -- --full phone >/dev/null
+grep -q 'of 0\.18' "$work/err" && fail "a line of 0.18 warned of without --check"
 
 echo "== servers naming none: this server alone, and said"
 [ "$(cc SUBSCRIPTION=false 'SERVERS= , ' -- --full phone)" = "$out_self" ] || fail "servers naming none: not this server alone"
@@ -264,6 +274,18 @@ grep -q '^warning: relay_flags: line 1: no relay in relays is named ghost' "$wor
   grep -q '^warning: relay_flags: line 2: fast is not standby' "$work/err" &&
   grep -q '^relay_flags: line 2: the off= of r2 is not' "$work/err" ||
   fail "relay_flags: a name, word or off= that is wrong not said as it should be: $(cat "$work/err")"
+
+echo "== every path of a relay off in relay_flags (burnt, or a spare held back): no link, and no subscription URL through it"
+dark="r1 off=reality,xhttp,mkcp,hysteria2,cdn:cdn-r.example.net"
+out=$(cc SUBSCRIPTION=true "RELAYS=$v1" "RELAY_FLAGS=$dark" -- --full phone)
+printf '%s\n' "$out" | grep -q 'through the relay r1' && fail "every path off: a subscription URL through the relay"
+printf '%s\n' "$out" | links | grep -q '#r1%20' && fail "every path off: a link through the relay"
+out=$(cc SUBSCRIPTION=true "RELAYS=$v1" "RELAY_FLAGS=${dark%,cdn:*}" -- phone)
+printf '%s\n' "$out" | grep -q 'through the relay r1\.example\.com: ' || fail "a CDN left on: no subscription URL through the relay"
+out=$(cc SUBSCRIPTION=true "RELAYS=$v1" "RELAY_FLAGS=$dark split" -- phone)
+printf '%s\n' "$out" | grep -q 'through the relay r1\.example\.com: ' || fail "split, REALITY kept: no subscription URL through the relay"
+cc SUBSCRIPTION=true "RELAYS=$v1" "RELAY_FLAGS=$dark" -- --relay r1 phone >/dev/null
+grep -qF 'phone: no subscription URL through r1' "$work/err" || fail "--relay, every path off: not said"
 
 echo "== malformed relay/1 lines: each left out, by its line number, and fails --check"
 cc "RELAYS=relay/1 r3 0123456789abcdeF 203.0.113.32 r3.example.com ${pbk} ab12 ${enc}
@@ -333,6 +355,9 @@ relay/1 ${name} ${nonce} 203.0.113.30 r1.example.com ${pbk} ab12 ${enc}" "$caddy
     fail "relay-config, vector $n: not server/1 s1 <hosts> 443 <pbk> ab12 <enc> $id xr=8443,<path>: $line"
 done < <(jq -r '.vectors[] | "\(.seed) \(.name) \(.nonce) \(.id)"' .github/tests/relay-id.json)
 [ "$n" -ge 6 ] || fail "relay-config: fewer than 6 vectors read"
+out=$(docker run --rm -v "$work/secrets:/run/secrets:ro" -v "$work/xray:/opt/xray:ro" -v "$root/bundles/server/tasks:/task:ro" \
+  -e DOMAIN=s.example.com -e HTTPS_PORT=443 "$caddy" sh /task/relay-config.sh phone 2>&1)
+grep -qF 'oci://ghcr.io/morzecrew/dotdash-relay:0.18.0 ' <<<"$out" || fail "relay-config, a relay of 0.18: its init not of that release"
 docker run --rm -v "$work/secrets:/run/secrets:ro" -v "$work/xray:/opt/xray:ro" -v "$root/bundles/server/tasks:/task:ro" \
   -e DOMAIN=s.example.com -e HTTPS_PORT=443 -e "RELAYS=$v2" "$caddy" sh /task/relay-config.sh r2 >/dev/null 2>"$work/err" &&
   fail "relay-config: no name, and not refused"

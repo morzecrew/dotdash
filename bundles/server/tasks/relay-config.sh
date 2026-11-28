@@ -63,7 +63,7 @@ open for its certificate, and in place of --set site below:
 Or a site next to the relay, in its own network, not a big name, on TLS 1.3
 and HTTP/2, as below; its DNS points elsewhere, which an observer can compare.
 
-sudo morzer init --release oci://ghcr.io/morzecrew/dotdash-relay:stable \\
+sudo morzer init --release oci://ghcr.io/morzecrew/dotdash-relay:0.18.0 \\
   --recovery-recipient age1… \\
   --set site=<a site next to the relay> \\
   --set dotdash_servers=${servers} --set dotdash_port=${HTTPS_PORT} \\
