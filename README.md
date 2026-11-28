@@ -13,8 +13,8 @@ A device connects to a server outside the network with
 [Xray](https://github.com/XTLS/Xray-core), over transports built to look like
 ordinary web traffic: VLESS with REALITY on port 443, XHTTP through the
 server's own site, and Hysteria2, mKCP and a DNS tunnel for networks that
-block the rest. The server's site is a real web app, a stock open-source one
-of your choice, so whoever opens it finds what any install of that app shows.
+block the rest. The server's site can be a stock open-source web app of your
+choice, so whoever opens it finds what any install of that app shows.
 Connections leave the server through the upstreams you choose, usually a
 proxy elsewhere, and stop when none of them answers rather than going out
 some other way.
