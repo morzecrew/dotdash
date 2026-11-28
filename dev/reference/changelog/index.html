@@ -4199,7 +4199,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
-<li>The subscription's name, the server's exit, goes in <code>Profile-Title</code> as plain UTF-8, at most 24 bytes. Its <code>base64:</code> form ran to 31 to 39 characters, past the 25 Happ takes, so newer Happ showed the subscription's host instead.</li>
+<li>
+<p>The subscription's name, the server's exit, goes in <code>Profile-Title</code> as plain UTF-8, at most 24 bytes. Its <code>base64:</code> form ran to 31 to 39 characters, past the 25 Happ takes, so newer Happ showed the subscription's host instead.</p>
+</li>
+<li>
+<p>A client's gateway check could pass a host whose FORWARD drops the LAN's traffic, and a health check could call a running <code>xray</code>, <code>vpn</code> or <code>warm</code> missing, now and then. A <code>grep -q</code> at a pipe's end, quitting early, killed the command before it and failed the pipe.</p>
+</li>
 </ul>
 <h2 id="0190-2026-11-28">[0.19.0] - 2026-11-28<a class="headerlink" href="#0190-2026-11-28" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
