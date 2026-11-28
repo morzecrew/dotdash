@@ -86,7 +86,7 @@ sudo morzer config set exit_ipv4_url=http://11.99.0.10:8000/ip4 exit_info_url=ht
 want="$(printf '\360\237\207\277\360\237\207\277') 203.0.113.7"
 title=
 for _ in $(seq 30); do
-  title=$(headers "${url}" | sed -n 's/^profile-title: base64://Ip' | base64 -d 2>/dev/null || true)
+  title=$(headers "${url}" | sed -n 's/^profile-title: //Ip')
   [ "${title}" = "${want}" ] && break
   sleep 2
 done

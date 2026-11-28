@@ -1,9 +1,9 @@
 #!/bin/sh
 # The subscriptions' name in the apps that read one: this server's IPv4 exit,
 # as the sites devices visit see it, after its country's flag
-# ("<flag> 203.0.113.7"), in place of this server's domain. Written base64 to
-# /exit/title, which Caddy sends as Profile-Title on every device's
-# subscription (caddy/Caddyfile).
+# ("<flag> 203.0.113.7"), in place of this server's domain. Written to
+# /exit/title as it is, at most 24 bytes of UTF-8, which Caddy sends as
+# Profile-Title on every device's subscription (caddy/Caddyfile).
 #
 # Asked through Xray's title-ip and title-info inbounds, each a forward to
 # its URL's host, as client traffic leaves, at start and every ten minutes, so an exit that changed (a line failed over) shows at a
@@ -44,8 +44,8 @@ while :; do
 		title=$ip
 		cc=$(get "$info_url" 10813 "/$ip/country" | tr -d ' \r\n')
 		case $cc in [A-Za-z][A-Za-z]) title="$(flag "$cc") $ip" ;; esac
-		if [ "$(cat /exit/title 2>/dev/null)" != "$(printf '%s' "$title" | base64 | tr -d '\n')" ]; then
-			printf '%s' "$title" | base64 | tr -d '\n' >/exit/title.new && mv /exit/title.new /exit/title
+		if [ "$(cat /exit/title 2>/dev/null)" != "$title" ]; then
+			printf '%s' "$title" >/exit/title.new && mv /exit/title.new /exit/title
 			echo "exit-title: ${title}"
 		fi
 	fi
