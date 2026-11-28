@@ -126,7 +126,9 @@ http://127.0.0.1:8081 {
 	rewrite @apple {path}.apple
 	# The subscription's name in the apps that show one (Happ, Hiddify):
 	# this server's exit, its country's flag and IPv4, in place of this
-	# domain, once exit-title has written it.
+	# domain, once exit-title has written it. Plain UTF-8, at most 24 bytes:
+	# Happ drops a name over 25 characters as sent, which base64 made
+	# 31 to 39.
 	@titled {
 		path_regexp ^/[0-9a-f]{32}$
 		file {
@@ -134,7 +136,7 @@ http://127.0.0.1:8081 {
 			try_files /title
 		}
 	}
-	header @titled Profile-Title "base64:{file./srv/exit/title}"
+	header @titled Profile-Title "{file./srv/exit/title}"
 	# How often the apps that read it (Happ, Hiddify) fetch it
 	# again, in hours: a new relay, a rotated key or a revoked device
 	# reaches them within that, where an app left alone may never refetch.

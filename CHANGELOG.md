@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The subscription's name, the server's exit, goes in `Profile-Title` as plain UTF-8, at most 24 bytes. Its `base64:` form ran to 31 to 39 characters, past the 25 Happ takes, so newer Happ showed the subscription's host instead.
+
 ## [0.19.0] - 2026-11-28
 
 ### Added
