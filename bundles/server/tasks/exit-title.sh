@@ -10,12 +10,10 @@
 # device's next refresh. Nothing is written until a check answers, and one
 # that fails keeps the last title and is asked again in 15 s: Xray, restarted
 # with this, may not listen yet. With the subscription parameter off, it asks
-# nothing. With direct=false it asks nothing either, and takes away the title
-# it wrote: a direct line in the upstreams makes the exit this server's own
-# address, which direct=false keeps from devices.
+# nothing. direct=false leaves it be: the exit is what any site shows a
+# device anyway, so the title gives away nothing more.
 set -u
 [ "${SUBSCRIPTION:-false}" = true ] || exec sleep 2147483647
-[ "${DIRECT:-true}" != false ] || { rm -f /exit/title; exec sleep 2147483647; }
 ipv4_url=${EXIT_IPV4_URL:-http://api4.ipify.org}
 info_url=${EXIT_INFO_URL:-http://ipinfo.io}
 # Its network has no other way out: each request goes to Xray's forward for
