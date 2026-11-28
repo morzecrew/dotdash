@@ -1,12 +1,15 @@
 #!/bin/sh
-# Checks each of this relay's entries as a device reaches it, end to end, and
-# prints a line per entry: ok, or FAIL and why. An Xray client in Xray's own
+# Checks each of this relay's entries as a device of each server group
+# reaches it, end to end, and prints a line per entry per group,
+# <entry>@<group>: ok, or FAIL and why. An Xray client in Xray's own
 # namespace dials each inbound on loopback, with the relay's own keys and the
-# first device's id in vless_clients, and fetches probe_url through it, on to
-# the servers: REALITY; under own-site, XHTTP through the site, its TLS
-# pinned to the site's certificate; under mkcp, mKCP; under hysteria2,
-# Hysteria2. First, the way on to the servers alone, through Xray's probe
-# inbound, which every entry needs. Under http-origin, the door's own log
+# id of the group's checker (#check@<group>, which the gateway's agent adds
+# with a random id, so no device's id is needed), and fetches probe_url
+# through it, on to that group's servers: REALITY; under own-site, XHTTP
+# through the site, its TLS pinned to the site's certificate; under mkcp,
+# mKCP; under hysteria2, Hysteria2. First, each group's state, as the agent
+# last found it: a group that is not live has its entries left unchecked, as
+# every one of them fails with it. Under http-origin, the door's own log
 # (caddy/Caddyfile) says what reached it in the last hour: nothing (a
 # firewall), all refused from Docker's own address (docker-proxy hides the
 # CDN's), all refused from others (http_origin_from), or some passed.
@@ -19,10 +22,14 @@ set -- 127.0.0.1
 # shellcheck source=entry.sh
 . /task/entry.sh
 
-id=$(awk '$1 !~ /^#/ && NF { print $1; exit }' /run/secrets/vless_clients)
-[ -n "$id" ] || { echo "entry-check: vless_clients lets no device in, so there is none to check as" >&2; exit 1; }
+status=/run/gateway/status.json
+[ -r "$status" ] || { echo "entry-check: no gateway status: is Xray running? (doctor)" >&2; exit 1; }
+# A line per group: its name, state and checker's id, then its servers as
+# the agent found them.
+groups=$(/jq/jq -r '.groups[]? | "\(.name) \(.state) \(.check) \([.legs[]? | .host + " " + .state + (if .error then " (" + .error + ")" else "" end)] | join(", "))"' "$status")
+[ -n "$groups" ] || { echo "entry-check: no server group yet, so none to check as: add one's servers line (the servers task says how)" >&2; exit 1; }
 failed=0
-say() { printf '%-8s %s\n' "$1" "$2"; case $2 in FAIL*) failed=1 ;; esac; }
+say() { printf '%-16s %s\n' "$1" "$2"; case $2 in FAIL*) failed=1 ;; esac; }
 
 # The site's certificate as Xray pins it, the leaf's SHA-256 as openssl
 # prints it, so a check through the site needs no CA, Caddy's own included.
@@ -76,32 +83,41 @@ entry() { # <entry> <what works when it does> <outbound> [where to look when it 
   if [ -z "$why" ]; then say "$1" "ok: $2"; else say "$1" "FAIL: $why${4:+ ($4)}"; fi
 }
 
-why=$(fetch 10809)
-if [ -z "$why" ]; then
-  say servers "ok: the relay reaches the servers, or the relays in via"
-else
-  say servers "FAIL: the relay reaches no server ($why): every entry below fails with it; see doctor"
-fi
-entry reality "a device's REALITY link under ${SITE} gets through" \
-  "$(vless 443 "\"network\": \"raw\", \"security\": \"reality\", \"realitySettings\": {\"serverName\": \"${SITE}\", \"fingerprint\": \"chrome\", \"password\": \"${pbk}\", \"shortId\": \"${sid}\"}" xtls-rprx-vision)" \
-  "REALITY borrows the site's handshake, Caddy's under own-site: does it answer TLS 1.3?"
-if [ -n "$path$hy2_port" ] && [ -z "$pin" ]; then
-  say site "FAIL: Caddy has no certificate for ${SITE} yet, so neither XHTTP nor Hysteria2 through the site works: check its ACME"
-elif [ -n "$path" ]; then
-  entry xhttp "the site passes the XHTTP path on to Xray, under its own certificate" \
-    "$(vless 443 "\"network\": \"xhttp\", $(tls h2), \"xhttpSettings\": {\"path\": \"/${path}\", \"host\": \"${SITE}\", \"mode\": \"auto\"}")" \
-    "doctor's cover-site check says whether Caddy runs"
-fi
-if [ -n "$kcp_seed" ]; then
-  mask="{\"type\": \"mkcp-legacy\", \"settings\": {\"value\": \"${kcp_seed}\"}}"
-  [ "${KCP_HEADER:-dtls}" = none ] || mask="$mask, {\"type\": \"mkcp-legacy\", \"settings\": {\"header\": \"${KCP_HEADER:-dtls}\"}}"
-  [ "${KCP_OPEN:-none}" != quic ] ||
-    mask="$mask, {\"type\": \"noise\", \"settings\": {\"noise\": [{\"type\": \"hex\", \"packet\": \"c300000001088394c8f03e5157080000449e00000002\", \"delay\": \"0-0\"}]}}"
-  entry mkcp "mKCP answers on UDP ${KCP_PORT}" "$(vless 8447 "\"network\": \"kcp\", \"finalmask\": {\"udp\": [${mask}]}")"
-fi
-[ -z "$hy2_port" ] || [ -z "$pin" ] ||
-  entry hy2 "Hysteria2 answers on UDP ${hy2_port}, under the site's certificate" \
-    "\"protocol\": \"hysteria\", \"settings\": {\"version\": 2, \"address\": \"127.0.0.1\", \"port\": 8448}, \"streamSettings\": {\"network\": \"hysteria\", $(tls h3), \"hysteriaSettings\": {\"version\": 2, \"auth\": \"${id}\"}}"
+# Each entry, as group $g's checker $id.
+entries() {
+  entry "reality@$g" "a device's REALITY link under ${SITE} gets through" \
+    "$(vless 443 "\"network\": \"raw\", \"security\": \"reality\", \"realitySettings\": {\"serverName\": \"${SITE}\", \"fingerprint\": \"chrome\", \"password\": \"${pbk}\", \"shortId\": \"${sid}\"}" xtls-rprx-vision)" \
+    "REALITY borrows the site's handshake, Caddy's under own-site: does it answer TLS 1.3?"
+  if [ -n "$path$hy2_port" ] && [ -z "$pin" ]; then
+    say "site@$g" "FAIL: Caddy has no certificate for ${SITE} yet, so neither XHTTP nor Hysteria2 through the site works: check its ACME"
+  elif [ -n "$path" ]; then
+    entry "xhttp@$g" "the site passes the XHTTP path on to Xray, under its own certificate" \
+      "$(vless 443 "\"network\": \"xhttp\", $(tls h2), \"xhttpSettings\": {\"path\": \"/${path}\", \"host\": \"${SITE}\", \"mode\": \"auto\"}")" \
+      "doctor's cover-site check says whether Caddy runs"
+  fi
+  if [ -n "$kcp_seed" ]; then
+    mask="{\"type\": \"mkcp-legacy\", \"settings\": {\"value\": \"${kcp_seed}\"}}"
+    [ "${KCP_HEADER:-dtls}" = none ] || mask="$mask, {\"type\": \"mkcp-legacy\", \"settings\": {\"header\": \"${KCP_HEADER:-dtls}\"}}"
+    [ "${KCP_OPEN:-none}" != quic ] ||
+      mask="$mask, {\"type\": \"noise\", \"settings\": {\"noise\": [{\"type\": \"hex\", \"packet\": \"c300000001088394c8f03e5157080000449e00000002\", \"delay\": \"0-0\"}]}}"
+    entry "mkcp@$g" "mKCP answers on UDP ${KCP_PORT}" "$(vless 8447 "\"network\": \"kcp\", \"finalmask\": {\"udp\": [${mask}]}")"
+  fi
+  [ -z "$hy2_port" ] || [ -z "$pin" ] ||
+    entry "hy2@$g" "Hysteria2 answers on UDP ${hy2_port}, under the site's certificate" \
+      "\"protocol\": \"hysteria\", \"settings\": {\"version\": 2, \"address\": \"127.0.0.1\", \"port\": 8448}, \"streamSettings\": {\"network\": \"hysteria\", $(tls h3), \"hysteriaSettings\": {\"version\": 2, \"auth\": \"${id}\"}}"
+}
+
+while read -r g state id legs; do
+  case $state in
+    live)
+      say "servers@$g" "ok: ${legs}"
+      entries </dev/null ;;
+    *)
+      say "servers@$g" "FAIL: $g is ${state}: ${legs:-not probed yet}; its entries are not checked, as every one fails with it (the servers task says more)" ;;
+  esac
+done <<GROUPS
+$groups
+GROUPS
 [ -z "$cdn" ] || say cdn "not checked here: a CDN's half takes a fetch through it, which cdn-check on a server makes"
 
 

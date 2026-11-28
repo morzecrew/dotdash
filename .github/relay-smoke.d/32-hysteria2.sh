@@ -24,7 +24,7 @@ restore() {
 trap restore EXIT
 
 # Captured, then read: a reader that stops early would kill the task's output.
-entry() { local out; out=$(sudo morzer task run relay-entry --output -- 127.0.0.1); grep -m1 '^127\.0\.0\.1 ' <<<"${out}" || true; }
+entry() { local out; out=$(sudo morzer task run relay-entry --output -- 127.0.0.1); grep -m1 '^relay/1 ' <<<"${out}" || true; }
 ca_dir=/rig/relay/hy2-ca
 device() { # <name> <port> <login>: a Hysteria2 client of the relay, HTTP proxy on 127.0.0.1:<port>
   mkdir -p "/rig/relay/$1"

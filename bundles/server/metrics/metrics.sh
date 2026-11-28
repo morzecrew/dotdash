@@ -4,7 +4,9 @@
 # turned into Prometheus text by metrics.jq, written to the node exporter's
 # textfile directory (/textfile) as dotdash-<product>-<role>.prom, to a
 # temporary name renamed into place, as morzer writes its own. With no
-# answer, dotdash_xray_up is 0. jq is the jq image's, mounted at /jq.
+# answer, dotdash_xray_up is 0. A relay's gateway status, mounted at
+# /gateway, adds each server group's state. jq is the jq image's, mounted at
+# /jq.
 #
 # metrics.sh --demo checks the conversion against a sample, with the jq on PATH.
 set -u
@@ -12,11 +14,18 @@ here=$(dirname "$0")
 jq=/jq/jq
 [ -x "$jq" ] || jq=jq
 
+gw=/gateway/status.json
 convert() { # <product> <role>: /debug/vars on stdin, the textfile on stdout
-  "$jq" -r --arg product "$1" --arg role "$2" -f "$here/metrics.jq"
+  g=$gw
+  [ -r "$g" ] || g=/dev/null
+  "$jq" -r --arg product "$1" --arg role "$2" --slurpfile gw "$g" -f "$here/metrics.jq"
 }
 
 if [ "${1:-}" = --demo ]; then
+  gw=$(mktemp)
+  trap 'rm -f "$gw"' EXIT
+  printf '%s' '{"groups": [{"name": "a", "state": "live", "devices": 14, "listed": "2020-01-01T00:00:00.5Z"},
+    {"name": "b", "state": "down", "devices": 3}]}' >"$gw"
   out=$(printf '%s' '{"stats": {"inbound": {"reality": {"uplink": 10, "downlink": 2000}},
     "outbound": {"gate": {"uplink": 12, "downlink": 2100}}, "user": {"x": {"uplink": 5}}},
     "observatory": {"upstream-a": {"alive": true, "delay": 120}, "upstream-b": {"alive": false, "delay": 99}},
@@ -27,6 +36,9 @@ if [ "${1:-}" = --demo ]; then
     'dotdash_observatory_alive{product="dotdash",role="xray",outbound="upstream-b"} 0' \
     'dotdash_observatory_delay_seconds{product="dotdash",role="xray",outbound="upstream-a"} 0.12' \
     'dotdash_xray_heap_bytes{product="dotdash",role="xray"} 8388608' \
+    'dotdash_group_live{product="dotdash",role="xray",group="a"} 1' \
+    'dotdash_group_live{product="dotdash",role="xray",group="b"} 0' \
+    'dotdash_group_devices{product="dotdash",role="xray",group="b"} 3' \
     '# TYPE dotdash_inbound_bytes_total counter'; do
     printf '%s\n' "$out" | grep -qxF "$want" || { echo "metrics.sh: no line: $want" >&2; exit 1; }
   done
@@ -34,6 +46,8 @@ if [ "${1:-}" = --demo ]; then
     echo "metrics.sh: a dead outbound's delay, or a user" >&2
     exit 1
   fi
+  printf '%s\n' "$out" | grep -qE '^dotdash_group_list_age_seconds\{product="dotdash",role="xray",group="a"\} [0-9]{8,}$' ||
+    { echo "metrics.sh: no list age for group a" >&2; exit 1; }
   echo "metrics.sh: ok"
   exit 0
 fi

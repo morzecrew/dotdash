@@ -49,10 +49,14 @@ jobs:
   # What each smoke install adds: the secrets only an operator sets, which
   # smoke.sh sets from random, and what init refuses without. The server's: a
   # domain, the healthcheck's URL and cert_issuer=internal, which needs no Let's
-  # Encrypt; .github/smoke.d/pre-apply supplies the rest. The relay's, client's
-  # and canary's: placeholders their pre-apply hooks replace with the stand-in
-  # server's. acme-dns's: the rig's zone and loopback address, the API on plain
-  # HTTP, since no CA reaches a rig.
+  # Encrypt; .github/smoke.d/pre-apply supplies the rest. The relay's: its
+  # site and name, and, for smoke-update's install of the published release
+  # from before the gateway, the placeholders that release requires (smoke.sh
+  # leaves out a --set the installed release doesn't declare); its pre-apply
+  # hook sets its servers line, or that release's secrets. The client's and
+  # canary's: placeholders their pre-apply hooks replace with the stand-in
+  # server's. acme-dns's: the rig's zone and loopback address, the API on
+  # plain HTTP, since no CA reaches a rig.
   bundle:
     permissions:
       contents: read
@@ -81,7 +85,7 @@ jobs:
       operator-secrets: >-
         ${{ fromJSON('{
         "server": "upstreams",
-        "relay": "vless_clients dotdash_id dotdash_encryption dotdash_short_id",
+        "relay": "",
         "client": "subscription_url",
         "canary": "dotdash_id dotdash_encryption dotdash_short_id dotdash_xhttp_path",
         "acme-dns": ""
@@ -89,7 +93,7 @@ jobs:
       init-args: >-
         ${{ fromJSON('{
         "server": "--domain dotdash.test --set probe_url=http://11.99.0.10:8000/ --set cert_issuer=internal --profile xdns",
-        "relay": "--set site=www.gstatic.com --set dotdash_servers=www.gstatic.com --set dotdash_address=rig.invalid --set dotdash_public_key=set-by-the-rig",
+        "relay": "--set site=www.gstatic.com --set name=r1 --set dotdash_servers=www.gstatic.com --set dotdash_address=rig.invalid --set dotdash_public_key=set-by-the-rig",
         "client": "",
         "canary": "--set dotdash_server=www.gstatic.com --set dotdash_address=rig.invalid --set dotdash_public_key=set-by-the-rig",
         "acme-dns": "--domain auth.rig.invalid --set address=127.0.0.1 --set nameserver=ns.rig.invalid --set api_tls=none"

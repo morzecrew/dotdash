@@ -1,16 +1,16 @@
-# A relay inside the restricted network, carrying devices on to the dotdash servers.
-# Rendered by render.sh.
+# A relay inside the restricted network, carrying each device on to its own
+# dotdash server group. Rendered by render.sh.
 direction: down
 
 inside: Inside the restricted network {
   style.stroke-dash: 4
 
-  phone: Phone\nwith a relay link
+  phone: Phone of group a\nwith a relay link
   probe: A probe
   relay: dotdash-relay {
     label: "dotdash-relay\nan address that gets through,\nits own keys"
   }
-  site: "A site next to the relay\n(the site parameter)"
+  site: "Its site\n(own, or one next to it)"
 
   phone -> relay: "443, under\nthe site's name"
   probe -> relay {style.stroke-dash: 4}
@@ -18,13 +18,13 @@ inside: Inside the restricted network {
 }
 
 outside: Outside it {
-  a: dotdash\na.example.com
-  b: dotdash\nb.example.com
+  a: "Group a\ndotdash a1.example.com, a2…"
+  b: "Group b\ndotdash b.example.com"
 }
 
-upstream: "Your upstream proxy,\nthen the internet"
+upstream: "Each group's upstream proxy,\nthen the internet"
 
-inside.relay -> outside.a: "as one client,\nthe fastest server"
-inside.relay -> outside.b {style.stroke-dash: 4}
+inside.relay -> outside.a: "a's devices, as the relay's\nclient there, fastest server"
+inside.relay -> outside.b: "b's devices" {style.stroke-dash: 4}
 outside.a -> upstream
 outside.b -> upstream

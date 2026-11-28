@@ -1,19 +1,49 @@
 #!/usr/bin/env bash
-# Healthy when Xray fetches probe_url through dotdash, in up to three tries so
-# one lost request is not an alert. It probes live, so `doctor` reports the way
-# on to dotdash as it is now. `doctor` gives health checks 30s in all: a try
-# times out after 7s (XRAY_HEALTHCHECK_TIMEOUT), so three fit with the pauses.
+# Healthy when the relay's own machinery works: Xray runs, on the servers and
+# via secrets it was given (a line it refuses keeps it from starting, and
+# Docker restarts it over and over), and the gateway's agent reached Xray's
+# API in its last round, at most two minutes ago (the image's
+# gateway-status). Not whether any server group answers: each group's state
+# is the servers task's, the facts' and the metrics' (dotdash_group_live), so
+# an idle relay with no servers line, or one whose groups are all down, is
+# healthy, and a servers line a server doesn't take yet rolls no change back.
 # Whether devices can reach this machine it cannot see; a canary can.
+#
+# After a start the agent's first round comes a second after Xray's, and
+# takes up to 10 s for each server that doesn't answer, so the check waits
+# up to 90 s for it, within its 2 minutes; but not for an Xray that isn't
+# running, or that Docker keeps restarting, which it says at once. The
+# status file outlives a start that fails before Xray runs, so a round it
+# names counts only while the container has not been restarted since the
+# check began.
 set -euo pipefail
 
 project=${DOTDASH_RELAY_COMPOSE_PROJECT:-dotdash-relay}
-docker compose -p "$project" ps --format '{{.Service}}' | grep -qx xray \
-  || { echo "xray is not running" >&2; exit 1; }
-for try in 1 2 3; do
-  if out=$(docker compose -p "$project" exec -T xray /usr/local/bin/xray-entrypoint healthcheck 2>&1); then
+refused() {
+  echo "xray $1: a servers or via line it refuses keeps it from starting, and docker compose logs xray names the line" >&2
+  exit 1
+}
+cid=$(docker compose -p "$project" ps -aq xray)
+[ -n "$cid" ] || refused "is not there"
+state() { docker inspect -f '{{.State.Status}} {{.RestartCount}}' "$cid"; }
+was=$(state)
+[ "${was% *}" = running ] || refused "is ${was% *}"
+sleep 2
+for _ in $(seq 30); do
+  out=$(docker compose -p "$project" exec -T xray /usr/local/bin/xray-entrypoint gateway-status 2>&1) && ok=true || ok=false
+  now=$(state)
+  [ "${now% *}" = running ] || refused "is ${now% *}"
+  [ "$now" = "$was" ] || refused "keeps restarting"
+  if $ok; then
+    # One line a group, and gateway: last round …; the groups' states alone.
+    awk '$1 != "gateway:" && $1 != "dropped:" && NF >= 2 && $2 ~ /^(live|down|refused|starting)$/ { n++; s[$2]++ }
+      END { if (!n) { print "the relay works, with no server group yet: it lets nobody in"; exit }
+            printf "the relay works: %d server group(s)", n
+            for (k in s) printf ", %d %s", s[k], k
+            print "" }' <<<"$out"
     exit 0
   fi
-  [ "$try" = 3 ] || sleep 2
+  sleep 3
 done
-echo "the relay cannot reach the internet through dotdash: $out" >&2
+echo "the relay's gateway is not working: ${out##*$'\n'}" >&2
 exit 1

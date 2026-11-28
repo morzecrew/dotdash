@@ -18,10 +18,10 @@ restore() {
 trap restore EXIT
 
 # Captured, then read: a reader that stops early would kill the task's output.
-entry() { local out; out=$(sudo morzer task run relay-entry --output -- 127.0.0.1); grep -m1 '^127\.0\.0\.1 ' <<<"${out}" || true; }
+entry() { local out; out=$(sudo morzer task run relay-entry --output -- 127.0.0.1); grep -m1 '^relay/1 ' <<<"${out}" || true; }
 device() { # <name> <port> <kcp port> <seed> <header>: an mKCP client of the relay, HTTP proxy on 127.0.0.1:<port>
   local enc
-  read -r _ _ _ _ enc _ <<<"$(entry)"
+  read -r _ _ _ _ _ _ _ enc _ <<<"$(entry)"
   mkdir -p "/rig/relay/$1"
   jq -n --arg id "$(cat /rig/relay/device)" --arg enc "${enc}" --argjson port "$2" --argjson kcp "$3" \
     --arg seed "$4" --arg header "$5" '

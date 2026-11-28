@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Every relay is a gateway: one relay carries devices of any number of server groups, each to that group's own servers and exit alone. Its new `servers` secret holds one `server/1` line per group, as one of the group's servers prints it with `relay-config -- <relay>`. The relay fetches each group's device list through its own tunnel every minute, and adds and removes devices through Xray's API with no restart; only a device deleted while connected restarts its Xray, which alone cuts an open connection. Nobody copies devices to a relay again. The routing comes from the xray image's `$gateway`, whose three rules fail closed: a group whose servers are all down gets nothing, and never another group's servers or exit. An id two groups list is dropped from both.
+
+- A relay's `relay-entry` prints its `relay/1` line, `relay/1 <name> <nonce> <host> <site> <public key> <short id> <encryption>`, then `xhttp=<path>` and its other transports' fields: the one line every server's `relays` takes. `nonce` is a new generated secret, from which, with the name, each server derives the relay's id.
+
+- A relay's `servers` task prints each server group's state, a line each: `live`, `down`, `refused` or `starting`, its servers, its devices and the age of its list. The facts carry the same under `groups`, with the relay's `name` and `nonce`, and the `metrics` profile adds `dotdash_group_live`, `dotdash_group_devices` and `dotdash_group_list_age_seconds` per group.
+
+- A relay's `entry-check` tries each entry for each live group, as a checker the relay adds to each group with a random id, a line per entry per group (`reality@a`); a group that is not live has its entries left out.
+
+- A relay's `server_link` (in place of `dotdash_link`) reaches each group's servers over XHTTP with REALITY on its line's `xr=`, and `tunnel_group` names the group whose servers a cover app's `tunnel_host` is reached through.
+
 - The server reads `relay/1` lines in `relays`, as a gateway relay's `relay-entry` will print them: `relay/1 <name> <nonce> <host> <site> <public key> <short id> <encryption>`, then `xhttp=<path>` and the other transports' fields. Each relay comes in by an id the image derives from a new generated secret, `relay_seed`, and the relay's name and nonce, so nobody adds a relay to `vless_clients` again, and deleting its line revokes it. Copy `relay_seed` to every server in `servers`, as the keys.
 
 - A server `name` parameter, the server group's: relays know the group by it, and the servers' own links are named by it in place of `server` (`s1 · reality`, `s1 2 · xhttp` with several servers). Unset, links read as before.
@@ -24,6 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The server writes each `relay/1` relay's device list, whether or not subscriptions are on: every device's id and name, the first 12 hex characters of its subscription token with `subscription` on, and the other relays' ids. A relay fetches it through its own tunnel at `list.sub.dotdash.internal/<list token>`, the token the first 32 hex characters of `sha256("<relay id>:list")`, and a device's subscription at `<prefix>.sub.dotdash.internal/<token>`. Xray hands those names to Caddy's new internal listener on port 8085, never published, for relays' users alone (a fixed freedom outbound, `sub`), and blocks every other user asking for a `dotdash.internal` name. The public site never serves a list.
 
 ### Changed
+
+- **Breaking for relays:** a relay's `dotdash_servers`, `dotdash_address`, `dotdash_port`, `dotdash_public_key`, `dotdash_link` and `dotdash_xhttp_reality_port` parameters and its `vless_clients`, `dotdash_id`, `dotdash_encryption`, `dotdash_short_id` and `dotdash_xhttp_path` secrets are gone: the `servers` secret takes their place. `via` is now a secret of `relay/1` lines, and `name` is required. Update the servers first, as a relay needs a server of this release: a server still reads the relay lines of the release before. A relay idles from its update until its `servers` line is in. `morzer rollback` from a relay of this release is refused, as it drops values the one before requires: restore its pre-update backup instead. The steps are in the relay's docs, under One relay, several server groups: Moving from 0.18.
+
+- **Breaking for relay monitoring:** a relay's health check says only that its own machinery works: Xray runs, and its gateway's agent reached Xray in the last two minutes. An idle relay, or one whose groups are all down, is healthy, and a `servers` line a server doesn't take yet rolls nothing back. Watch `dotdash_group_live` for whether a group answers.
+
+- **Breaking for anything that reads a relay's facts:** `clients` and `via` are gone, `name`, `nonce` and `groups` are new, and device traffic is counted per `<device>@<group>`. A relay of this release takes `servers`, `via`, `ipv6`, `server_link`, `via_link`, `via_fingerprint` and `tunnel_group` from an authority, and nothing else: the manager drives one only from its release with server groups.
+
+- A subscription through a relay goes to the device's own group by its token's first 12 hex characters, which that group's list carries, so URLs keep their form and the relay never holds a whole token. Caddy no longer restarts when servers change. A token no group lists, or its server lacks, and a group that is down, get the relay's site, as any other path.
 
 - **Breaking for anything that reads link names:** with `name` set, the servers' own links are named by it, not `server`.
 

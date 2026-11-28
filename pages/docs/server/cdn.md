@@ -72,7 +72,7 @@ send those devices their links again.
 A CDN is refused subscriptions. A subscription read in the clear gives away
 every link, the device's keys and every relay and CDN name, so one request
 to the provider would list every way in. The server and
-[relays with their own site](../relay/install.md#6-devices) answer a
+[relays with their own site](../relay/install.md#8-devices) answer a
 subscription request a CDN passed on with the site, as any other path: its
 404, or your app's answer. They recognise
 one by the headers a CDN adds to say so (`X-Forwarded-For`, `Via`, `Forwarded`
@@ -121,7 +121,7 @@ cheap to replace, rather than this server and its upstream.
    `https://relay.example.net`. Like the server, the relay answers under
    any name.
 2. **On the relay**, list the names devices use, then print its line again
-   ([its line](../relay/install.md#4-on-the-relay-its-line)); it now ends in
+   ([its line](../relay/install.md#3-on-the-relay-its-line)); it now ends in
    `cdn=cdn.example.net cdnpath=…`:
 
     ```sh

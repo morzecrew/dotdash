@@ -11,10 +11,11 @@
 #   server; the facts carry the days that certificate has left;
 # - a device whose link names the domain gets out through the relay, and
 #   doctor passes, the cover-site check included;
-# - a subscription path goes on to the dotdash servers through the relay's
-#   tunnel, unless a CDN marks it as passed on, any other path stays the
-#   relay's site, and relay-entry marks the line own-site; a token the
-#   servers don't have gets the relay's site, as any other path;
+# - a device's subscription goes on to its server group through the relay's
+#   tunnel by its token's first 12 hex characters, unless a CDN marks it as
+#   passed on or it comes under another name; a token no group has, or its
+#   server lacks, and any other path, get the relay's site; relay-entry's
+#   line carries xhttp=;
 # - with the XHTTP path relay-entry adds, a device gets out over XHTTP behind
 #   the relay's site, under its certificate;
 # - an app behind the site (cover) serves it, and doctor passes, its
@@ -37,10 +38,10 @@ restore() {
 }
 trap restore EXIT
 
-entry() { sudo morzer task run relay-entry --output -- 127.0.0.1 | grep -m1 '^127\.0\.0\.1 ' || true; }
+entry() { sudo morzer task run relay-entry --output -- 127.0.0.1 | grep -m1 '^relay/1 ' || true; }
 device() { # <port> <site>: an Xray client of the relay, HTTP proxy on 127.0.0.1:<port>
   local host site pbk sid enc
-  read -r host site pbk sid enc _ <<<"$(entry)"
+  read -r _ _ _ host site pbk sid enc _ <<<"$(entry)"
   [ "${site}" = "$2" ] || die "relay-entry gave the site as ${site}, not $2"
   mkdir -p /rig/relay/own
   jq -n --arg host "${host}" --arg site "${site}" --arg pbk "${pbk}" --arg sid "${sid}" --arg enc "${enc}" \
@@ -96,35 +97,32 @@ echo "${0##*/}: a device naming the relay's domain gets out, and doctor passes"
 
 # site <host> <path> [curl args]: the relay's site's status and body there.
 site() { curl -sk --max-time 40 -w '\n%{http_code}' --resolve "$1:443:127.0.0.1" "${@:3}" "https://$1$2" || true; }
-# The stand-in server sends dotdash_port on to www.gstatic.com:443
-# (pre-apply), which has no such token: its 404 gives way to the relay's
-# own site, which answers exactly as for a path that is no subscription.
-token=$(openssl rand -hex 16)
-miss=$(site "${domain}" "/${token}")
-! grep -qF 'Error 404 (Not Found)!!1' <<<"${miss}" || die "a token the servers lack got the server's 404, not the relay's site"
-[ "${miss}" = "$(site "${domain}" "/${token}0")" ] ||
-  die "a token the servers lack got another answer than a path that is no subscription: $(tail -c 300 <<<"${miss}")"
-# That it went on to the servers shows with the stand-in stopped: a
-# subscription path then fails (5xx), while one a CDN marks as passed on,
-# one under another name than the relay's domain (a CDN that strips its
-# headers is told apart by its Host), and any other path stay the site's.
-sudo docker stop relay-rig-server >/dev/null
-reached() { [[ $(site "$@" | tail -n1) == 5* ]]; }
-reached "${domain}" "/${token}" || die "a subscription path did not go on to the servers"
-reached "${domain}" "/${token}.json" || die "a device's Xray config path did not go on to the servers"
-! reached "${domain}" "/${token}" -H 'X-Forwarded-For: 203.0.113.9' ||
-  die "a subscription request a CDN marks as passed on still went on to the servers"
-! reached cdn-b.test "/${token}" || die "a subscription request under another name than the relay's domain still went on to the servers"
-! reached "${domain}" "/${token}0" || die "a path that is no subscription went on to the servers"
-sudo docker start relay-rig-server >/dev/null
-# Caddy holds a server that failed as down for 30 s (fail_duration).
-for _ in $(seq 20); do [ "$(site "${domain}" "/${token}")" = "${miss}" ] && break; sleep 3; done
-[ "$(site "${domain}" "/${token}")" = "${miss}" ] || die "with the server back, a token it lacks no longer gets the relay's site"
-[ "$(awk '{ print $6 }' <<<"$(entry)")" = own-site ] || die "relay-entry does not mark the line own-site: $(entry | cut -d' ' -f1,2,6)"
-echo "${0##*/}: a subscription path goes on to the servers through the tunnel, a token they lack gets the relay's site, and relay-entry marks the line own-site"
+# phone's token (pre-apply/10-server.sh), whose first 12 hex characters its
+# group's list carries: the relay routes it to that group's server, whose
+# internal listener serves it.
+token=$(cat /rig/relay/token)
+# What the site answers a path that is no subscription: its 404.
+cover=$(site "${domain}" "/${token}0")
+[[ ${cover} == *$'\n404' ]] || die "a path that is no subscription did not get the site's 404: $(tail -c 300 <<<"${cover}")"
+for _ in $(seq 20); do [ "$(site "${domain}" "/${token}")" = $'subscription of phone\n200' ] && break; sleep 3; done
+[ "$(site "${domain}" "/${token}")" = $'subscription of phone\n200' ] ||
+  die "phone's subscription did not come from its server through the relay: $(site "${domain}" "/${token}" | tail -c 300)"
+[ "$(site "${domain}" "/${token}.json")" = $'{"subscription_of": "phone"}\n200' ] || die "phone's .json subscription did not come through the relay"
+# A request a CDN marks as passed on, or under another name than the relay's
+# domain (a CDN that strips its headers is told apart by its Host), gets the
+# site; so does a token no group's list has (no route at Xray), and one
+# whose prefix a group has but whose server lacks it (its 404).
+[ "$(site "${domain}" "/${token}" -H 'X-Forwarded-For: 203.0.113.9')" = "${cover}" ] ||
+  die "a subscription request a CDN marks as passed on did not get the relay's site"
+[ "$(site cdn-b.test "/${token}")" = "${cover}" ] || die "a subscription request under another name than the relay's domain did not get the relay's site"
+[ "$(site "${domain}" "/0123456789ab${token:12}")" = "${cover}" ] || die "a token no group has did not get the relay's site"
+[ "$(site "${domain}" "/${token:0:12}00000000000000000000")" = "${cover}" ] || die "a token its server lacks did not get the relay's site"
+[[ $(entry) == *" xhttp="* ]] || die "relay-entry's line carries no xhttp= under own-site: $(entry | cut -d' ' -f1-5)"
+echo "${0##*/}: a device's subscription comes from its group's server through the tunnel by its prefix; a token no group has, or its server lacks, gets the relay's site; the line carries xhttp="
 
-read -r _ site _ _ enc own path _ <<<"$(entry)"
-[ "${own}" = own-site ] && [ -n "${path}" ] || die "relay-entry gives no XHTTP path under own-site: $(entry | cut -d' ' -f1,2,6)"
+read -r _ _ _ _ site _ _ enc _ <<<"$(entry)"
+path=$(entry | grep -o ' xhttp=[^ ]*' | cut -d= -f2)
+[ -n "${path}" ] || die "relay-entry gives no XHTTP path under own-site"
 # The CA beside the config, not in it: the image refuses a file in
 # /etc/xray that is not JSON.
 mkdir -p /rig/relay/xhttp /rig/relay/xhttp-ca

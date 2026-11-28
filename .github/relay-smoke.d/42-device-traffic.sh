@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The device-traffic profile: the relay's Xray counts each device's bytes, as
 # the server counts the relay alone, and the facts task, run in Xray's
-# namespace, carries them by device name. 10-through.sh's phone, started
+# namespace, carries them by device name and group, <device>@<group>. 10-through.sh's phone, started
 # again from its config, raises the counts. Without the profile, the facts
 # carry none. The rig's relay has no entry_host, which facts needs
 # (12-facts.sh): set here, and unset after.
@@ -25,7 +25,7 @@ counted() { # the phone's bytes in the facts' counts
   facts=$(sudo morzer task run facts --output) || die "the facts task failed under device-traffic"
   jq -e '.entry_host and (.traffic.started | type == "number")' >/dev/null <<<"${facts}" ||
     die "the facts carry no counts under device-traffic: ${facts}"
-  jq '.traffic.devices.phone // 0' <<<"${facts}"
+  jq '.traffic.devices["phone@s1"] // 0' <<<"${facts}"
 }
 
 sudo morzer config set entry_host=127.0.0.1 >/dev/null || die "could not set entry_host"

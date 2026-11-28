@@ -1,13 +1,11 @@
 {{- /* REALITY's target: under the own-site profile the relay's own site,
 Caddy, under the relay's own domain, whose DNS is this machine; otherwise the
 borrowed site, whose DNS is someone else's. */ -}}
-{{- /* A value that goes into this JSON as it is, or from dotdash_servers into
-caddy.env and on into the Caddyfile, holds nothing that would end its string
-there, its Caddyfile token or its env line: no quote, backslash, brace or
-whitespace. morzer's quote escapes only the quote, and all but site may come
-from an authority, via built from other relays' facts. */ -}}
+{{- /* A value that goes into this JSON as it is holds nothing that would end
+its string: no quote, backslash, brace or whitespace. morzer's quote escapes
+only the quote. */ -}}
 {{- define "plain" }}{{ if or (contains . "\"") (contains . "\\") (contains . "{") (contains . "}") (contains . " ") (contains . "\t") (contains . "\n") (contains . "\r") }}
-{{- required (printf "site, dotdash_servers, dotdash_address, dotdash_public_key and via take no quote, backslash, brace or whitespace: %q" .) "" }}{{ end }}{{ end -}}
+{{- required (printf "site takes no quote, backslash, brace or whitespace: %q" .) "" }}{{ end }}{{ end -}}
 {{- $own := has "own-site" .Profiles -}}
 {{- $kcp := has "mkcp" .Profiles -}}
 {{- $hy2 := has "hysteria2" .Profiles -}}
@@ -27,39 +25,6 @@ for internal, and with acme-dns the wildcard over the domain's parent
 {{- if eq .Parameters.cert_issuer "internal" }}{{ $issuer = "local" }}{{ end -}}
 {{- $cert := $site -}}
 {{- if and (eq .Parameters.cert_issuer "acme-dns") (gt (len $labels) 2) }}{{ $cert = printf "wildcard_.%s" (join (slice $labels 1) ".") }}{{ end -}}
-{{- $servers := split "," (required "set dotdash_servers" .Parameters.dotdash_servers) -}}
-{{- range $servers }}{{ template "plain" . }}{{ end -}}
-{{- $address := .Parameters.dotdash_address }}{{ if eq $address "none" }}{{ $address = "" }}{{ end -}}
-{{- template "plain" $address -}}
-{{- /* ipv6=block: an IPv6 destination ends here, in a blackhole after the
-servers' outbounds (the first outbound stays the default); names go on. */ -}}
-{{- $block6 := eq .Parameters.ipv6 "block" -}}
-{{- /* via: other relays to go through instead of the servers, each line as
-its relay-entry prints it, of which the first five fields make a link like a
-device's, on 443: its host, site, public key, short id and encryption. The
-relay lets this one in as one of its devices, by dotdash_id, and carries it
-on as it carries them; the servers never see this relay's address. Comments
-and blank lines are skipped; the kept lines go one per line into $via. */ -}}
-{{- /* via_link=xhttp: XHTTP through each relay's own site, on the path its
-line carries after own-site (relay-entry prints it sixth and seventh), its
-connections reused across devices, as devices' xhttp links to a relay are;
-so each line has to carry it. */ -}}
-{{- $vx := eq .Parameters.via_link "xhttp" -}}
-{{- $via := "" -}}
-{{- range lines .Parameters.via }}{{ $l := trim . }}{{ if and $l (ne (slice $l 0 1) "#") }}
-{{- $f := split " " $l }}{{ range $f }}{{ template "plain" . }}{{ end }}
-{{- if lt (len $f) 5 }}{{ required (printf "a via line is <host> <site> <public key> <short id> <encryption>, as the relay's relay-entry prints it, not: %s" $l) "" }}{{ end }}
-{{- if and $vx (not (and (gt (len $f) 6) (eq (index $f 5) "own-site"))) }}{{ required (printf "via_link=xhttp goes through each relay's own site, and this via line has no own-site <path>: %s" $l) "" }}{{ end }}
-{{- $via = printf "%s%s\n" $via $l }}{{ end }}{{ end -}}
-{{- $hops := lines (trim $via) -}}
-{{- $many := gt (len $servers) 1 -}}
-{{- $pbk := "" -}}
-{{- if $hops }}{{ $many = gt (len $hops) 1 }}{{ else }}{{ $pbk = required "set dotdash_public_key" .Parameters.dotdash_public_key }}{{ template "plain" $pbk }}{{ end -}}
-{{- /* dotdash_link=xhttp-reality: XHTTP with REALITY to the servers'
-xhttp_reality_port, its connections reused across devices, in place of a
-REALITY connection with Vision for each. */ -}}
-{{- $xr := eq .Parameters.dotdash_link "xhttp-reality" -}}
-{{- if and $hops $xr }}{{ required "dotdash_link=xhttp-reality is a way to the servers, not through via: set dotdash_link=reality, or empty via" "" }}{{ end -}}
 {
   "log": {"loglevel": "warning", "access": "none"},
 {{- $metrics := has "metrics" .Profiles -}}
@@ -72,19 +37,23 @@ REALITY connection with Vision for each. */ -}}
   metrics/metrics.sh). */}}
   "metrics": {"listen": "xray-metrics:11111"},
 {{- end }}
-{{- if $counted }}
-  {{- /* The device-traffic profile: the bytes each device moves, by its name,
-  read by the facts task alone from the StatsService on loopback, which it
-  reaches in this container's namespace (compose/device-traffic.yaml). A
-  device's traffic to 127.0.0.1 never gets here: everything goes on to the servers. */}}
-  "api": {"tag": "api", "listen": "127.0.0.1:10085", "services": ["StatsService"]},
-{{- end }}
-{{- if or $metrics $counted }}
+  {{- /* Xray's API on loopback, for the gateway's agent (gateway.json.tmpl),
+  which adds and removes each group's devices through it and replaces the
+  routing when their subscription prefixes change; and, under the
+  device-traffic profile, for the facts task, which reads the bytes each
+  device moves from its StatsService, in this container's namespace
+  (compose/device-traffic.yaml). Online counts per device, by which the
+  agent tells a removed device still connected, which only a restart cuts. */}}
+  "api": {"tag": "api", "listen": "127.0.0.1:10085", "services": ["HandlerService", "RoutingService", "StatsService"]},
   "stats": {},
   "policy": {
-    {{- if $counted }}"levels": {"0": {"statsUserUplink": true, "statsUserDownlink": true}}{{ if $metrics }}, {{ end }}{{ end }}
-    {{- if $metrics }}"system": {"statsInboundUplink": true, "statsInboundDownlink": true, "statsOutboundUplink": true, "statsOutboundDownlink": true}{{ end }}},
-{{- end }}
+    "levels": {"0": {"statsUserOnline": true{{ if $counted }}, "statsUserUplink": true, "statsUserDownlink": true{{ end }}}}
+    {{- if $metrics }},
+    "system": {"statsInboundUplink": true, "statsInboundDownlink": true, "statsOutboundUplink": true, "statsOutboundDownlink": true}{{ end }}},
+  {{- /* Each device inbound takes its clients from the gateway's agent
+  ($gatewayClients): every group's devices, each named <device>@<group>,
+  which the gateway's rules send to that group's servers alone; none at the
+  first start, each group's once its first list is in. */}}
   "inbounds": [
     {
       "tag": "devices",
@@ -92,7 +61,7 @@ REALITY connection with Vision for each. */ -}}
       "port": 443,
       "protocol": "vless",
       "settings": {
-        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "clients": {"$gatewayClients": "vless"},
         "flow": "xtls-rprx-vision",
         "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
       },
@@ -109,11 +78,10 @@ REALITY connection with Vision for each. */ -}}
           "shortIds": [{"$file": "/run/secrets/reality_short_id"}]
         }
       }
-    },
-    {"tag": "probe", "listen": "127.0.0.1", "port": 10809, "protocol": "http"}
+    }
     {{- if $kcp }},
     {{- /* mKCP on UDP, published as kcp_port: the same devices, the same VLESS
-    Encryption, on to dotdash like REALITY. AES-128-GCM under kcp_seed, then
+    Encryption, on to each device's servers like REALITY. AES-128-GCM under kcp_seed, then
     kcp_header, in that order, as devices' links name them. */}}
     {
       "tag": "devices-kcp",
@@ -121,7 +89,7 @@ REALITY connection with Vision for each. */ -}}
       "port": 8447,
       "protocol": "vless",
       "settings": {
-        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "clients": {"$gatewayClients": "vless"},
         "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
       },
       "streamSettings": {
@@ -140,8 +108,8 @@ REALITY connection with Vision for each. */ -}}
     {{- end }}
     {{- if $hy2 }},
     {{- /* Hysteria2 on UDP, published as hysteria2_port: the same devices, each
-    UUID its login, under the own site's certificate, on to dotdash like
-    REALITY. As the server's: a connection that brings no login gets the site
+    UUID its login, under the own site's certificate, on to each device's
+    servers like REALITY. As the server's: a connection that brings no login gets the site
     over HTTP/3, no stateless resets, a silent connection given up after 15 s
     (devices' keepalives hold a healthy one), and BBR. The site gets the Host
     the visitor sent, as over TCP, not caddy:443 (rewriteHost), so a cover
@@ -151,7 +119,7 @@ REALITY connection with Vision for each. */ -}}
       "listen": "0.0.0.0",
       "port": 8448,
       "protocol": "hysteria",
-      "settings": {"version": 2, "users": {"$hysteriaUsers": "/run/secrets/vless_clients"}},
+      "settings": {"version": 2, "users": {"$gatewayClients": "hysteria"}},
       "streamSettings": {
         "network": "hysteria",
         "security": "tls",
@@ -167,7 +135,7 @@ REALITY connection with Vision for each. */ -}}
     {{- if $own }},
     {{- /* XHTTP behind the relay's own site, which routes xhttp_path here
     over h2c, as the server's site does: the same devices, the same VLESS
-    Encryption, on to dotdash like REALITY. On the project's network, never
+    Encryption, on to each device's servers like REALITY. On the project's network, never
     published. */}}
     {
       "tag": "devices-xhttp",
@@ -175,7 +143,7 @@ REALITY connection with Vision for each. */ -}}
       "port": 8080,
       "protocol": "vless",
       "settings": {
-        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "clients": {"$gatewayClients": "vless"},
         "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
       },
       "streamSettings": {
@@ -195,7 +163,7 @@ REALITY connection with Vision for each. */ -}}
       "port": 8082,
       "protocol": "vless",
       "settings": {
-        "clients": {"$vlessClients": "/run/secrets/vless_clients"},
+        "clients": {"$gatewayClients": "vless"},
         "decryption": {"$vlessDecryption": "/run/secrets/vless_seed"}
       },
       "streamSettings": {
@@ -207,85 +175,7 @@ REALITY connection with Vision for each. */ -}}
           "seqPlacement": "cookie", "seqKey": "seq",
           "uplinkDataKey": "X-Part", "noSSEHeader": true}
       }
-    },
-    {{- /* Caddy's way to the dotdash servers, for devices' subscriptions
-    and a cover app's tunnel_host: on the project's network, where Caddy is
-    the only other container (a cover app is on edge), and never
-    published. */}}
-    {"tag": "subscriptions", "listen": "0.0.0.0", "port": 10810, "protocol": "http"}
-    {{- end }}
-  ],
-  {{- /* One outbound per dotdash server, which share their keys. With
-  several, a balancer takes whichever answers fastest, so a ban on one
-  server's address doesn't cut every device off. */}}
-  "outbounds": [
-    {{- if $hops }}{{ range $i, $h := $hops }}{{ if $i }},{{ end }}{{ $f := split " " $h }}
-    {{- if $vx }}
-    {
-      "tag": "dotdash-{{ $i }}", "protocol": "vless",
-      "settings": {
-        "address": "{{ index $f 0 }}", "port": 443,
-        "id": {"$file": "/run/secrets/dotdash_id"},
-        "encryption": "{{ index $f 4 }}"
-      },
-      "streamSettings": {"network": "xhttp", "security": "tls",
-        "tlsSettings": {"serverName": "{{ index $f 1 }}", "alpn": ["h2"], "fingerprint": "{{ if eq $.Parameters.via_fingerprint "none" }}{{ else }}{{ $.Parameters.via_fingerprint }}{{ end }}"},
-        "xhttpSettings": {"path": "/{{ index $f 6 }}", "host": "{{ index $f 1 }}", "mode": "auto"},
-        "sockopt": {"tcpUserTimeout": 15000}}
     }
-    {{- else }}
-    {
-      "tag": "dotdash-{{ $i }}", "protocol": "vless",
-      "settings": {
-        "address": "{{ index $f 0 }}", "port": 443,
-        "id": {"$file": "/run/secrets/dotdash_id"},
-        "encryption": "{{ index $f 4 }}", "flow": "xtls-rprx-vision"
-      },
-      "streamSettings": {"network": "raw", "security": "reality", "realitySettings": {
-        "serverName": "{{ index $f 1 }}", "fingerprint": "chrome",
-        "password": "{{ index $f 2 }}", "shortId": "{{ index $f 3 }}"
-      },
-      "sockopt": {"tcpUserTimeout": 15000}}
-    }
-    {{- end }}{{ end }}{{ else }}
-    {{- range $i, $s := $servers }}{{ if $i }},{{ end }}
-    {
-      "tag": "dotdash-{{ $i }}", "protocol": "vless",
-      "settings": {
-        "address": "{{ if and $address (eq (len $servers) 1) }}{{ $address }}{{ else }}{{ $s }}{{ end }}", "port": {{ if $xr }}{{ $.Parameters.dotdash_xhttp_reality_port }}{{ else }}{{ $.Parameters.dotdash_port }}{{ end }},
-        "id": {"$file": "/run/secrets/dotdash_id"},
-        "encryption": {"$file": "/run/secrets/dotdash_encryption"}{{ if not $xr }},
-        "flow": "xtls-rprx-vision"{{ end }}
-      },
-      "streamSettings": {"network": "{{ if $xr }}xhttp{{ else }}raw{{ end }}", "security": "reality", "realitySettings": {
-        "serverName": "{{ $s }}", "fingerprint": "chrome",
-        "password": "{{ $pbk }}",
-        "shortId": {"$file": "/run/secrets/dotdash_short_id"}
-      }{{ if $xr }},
-      "xhttpSettings": {"path": {"$file": "/run/secrets/dotdash_xhttp_path"}, "mode": "auto"}{{ end }},
-      {{- /* Given up once what it sent has gone unacknowledged for 15 s, and
-      redialled: a frozen link to the server otherwise holds every device
-      behind it for a minute (dotdash-lab #57). */}}
-      "sockopt": {"tcpUserTimeout": 15000}}
-    }
-    {{- end }}{{ end }}
-    {{- if $block6 }},
-    {"tag": "block", "protocol": "blackhole"}
     {{- end }}
-  ]{{ if $many }},
-  {{- /* Each server probed at a moment of its own, every 30 seconds, not all
-  together, which would tie them to each other for whoever watches this
-  relay: burstObservatory, which leastPing reads as it read observatory. */}}
-  "burstObservatory": {"subjectSelector": ["dotdash-"], "pingConfig": {"destination": "{{ .Parameters.probe_url }}", "interval": "30s", "sampling": 1}}
-  {{- end }}{{ if or $many $block6 }},
-  "routing": {
-    {{- if $many }}
-    "balancers": [{"tag": "dotdash", "selector": ["dotdash-"], "strategy": {"type": "leastPing"}}],
-    {{- end }}
-    "rules": [
-      {{- if $block6 }}{"type": "field", "ip": ["::/0"], "outboundTag": "block"}{{ if $many }},{{ end }}{{ end }}
-      {{- if $many }}{"type": "field", "network": "tcp,udp", "balancerTag": "dotdash"}{{ end }}
-    ]
-  }
-  {{- end }}
+  ]
 }

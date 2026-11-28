@@ -8,7 +8,8 @@ Set one with `sudo morzer config set <name>=<value>`.
 | --- | --- | --- |
 | `site` | `none` | without the `own-site` profile, a site next to the relay, in its own network, on TLS 1.3 and HTTP/2: devices send its name, and probes get its handshake |
 | `cover` | `pages` | with `own-site`, what the site serves past your own files in `/srv/dotdash-relay`: `pages`, the bundled page, or your [app](../server/cover-site.md#an-app-instead-of-pages)'s URL, such as `http://cover-app:8080` on the network `dotdash-relay_edge` or `http://host.docker.internal:8080` |
-| `tunnel_host` | `none` | with `own-site`, one host a cover app may call through the tunnel at `http://caddy:8090`, with no TLS: Caddy sends it on as HTTPS inside the link to the servers or the relays in `via`, so this machine shows one TLS client, Xray's ([cover site](../server/cover-site.md#an-app-installed-with-morzer)) |
+| `tunnel_host` | `none` | with `own-site`, one host a cover app may call through the tunnel at `http://caddy:8090`, with no TLS: Caddy sends it on as HTTPS inside the link to `tunnel_group`'s servers, or through the relays in `via`, so this machine shows one TLS client, Xray's ([cover site](../server/cover-site.md#an-app-installed-with-morzer)) |
+| `tunnel_group` | empty | the server group, by its name in `servers`, whose servers `tunnel_host` is reached through; empty for the first line's |
 | `cert_issuer` | `acme` | with `own-site`, `acme` (Let's Encrypt, over port 80), `acme-dns` (a [wildcard](../server/certificates.md) over a DNS-01 check handed to acme-dns, the `acme_dns` secret) or `internal` (Caddy's own CA, for a machine the internet can't reach) |
 | `entry_host` | `none` | the address devices reach the relay at, its IP without a domain, for `relay-entry` with no address and for `facts`; `none` under `own-site` is the relay's domain |
 | `cdn_hosts` | `none` | with `own-site`, the names devices use for [local CDNs](../server/cdn.md#in-front-of-a-relay) in front of the relay, comma-separated; `relay-entry` adds them to the relay's line |
@@ -16,18 +17,12 @@ Set one with `sudo morzer config set <name>=<value>`.
 | `http_origin_from` | `none` | with `http-origin`, the addresses the door answers, comma-separated IPs or CIDR ranges: the CDN's gateways; `any` answers every address, `none` no one. The door sees the address that connects to it: over IPv6, which Docker forwards from an address of its own, or behind a proxy of yours in front of the port, only `any` works |
 | `http_origin_host` | `none` | with `http-origin`, the names devices reach that CDN at, comma-separated, each `<name>/<path>` where the CDN gives a path of its own; `relay-entry` adds it to the relay's line as `origin=`, and prints the `xhttpSettings` to give the CDN |
 | `cdn_only` | `false` | `true`: devices get the relay's CDN links alone, none to its own address, so it stays the [CDNs' origin](../server/cdn.md#the-cdns-origin-only); `relay-entry` ends the line with `cdn-only`, and refuses it without `cdn_hosts` |
-| `name` | `none` | a label of up to 24 letters, digits, dots, dashes or underscores that devices' links through the relay carry in place of `relay <n>`: `edge-1 · reality`. `relay-entry` ends the line with `name=`; a name an earlier line took goes by the number. Every device's app shows it, so pick one that says nothing about where the relay is hosted |
-| `dotdash_servers` | none, given at `init` | the dotdash servers sharing one set of keys, comma-separated domains; the relay uses whichever answers fastest |
-| `dotdash_port` | `443` | the servers' `https_port` |
-| `dotdash_public_key` | none, given at `init` | the servers' REALITY public key, the `pbk` of their links |
-| `dotdash_address` | `none` | where to connect when `dotdash_servers` names one server, such as its IP; `none` reaches each server by its name |
+| `name` | none, given at `init` | the relay's name, 1 to 24 letters, digits, dots, dashes or underscores, unique among each group's relays: it heads the relay's line, each server derives the relay's id from it and the `nonce`, and devices' links through the relay carry it, `r1 · reality`. Every device's app shows it, so pick one that says nothing about where the relay is hosted |
 | `metrics_textfile` | `/var/lib/prometheus/node-exporter` | with the `metrics` profile, the node exporter's textfile directory, writable by 65532 ([Metrics](operations.md#metrics)) |
-| `dotdash_link` | `reality` | how the relay reaches the servers: `reality`, a REALITY connection with Vision for each device's; `xhttp-reality`, XHTTP with REALITY on `dotdash_xhttp_reality_port`, connections reused across devices, about 100 ms sooner to a page's first byte for about twice the CPU here and on the server. Needs the servers' [`xhttp-reality`](../server/xhttp-reality.md) profile and the `dotdash_xhttp_path` secret, both of which `relay-config` prints |
-| `dotdash_xhttp_reality_port` | `8443` | the servers' `xhttp_reality_port`, for `dotdash_link=xhttp-reality` |
-| `via` | none | other relays to go through instead of the servers, one line each as its `relay-entry` prints it; with several, whichever answers fastest ([Through another relay](operations.md#through-another-relay)). Not with `dotdash_link=xhttp-reality` |
-| `via_link` | `reality` | how the relay reaches those in `via`: `reality`, REALITY with Vision, a connection for each device's; `xhttp`, XHTTP through each one's own site under its certificate, connections reused across devices, for which each line has to carry `own-site <path>`, as `relay-entry` prints it under `own-site` |
+| `server_link` | `reality` | how the relay reaches each group's servers: `reality`, a REALITY connection with Vision for each device's; `xhttp-reality`, XHTTP with REALITY on the port and path of the group's line's `xr=`, connections reused across devices, about 100 ms sooner to a page's first byte for about twice the CPU here and on the server; a line without `xr=` (servers without the [`xhttp-reality`](../server/xhttp-reality.md) profile) keeps REALITY |
+| `via_link` | `reality` | how the relay reaches those in `via`: `reality`, REALITY with Vision, a connection for each device's; `xhttp`, XHTTP through each one's own site under its certificate, connections reused across devices, for which each line has to carry `xhttp=<path>`, as `relay-entry` prints it under `own-site` |
 | `via_fingerprint` | `chrome` | the TLS client hello the `xhttp` `via` leg shows the relay it goes through (`via_link=xhttp` only; the `reality` leg and the way to the servers are unaffected): `chrome`, `firefox`, `safari`, `edge`, `ios`, `android` mimic that browser; `none` uses Xray's own Go TLS stack, which looks like a server-side HTTP client rather than a browser; `random` picks a browser per connection |
-| `probe_url` | `https://www.gstatic.com/generate_204` | what the health check fetches through dotdash; any 2xx is healthy |
+| `probe_url` | `https://www.gstatic.com/generate_204` | what the relay fetches through each server every 30 seconds, to pick a group's fastest; any 2xx counts |
 | `tcp_congestion` | `bbr` | TCP congestion control toward devices, in Xray's own namespace: `bbr` keeps its pace through a lossy last mile; `cubic` for a kernel without `tcp_bbr`. Xray also probes each connection's path MTU and holds at most 128 KiB unsent per connection, and gives its link to a server up after 15 s of unacknowledged data |
 | `ipv6` | `allow` | `block`: IPv6 destinations end at the relay and never reach a server; names go on |
 | `https_port` | `443` | host port for REALITY; devices always dial 443, so another is for [your own web server](../server/shared-machine.md) passing the relay's name through |
@@ -48,10 +43,12 @@ domain under `own-site`, the `own-site`, `mkcp`, `hysteria2` and
 `http-origin` profiles, `kcp_port`, `kcp_header`, `kcp_open`,
 `hysteria2_port`, `cdn_hosts`, `http_origin_host`, `cdn_only`, `name`, and a
 rotated `reality_key`, `reality_short_id`, `vless_seed`, `xhttp_path`,
-`cdn_xhttp_path` or `kcp_seed`. The rest change nothing on the servers:
-`http_origin_port` (the CDN needs it, the servers don't), `http_origin_from`,
-`cover`, `tunnel_host`, `cert_issuer`, `https_port`, `http_port`, `listen`,
-`via`, the `dotdash_*` parameters and the rest.
+`cdn_xhttp_path`, `kcp_seed` or `nonce`. A new `name` or `nonce` is a new
+id on every server, so each server's `relay-config` line changes too. The
+rest change nothing on the servers: `http_origin_port` (the CDN needs it,
+the servers don't), `http_origin_from`, `cover`, `tunnel_host`,
+`tunnel_group`, `cert_issuer`, `https_port`, `http_port`, `listen`,
+`server_link`, `via` and the rest.
 
 ## Profiles
 
@@ -59,7 +56,8 @@ rotated `reality_key`, `reality_short_id`, `vless_seed`, `xhttp_path`,
 domain (`--domain` at `init`, or `installation.domains`), and REALITY hands it
 every connection without the relay's keys. It publishes port 80 too, for the
 certificate. The site also serves devices their subscriptions, fetched from
-the servers through the relay's tunnel, and XHTTP on the secret path
+each device's own servers through the relay's tunnel by the token's first
+12 hex characters, and XHTTP on the secret path
 `xhttp_path`, which `init` generates. With `cdn_hosts` set, `relay-entry`
 ends the relay's line with `cdn=<name>,...` and `cdnpath=<path>`, and the
 server gives each device a `relay · cdn` link through each, by a secret path
@@ -109,36 +107,48 @@ provider's firewall, and replace the relay's line on the server after turning
 it on.
 
 `installation.profile=device-traffic` (with any of the others): the relay
-counts the bytes each device moves through it, and its facts carry the counts
-to the authority hourly, for the [manager](../manager.md#leaked-links). The
-server counts the relay as one client, so a relay's devices are counted here.
+counts the bytes each device moves through it, by `<device>@<group>`, and
+its facts carry the counts to the authority hourly, for the
+[manager](../manager.md#leaked-links). The server counts the relay as one
+client, so a relay's devices are counted here.
 The facts task, and with it `relay-entry`, then runs in Xray's namespace, and
 starts Xray if it is down.
 
 ## Secrets
 
-`init` generates the relay's own keys; the rest come from the server's
-`relay-config`.
+`init` generates the relay's own keys and nonce; `servers` and `via` you
+give it.
 
 | Name | Generated | |
 | --- | --- | --- |
-| `vless_clients` | no | the devices the relay lets in, one `<uuid> [name [desktop|mobile]]` per line |
-| `dotdash_id` | no | the id the relay uses on the server, its line in the server's `vless_clients` |
-| `dotdash_encryption` | no | the `encryption=` value of the server's links |
-| `dotdash_short_id` | no | the `sid=` value of the server's REALITY links |
+| `servers` | no | one `server/1` line per server group, as one of its servers prints it with `relay-config -- <relay>`; empty: no group, and the relay lets nobody in ([Server groups](operations.md#server-groups)) |
+| `via` | no | other relays to go through instead of the servers, one `relay/1` line each as its `relay-entry` prints it; with several, whichever answers fastest ([Through another relay](operations.md#through-another-relay)) |
+| `nonce` | yes | 16 hex characters in the relay's line, from which, with its name, each server derives the relay's id there |
 | `vless_seed` | yes | the seed the relay's VLESS Encryption key pair derives from |
 | `reality_key` | yes | the relay's REALITY private key |
 | `reality_short_id` | yes | the relay's REALITY short id |
 | `kcp_seed` | yes | the key the relay's mKCP packets are encrypted under, with `mkcp` |
 | `xhttp_path` | yes | with `own-site`, the secret path the site routes to Xray's XHTTP inbound |
 | `cdn_xhttp_path` | yes | with `own-site`, the secret path CDNs in front fetch XHTTP by, apart from `xhttp_path` |
-| `dotdash_xhttp_path` | no | with `dotdash_link=xhttp-reality`, the `path=` of the servers' XHTTP links, from `relay-config` |
 | `acme_dns` | no | with `cert_issuer=acme-dns`, the [acme-dns](../acme-dns.md) registration as JSON |
+
+A `servers` line:
+
+```text
+server/1 <name> <host>[,<host>...] <port> <public key> <short id> <encryption> <relay id> [xr=<port>,<path>] [address=<ip>[,<ip>...]]
+```
+
+the group's name, its servers, which share their keys, the port they take
+REALITY on, their keys, the relay's id there (its way into the group, and a
+credential), `xr=` under their `xhttp-reality` profile, and `address=`, which
+you may add, one IP per host in order, for the relay to dial in place of the
+names.
 
 ## Tasks
 
 | Task | |
 | --- | --- |
-| `relay-entry --output -- <address>` | the relay's line for the server's `relays`, and how a canary checks the relay; with no address, at `entry_host` |
-| `entry-check --output` | each of the relay's entries checked end to end as a device reaches it, and the `http-origin` door by its log, a line each with why it fails ([Check each entry](operations.md#check-each-entry)) |
-| `facts --output` | the same line as JSON, which the relay publishes to an authority it [follows](../server/operations.md#managed-from-elsewhere); under `own-site` also `cert_days`, the whole days left on the site's certificate; and `clients`, how many devices it lets in and their [digest](operations.md#devices) |
+| `relay-entry --output -- <address>` | the relay's `relay/1` line for every server's `relays`, and how a canary checks the relay; with no address, at `entry_host` |
+| `servers --output` | each server group's state, a line each: `live`, `down`, `refused` or `starting`, each of its servers, its devices and the age of its list ([Health per group](gateway.md#health-per-group)) |
+| `entry-check --output` | each of the relay's entries checked end to end as a device of each live group reaches it, and the `http-origin` door by its log, a line each with why it fails ([Check each entry](operations.md#check-each-entry)) |
+| `facts --output` | the same line as JSON, with the relay's `name`, `nonce` and each group's state under `groups`, which the relay publishes to an authority it [follows](../server/operations.md#managed-from-elsewhere); under `own-site` also `cert_days`, the whole days left on the site's certificate |

@@ -22,7 +22,7 @@ services:
     # host.docker.internal: the host, for an app published on one of its
     # ports (cover).
     extra_hosts: ["host.docker.internal:host-gateway"]
-    # SUBSCRIPTION_UPSTREAMS, the dotdash servers' HTTPS (templates/caddy.env.tmpl).
+    # CERT_WILDCARD and HTTP_ORIGIN_FROM (templates/caddy.env.tmpl).
     env_file: /etc/dotdash-relay/caddy.env
     # The path it routes to Xray's XHTTP inbound, and under cert_issuer=acme-dns
     # its acme-dns registration.
@@ -49,7 +49,8 @@ services:
       - /config:uid=65532,gid=65532,mode=0700,size=8m
     ports:
       - "${DOTDASH_RELAY_PARAM_LISTEN-}:${DOTDASH_RELAY_PARAM_HTTP_PORT:-80}:80/tcp"
-    # default, Xray's, for REALITY's hand-off, XHTTP and subscriptions; edge,
+    # default, Xray's, for REALITY's hand-off, XHTTP, subscriptions and the
+    # tunnel; edge,
     # a cover app's (cover, tunnel_host), which Xray is never on, so an app
     # reaches Caddy alone, as on a server.
     networks: [default, edge]

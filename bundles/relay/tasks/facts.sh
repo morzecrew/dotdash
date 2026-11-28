@@ -1,11 +1,12 @@
 #!/bin/sh
-# This relay's facts, as JSON: relay-entry's line, for an authority managing
-# several machines. morzer publishes them to it after every change when
-# sync.recipient is set (manifest `published`). Besides public halves they
-# carry the short id, and under own-site the XHTTP path (and the CDNs' with
-# cdn_hosts) and under mkcp the
-# seed (and under hysteria2 its port, and its name when set): credentials, but the ones every device's link through this relay
-# carries, so the authority hands them on to devices.
+# This relay's facts, as JSON: relay-entry's line, its name and nonce, and
+# each server group's state as the gateway's agent last found it, for an
+# authority managing several machines. morzer publishes them to it after
+# every change when sync.recipient is set (manifest `published`). Besides
+# public halves they carry the short id, and under own-site the XHTTP path
+# (and the CDNs' with cdn_hosts) and under mkcp the seed (and under hysteria2
+# its port): credentials, but the ones every device's link through this
+# relay carries, so the authority hands them on to devices.
 set -eu
 # shellcheck source=entry.sh
 . /task/entry.sh
@@ -28,8 +29,21 @@ printf '{"entry_host": %s, "site": %s, "public_key": %s, "short_id": %s, "encryp
 [ -z "$cdn_path" ] || printf ', "cdn_path": %s' "$(str "$cdn_path")"
 [ -z "$origin" ] || printf ', "origin_host": %s' "$(str "$origin")"
 [ -z "$only" ] || printf ', "cdn_only": true'
-[ -z "$name" ] || printf ', "name": %s' "$(str "$name")"
-printf ', "clients": {"count": %s, "digest": %s}' "$clients" "$(str "$clients_digest")"
+printf ', "name": %s, "nonce": %s' "$(str "$name")" "$(str "$nonce")"
+# Each server group, by name: its state (starting, live, down or refused),
+# whether each of its servers (or with via, each relay on the way) served
+# its device list in the last round, how many devices it lets in, the
+# digest of that list as served and its age in seconds. Empty while Xray
+# has written no status.
+groups='{}'
+if [ -r /run/gateway/status.json ]; then
+  groups=$(/jq/jq -c --argjson now "$(date +%s)" '
+    def epoch: sub("\\.[0-9]+"; "") | fromdateiso8601;
+    [.groups[]? | {key: .name, value: ({state, servers: ([.legs[]? | {key: .host, value: (.state == "ok")}] | from_entries),
+      devices, digest, list_age: (try ($now - (.listed | epoch) | floor) catch null)} | with_entries(select(.value != null)))}]
+    | from_entries' /run/gateway/status.json) || { echo "facts: the gateway's status did not read: no groups this time" >&2; groups='{}'; }
+fi
+printf ', "groups": %s' "$groups"
 # Under own-site, the whole days left on the certificate the site serves
 # (entry.sh's cert_file): the leaf's notAfter, the second UTCTime
 # (YYMMDDHHMMSSZ) in its DER. Left out while Caddy has none, so the authority
@@ -67,5 +81,4 @@ if [ "${DEVICE_TRAFFIC:-false}" = true ]; then
     echo "facts: Xray's stats did not answer: no traffic this time" >&2
   fi
 fi
-# This release takes via: an authority sets or unsets it only on one that does.
-printf ', "via": true}\n'
+printf '}\n'
