@@ -172,7 +172,8 @@ What each kind needs to be installed:
 - **A server:** `--domain` and `--upstreams <file>`, its ways out, one per
   line. It comes up on keys of its own: the first document replaces them, and
   relays, canaries and clients move to it once its facts show the manager's
-  key. A relay, canary or client waits for a server that has.
+  key. A relay's line for its group waits for a server of the group that
+  has, and so do the group's canaries and clients.
 - **A relay:** `--site` and `--entry-host` (a neighbour's site, and the
   address devices reach it at), or `--domain` for one of its own site. It
   comes up idle under its roster name, with a nonce it makes, which its facts
