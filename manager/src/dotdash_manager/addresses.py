@@ -38,19 +38,19 @@ def record(a: dict, facts: dict, now: int) -> list[str]:
             if k > 0 and not d.startswith(("relay-", "canary-")):
                 on.setdefault(d, {})[n] = k
     lines = []
-    for d, at in sorted(on.items()):
-        lines += [f"{d}: {at[n]} addresses at once on relay {n} at {when(read[n]['at'])}: {SAY.format(d)}"
-                  for n in sorted(new & set(at)) if at[n] >= MANY]
+    for d, by in sorted(on.items()):
+        lines += [f"{d}: {by[n]} addresses at once on relay {n} at {when(read[n]['at'])}: {SAY.format(d)}"
+                  for n in sorted(new & set(by)) if by[n] >= MANY]
         # Counts can't tell one address from two, so an app that keeps two
         # relays open from one address shows here too: the price of counts.
-        both = sorted({n for n in at for m in at
+        both = sorted({n for n in by for m in by
                        if m != n and new & {n, m} and abs(read[n]["at"] - read[m]["at"]) <= WINDOW})
         if both:
             lines.append(f"{d}: on relays {', '.join(both)} at once at {when(max(read[n]['at'] for n in both))}:"
                          f" {SAY.format(d)}")
-    seen = a.setdefault("seen", [])
-    seen += [{"at": now, "line": line} for line in lines]
-    seen[:] = [s for s in seen if s["at"] > now - DAYS * 86400]
+    kept = a.setdefault("seen", [])
+    kept += [{"at": now, "line": line} for line in lines]
+    kept[:] = [s for s in kept if s["at"] > now - DAYS * 86400]
     return lines
 
 
