@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The subscription's name, the server's exit, goes in `Profile-Title` as plain UTF-8, at most 24 bytes. Its `base64:` form ran to 31 to 39 characters, past the 25 Happ takes, so newer Happ showed the subscription's host instead.
 
+- A client's gateway check could pass a host whose FORWARD drops the LAN's traffic, and a health check could call a running `xray`, `vpn` or `warm` missing, now and then. A `grep -q` at a pipe's end, quitting early, killed the command before it and failed the pipe.
+
 ## [0.19.0] - 2026-11-28
 
 ### Added

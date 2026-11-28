@@ -64,7 +64,9 @@ ask_line() {
     local t k=$4
     # Not from stdin, which is why()'s loop over the list: exec would read
     # the lines after this one.
-    if ! docker compose -p "$project" ps --format '{{.Service}}' </dev/null | grep -qx vpn; then
+    # Read whole, then searched: grep -q at a pipe's end can fail the pipe
+    # under pipefail, by a SIGPIPE to compose.
+    if ! grep -qx vpn <<<"$(docker compose -p "$project" ps --format '{{.Service}}' </dev/null)"; then
       echo "$label (OpenVPN): the openvpn profile is off, so nothing carries the line"
     elif ! t=$(docker compose -p "$project" exec -T vpn /usr/local/bin/openvpn-entrypoint healthcheck "$k" </dev/null 2>&1); then
       echo "$label (OpenVPN, tun$k): the tunnel is down (${t##*unhealthy: }): its server may be down, unreachable from here, or refusing its config"
@@ -164,7 +166,7 @@ why() {
     asked=$((asked + 1))
     # A warm= line leaves through warm, the warm profile's container. Not
     # from stdin, which is this loop's.
-    if [ -n "$warm" ] && ! docker compose -p "$project" ps --format '{{.Service}}' </dev/null | grep -qx warm; then
+    if [ -n "$warm" ] && ! grep -qx warm <<<"$(docker compose -p "$project" ps --format '{{.Service}}' </dev/null)"; then
       failed+=("$name (warm=): warm, the warm profile's container, is not running, so nothing carries the line")
       continue
     fi
