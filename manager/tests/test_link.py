@@ -12,8 +12,10 @@ key = "k"
 identity = "i"
 authority = "a"
 subscription = true
-devices = ["phone", "laptop"]
 pools = { p = ["laptop", "198.51.100.9"] }
+[[group]]
+name = "g"
+devices = ["phone", "laptop"]
 [[server]]
 name = "a"
 id = "inst_A"
@@ -32,7 +34,7 @@ id = "inst_R3"
 key = "RWt"
 """
 RELAY = {"entry_host": "203.0.113.5", "site": "r1.example.net", "public_key": "P", "short_id": "S", "encryption": "E",
-         "own_site": {"xhttp_path": "x"}}
+         "own_site": {"xhttp_path": "x"}, "name": "r1", "nonce": "0123456789abcdef"}
 
 
 @pytest.fixture
@@ -40,11 +42,11 @@ def rig(tmp_path, monkeypatch):
     """A roster and the state a sync left: r2 in pool p alone, r3 burnt."""
     (tmp_path / "network.toml").write_text(ROSTER)
     st = state.load(tmp_path / "none", loads(ROSTER))
-    a = {"domain": "a.example.net", "https_port": 8443, "public_key": state.public_key(st["keys"]["reality_key"])}
+    a = {"domain": "a.example.net", "https_port": 8443, "public_key": state.public_key(st["keys"]["g"]["reality_key"])}
     st["facts"] = {n: {"id": i, "at": 0, "facts": f} for n, i, f in [
         ("a", "inst_A", a), ("r1", "inst_R1", RELAY),
-        ("r2", "inst_R2", {**RELAY, "entry_host": "198.51.100.9", "site": "r2.example.net"}),
-        ("r3", "inst_R3", {**RELAY, "entry_host": "192.0.2.7", "site": "r3.example.net"})]}
+        ("r2", "inst_R2", {**RELAY, "entry_host": "198.51.100.9", "site": "r2.example.net", "name": "r2"}),
+        ("r3", "inst_R3", {**RELAY, "entry_host": "192.0.2.7", "site": "r3.example.net", "name": "r3"})]}
     st["out"] = ["r3"]
     state.save(tmp_path / "dotdash-state.json", st)
     monkeypatch.chdir(tmp_path)
@@ -54,7 +56,7 @@ def rig(tmp_path, monkeypatch):
 
 def token(rig, device):
     st = json.loads((rig / "dotdash-state.json").read_text())
-    return hashlib.sha256(f"{st['keys']['subscription_key']}:{st['ids'][device]}".encode()).hexdigest()[:32]
+    return hashlib.sha256(f"{st['keys']['g']['subscription_key']}:{st['ids'][device]}".encode()).hexdigest()[:32]
 
 
 def test_link_gives_a_device_the_urls_the_servers_serve_it(rig):

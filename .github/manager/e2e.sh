@@ -32,6 +32,9 @@ key = "${m}/authority.key"
 identity = "${m}/authority.age"
 authority = "${authority}"
 subscription = true
+
+[[group]]
+name = "g"
 devices = ["phone"]
 
 [[server]]
@@ -48,8 +51,10 @@ pbk_before=$(sudo morzer task run client-config --output -- --full | grep -o 'pb
 [ -n "${pbk_before}" ] || die "the server printed no REALITY link before adopt"
 adopt=$(/rig/venv/bin/python -c 'from dotdash_manager.adopt import COMMAND; print(COMMAND)')
 out=$(sudo sh -c "${adopt}" | mgr adopt a) || die "adopt failed: ${out}"
-grep -q '^adopted: the server.s keys; ids of 1 of the roster.s 1 names$' <<<"${out}" || die "adopt did not take the server's device: ${out}"
-echo "e2e: adopt took the server's keys and its device's id"
+grep -q '^adopted: the server.s keys, as g.s; ids of 1 of g.s 1 names$' <<<"${out}" || die "adopt did not take the server's device: ${out}"
+seed=$(sudo cat /run/dotdash/secrets/relay_seed)
+grep -qF "\"relay_seed\": \"${seed}\"" "${m}/dotdash-state.json" || die "adopt did not take the server's relay_seed"
+echo "e2e: adopt took the server's keys, its relay_seed and its device's id"
 
 out=$(mgr sync) || die "the first sync failed: ${out}"
 grep -q '^a: published$' <<<"${out}" || die "the first sync published nothing for the server: ${out}"
@@ -60,13 +65,16 @@ sudo morzer sync now || die "the server did not apply the document: $(sudo morze
 sudo morzer fleet publish >/dev/null || die "the server could not publish its row and facts"
 
 pbk=$(/rig/venv/bin/python -c "import json; from dotdash_manager.state import public_key; \
-print(public_key(json.load(open('${m}/dotdash-state.json'))['keys']['reality_key']))")
+print(public_key(json.load(open('${m}/dotdash-state.json'))['keys']['g']['reality_key']))")
 links=$(sudo morzer task run client-config --output -- --full)
 grep -q '^== phone ==$' <<<"${links}" || die "the server's devices are not the roster's: ${links}"
 grep 'security=reality' <<<"${links}" | grep -qF "pbk=${pbk}" || die "the server's links do not carry the manager's key"
 [ "pbk=${pbk}" = "${pbk_before}" ] || die "the manager's key is not the one the server had before adopt"
 grep -qF "vless://${phone}@" <<<"${links}" || die "the device's id changed under the manager"
-echo "e2e: the server applied it: the roster's device and the manager's keys, which are the ones it had"
+name=$(sudo morzer config get name 2>&1) || true
+[ "${name}" = g ] || die "the server's name is not its group's: ${name}"
+[ "$(sudo cat /run/dotdash/secrets/relay_seed)" = "${seed}" ] || die "the server's relay_seed changed under the manager"
+echo "e2e: the server applied it: the roster's device and the manager's keys, which are the ones it had, and its group's name"
 
 out=$(mgr sync) || die "the second sync failed: ${out}"
 ! grep -q '^waiting: a:' <<<"${out}" || die "the manager does not see the server's facts with its keys: ${out}"
@@ -75,7 +83,7 @@ echo "e2e: the server's facts show the keys applied, and the second sync has not
 
 out=$(mgr status) || die "status says something is wrong: ${out}"
 grep -Eq '^a +server +[^ ]+ +applied [0-9]+ +[0-9]+/[0-9]+ up' <<<"${out}" || die "status does not show the server's document applied: ${out}"
-grep -q '^  server a: dotdash\.test:443: reality, xhttp' <<<"${out}" || die "status's topology lacks the server: ${out}"
+grep -q '^  server a (g): dotdash\.test:443: reality, xhttp' <<<"${out}" || die "status's topology lacks the server: ${out}"
 echo "e2e: status shows the server applied its newest document, from its real fleet row"
 
 url=$(sudo morzer task run client-config --output -- phone | grep -m1 '^https://') || die "client-config printed no subscription URL"

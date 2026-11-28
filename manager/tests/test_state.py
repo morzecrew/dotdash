@@ -20,10 +20,12 @@ def test_public_key_is_x25519():
 
 def test_load_keeps_what_it_made_and_save_is_private(tmp_path):
     net = loads('target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\nsubscription = true\n'
-                'devices = ["phone"]\n[[client]]\nname = "home"\ndevice = "phone"\n')
+                '[[group]]\nname = "g"\ndevices = ["phone"]\n[[group]]\nname = "h"\n[[client]]\nname = "home"\ndevice = "phone"\n')
     path = tmp_path / "dotdash-state.json"
     first = state.load(path, net)
-    assert set(first["keys"]) == set(state.SHARED_KEYS) and set(first["ids"]) == {"phone"} and "home" in first["passwords"]
+    assert set(first["keys"]) == {"g", "h"} and set(first["keys"]["g"]) == set(state.SHARED_KEYS)
+    assert first["keys"]["g"]["relay_seed"] != first["keys"]["h"]["relay_seed"] and len(first["keys"]["g"]["relay_seed"]) == 64
+    assert set(first["ids"]) == {"phone"} and "home" in first["passwords"]
     state.save(path, first)
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert state.load(path, net) == json.loads(path.read_text()) == first
@@ -31,17 +33,19 @@ def test_load_keeps_what_it_made_and_save_is_private(tmp_path):
 
 def test_one_taken_out_and_added_again_gets_a_new_id_and_password(tmp_path):
     head = 'target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\nsubscription = true\n'
-    full = loads(head + 'devices = ["phone", "tv"]\n[[relay]]\nname = "r1"\n[[canary]]\nname = "c1"\nwatches = "r1"\n'
-                 '[[client]]\nname = "home"\ndevice = "phone"\n')
+    full = loads(head + '[[group]]\nname = "g"\ndevices = ["phone", "tv"]\n[[relay]]\nname = "r1"\n[[canary]]\nname = "c1"\n'
+                 'watches = "r1"\n[[client]]\nname = "home"\ndevice = "phone"\n')
     path = tmp_path / "dotdash-state.json"
     first = state.load(path, full)
+    # A relay has no id here: each group's servers derive it.
+    assert set(first["ids"]) == {"phone", "tv", "canary-c1"}
     state.save(path, first)
-    gone = state.load(path, loads(head + 'devices = ["tv"]\n'))
+    gone = state.load(path, loads(head + '[[group]]\nname = "g"\ndevices = ["tv"]\n'))
     assert set(gone["ids"]) == {"tv"} and gone["passwords"] == {}
     assert gone["ids"]["tv"] == first["ids"]["tv"] and gone["keys"] == first["keys"]
     state.save(path, gone)
     back = state.load(path, full)
-    for name in "phone", "relay-r1", "canary-c1":
+    for name in "phone", "canary-c1":
         assert back["ids"][name] != first["ids"][name]
     assert back["passwords"]["home"] != first["passwords"]["home"]
 
@@ -58,6 +62,22 @@ def test_ids_that_differ_only_in_bytes_6_and_7_are_one_to_xray(monkeypatch):
     made = iter([uuid.UUID(a67), uuid.UUID(fresh)])
     monkeypatch.setattr(state.uuid, "uuid4", lambda: next(made))
     assert state.new_id({"phone": a}) == fresh
+
+
+def test_a_state_from_before_groups_gives_its_keys_to_the_first_group(tmp_path):
+    """Its one set of keys was its servers'; a group renamed later gets new
+    ones, and its old ones are kept to name it back."""
+    path = tmp_path / "dotdash-state.json"
+    old = {k: make() for k, make in state.SHARED_KEYS.items() if k != "relay_seed"}
+    path.write_text(json.dumps({"keys": old, "ids": {"phone": str(uuid.uuid4()), "relay-r1": str(uuid.uuid4())},
+                                "via": ["r1"], "rotation": {"phase": "swapped", "since": 1, "second": {"reality_key": "o"}}}))
+    head = 'target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n'
+    st = state.load(path, loads(head + '[[group]]\nname = "a"\ndevices = ["phone"]\n[[group]]\nname = "b"\n'))
+    assert st["keys"]["a"] == {**old, "relay_seed": st["keys"]["a"]["relay_seed"]} and st["keys"]["b"]["reality_key"] != old["reality_key"]
+    assert st["rotation"]["second"] == {"a": {"reality_key": "o"}} and "via" not in st and set(st["ids"]) == {"phone"}
+    state.save(path, st)
+    renamed = state.load(path, loads(head + '[[group]]\nname = "c"\ndevices = ["phone"]\n'))
+    assert renamed["keys"]["a"] == st["keys"]["a"] and renamed["keys"]["c"]["reality_key"] != old["reality_key"]
 
 
 def test_save_leaves_nothing_beside_the_state(tmp_path):
@@ -84,7 +104,8 @@ def test_no_state_beside_a_joined_roster_is_refused_unless_new_state(tmp_path, m
 
     monkeypatch.setattr(state, "lock", lambda path: 0)
     roster = tmp_path / "network.toml"
-    roster.write_text('target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[server]]\nname = "a"\nid = "inst_A"\nkey = "RWa"\n')
+    roster.write_text('target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[group]]\nname = "g"\n'
+                      '[[server]]\nname = "a"\nid = "inst_A"\nkey = "RWa"\n')
     for dry_run in False, True:
         with pytest.raises(Refused, match="names a joined: a new state gives every server new keys"):
             Options(roster, "morzer").open(dry_run)
@@ -95,7 +116,7 @@ def test_no_state_beside_a_joined_roster_is_refused_unless_new_state(tmp_path, m
 
 def test_a_dry_run_keeps_no_state(tmp_path):
     roster = tmp_path / "network.toml"
-    roster.write_text('target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\ndevices = ["phone"]\n')
+    roster.write_text('target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[group]]\nname = "g"\ndevices = ["phone"]\n')
     o = Options(roster, "morzer")
     st = o.open(dry_run=True)[1]
     assert "phone" in st["ids"] and not o.state.exists()

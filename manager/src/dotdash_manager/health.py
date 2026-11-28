@@ -185,7 +185,7 @@ def judge(net: Network, facts: dict, health: dict, rows: dict | None = None,
         say.append(f"burnt: every relay ({', '.join(sorted(out))}) at once; all kept, check the canaries' network")
         return set(), say
     say += [f"burnt: relay {r}: its canaries got through none of its paths in {health[r]['fails']} readings; "
-            f"left out of the servers' relays and pools until a canary gets through again{note(r, 'replace it')}"
+            f"devices get none of its links, and it leaves the pools, until a canary gets through again{note(r, 'replace it')}"
             for r in sorted(out)]
     return out, say
 
@@ -196,7 +196,7 @@ def spares(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[se
     the first spare not burnt itself, those its canaries got through to first,
     and the spare takes its place in the pools. A spare stands in only while
     the relay it replaces is burnt: one that comes back sends it back to
-    waiting. Returns the spares held back (left out, as burnt relays are), each
+    waiting. Returns the spares held back (kept from devices, as burnt relays are), each
     standing spare's burnt relay, and what to say."""
     def warm(name: str) -> bool:
         h = health.get(name, {})
@@ -228,7 +228,7 @@ def blocked(net: Network, facts: dict, health: dict, burnt: set[str]) -> tuple[d
     relay that has it is likelier the canaries' network refusing that transport
     than every relay losing it in the same hour: kept everywhere, and said.
     A server's are reported only, as for a burnt server. A CDN in front of a
-    relay (cdn:<name>) goes on its line as such, and devices lose that CDN's
+    relay (cdn:<name>) goes in relay_flags' off= as such, and devices lose that CDN's
     links alone; being one relay's, it is never kept for being blocked
     everywhere it is."""
     def out(name: str) -> set[str]:
@@ -280,8 +280,8 @@ def splits(net: Network, health: dict, burnt: set[str] | frozenset[str] = frozen
     BURN_AFTER readings, while the split hello did in the last one. That is a
     box blocking the name by SNI, reassembling TCP but not TLS records
     (dotdash-lab #50). It holds while that stays so: REALITY back, or the split
-    failing too, turns it off. A server gets hello_split; a relay split on its
-    line, beside off=reality, which keeps the link out of share links (they
+    failing too, turns it off. A server gets hello_split; a relay split in the
+    servers' relay_flags, beside off=reality, which keeps the link out of share links (they
     can't split) while devices' Xray configs keep it, split. A burnt relay
     stays out."""
     def on(name: str) -> bool:

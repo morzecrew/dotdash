@@ -26,9 +26,10 @@ def script(m: Machine, target: str, authority: str, recipient: str, recovery: st
            upstreams: str | None = None, credentials: str | None = None) -> str:
     """The script, for `sh` as root on the machine. A fresh one is installed:
     a server needs its domain and upstreams, a relay its domain (of its own
-    site) or a neighbour's site and its address. One installed already, as a
-    network set up by hand has them, only starts following the manager, whose
-    document brings the rest."""
+    site) or a neighbour's site and its address, and comes up idle under its
+    roster name, until its facts give the servers its relay/1 line. One
+    installed already, as a network set up by hand has them, only starts
+    following the manager, whose document brings the rest."""
     etc = f"/etc/{PRODUCTS[m.kind]}"
     init = ["morzer init", f"--release oci://ghcr.io/morzecrew/{IMAGES[m.kind]}:stable",
             f"--recovery-recipient {shlex.quote(recovery)}"]
@@ -39,6 +40,9 @@ def script(m: Machine, target: str, authority: str, recipient: str, recovery: st
         else:
             lacking = "--domain and --upstreams <file>"
     elif m.kind == "relay":
+        # Its name and the nonce it makes at init are its relay/1 line's head,
+        # which the servers derive its id from: its facts carry both.
+        init.append(f"--set name={shlex.quote(m.name)}")
         if domain:
             init.append(f"--domain {shlex.quote(domain)} --profile own-site")
         elif site and entry_host:

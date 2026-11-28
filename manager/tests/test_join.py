@@ -8,13 +8,14 @@ from dotdash_manager.cli import app
 from dotdash_manager.roster import loads, with_joined
 from typer.testing import CliRunner
 
-ROSTER = ('target = "file:///t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n'
+ROSTER = ('target = "file:///t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[group]]\nname = "g"\n'
           '[[server]]\nname = "a"\n[[relay]]\nname = "r1"\n[[relay]]\nname = "r2"\nid = "inst_2"\nkey = "RW2"\n')
-DOC = {"parameters": {"dotdash_servers": "a.example", "ipv6": "allow"},
-       "secrets": {"dotdash_id": "6e3c4bd2-5a4f-4b8e-9d1e-0f2a3b4c5d6e", "vless_clients": "id1 phone\nid2 laptop"}}
+# A canary's document, as join hands one at init.
+DOC = {"parameters": {"dotdash_server": "a.example", "dotdash_port": "443"},
+       "secrets": {"dotdash_id": "6e3c4bd2-5a4f-4b8e-9d1e-0f2a3b4c5d6e", "dotdash_short_id": "ab"}}
 
 
-def make(kind="relay", doc=DOC, **kw):
+def make(kind="relay", doc=None, **kw):
     net = loads(ROSTER)
     m = net.find({"server": "a", "relay": "r1"}[kind])
     return join.script(m, "s3://b/net", "RWauth", "age1me", kw.pop("recovery", "age1me"), doc, **kw)
@@ -25,9 +26,10 @@ def test_a_relay_script_is_sh_and_ends_in_its_id_and_key():
     subprocess.run(["sh", "-n"], input=s, text=True, check=True)
     if shutil.which("shellcheck"):
         subprocess.run(["shellcheck", "-s", "sh", "-"], input=s, text=True, check=True)
-    assert "--set site=site.example --set entry_host=203.0.113.7" in s
-    assert "--set dotdash_servers=a.example" in s and "--recovery-recipient age1me" in s
-    assert "morzer secret set vless_clients <<'DOTDASH_END'\nid1 phone\nid2 laptop\nDOTDASH_END" in s
+    # It comes up idle under its name, and makes its nonce: its facts carry
+    # both, and the next sync gives the servers its relay/1 line and it theirs.
+    assert "--set name=r1 \\\n  --set site=site.example --set entry_host=203.0.113.7" in s
+    assert "--recovery-recipient age1me" in s and "morzer secret set" not in s.split("\nelse\n")[0]
     assert "morzer secret set sync_target <<'DOTDASH_END'\nkind: s3\nsecret: x\nDOTDASH_END" in s
     assert "backup target add s3://b/net/backups/r1 --credentials sync_target" in s
     assert "recipients list --json | grep -qF age1me || morzer secret recipients add age1me --kind recovery" in s
@@ -45,6 +47,10 @@ def test_what_each_kind_needs():
     with pytest.raises(Refused, match="ends the script"):
         make("server", None, domain="a.example", upstreams="x\nDOTDASH_END\n")
     assert "--set 'note=a b'" in make(doc={"parameters": {"note": "a b"}}, domain="own.example")
+    canary = join.script(loads(ROSTER + '[[canary]]\nname = "c1"\nwatches = "r1"\n').find("c1"), "s3://b/net", "RWauth",
+                         "age1me", "age1me", DOC)
+    assert "--set dotdash_server=a.example \\\n  --set dotdash_port=443" in canary
+    assert "morzer secret set dotdash_short_id <<'DOTDASH_END'\nab\nDOTDASH_END" in canary
 
 
 def test_an_installed_machine_only_starts_following(tmp_path):
@@ -158,7 +164,7 @@ def test_join_hands_a_machine_its_own_credential_where_the_roster_gives_one(tmp_
     (tmp_path / "a.yaml").write_text("access_key_id: A\n")
     (tmp_path / "up").write_text("socks5://u:p@203.0.113.1:1080\n")
     (tmp_path / "network.toml").write_text('target = "s3://b/net"\ncredentials = "net.yaml"\nkey = "k"\nidentity = "i"\n'
-                                           'authority = "a"\n[[server]]\nname = "a"\ncredentials = "a.yaml"\n'
+                                           'authority = "a"\n[[group]]\nname = "g"\n[[server]]\nname = "a"\ncredentials = "a.yaml"\n'
                                            '[[server]]\nname = "b"\n')
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(state, "lock", lambda path: 0)

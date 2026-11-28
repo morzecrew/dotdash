@@ -1,0 +1,140 @@
+[
+ {
+  "a1": {
+   "parameters": {
+    "cdn_hosts": "none",
+    "name": "a",
+    "pools": "p laptop",
+    "relay_flags": "r1 off=cdn:c.example.net,hysteria2,mkcp,reality,xhttp",
+    "relays": "relay/1 r1 0123456789abcdef 203.0.113.5 r1.example.net P S E xhttp=x kcp=8447,dtls,K,quic hy2=443 cdn=c.example.net",
+    "servers": "self,a2.example.net",
+    "subscription": "true"
+   },
+   "secrets": {
+    "kcp_seed": "b075b18d6e273c802744f832e3f4cb80",
+    "reality_key": "AEs3LLVHSU2y9i1LKGAjKXgfKzWOXbsUpirX5XZ7O0o",
+    "reality_short_id": "3230eedee1463994",
+    "relay_seed": "687bd6a917d4d11e317ee3d447c0b897d3169f06caa59d13658c98fda5bd9657",
+    "subscription_key": "2f2fc7f2e9ce13b09b84f63d54d0b4a59f4dbd46aea41da67023817e2d0c5e59",
+    "vless_clients": "00000001-0000-4000-8000-000000000001 phone\n00000002-0000-4000-8000-000000000002 laptop desktop\n00000004-0000-4000-8000-000000000004 canary-c1",
+    "vless_seed": "774183b41e2c10cfe57bace97f77e0e892755a8baf938a8b38820048fe62c7c8774183b41e2c10cfe57bace97f77e0e892755a8baf938a8b38820048fe62c7c8",
+    "xhttp_path": "71a3894cb6036aa2db255dea8758ab61"
+   }
+  },
+  "a2": {
+   "parameters": {
+    "cdn_hosts": "none",
+    "name": "a",
+    "pools": "p laptop",
+    "relay_flags": "r1 off=cdn:c.example.net,hysteria2,mkcp,reality,xhttp",
+    "relays": "relay/1 r1 0123456789abcdef 203.0.113.5 r1.example.net P S E xhttp=x kcp=8447,dtls,K,quic hy2=443 cdn=c.example.net",
+    "servers": "self,a1.example.net",
+    "subscription": "true"
+   },
+   "secrets": {
+    "kcp_seed": "b075b18d6e273c802744f832e3f4cb80",
+    "reality_key": "AEs3LLVHSU2y9i1LKGAjKXgfKzWOXbsUpirX5XZ7O0o",
+    "reality_short_id": "3230eedee1463994",
+    "relay_seed": "687bd6a917d4d11e317ee3d447c0b897d3169f06caa59d13658c98fda5bd9657",
+    "subscription_key": "2f2fc7f2e9ce13b09b84f63d54d0b4a59f4dbd46aea41da67023817e2d0c5e59",
+    "vless_clients": "00000001-0000-4000-8000-000000000001 phone\n00000002-0000-4000-8000-000000000002 laptop desktop\n00000004-0000-4000-8000-000000000004 canary-c1",
+    "vless_seed": "774183b41e2c10cfe57bace97f77e0e892755a8baf938a8b38820048fe62c7c8774183b41e2c10cfe57bace97f77e0e892755a8baf938a8b38820048fe62c7c8",
+    "xhttp_path": "71a3894cb6036aa2db255dea8758ab61"
+   }
+  },
+  "b1": {
+   "parameters": {
+    "cdn_hosts": "none",
+    "name": "b",
+    "pools": "p tablet",
+    "relay_flags": "r1 off=cdn:c.example.net,hysteria2,mkcp,reality,xhttp\nr2 off=mkcp split",
+    "relays": "relay/1 r1 0123456789abcdef 203.0.113.5 r1.example.net P S E xhttp=x kcp=8447,dtls,K,quic hy2=443 cdn=c.example.net\nrelay/1 r2 fedcba9876543210 198.51.100.9 r2.example.net P S E xhttp=x kcp=8447,dtls,K,quic hy2=443",
+    "servers": "self",
+    "subscription": "true"
+   },
+   "secrets": {
+    "kcp_seed": "f80afa02ed7b2361f21a9d45fa6ffd8f",
+    "reality_key": "yWA3YBK4jPTMVAyTmYkHUq-HbpOVEn9D6jpwJwo_I1Q",
+    "reality_short_id": "ae6a39253a4cdd6d",
+    "relay_seed": "a47df1df19657c2da51c5b0aaddc7dfb696fdbbb73b918a5800d48720efaade2",
+    "subscription_key": "4bf41f93d01e40445b52bdc384aa09ede1ce6ff7efcf86c4b4d2c4ebb1efbf63",
+    "vless_clients": "00000003-0000-4000-8000-000000000003 tablet\n00000005-0000-4000-8000-000000000005 canary-c2",
+    "vless_seed": "9f648cb911791d1c1364a7ec6de9948eed44ba7aae894cef829635ddf53053a69f648cb911791d1c1364a7ec6de9948eed44ba7aae894cef829635ddf53053a6",
+    "xhttp_path": "ffffb871122e5f0861989b4e580fa278"
+   }
+  },
+  "c1": {
+   "parameters": {
+    "dotdash_address": "203.0.113.5",
+    "dotdash_hysteria2_port": "443",
+    "dotdash_kcp_header": "dtls",
+    "dotdash_kcp_open": "quic",
+    "dotdash_kcp_port": "8447",
+    "dotdash_port": "443",
+    "dotdash_public_key": "P",
+    "dotdash_server": "r1.example.net"
+   },
+   "secrets": {
+    "dotdash_encryption": "E",
+    "dotdash_id": "00000004-0000-4000-8000-000000000004",
+    "dotdash_kcp_seed": "K",
+    "dotdash_short_id": "S",
+    "dotdash_xhttp_path": "x"
+   }
+  },
+  "c2": {
+   "parameters": {
+    "dotdash_address": "b1.example.net",
+    "dotdash_port": "443",
+    "dotdash_public_key": "GcbtYh_S7R9x3rHBre12E1ZMaDZvKqGMpvfXsFWeS0k",
+    "dotdash_server": "b1.example.net"
+   },
+   "secrets": {
+    "dotdash_encryption": "enc-b",
+    "dotdash_id": "00000005-0000-4000-8000-000000000005",
+    "dotdash_kcp_seed": "f80afa02ed7b2361f21a9d45fa6ffd8f",
+    "dotdash_short_id": "ae6a39253a4cdd6d",
+    "dotdash_xhttp_path": "ffffb871122e5f0861989b4e580fa278"
+   }
+  },
+  "home": {
+   "secrets": {
+    "proxy_password": "pw",
+    "subscription_url": "https://a1.example.net/fa43ba4edc05851e7a73707ffe69658b"
+   }
+  },
+  "r1": {
+   "parameters": {
+    "ipv6": "allow",
+    "server_link": "reality",
+    "via_fingerprint": "chrome",
+    "via_link": "reality"
+   },
+   "secrets": {
+    "servers": "server/1 a a1.example.net,a2.example.net 443 4XSZni0UDBFkwSiWfSmD1bswn3iMYPg2qq8--RSpj1o 3230eedee1463994 enc-a a1d110a6-7921-42ae-8cd1-99a6d0fc020e xr=8443,71a3894cb6036aa2db255dea8758ab61\nserver/1 b b1.example.net 443 GcbtYh_S7R9x3rHBre12E1ZMaDZvKqGMpvfXsFWeS0k ae6a39253a4cdd6d enc-b 392d7ba8-8e6f-4114-a2ee-7ee073fd1206"
+   },
+   "unset": {
+    "parameters": [
+     "tunnel_group"
+    ],
+    "secrets": [
+     "via"
+    ]
+   }
+  },
+  "r2": {
+   "parameters": {
+    "ipv6": "allow",
+    "server_link": "reality",
+    "tunnel_group": "b",
+    "via_fingerprint": "chrome",
+    "via_link": "reality"
+   },
+   "secrets": {
+    "servers": "server/1 b b1.example.net 443 GcbtYh_S7R9x3rHBre12E1ZMaDZvKqGMpvfXsFWeS0k ae6a39253a4cdd6d enc-b e26cdbe0-bbcf-4001-9485-c81a8e995515",
+    "via": "relay/1 r1 0123456789abcdef 203.0.113.5 r1.example.net P S E xhttp=x kcp=8447,dtls,K,quic hy2=443 cdn=c.example.net"
+   }
+  }
+ },
+ []
+]

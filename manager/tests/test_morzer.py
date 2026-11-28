@@ -6,10 +6,12 @@ import pytest
 from dotdash_manager.morzer import Morzer, check, to_yaml, write_roster
 from dotdash_manager.roster import loads
 
-HEAD = 'target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n'
+HEAD = 'target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[group]]\nname = "g"\n'
 RELAY = {"entry_host": "203.0.113.5", "site": "www.example.net", "public_key": "P", "short_id": "S", "encryption": "E",
          "kcp": {"port": 8447, "header": "dtls", "open": "none", "seed": "K"}, "cdn_hosts": ["c.example.net"],
-         "traffic": {"started": 1, "devices": {"phone": 10}}, "via": True, "clients": {"count": 1, "digest": "0123abcd"}}
+         "traffic": {"started": 1, "devices": {"phone@a": 10}}, "name": "edge-1", "nonce": "0123456789abcdef",
+         "groups": {"a": {"state": "live", "servers": {"a.example.net": True}, "devices": 1, "digest": "0123abcd",
+                          "list_age": 42}, "b": {"state": "starting"}}}
 SERVER = {"domain": "a.example.net", "https_port": 443, "public_key": "P", "encryption": "mlkem768x25519plus.native.0rtt.x"}
 CANARY = {"server": "www.example.net", "address": "203.0.113.5", "public_key": "", "checked_at": 1, "internet": None,
           "paths": {"reality": True, "xhttp-reality": False}, "cdn": {"c.example.net": True}, "reality_split": None,
@@ -37,7 +39,11 @@ def test_facts_as_the_bundles_print_them_pass_their_nulls_left_out():
     ("relay", {**RELAY, "cdn_hosts": "c.example.net"}, "cdn_hosts: Input should be a valid list"),
     ("relay", {**RELAY, "cdn_only": "false"}, "cdn_only: Input should be a valid boolean"),
     ("relay", {**RELAY, "traffic": {"started": 1, "devices": {"phone": "10"}}}, "traffic.devices.phone"),
-    ("relay", {**RELAY, "clients": {"count": 1, "digest": "evil"}}, "clients.digest"),
+    ("relay", {**RELAY, "groups": {"a": {"state": "live", "digest": "evil"}}}, "groups.a.digest"),
+    ("relay", {**RELAY, "groups": {"a-b": {"state": "live"}}}, "groups.a-b.[key]"),
+    ("relay", {**RELAY, "groups": {"a": {"devices": 3}}}, "groups.a.state: Field required"),
+    ("relay", {**RELAY, "nonce": "0123"}, "nonce: String should match"),
+    ("relay", {**RELAY, "name": "a/b"}, "name: String should match"),
     ("server", {**SERVER, "https_port": "443"}, "https_port: Input should be a valid integer"),
     ("server", {**SERVER, "https_port": True}, "https_port: Input should be a valid integer"),
     ("server", {**SERVER, "hysteria2_port": 70000}, "hysteria2_port"),

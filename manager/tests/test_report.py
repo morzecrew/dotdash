@@ -7,6 +7,8 @@ target = "t"
 key = "k"
 identity = "i"
 authority = "a"
+[[group]]
+name = "g"
 [[server]]
 name = "s"
 [[relay]]

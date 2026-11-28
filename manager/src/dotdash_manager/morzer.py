@@ -35,7 +35,7 @@ TIMEOUT = 120
 UNSAFE = re.compile(r'[\s"\\{}]')
 Word = Annotated[str, Field(min_length=1)]
 Port = Annotated[int, Field(ge=1, le=65535)]
-# A canary's path names, which go on a relay's line as off= and into verdicts.
+# A canary's path names, which go in a relay's relay_flags as off= and into verdicts.
 PathName = Annotated[str, Field(pattern=r"^[a-z0-9-]{1,32}$")]
 
 
@@ -63,11 +63,16 @@ class OwnSite(Facts):
     xhttp_path: Word
 
 
-class Clients(Facts):
-    """How many devices a relay lets in, and their ids' digest (render's
-    clients_digest), which status compares with what it was sent."""
-    count: Annotated[int, Field(ge=0)]
-    digest: Annotated[str, Field(pattern=r"^[0-9a-f]{8}$")]
+class GroupState(Facts):
+    """A server group as a relay's gateway last found it: its state, whether
+    each of its servers served the relay its device list, how many devices
+    that lets in, the list's digest and its age in seconds."""
+    # starting, live, down or refused; a later release's word passes.
+    state: Word
+    servers: dict[Word, bool] | None = None
+    devices: Annotated[int, Field(ge=0)] | None = None
+    digest: Annotated[str, Field(pattern=r"^[0-9a-f]{8}$")] | None = None
+    list_age: int | None = None
 
 
 class Traffic(Facts):
@@ -103,9 +108,11 @@ class RelayFacts(TargetFacts):
     cdn_path: Word | None = None
     origin_host: Word | None = None
     cdn_only: bool | None = None
-    name: Word | None = None
-    via: bool | None = None
-    clients: Clients | None = None
+    # A relay of the release with server groups carries both: its relay/1
+    # line's head, which each server derives its id from. One before it, neither.
+    name: Annotated[str, Field(pattern=r"^[A-Za-z0-9._-]{1,24}$")] | None = None
+    nonce: Annotated[str, Field(pattern=r"^[0-9a-f]{16}$")] | None = None
+    groups: dict[Annotated[str, Field(pattern=r"^[a-z][a-z0-9]{0,15}$")], GroupState] | None = None
 
 
 class CanaryFacts(Facts):
