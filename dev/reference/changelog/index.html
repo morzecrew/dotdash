@@ -2027,7 +2027,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="[Unreleased]">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0190-2026-11-28" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        [0.19.0] - 2026-11-28
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.19.0] - 2026-11-28">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -3075,7 +3086,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="[Unreleased]">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0190-2026-11-28" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        [0.19.0] - 2026-11-28
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.19.0] - 2026-11-28">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -4141,16 +4163,17 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="0190-2026-11-28">[0.19.0] - 2026-11-28<a class="headerlink" href="#0190-2026-11-28" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p>Every relay is a gateway: one relay carries devices of any number of server groups, each to that group's own servers and exit alone. Its new <code>servers</code> secret holds one <code>server/1</code> line per group, as one of the group's servers prints it with <code>relay-config -- &lt;relay&gt;</code>. The relay fetches each group's device list through its own tunnel every minute, and adds and removes devices through Xray's API with no restart; only a device deleted while connected restarts its Xray, which alone cuts an open connection. Nobody copies devices to a relay again. The routing comes from the xray image's <code>$gateway</code>, whose three rules fail closed: a group whose servers are all down gets nothing, and never another group's servers or exit. An id two groups list is dropped from both.</p>
+<p>Every relay is a gateway: one relay carries devices of several server groups, each to its own group's servers and exit alone. A new <code>servers</code> secret takes one <code>server/1</code> line per group, and the relay fetches each group's devices itself with no restart. A group whose servers are down gets nothing, never another's exit.</p>
 </li>
 <li>
-<p>A relay's <code>relay-entry</code> prints its <code>relay/1</code> line, <code>relay/1 &lt;name&gt; &lt;nonce&gt; &lt;host&gt; &lt;site&gt; &lt;public key&gt; &lt;short id&gt; &lt;encryption&gt;</code>, then <code>xhttp=&lt;path&gt;</code> and its other transports' fields: the one line every server's <code>relays</code> takes. <code>nonce</code> is a new generated secret, from which, with the name, each server derives the relay's id.</p>
+<p>A relay's <code>relay-entry</code> prints its <code>relay/1</code> line, the one line every server's <code>relays</code> takes: <code>relay/1 &lt;name&gt; &lt;nonce&gt; &lt;host&gt; &lt;site&gt; &lt;public key&gt; &lt;short id&gt; &lt;encryption&gt;</code>, then its transports' fields. <code>nonce</code> is a new generated secret, from which, with the name, each server derives the relay's id.</p>
 </li>
 <li>
-<p>A relay's <code>servers</code> task prints each server group's state, a line each: <code>live</code>, <code>down</code>, <code>refused</code> or <code>starting</code>, its servers, its devices and the age of its list. The facts carry the same under <code>groups</code>, with the relay's <code>name</code> and <code>nonce</code>, and the <code>metrics</code> profile adds <code>dotdash_group_live</code>, <code>dotdash_group_devices</code> and <code>dotdash_group_list_age_seconds</code> per group.</p>
+<p>A relay's <code>servers</code> task prints each server group's state, <code>live</code>, <code>down</code>, <code>refused</code> or <code>starting</code>, with its servers, devices and the age of its list. The facts carry the same under <code>groups</code>, and the <code>metrics</code> profile adds <code>dotdash_group_live</code>, <code>dotdash_group_devices</code> and <code>dotdash_group_list_age_seconds</code>.</p>
 </li>
 <li>
 <p>A relay's <code>entry-check</code> tries each entry for each live group, as a checker the relay adds to each group with a random id, a line per entry per group (<code>reality@a</code>); a group that is not live has its entries left out.</p>
@@ -4159,13 +4182,13 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>A relay's <code>server_link</code> (in place of <code>dotdash_link</code>) reaches each group's servers over XHTTP with REALITY on its line's <code>xr=</code>, and <code>tunnel_group</code> names the group whose servers a cover app's <code>tunnel_host</code> is reached through.</p>
 </li>
 <li>
-<p>The server reads <code>relay/1</code> lines in <code>relays</code>, as a gateway relay's <code>relay-entry</code> will print them: <code>relay/1 &lt;name&gt; &lt;nonce&gt; &lt;host&gt; &lt;site&gt; &lt;public key&gt; &lt;short id&gt; &lt;encryption&gt;</code>, then <code>xhttp=&lt;path&gt;</code> and the other transports' fields. Each relay comes in by an id the image derives from a new generated secret, <code>relay_seed</code>, and the relay's name and nonce, so nobody adds a relay to <code>vless_clients</code> again, and deleting its line revokes it. Copy <code>relay_seed</code> to every server in <code>servers</code>, as the keys.</p>
+<p>The server reads a relay's <code>relay/1</code> line in <code>relays</code> and lets the relay in by an id derived from a new generated secret, <code>relay_seed</code>, and the relay's name and nonce. Nobody adds a relay to <code>vless_clients</code> again, and deleting its line revokes it. Copy <code>relay_seed</code> to every server of the group, as the keys.</p>
 </li>
 <li>
 <p>A server <code>name</code> parameter, the server group's: relays know the group by it, and the servers' own links are named by it in place of <code>server</code> (<code>s1 · reality</code>, <code>s1 2 · xhttp</code> with several servers). Unset, links read as before.</p>
 </li>
 <li>
-<p><code>relay-config -- &lt;relay&gt;</code> prints the one <code>server/1</code> line that relay keeps for this server group: the servers, their port and keys, the relay's id here, and <code>xr=</code> under the <code>xhttp-reality</code> profile. It needs <code>name</code> and the relay's <code>relay/1</code> line. For a relay of the release before, named as its client in <code>vless_clients</code>, it prints what it did.</p>
+<p><code>relay-config -- &lt;relay&gt;</code> prints the one <code>server/1</code> line that relay keeps for this server group: the servers, their port and keys, and the relay's id here. It needs <code>name</code> and the relay's <code>relay/1</code> line; for a relay of 0.18, named as its client in <code>vless_clients</code>, it prints what it did.</p>
 </li>
 <li>
 <p>A <code>relay_flags</code> parameter, one <code>&lt;name&gt; [standby] [off=&lt;path&gt;[,&lt;path&gt;]] [split]</code> line per relay: what the server or the manager decides about a relay, kept off its line, so a change restarts no Xray.</p>
@@ -4177,13 +4200,13 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>The server's facts carry its <code>name</code>.</p>
 </li>
 <li>
-<p>The manager runs server groups: a <code>[[group]]</code> in the roster holds its devices, each server names its <code>group</code> (none needed with one), and a relay serves every group unless its <code>groups</code> narrows it. Each group has keys and a <code>relay_seed</code> of its own in the state. A group's servers get its <code>name</code>, its <code>relay_seed</code> and keys, its devices and canaries alone in <code>vless_clients</code>, a <code>relay/1</code> line in <code>relays</code> for each relay serving it, made from the relay's facts, and <code>relay_flags</code> for standby, <code>off=</code> and <code>split</code>. A relay gets a <code>server/1</code> line in its <code>servers</code> secret per group it serves, from that group's servers that applied its keys and the relay's id there, which the manager derives as the servers do (checked against the shared vector), and <code>via</code> as a secret of <code>relay/1</code> lines, <code>server_link</code> and <code>tunnel_group</code> from the roster. No relay is sent a device list, so adding a device changes no relay's document.</p>
+<p>The manager runs server groups: a <code>[[group]]</code> in the roster holds its devices, each server names its <code>group</code>, and a relay serves every group unless <code>groups</code> narrows it. Each group has its own keys and <code>relay_seed</code>; the manager writes <code>relays</code> and <code>servers</code> from facts. A new device changes no relay's document.</p>
 </li>
 <li>
 <p>The manager's <code>status</code> gives each group a relay serves a line of its own in the topology, as the relay's facts say: live, down, refused or starting, its servers, its devices and the age of its list. One group down says nothing of the relay or its other groups.</p>
 </li>
 <li>
-<p>The server writes each <code>relay/1</code> relay's device list, whether or not subscriptions are on: every device's id and name, the first 12 hex characters of its subscription token with <code>subscription</code> on, and the other relays' ids. A relay fetches it through its own tunnel at <code>list.sub.dotdash.internal/&lt;list token&gt;</code>, the token the first 32 hex characters of <code>sha256("&lt;relay id&gt;:list")</code>, and a device's subscription at <code>&lt;prefix&gt;.sub.dotdash.internal/&lt;token&gt;</code>. Xray hands those names to Caddy's new internal listener on port 8085, never published, for relays' users alone (a fixed freedom outbound, <code>sub</code>), and blocks every other user asking for a <code>dotdash.internal</code> name. The public site never serves a list.</p>
+<p>The server publishes each <code>relay/1</code> relay's device list, with subscriptions on or off, at an internal name only that relay's tunnel reaches. Xray hands those names to a new Caddy listener on port 8085, never published, and blocks every other user asking for one. The public site never serves a list.</p>
 </li>
 <li>
 <p><code>client-config --check</code> warns of each relay line of 0.18 left in <code>relays</code>, which the next release won't read, and of a client in <code>vless_clients</code> named as a <code>relay/1</code> line's relay: likely that relay's client of 0.18, which nothing needs once the relay runs this release.</p>
@@ -4192,28 +4215,28 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
-<p><strong>Breaking for relays:</strong> a relay's <code>dotdash_servers</code>, <code>dotdash_address</code>, <code>dotdash_port</code>, <code>dotdash_public_key</code>, <code>dotdash_link</code> and <code>dotdash_xhttp_reality_port</code> parameters and its <code>vless_clients</code>, <code>dotdash_id</code>, <code>dotdash_encryption</code>, <code>dotdash_short_id</code> and <code>dotdash_xhttp_path</code> secrets are gone: the <code>servers</code> secret takes their place. <code>via</code> is now a secret of <code>relay/1</code> lines, and <code>name</code> is required. Update the servers first, as a relay needs a server of this release: a server still reads the relay lines of the release before. A relay idles from its update until its <code>servers</code> line is in. <code>morzer rollback</code> from a relay of this release is refused, as it drops values the one before requires: restore its pre-update backup instead. The steps are in the relay's docs, under One relay, several server groups: Moving from 0.18.</p>
+<p><strong>Breaking for relays:</strong> <code>servers</code> replaces a relay's <code>dotdash_*</code> values and <code>vless_clients</code>, <code>via</code> takes <code>relay/1</code> lines, and <code>name</code> is required. Update the servers first; a relay idles until its <code>servers</code> line is in. <code>morzer rollback</code> is refused: restore the pre-update backup (the relay's docs, Moving from 0.18).</p>
 </li>
 <li>
-<p><strong>Breaking for relay monitoring:</strong> a relay's health check says only that its own machinery works: Xray runs, and its gateway's agent reached Xray in the last two minutes. An idle relay, or one whose groups are all down, is healthy, and a <code>servers</code> line a server doesn't take yet rolls nothing back. Watch <code>dotdash_group_live</code> for whether a group answers.</p>
+<p><strong>Breaking for relay monitoring:</strong> a relay's health check says only that Xray runs and its gateway's agent reached it in the last two minutes, so an idle relay, or one whose groups are all down, is healthy. Watch <code>dotdash_group_live</code> for whether a group answers.</p>
 </li>
 <li>
-<p><strong>Breaking for anything that reads a relay's facts:</strong> <code>clients</code> and <code>via</code> are gone, <code>name</code>, <code>nonce</code> and <code>groups</code> are new, and device traffic is counted per <code>&lt;device&gt;@&lt;group&gt;</code>. A relay of this release takes <code>servers</code>, <code>via</code>, <code>ipv6</code>, <code>server_link</code>, <code>via_link</code>, <code>via_fingerprint</code> and <code>tunnel_group</code> from an authority, and nothing else: the manager drives one only from its release with server groups.</p>
+<p><strong>Breaking for anything that reads a relay's facts:</strong> <code>clients</code> and <code>via</code> are gone, <code>name</code>, <code>nonce</code> and <code>groups</code> are new, and device traffic is counted per <code>&lt;device&gt;@&lt;group&gt;</code>. From an authority, a relay takes only <code>servers</code>, <code>via</code>, <code>ipv6</code>, <code>server_link</code>, <code>via_link</code>, <code>via_fingerprint</code> and <code>tunnel_group</code>.</p>
 </li>
 <li>
-<p><strong>Breaking for the manager:</strong> its roster lists devices under a <code>[[group]]</code> named as its servers should be, and refuses <code>devices</code> at the top; the state's keys become the first group's, so its servers keep theirs. It drives servers and relays of this release alone: a relay whose facts carry no <code>nonce</code>, one from before, waits in no group's <code>relays</code> until it is updated, and gets no document. Update the servers first, with the manager of before, then this manager and the relays together. Relays' clients leave the servers' <code>vless_clients</code>, <code>rotate</code> rotates every group at once, each proven by a canary watching its servers, device traffic from relays is read per <code>&lt;device&gt;@&lt;group&gt;</code>, and <code>status</code> no longer compares a relay's device list with what it sent. <code>join</code> brings a relay up idle under its roster name (<code>--set name=</code>), with no document: the next <code>sync</code> gives the servers its line and it theirs. <code>adopt</code> takes a server's keys and <code>relay_seed</code> as its group's, so relays keep their ids, and says when the server's <code>name</code> differs from its group's.</p>
+<p><strong>Breaking for the manager:</strong> its roster lists devices under a <code>[[group]]</code>, and the state's keys become the first group's. It drives servers and relays of this release alone: update the servers with the manager of before, then this manager and the relays together. <code>rotate</code> rotates every group at once.</p>
 </li>
 <li>
-<p>The manager keeps a burnt relay, or a spare held back, in its groups' <code>relays</code>, every path of it off in their <code>relay_flags</code>, where it had left it out: out of <code>relays</code> a relay is out of its id there, so its canaries could never get through again, and a relay going <code>via</code> it would lose its way to the servers. Devices still get none of its links, and it still leaves the pools. A relay's blocked paths and split hello go in <code>relay_flags</code> too, so a verdict restarts no server's Xray.</p>
+<p>The manager keeps a burnt relay, or a spare held back, in its groups' <code>relays</code> with every path off in <code>relay_flags</code>: left out, a relay lost its id there, so its canaries never got through again and relays going <code>via</code> it lost their way. Devices still get none of its links.</p>
 </li>
 <li>
-<p>A subscription through a relay goes to the device's own group by its token's first 12 hex characters, which that group's list carries, so URLs keep their form and the relay never holds a whole token. Caddy no longer restarts when servers change. A token no group lists, or its server lacks, and a group that is down, get the relay's site, as any other path.</p>
+<p>A subscription through a relay goes to the device's own group by its token's first 12 hex characters, so URLs keep their form and the relay never holds a whole token. Caddy no longer restarts when servers change. A token no group lists, or a group that is down, gets the relay's site.</p>
 </li>
 <li>
 <p><strong>Breaking for anything that reads link names:</strong> with <code>name</code> set, the servers' own links are named by it, not <code>server</code>.</p>
 </li>
 <li>
-<p>An edit to <code>relays</code> restarts the server's Xray, which now lets the <code>relay/1</code> lines' relays in. The lines of the release before still print links for this release, their relays still coming in by their clients in <code>vless_clients</code>; <code>standby</code>, <code>off=</code>, <code>split</code> and <code>name=</code> on a <code>relay/1</code> line are warned of and ignored (they go in <code>relay_flags</code>, and the name is the line's second field).</p>
+<p>An edit to <code>relays</code> restarts the server's Xray, which now lets the <code>relay/1</code> lines' relays in. Lines of 0.18 still work, their relays coming in by their clients in <code>vless_clients</code>. <code>standby</code>, <code>off=</code>, <code>split</code> and <code>name=</code> on a <code>relay/1</code> line are warned of and ignored: they go in <code>relay_flags</code>.</p>
 </li>
 <li>
 <p>Two <code>relay/1</code> lines with one name, ignoring case, or one whose client name, <code>relay-&lt;name&gt;</code>, a device in <code>vless_clients</code> has, fail the change that brings them, as Xray refuses them too. A relay's old line in <code>vless_clients</code> named exactly <code>relay-&lt;name&gt;</code> has to be renamed or dropped before its <code>relay/1</code> line goes in.</p>
@@ -4228,10 +4251,10 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p><code>relay-config</code>, for a relay of 0.18, prints that release's <code>init</code> (<code>dotdash-relay:0.18.0</code>): <code>stable</code> is now a gateway relay, which refuses the <code>dotdash_*</code> values it sets.</p>
 </li>
 <li>
-<p>A cover app's own headers reach visitors, on the server and on own-site relays: Caddy no longer replaces its <code>Referrer-Policy</code>, adds HSTS or <code>X-Content-Type-Options</code> over its own, or removes its <code>Server</code>. It sets those three only where the app sends none, and removes only its own <code>Server</code> and the <code>Via</code> it adds. Every site had answered with the same set, whatever the app, which no install of a stock app such as Vaultwarden does.</p>
+<p>A cover app's own headers reach visitors, on the server and on own-site relays: Caddy sets <code>Referrer-Policy</code>, HSTS and <code>X-Content-Type-Options</code> only where the app sends none, and removes only its own <code>Server</code> and <code>Via</code>. Every site had answered with the same headers whatever the app, which no stock install does.</p>
 </li>
 <li>
-<p>The manager refuses two ids that differ only in bytes 6 and 7, of devices or canaries, in one group or across groups, as a relay drops both. Xray zeroes those bytes before it looks an id up, so it took both for one device, logged and routed as the one listed last. <code>adopt</code> refuses such a pair from a server, <code>sync</code> sends none out (<code>renew</code> one of the two), and the ids <code>sync</code> and <code>renew</code> make never collide that way.</p>
+<p>The manager refuses two ids, of devices or canaries, that differ only in bytes 6 and 7, as Xray ignores those bytes and took both for one device, and a relay drops both. <code>adopt</code> refuses such a pair, <code>sync</code> sends none out, and the ids <code>sync</code> and <code>renew</code> make never collide that way.</p>
 </li>
 </ul>
 <h2 id="0180-2026-11-26">[0.18.0] - 2026-11-26<a class="headerlink" href="#0180-2026-11-26" title="Permanent link">&para;</a></h2>
