@@ -268,6 +268,33 @@ tagged `<group>-<n>`, so group names reach whoever scrapes the metrics.
 Alert on `dotdash_group_live == 0`: morzer's own alerts fire only when the
 relay's machinery fails.
 
+## Devices at several addresses
+
+A link passed around gets used from several places at once. The
+`device-addresses` profile counts, for each device, how many addresses it is
+connected from at that moment, so the [manager](../manager.md#leaked-links)
+can name a device at three or more at once, or on two relays at once:
+
+```sh
+sudo morzer config set installation.profile=device-addresses    # beside the profiles you run
+```
+
+- **Only counts leave.** Xray keeps each device's addresses in memory while
+  it has a connection open, with or without the profile: the gateway's agent
+  needs them to spot a deleted device still connected. An address is gone
+  once its last connection closes. The facts task reads them from Xray's API
+  and keeps only the count. Nothing writes an address to disk, and the facts
+  never carry one.
+- **An IPv6 /64 counts once.** A phone's IPv6 addresses change, but stay
+  inside its line's /64.
+- **When it counts.** The facts refresh hourly, so a device counts only if
+  it is connected right then. A phone shows one or two addresses: Wi-Fi and
+  mobile data while it switches, or REALITY and XHTTP.
+- **What it can't see.** XHTTP and CDN links reach Xray through the relay's
+  own site, so they all count as one address, the site's. A link passed
+  around on XHTTP alone looks like one device. Devices behind one mobile
+  carrier's NAT can share an address too.
+
 ## Updates
 
 As for the server: `sudo morzer self-update` when a release needs a newer

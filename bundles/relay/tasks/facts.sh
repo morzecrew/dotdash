@@ -81,4 +81,25 @@ if [ "${DEVICE_TRAFFIC:-false}" = true ]; then
     echo "facts: Xray's stats did not answer: no traffic this time" >&2
   fi
 fi
+# With the device-addresses profile, in Xray's namespace: how many distinct
+# addresses each device is connected from right now, by name, and when that
+# was (addresses.jq). Xray keeps each device's addresses in memory while it
+# has a connection open (statsUserOnline, on for the gateway's agent anyway);
+# they go from its API on loopback through this pipe to jq, which keeps the
+# counts alone: nothing here prints or writes an address. Left out, with a
+# word on stderr, when Xray does not answer within 5 s.
+if [ "${DEVICE_ADDRESSES:-false}" = true ]; then
+  counts=
+  for _ in 1 2 3 4 5; do
+    counts=$(/opt/xray/xray api statsonlineiplist --server=127.0.0.1:10085 -all 2>/dev/null |
+      /jq/jq -c --argjson at "$(date +%s)" -f /task/addresses.jq 2>/dev/null) || counts=
+    [ -z "$counts" ] || break
+    sleep 1
+  done
+  if [ -n "$counts" ]; then
+    printf ', "addresses": %s' "$counts"
+  else
+    echo "facts: Xray's online addresses did not answer: no addresses this time" >&2
+  fi
+fi
 printf '}\n'

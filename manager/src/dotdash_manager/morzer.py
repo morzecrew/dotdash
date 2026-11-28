@@ -40,8 +40,9 @@ PathName = Annotated[str, Field(pattern=r"^[a-z0-9-]{1,32}$")]
 
 
 class Facts(BaseModel):
-    """The keys render, health and traffic read, each of the type they read
-    it as. strict: "443" is no port; extra: a later release's keys pass."""
+    """The keys render, health, traffic and addresses read, each of the type
+    they read it as. strict: "443" is no port; extra: a later release's keys
+    pass."""
     model_config = ConfigDict(strict=True, extra="allow")
 
 
@@ -80,6 +81,13 @@ class Traffic(Facts):
     devices: dict[str, int]
 
 
+class Addresses(Facts):
+    """A relay's reading, at at, of how many addresses each device is
+    connected from (the device-addresses profile)."""
+    at: int
+    devices: dict[str, Annotated[int, Field(ge=0)]]
+
+
 class TargetFacts(Facts):
     cert_days: int | None = None
     traffic: Traffic | None = None
@@ -113,6 +121,7 @@ class RelayFacts(TargetFacts):
     name: Annotated[str, Field(pattern=r"^[A-Za-z0-9._-]{1,24}$")] | None = None
     nonce: Annotated[str, Field(pattern=r"^[0-9a-f]{16}$")] | None = None
     groups: dict[Annotated[str, Field(pattern=r"^[a-z][a-z0-9]{0,15}$")], GroupState] | None = None
+    addresses: Addresses | None = None
 
 
 class CanaryFacts(Facts):

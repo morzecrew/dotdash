@@ -38,9 +38,14 @@ runtimes:
       # The bytes each device moves, in the facts the manager reads hourly,
       # which flags a device moving far more than usual: a leaked link.
       device-traffic: [compose/device-traffic.yaml]
+      # How many addresses each device is connected from right now, in the
+      # facts the manager reads hourly, which flags a device at several at
+      # once, or on two relays at once: a leaked link. Counts only, never an
+      # address.
+      device-addresses: [compose/device-addresses.yaml]
     # installation.profile=own-site,mkcp runs both, own-site,hysteria2 adds
     # Hysteria2, own-site,http-origin the door; metrics goes with any.
-    combinable: [own-site, mkcp, hysteria2, http-origin, metrics, device-traffic]
+    combinable: [own-site, mkcp, hysteria2, http-origin, metrics, device-traffic, device-addresses]
     options:
       project: dotdash-relay
 
@@ -260,9 +265,11 @@ managed:
 published:
   task: facts
   # Run again before every fleet publish, hourly, so the device-traffic
-  # profile's counts are an hour old at most; without it the facts are
-  # the same each time and stay as they are. One task operation an hour
-  # in the journal and the attestations (retention.attestations).
+  # profile's counts are an hour old at most, and the device-addresses
+  # profile's are read then, within 15 minutes past the hour on every
+  # machine (the fleet timer's spread); without it the facts are the same
+  # each time and stay as they are. One task operation an hour in the
+  # journal and the attestations (retention.attestations).
   refresh: publish
 
 tasks:
