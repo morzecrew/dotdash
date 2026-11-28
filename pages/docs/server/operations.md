@@ -7,7 +7,7 @@ bundle.
 
 | Task | Command |
 | --- | --- |
-| Update by hand | `sudo morzer update --stage && sudo morzer update --to <version>` |
+| Update by hand | `sudo morzer update --stage && sudo morzer update --to <version>`; with relays of 0.18, see [Moving from 0.18](../relay/gateway.md#moving-from-018) |
 | New morzer | `sudo morzer self-update` |
 | Backups off the machine | `sudo morzer backup target add s3://bucket/dotdash/<name> --credentials backup_s3`, a prefix per machine: morzer prunes every backup at a target's root |
 | Alerts | `sudo morzer notify target add https://hooks.example/morzer` |
@@ -40,7 +40,7 @@ machine's own.
 | Bundle | An authority may set | It tells the authority (`facts`) |
 | --- | --- | --- |
 | server | `vless_clients`, the shared keys (`reality_key`, `vless_seed`, `reality_short_id`, `xhttp_path`, `kcp_seed`, `subscription_key`, `relay_seed`), `servers`, `name`, `relays`, `relay_flags`, `cdn_hosts`, `cdn_extra`, `pools`, `subscription`, `direct`, `reality_second_key` and its keys, `hello_split` | its domain and ports, its `name`, the REALITY public key, the VLESS encryption string, and the whole days left on the site's certificate (`cert_days`) |
-| relay | `vless_clients`, `dotdash_id`, `dotdash_encryption`, `dotdash_short_id`, `dotdash_servers`, `dotdash_address`, `dotdash_port`, `dotdash_public_key`, `ipv6` | its `relay-entry` line, at [`entry_host`](../relay/reference.md) |
+| relay | `servers`, `via`, `ipv6`, `server_link`, `via_link`, `via_fingerprint`, `tunnel_group` | its `relay/1` line's fields, at [`entry_host`](../relay/reference.md), its `name` and `nonce`, each server group's state (`groups`), and under `own-site` `cert_days` |
 | canary | every `dotdash_*` | nothing |
 | client | `subscription_url`, `proxy_password` | nothing |
 

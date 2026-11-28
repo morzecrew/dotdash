@@ -41,8 +41,8 @@
 | `cdn_hosts` | `none` | the names of local [CDNs](cdn.md#a-local-cdn-for-restricted-networks) in front of this server, comma-separated; a link through each |
 | `cdn_extra` | `none` | `<name> <JSON object>` for each CDN name that asks for [XHTTP settings of its own](cdn.md#a-cdn-that-fetches-in-plain-http), the object as the CDN gives it; links and outbounds through that name carry it in place of dotdash's |
 | `name` | `none` | this server group's name, 1 to 16 lowercase letters and digits starting with a letter, the same on every server in `servers`: what relays know these servers by, and what their own links are named by in place of `server`; devices' apps show it, so pick an opaque one. `relay-config` needs it |
-| `relays` | a comment | one line per [relay](../relay/install.md), as its `relay-entry` prints it: `relay/1 <name> <nonce> <host> <site> <public key> <short id> <encryption>`, then `xhttp=<path>`, `kcp=<port>,<header>,<seed>`, `hy2=<port>`, `cdn=<name>[,<name>]`, `cdnpath=<path>`, `origin=…` and `cdn-only` where the relay has them. The relay comes in by an id these servers derive from `relay_seed` and its name and nonce, which [`relay-config -- <name>`](#a-relays-server1-line) prints it; deleting its line revokes it. For this release the lines of the one before, `<host> <site> <public key> <short id> <encryption> …` with `own-site <path>`, `name=`, `off=` and `standby`, still work, their relays coming in by their clients in `vless_clients` |
-| `relay_flags` | a comment | one `<name> <flag>...` line per relay that needs one: `off=<path>[,<path>]` (`reality`, `xhttp`, `mkcp`, `hysteria2`, or `cdn:<name>` for one CDN in front of it) leaves out paths its canaries find [blocked](../manager.md#blocked-paths), `split` keeps REALITY through it with its hello split, and `standby` makes it the [last resort](../relay/install.md#4-on-each-server-the-relays-line-in-relays), unchecked. A change restarts no Xray, as an edit to `relays` does |
+| `relays` | a comment | one line per [relay](../relay/install.md), as its `relay-entry` prints it: `relay/1 <name> <nonce> <host> <site> <public key> <short id> <encryption>`, then `xhttp=<path>`, `kcp=<port>,<header>,<seed>`, `hy2=<port>`, `cdn=<name>[,<name>]`, `cdnpath=<path>`, `origin=…` and `cdn-only` where the relay has them. The relay comes in by an id these servers derive from `relay_seed` and its name and nonce, which [`relay-config -- <name>`](#a-relays-server1-line) prints it; deleting its line revokes it. For this release the lines of the one before, `<host> <site> <public key> <short id> <encryption> …` with `own-site <path>`, `name=`, `off=` and `standby`, still work, their relays coming in by their clients in `vless_clients`, until each relay [moves](../relay/gateway.md#moving-from-018) |
+| `relay_flags` | a comment | one `<name> <flag>...` line per relay that needs one: `off=<path>[,<path>]` (`reality`, `xhttp`, `mkcp`, `hysteria2`, or `cdn:<name>` for one CDN in front of it) leaves out paths its canaries find [blocked](../manager.md#blocked-paths), and with every path off its subscription URL too, `split` keeps REALITY through it with its hello split, and `standby` makes it the [last resort](../relay/install.md#4-on-each-server-the-relays-line-in-relays), unchecked. A change restarts no Xray, as an edit to `relays` does |
 | `pools` | a comment | one `<pool> <member>...` line per [pool](devices.md#pools), the members device names, relay hosts and CDN hosts |
 | `direct` | `true` | `false`: no server's address in devices' links, configs or subscriptions, only [relays and CDN hosts](devices.md#keeping-the-servers-out-of-devices-links) |
 | `openflux_channels` | a comment | with the `openflux` profile, one `<device> <kind>[=<link>] ...` line per device that gets an [OpenFlux](openflux.md) channel |
@@ -59,7 +59,9 @@ name two lines of before share, a `relay_flags` line naming no relay, or a
 pool member that names nothing is only a warning. Two `relay/1` lines with one
 name, ignoring case, or one whose relay's client name, `relay-<name>`, a
 device in `vless_clients` has, fail it: Xray would refuse them too.
-`sudo morzer task run client-config --output -- --check` prints them all. Profiles (`installation.profile`): `xdns`,
+`sudo morzer task run client-config --output -- --check` prints them all,
+and warns of each line of 0.18 left in `relays` and each client in
+`vless_clients` named as a `relay/1` line's relay. Profiles (`installation.profile`): `xdns`,
 `xhttp-reality`, `mkcp`, `hysteria2`, `openvpn` (for an [OpenVPN line](upstreams.md#openvpn)),
 `warm` (for [warm connections](upstreams.md#warm-connections)),
 `openflux` (for [OpenFlux](openflux.md), with `openflux_channels`),
@@ -82,7 +84,8 @@ secret as a link. Every server in `servers` prints the same line, as they
 share `relay_seed`. Rotating `relay_seed` revokes every relay of the group at
 once; each then needs its line printed again. For a relay of the release
 before, which has no `relay/1` line, `relay-config -- <its client's name>`
-prints what it did.
+prints what it did, its copy of the devices included, until it
+[moves to this release](../relay/gateway.md#moving-from-018).
 
 Each relay fetches its device list from these servers through its tunnel,
 so a device added or deleted in `vless_clients` reaches the relay with no

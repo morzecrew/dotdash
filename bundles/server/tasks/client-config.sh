@@ -157,8 +157,9 @@ pbk=$(/opt/xray/xray-entrypoint reality-password /run/secrets/reality_key)
 # ks and ko kcp='s port, header, seed and opener; d its CDN hosts, the
 # origin's among them, but those off= takes, comma-separated, which pick then
 # cuts down to a device's, and dall all of them; rn its route, which its links are named by;
-# or its origin hosts. awk reads $2 the site, $6 own-site, $13 cdn-only, $17
-# the route, $19 standby and $21 all the CDN hosts.
+# or its origin hosts. awk reads $2 the site, $6 own-site ("-" with every
+# path off), $13 cdn-only, $17 the route, $19 standby and $21 all the CDN
+# hosts.
 cols='h s k i e o p kp kh ks ko d only off sp hy rn cp sb or dall'
 # fronts_ok <list>: whether it is "<host>[/<path>]", comma-separated.
 fronts_ok() {
@@ -344,6 +345,17 @@ all_relays=$(set -f; n=0 seen=; printf '%s\n' "${RELAYS:-}" | while read -r line
       esac; fi ;;
   esac
   taken="${taken:-} $nm"
+  # A line of before is read by this release alone: --check says so.
+  $v1 || ! $check || warn "relays: line $n: $1's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated"
+  # Every path of it off (a burnt relay, or a spare held back, which
+  # dotdash-manager keeps in relays so its id here stands): no subscription
+  # URL through it either, so its address reaches no device. o is read for
+  # that alone from here.
+  dark=true
+  case ,$x, in *,reality,*) [ "$sp" != split ] || dark=false ;; *) dark=false ;; esac
+  [ -z "$p" ] || case ,$x, in *,xhttp,*) ;; *) dark=false ;; esac
+  [ "$hy$kp$d" = --- ] || dark=false
+  ! $dark || o=
   echo "$1 $2 $3 $4 $5 ${o:--} ${p:--} $kp $kh $ks $ko $d $only $x $sp $hy $nm $cp $sb $or $dall"
 done)
 # A relay's route, unnamed: "relay", numbered where there are several by its
@@ -422,6 +434,12 @@ printf '%s\n' "${RELAY_FLAGS:-}" | sed 's/#.*//' | awk 'NF { print NR, $0 }' | {
     esac
   done
 done; }
+# A relay/1 line's relay comes in by its derived id, so a client named as it
+# is is likely its client of 0.18, left in vless_clients: --check says so.
+! $check || printf '%s\n' "$names" | while read -r m; do
+  [ -n "$m" ] && printf '%s\n' "$v1_names" | grep -qxF "$(printf '%s' "$m" | tr '[:upper:]' '[:lower:]')" || continue
+  warn "vless_clients: $m is named as a relay/1 line's relay, which comes in by its derived id: if it is that relay's client of 0.18, delete it"
+done
 # Their edges take GET alone and no request body (some answer 413 to any),
 # so a device uploads in packet-up GETs with the data in headers. The server's
 # inbound reads that as it is: its placement is auto. Edges cap a request's
@@ -786,7 +804,7 @@ client() { # <id> <label>
     own="https://${DOMAIN}${at}/${token}"
     [ "$direct" != false ] && [ -z "$only_relay" ] || own=
     if [ -n "$only_relay" ] && [ -z "$sub_relays" ]; then
-      echo "$2: no subscription URL through $only_relay, which has no site of its own or offers CDN links alone" >&2
+      echo "$2: no subscription URL through $only_relay, which has no site of its own, offers CDN links alone, or has every path off in relay_flags" >&2
     elif [ -z "$own$sub_relays" ]; then
       echo "$2: no subscription URL: direct=false keeps this server's out, and the device gets no own-site relay" >&2
     fi

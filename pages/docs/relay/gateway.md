@@ -89,19 +89,29 @@ relay of that group.
 A relay at 0.19 needs servers at 0.19: update the servers first. A server at
 0.19 still reads the relay lines of 0.18 for one release, so its update keeps
 every link. Each relay then idles from its update until its `servers` line
-is in, a few minutes. Rehearse it on a spare first. For server S and relays
-R1…Rn:
+is in, a few minutes, and the canaries watching it fail meanwhile.
+Unattended updates take the servers to 0.19 by themselves, but never a
+relay: one that can't be rolled back waits, staged, for you. Rehearse it on
+a spare first. For a server group S, one server or
+[several sharing keys](../server/several-servers.md), and relays R1…Rn:
 
 1. **Before.** On S, keep the old lines for the way back, and pick each
-   relay's name and S's name. Leave each relay's old `<uuid> <name>` line in
-   S's `vless_clients` until the end.
+   relay's name and S's name.
 
     ```sh
     sudo morzer config get relays > ~/relays.0.18
     ```
 
-2. **S first.** Its devices see no change: the old relays still come in by
-   their lines in `vless_clients`.
+    - Leave each relay's old `<uuid> <name>` line in S's `vless_clients`
+      until the end. A client there named `relay-<the relay's new name>`
+      blocks the relay's `relay/1` line, which S refuses beside it: pick
+      another name for the relay, or rename the client first.
+    - Note each old line's `standby`, `off=` and `split`: a `relay/1` line
+      carries none of them. They go in S's `relay_flags`, by the relay's
+      name.
+
+2. **S first**, each of its servers. Its devices see no change: the old
+   relays still come in by their clients in `vless_clients`.
 
     ```sh
     sudo morzer self-update                       # if the release notes ask for a newer morzer
@@ -110,6 +120,19 @@ R1…Rn:
     sudo morzer task run client-config --output -- --check
     ```
 
+    `--check` warns of each line of 0.18 left in `relays`, until step 4.
+    With several servers, each generated a `relay_seed` of its own on its
+    update, and they need one: copy the first one's to the others before any
+    `relay/1` line goes in, as the other shared secrets:
+
+    ```sh
+    sudo cat /run/dotdash/secrets/relay_seed | ssh b.example.com sudo morzer secret set relay_seed
+    ```
+
+    Until it is updated, a relay keeps its own copy of the devices: a device
+    added to or deleted from S reaches it only once you set that copy again,
+    from `relay-config -- <its client's name>`, as before.
+
 3. **Each relay, one at a time.** Devices use the others meanwhile.
 
     ```sh
@@ -117,9 +140,12 @@ R1…Rn:
     sudo morzer update --stage
     sudo morzer update --to 0.19.0 --set name=ri
     sudo morzer task run relay-entry --output -- <its domain, or its IP>
-    # on S: replace Ri's old line with that relay/1 line. The same host,
-    # keys and transports, so devices' links don't change
+    # on each server of S: replace Ri's old line with that relay/1 line. The
+    # same host, keys and transports, so devices' links don't change, but
+    # for their name, now Ri's
     sudo EDITOR=nano morzer config edit relays
+    sudo EDITOR=nano morzer config edit relay_flags   # its old line's flags, if it had any: "ri standby"
+    # on one server of S
     sudo morzer task run relay-config --output -- ri
     # on Ri
     sudo EDITOR=nano morzer secret edit servers   # the server/1 line
@@ -127,22 +153,29 @@ R1…Rn:
     sudo morzer task run entry-check --output
     ```
 
-    A relay with `via`: move the relays it goes through first, then give it
-    `sudo EDITOR=nano morzer secret edit via` with each one's `relay/1` line,
-    before `servers`. The `via` parameter's old lines are dropped with the
-    update (`config list` marks the value stale; `config unset via` clears
-    it). `dotdash_link` is now `server_link`. Under `own-site`, a device that
-    refreshes its subscription through the relay during the gap gets the
-    site; its app keeps its old links, and the next refresh works.
+    - A relay with `via`: move the relays it goes through first, then give
+      it `sudo EDITOR=nano morzer secret edit via` with each one's `relay/1`
+      line, before `servers`. The `via` parameter's old lines are dropped
+      with the update (`config list` marks the value stale;
+      `config unset via` clears it).
+    - `dotdash_link` is now `server_link`: a relay that went to S over XHTTP
+      with REALITY takes `--set server_link=xhttp-reality` with its update.
+    - Under `own-site`, a device that refreshes its subscription through the
+      relay during the gap gets the site; its app keeps its old links, and
+      the next refresh works.
 
 4. **The end.** On S, once every relay's line in `relays` is a `relay/1`
    line, delete each relay's old line from `vless_clients`:
    `sudo EDITOR=nano morzer secret edit vless_clients`.
+   `client-config --check` warns while a line of 0.18 is left in `relays`,
+   and of a client named as a `relay/1` line's relay, which is likely its
+   old line.
 
 **The way back**, relays first: a server back at 0.18 can't read `relay/1`
 lines. A relay's `morzer rollback` is refused, as 0.19 drops values 0.18
 requires: restore its pre-update backup instead, then put its old line back
-in S's `relays` from `~/relays.0.18`.
+in S's `relays` from `~/relays.0.18`, and its client in `vless_clients` if
+step 4 deleted it.
 
 ```sh
 sudo morzer restore --backup <the pre-update one> --force --confirm <installation-id>

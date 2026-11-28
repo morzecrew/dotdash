@@ -60,7 +60,7 @@ each device's own servers through the relay's tunnel by the token's first
 12 hex characters, and XHTTP on the secret path
 `xhttp_path`, which `init` generates. With `cdn_hosts` set, `relay-entry`
 ends the relay's line with `cdn=<name>,...` and `cdnpath=<path>`, and the
-server gives each device a `relay · cdn` link through each, by a secret path
+server gives each device a `r1 · cdn` link through each, by a secret path
 of the CDNs' own (`cdn_xhttp_path`, generated too) that a CDN reading the
 requests never learns the other from
 ([CDN in front of a relay](../server/cdn.md#in-front-of-a-relay)). See
@@ -81,7 +81,7 @@ site's certificate, each device's UUID its login, and carries it on to the
 servers like REALITY. It needs `own-site`, whose certificate it serves:
 without it the profile is refused. `relay-entry` then ends the relay's line
 with `hy2=<port>`, from which the server gives each device a
-`relay · hy2` link. Open the UDP port in the provider's firewall, and
+`r1 · hy2` link. Open the UDP port in the provider's firewall, and
 replace the relay's line on the server after turning it on.
 
 `installation.profile=own-site,http-origin`: the relay's Caddy also listens
@@ -92,7 +92,7 @@ alone, which it passes on to Xray's XHTTP inbound; everyone else gets a 404.
 It needs `own-site`, whose Caddy is the door: without it the profile is
 refused. `relay-entry` then ends the relay's line with `cdnpath=<path>` and
 `origin=<http_origin_host>`, from which the server gives each device a
-`relay · cdn` link through that name. Where the CDN gives several names,
+`r1 · cdn` link through that name. Where the CDN gives several names,
 set them all, comma-separated: each gets a link of its own, `cdn 1`,
 `cdn 2` and on. A name the CDN gives with a path of its own takes it after
 the name, `<name>/<path>`, and its settings go in the server's `cdn_extra`
@@ -102,7 +102,7 @@ the name, `<name>/<path>`, and its settings go in the server's `cdn_extra`
 relay serves [mKCP](../server/mkcp.md) on UDP `kcp_port` too, under its own
 `kcp_seed`, and carries it on to the servers like REALITY. `relay-entry` then
 ends the relay's line with `kcp=<port>,<header>,<seed>`, from which the server
-gives each device a `relay · kcp` link. Open the UDP port in the
+gives each device a `r1 · kcp` link. Open the UDP port in the
 provider's firewall, and replace the relay's line on the server after turning
 it on.
 

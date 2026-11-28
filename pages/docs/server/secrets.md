@@ -16,6 +16,7 @@ replace a generated one with `sudo morzer secret rotate <name>`.
 | `cdn_xhttp_path` | yes | secret path the [CDNs](cdn.md) in front take to Xray's CDN inbound; this server's own, not shared |
 | `subscription_key` | yes | key the subscription URLs derive from |
 | `kcp_seed` | yes | key [mKCP](mkcp.md)'s packets are encrypted under |
+| `relay_seed` | yes | what each [relay](../relay/install.md)'s id on these servers derives from, with its name and nonce; shared within a group, as the keys, and rotating it revokes every relay of the group ([A relay's server/1 line](parameters.md#a-relays-server1-line)) |
 | `reality_key_second` | no | with `reality_second_key`, a second REALITY private key ([Rotating the REALITY key](#rotating-the-reality-key)) |
 | `reality_short_id_second` | no | with `reality_second_key`, the short id that goes with it |
 | `call_token` | no | with the `openflux` profile and `call_provider=tm`, the provider's API token ([Calls made for you](openflux.md#calls-made-for-you)) |
@@ -57,7 +58,9 @@ no one cut off. A prober meets the site through both, as before.
     sudo morzer config set reality_second_key=false
     ```
 
-With [relays](../relay/index.md) or [several servers](several-servers.md),
-set the same keys on each server, and move relays to the new key
-(`dotdash_public_key`, `dotdash_short_id`) between steps 2 and 3.
+With [several servers](several-servers.md), set the same keys on each
+server. With [relays](../relay/index.md), move them to the new key between
+steps 2 and 3: print the group's line again on one server,
+`relay-config -- <relay>`, and replace the group's line in each relay's
+`servers` with it. A relay still on the old key gets in until step 3.
 

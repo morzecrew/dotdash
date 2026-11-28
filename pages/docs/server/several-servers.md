@@ -9,8 +9,10 @@ fails over between them. Add and revoke devices on each.
 for s in vless_clients vless_seed reality_key reality_short_id xhttp_path kcp_seed subscription_key relay_seed; do
   sudo cat /run/dotdash/secrets/$s | ssh b.example.com sudo morzer secret set $s
 done
-sudo morzer config get relays | ssh b.example.com sudo morzer config set --set-file relays=-
-# on every server
+for p in relays relay_flags; do
+  sudo morzer config get $p | ssh b.example.com sudo morzer config set --set-file $p=-
+done
+# on every server: the same servers, and the same name
 sudo morzer config set servers=example.com,b.example.com name=s1
 ```
 
@@ -23,11 +25,16 @@ sudo morzer config set servers=example.com,b.example.com name=s1
 - **`kcp_seed`:** every server's mKCP links carry this server's seed, so
   with another seed there they are dead.
 - **`subscription_key`:** a device's URL is the same token on every server.
-  A relay fetches it from the first server that answers, so with another
+  A relay fetches it from whichever server it reaches, so with another
   key there the URL gets a 404.
 - While [rotating the REALITY key](secrets.md#rotating-the-reality-key),
   copy `reality_key_second` and `reality_short_id_second` too.
-- **`relay_seed`, `relays` and `name`:** a relay's id is derived from
-  `relay_seed`, so every server lets it in by the same id and prints it the
-  same `server/1` line, which names the group by `name`. Copy `relay_flags`
-  too where you use it.
+- **`relay_seed`, `name`, `relays` and `relay_flags`:** the servers are one
+  group to each [relay](../relay/index.md). A relay's id is derived from
+  `relay_seed`, so every server lets it in by the same id, and each prints it
+  the same `server/1` line, which names the group by `name` and lists every
+  server: `server/1 s1 example.com,b.example.com …`. The relay holds that one
+  line for the group, uses whichever server answers fastest, and fetches the
+  group's devices from any of them. A server added later goes into that line:
+  print it again with `relay-config -- <relay>` and replace the group's line
+  in each relay's `servers`.

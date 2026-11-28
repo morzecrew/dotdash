@@ -5,7 +5,8 @@ server, or [several sharing keys](../server/several-servers.md), with a
 `name`. Two lines pass between them: the relay's line goes into each
 server's `relays`, and each server's line for the relay goes into the
 relay's `servers`. Nobody copies devices or ids by hand. The relay fetches
-each group's devices from its servers every minute.
+each group's devices from its servers every minute. A relay of 0.18 is
+updated in place instead: [Moving from 0.18](gateway.md#moving-from-018).
 
 ![Setup: install the relay with a name, relay-entry prints its line, the line into each server's relays, relay-config on each server prints a line for the relay, those lines into the relay's servers, devices get the relay's links](../assets/diagrams/relay-setup.light.svg#only-light)
 ![Setup: install the relay with a name, relay-entry prints its line, the line into each server's relays, relay-config on each server prints a line for the relay, those lines into the relay's servers, devices get the relay's links](../assets/diagrams/relay-setup.dark.svg#only-dark)
@@ -193,15 +194,16 @@ Subscriptions pick the links up by themselves; otherwise resend them. Do it
 now, while devices can still reach the server.
 
 With subscriptions on and a relay under `own-site`, each device also gets
-its subscription through the relay, which `client-config -- --relay r1
-phone` prints alone:
+its subscription through the relay, under its server's
+(`client-config -- phone`):
 
 ```text
 https://a.example.com/<token>
 through the relay relay.example.net: https://relay.example.net/<token>
 ```
 
-Give a device inside the restricted network the second one. The relay
+Give a device inside the restricted network the second one, which
+`client-config -- --relay r1 phone` prints alone. The relay
 fetches it from the device's own servers through its tunnel, so the app
 keeps refreshing its links while only some addresses get through, and
 nothing between the relay and the server can read them. The relay never

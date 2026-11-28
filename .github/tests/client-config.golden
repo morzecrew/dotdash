@@ -2145,6 +2145,16 @@ entry_port is not a port: x
 === --check, the fleet
 --- exit 0
 --- stderr
+warning: relays: line 2: 203.0.113.1's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
+warning: relays: line 3: 203.0.113.2's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
+warning: relays: line 5: 203.0.113.3's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
+warning: relays: line 6: 203.0.113.4's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
+warning: relays: line 7: 203.0.113.5's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
+warning: relays: line 8: 203.0.113.6's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
+warning: relays: line 9: 203.0.113.7's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
+warning: relays: line 10: 203.0.113.8's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
+warning: relays: line 11: 203.0.113.9's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
+warning: relays: line 12: 2001:db8::9's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
 cdn_hosts: bad_x is not a host name; left out
 warning: pools: line 4: nobody.example.net is no device name, relay host or CDN host
 cdn_extra: line 6: Xray refuses the extra for cdn-r2.example.net; dotdash's own through it
@@ -2153,20 +2163,33 @@ cdn_extra: line 8: the extra for cdn-p.example.net is not a JSON object; dotdash
 === --check, every line said
 --- exit 0
 --- stderr
+warning: relays: line 1: 203.0.113.10's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
 warning: relays: line 2: 203.0.113.11 is named twin, as an earlier relay is; it goes by its number
+warning: relays: line 2: 203.0.113.11's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
 relays: line 3: the kcp= field of 203.0.113.12 is not <port>,<header>,<seed>[,<open>]; no mKCP link through it
 warning: relays: line 3: the name= field of 203.0.113.12 is not 1 to 24 letters, digits, dots, dashes or underscores; it goes by its number
+warning: relays: line 3: 203.0.113.12's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
 relays: line 4: the hy2= field of 203.0.113.13 is not a port; no Hysteria2 link through it
+warning: relays: line 4: 203.0.113.13's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
 relays: line 5: 203.0.113.14 names hy2= but no site of its own, whose certificate Hysteria2 needs; no Hysteria2 link through it
+warning: relays: line 5: 203.0.113.14's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
 relays: line 6: the cdn= field of 203.0.113.15 is not <host>[,<host>]; no CDN link through it
+warning: relays: line 6: 203.0.113.15's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
 relays: line 7: 203.0.113.16 names CDNs but no XHTTP path of its own site; no CDN link through it
+warning: relays: line 7: 203.0.113.16's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
 relays: line 8: the cdnpath= field of 203.0.113.17 is not hex; its CDN links take its XHTTP path
+warning: relays: line 8: 203.0.113.17's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
 relays: line 9: 203.0.113.18 names origin= but no cdnpath=, the path its door passes; no link through it
+warning: relays: line 9: 203.0.113.18's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
 relays: line 10: the origin= field of 203.0.113.19 is not <host>[/<path>][,<host>[/<path>]]; no link through it
+warning: relays: line 10: 203.0.113.19's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
 relays: line 11: the off= field of 203.0.113.20 is not <path>[,<path>]; ignored
+warning: relays: line 11: 203.0.113.20's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
 warning: relays: line 12: the off= field of 203.0.113.21 names foo, not reality, xhttp, mkcp, hysteria2 or cdn:<host>; ignored
+warning: relays: line 12: 203.0.113.21's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
 relays: line 13: 203.0.113.22 is cdn-only but has no CDN link; left out
 warning: relays: line 14: no field is named cdn_path=; ignored
+warning: relays: line 14: 203.0.113.23's line is of 0.18, which the next release won't read: replace it with the relay/1 line its relay-entry prints once the relay is updated
 relays: line 15: its site is malformed; left out
 === off= names CDNs
 --- exit 0

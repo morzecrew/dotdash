@@ -20,7 +20,7 @@ same.
 | A server group's `reality_key`, `vless_seed` or `reality_short_id` | Run `relay-config -- <relay>` on one of its servers again, and replace that group's line in the relay's `servers`. Until then the group shows `down` there. |
 | A group's `relay_seed` | The same, for every relay of the group: each has a new id there. |
 | The relay's own keys (`secret rotate` on the relay) | Run `relay-entry` again, replace the relay's line in every server's `relays`, and send devices their links again (subscriptions pick them up). Its `servers` lines stay. |
-| The relay's `nonce` or `name` | The same, then `relay-config` on each server again, as the relay's id there changes: replace its `servers` lines. |
+| The relay's `nonce` or `name` | The same, then `relay-config` on one server of each group again, as the relay's id there changes: replace its `servers` lines. |
 | The relay's address | `relay-entry -- <new address>`, then replace the line on every server. |
 
 ## Undo a change
@@ -272,6 +272,8 @@ relay's machinery fails.
 
 As for the server: `sudo morzer self-update` when a release needs a newer
 morzer, then `sudo morzer update --stage && sudo morzer update --to <version>`.
+A relay of 0.18 moves to the gateway after its servers, by hand:
+[Moving from 0.18](gateway.md#moving-from-018).
 Unattended updates follow
 `update.channel=oci://ghcr.io/morzecrew/dotdash-relay:stable`; see
 [Operations](../server/operations.md#unattended-updates).
