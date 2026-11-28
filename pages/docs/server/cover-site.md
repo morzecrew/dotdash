@@ -81,9 +81,14 @@ Either way:
   `config set cover=…` is undone when the app it names doesn't answer.
 - `cover=pages` goes back to pages.
 
-Pick something people run on servers like this one, such as a wiki, a file
-share or a dashboard behind a login, and give it content. The same app on
-every server would link them, as the bundled page does, so vary it.
+Pick a popular open-source app that many people run on their own domains,
+and run it as its project publishes it: an app that shows strangers a login
+page or a public status page hides among thousands of installs of it, where
+an app of your own, or one changed to look unique, stands alone. Keep it
+current, since it shows its version to scanners and faces every one of them;
+never leave a first-run page or a default password reachable; and turn off
+the calls it makes to the outside. Use more than one such app across your
+machines, so one face learned blocks fewer of them.
 
 ## An app installed with morzer
 
@@ -107,7 +112,7 @@ there: name that site in `tunnel_host`, and have the app call
 `http://caddy:8090`, with no TLS.
 
 ```sh
-sudo morzer --product dotdash-relay config set tunnel_host=files.example.com
+sudo morzer --product dotdash-relay config set tunnel_host=peer.example.net
 ```
 
 Caddy sends the calls on as HTTPS inside the link to that relay, which then
