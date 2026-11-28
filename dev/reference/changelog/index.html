@@ -4177,6 +4177,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>The server's facts carry its <code>name</code>.</p>
 </li>
 <li>
+<p>The manager runs server groups: a <code>[[group]]</code> in the roster holds its devices, each server names its <code>group</code> (none needed with one), and a relay serves every group unless its <code>groups</code> narrows it. Each group has keys and a <code>relay_seed</code> of its own in the state. A group's servers get its <code>name</code>, its <code>relay_seed</code> and keys, its devices and canaries alone in <code>vless_clients</code>, a <code>relay/1</code> line in <code>relays</code> for each relay serving it, made from the relay's facts, and <code>relay_flags</code> for standby, <code>off=</code> and <code>split</code>. A relay gets a <code>server/1</code> line in its <code>servers</code> secret per group it serves, from that group's servers that applied its keys and the relay's id there, which the manager derives as the servers do (checked against the shared vector), and <code>via</code> as a secret of <code>relay/1</code> lines, <code>server_link</code> and <code>tunnel_group</code> from the roster. No relay is sent a device list, so adding a device changes no relay's document.</p>
+</li>
+<li>
+<p>The manager's <code>status</code> gives each group a relay serves a line of its own in the topology, as the relay's facts say: live, down, refused or starting, its servers, its devices and the age of its list. One group down says nothing of the relay or its other groups.</p>
+</li>
+<li>
 <p>The server writes each <code>relay/1</code> relay's device list, whether or not subscriptions are on: every device's id and name, the first 12 hex characters of its subscription token with <code>subscription</code> on, and the other relays' ids. A relay fetches it through its own tunnel at <code>list.sub.dotdash.internal/&lt;list token&gt;</code>, the token the first 32 hex characters of <code>sha256("&lt;relay id&gt;:list")</code>, and a device's subscription at <code>&lt;prefix&gt;.sub.dotdash.internal/&lt;token&gt;</code>. Xray hands those names to Caddy's new internal listener on port 8085, never published, for relays' users alone (a fixed freedom outbound, <code>sub</code>), and blocks every other user asking for a <code>dotdash.internal</code> name. The public site never serves a list.</p>
 </li>
 </ul>
@@ -4190,6 +4196,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </li>
 <li>
 <p><strong>Breaking for anything that reads a relay's facts:</strong> <code>clients</code> and <code>via</code> are gone, <code>name</code>, <code>nonce</code> and <code>groups</code> are new, and device traffic is counted per <code>&lt;device&gt;@&lt;group&gt;</code>. A relay of this release takes <code>servers</code>, <code>via</code>, <code>ipv6</code>, <code>server_link</code>, <code>via_link</code>, <code>via_fingerprint</code> and <code>tunnel_group</code> from an authority, and nothing else: the manager drives one only from its release with server groups.</p>
+</li>
+<li>
+<p><strong>Breaking for the manager:</strong> its roster lists devices under a <code>[[group]]</code> named as its servers should be, and refuses <code>devices</code> at the top; the state's keys become the first group's, so its servers keep theirs. It drives servers and relays of this release alone: a relay whose facts carry no <code>nonce</code>, one from before, waits in no group's <code>relays</code> until it is updated, and gets no document. Update the servers first, with the manager of before, then this manager and the relays together. Relays' clients leave the servers' <code>vless_clients</code>, <code>rotate</code> rotates every group at once, each proven by a canary watching its servers, device traffic from relays is read per <code>&lt;device&gt;@&lt;group&gt;</code>, and <code>status</code> no longer compares a relay's device list with what it sent. <code>join</code> brings a relay up idle under its roster name (<code>--set name=</code>), with no document: the next <code>sync</code> gives the servers its line and it theirs. <code>adopt</code> takes a server's keys and <code>relay_seed</code> as its group's, so relays keep their ids, and says when the server's <code>name</code> differs from its group's.</p>
+</li>
+<li>
+<p>The manager keeps a burnt relay, or a spare held back, in its groups' <code>relays</code>, every path of it off in their <code>relay_flags</code>, where it had left it out: out of <code>relays</code> a relay is out of its id there, so its canaries could never get through again, and a relay going <code>via</code> it would lose its way to the servers. Devices still get none of its links, and it still leaves the pools. A relay's blocked paths and split hello go in <code>relay_flags</code> too, so a verdict restarts no server's Xray.</p>
 </li>
 <li>
 <p>A subscription through a relay goes to the device's own group by its token's first 12 hex characters, which that group's list carries, so URLs keep their form and the relay never holds a whole token. Caddy no longer restarts when servers change. A token no group lists, or its server lacks, and a group that is down, get the relay's site, as any other path.</p>
@@ -4210,7 +4222,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p>A cover app's own headers reach visitors, on the server and on own-site relays: Caddy no longer replaces its <code>Referrer-Policy</code>, adds HSTS or <code>X-Content-Type-Options</code> over its own, or removes its <code>Server</code>. It sets those three only where the app sends none, and removes only its own <code>Server</code> and the <code>Via</code> it adds. Every site had answered with the same set, whatever the app, which no install of a stock app such as Vaultwarden does.</p>
 </li>
 <li>
-<p>The manager refuses two ids that differ only in bytes 6 and 7, of devices, canaries or relays. Xray zeroes those bytes before it looks an id up, so it took both for one device, logged and routed as the one listed last. <code>adopt</code> refuses such a pair from a server, <code>sync</code> sends none out (<code>renew</code> one of the two), and the ids <code>sync</code> and <code>renew</code> make never collide that way.</p>
+<p>The manager refuses two ids that differ only in bytes 6 and 7, of devices or canaries, in one group or across groups, as a relay drops both. Xray zeroes those bytes before it looks an id up, so it took both for one device, logged and routed as the one listed last. <code>adopt</code> refuses such a pair from a server, <code>sync</code> sends none out (<code>renew</code> one of the two), and the ids <code>sync</code> and <code>renew</code> make never collide that way.</p>
 </li>
 </ul>
 <h2 id="0180-2026-11-26">[0.18.0] - 2026-11-26<a class="headerlink" href="#0180-2026-11-26" title="Permanent link">&para;</a></h2>
