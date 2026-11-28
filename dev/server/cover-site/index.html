@@ -2363,9 +2363,14 @@ bridge address only.</p>
   <code>config set cover=…</code> is undone when the app it names doesn't answer.</li>
 <li><code>cover=pages</code> goes back to pages.</li>
 </ul>
-<p>Pick something people run on servers like this one, such as a wiki, a file
-share or a dashboard behind a login, and give it content. The same app on
-every server would link them, as the bundled page does, so vary it.</p>
+<p>Pick a popular open-source app that many people run on their own domains,
+and run it as its project publishes it: an app that shows strangers a login
+page or a public status page hides among thousands of installs of it, where
+an app of your own, or one changed to look unique, stands alone. Keep it
+current, since it shows its version to scanners and faces every one of them;
+never leave a first-run page or a default password reachable; and turn off
+the calls it makes to the outside. Use more than one such app across your
+machines, so one face learned blocks fewer of them.</p>
 <h2 id="an-app-installed-with-morzer">An app installed with morzer<a class="headerlink" href="#an-app-installed-with-morzer" title="Permanent link">&para;</a></h2>
 <p>An app shipped as a morzer bundle of its own installs beside this server as a
 second installation, updated and rolled back on its own. Its Compose file
@@ -2383,7 +2388,7 @@ app on a relay may make calls of its own to a site on a relay this one goes
 through (<code>via</code>). It can send them through the tunnel instead of straight
 there: name that site in <code>tunnel_host</code>, and have the app call
 <code>http://caddy:8090</code>, with no TLS.</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>--product<span class="w"> </span>dotdash-relay<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">tunnel_host</span><span class="o">=</span>files.example.com
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>--product<span class="w"> </span>dotdash-relay<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">tunnel_host</span><span class="o">=</span>peer.example.net
 </code></pre></div>
 <p>Caddy sends the calls on as HTTPS inside the link to that relay, which then
 sees one TLS client from this one, Xray's, instead of two.</p>
