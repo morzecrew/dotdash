@@ -2201,7 +2201,8 @@ start, while devices still reach the server.</p>
   hand over messages. If a link may have leaked, delete the device from
   <code>vless_clients</code> and give it a new one. With the manager, the
   <code>device-traffic</code> profile names a device that suddenly moves far more than
-  usual (<a href="../manager/#leaked-links">Leaked links</a>).</li>
+  usual, and a relay's <code>device-addresses</code> profile one connected from three
+  places at once (<a href="../manager/#leaked-links">Leaked links</a>).</li>
 <li><strong>Nothing gets through at all</strong>, neither relay nor CDN: an
   <a href="../server/openflux/">OpenFlux</a> channel meets the device on a service the
   network still lets through, at 1-2 Mbit/s, in a second app. Set it up

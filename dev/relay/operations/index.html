@@ -1677,6 +1677,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#devices-at-several-addresses" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Devices at several addresses
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#updates" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2343,6 +2354,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#devices-at-several-addresses" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Devices at several addresses
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#updates" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2727,6 +2749,30 @@ per inbound shows which transport devices use. Each server's outbound is
 tagged <code>&lt;group&gt;-&lt;n&gt;</code>, so group names reach whoever scrapes the metrics.
 Alert on <code>dotdash_group_live == 0</code>: morzer's own alerts fire only when the
 relay's machinery fails.</p>
+<h2 id="devices-at-several-addresses">Devices at several addresses<a class="headerlink" href="#devices-at-several-addresses" title="Permanent link">&para;</a></h2>
+<p>A link passed around gets used from several places at once. The
+<code>device-addresses</code> profile counts, for each device, how many addresses it is
+connected from at that moment, so the <a href="../../manager/#leaked-links">manager</a>
+can name a device at three or more at once, or on two relays at once:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>device-addresses<span class="w">    </span><span class="c1"># beside the profiles you run</span>
+</code></pre></div>
+<ul>
+<li><strong>Only counts leave.</strong> Xray keeps each device's addresses in memory while
+  it has a connection open, with or without the profile: the gateway's agent
+  needs them to spot a deleted device still connected. An address is gone
+  once its last connection closes. The facts task reads them from Xray's API
+  and keeps only the count. Nothing writes an address to disk, and the facts
+  never carry one.</li>
+<li><strong>An IPv6 /64 counts once.</strong> A phone's IPv6 addresses change, but stay
+  inside its line's /64.</li>
+<li><strong>When it counts.</strong> The facts refresh hourly, so a device counts only if
+  it is connected right then. A phone shows one or two addresses: Wi-Fi and
+  mobile data while it switches, or REALITY and XHTTP.</li>
+<li><strong>What it can't see.</strong> XHTTP and CDN links reach Xray through the relay's
+  own site, so they all count as one address, the site's. A link passed
+  around on XHTTP alone looks like one device. Devices behind one mobile
+  carrier's NAT can share an address too.</li>
+</ul>
 <h2 id="updates">Updates<a class="headerlink" href="#updates" title="Permanent link">&para;</a></h2>
 <p>As for the server: <code>sudo morzer self-update</code> when a release needs a newer
 morzer, then <code>sudo morzer update --stage &amp;&amp; sudo morzer update --to &lt;version&gt;</code>.

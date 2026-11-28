@@ -2961,6 +2961,9 @@ group's line. Each group is its own: one down says nothing of the relay's
 entry, which its canaries judge, nor of its other groups. A canary passing
 while the relay says <code>b</code> is down means the entry is fine and <code>b</code>'s servers
 or the way to them are not.</p>
+<p>Under the relays' <code>device-addresses</code> profile, <code>status</code> ends with the devices
+<code>sync</code> named in the last day (<a href="#leaked-links">Leaked links</a>). They change no
+exit code.</p>
 <p>It reads each machine's own fleet row and the newest document on the target,
 two morzer calls, and the rest from the state, so it prints no key, path or
 id. It exits 1 when a document is refused, a machine doesn't follow the
@@ -3120,6 +3123,22 @@ it ever did. A long video call or a big download can too, so ask before
 renewing it. Only counts reach the manager, never an address. They
 are an hour behind at most, as the facts refresh hourly. A server or relay
 that restarts loses only what it counted since the last refresh.</p>
+<p>With the <code>device-addresses</code> profile on the relays
+(<a href="../relay/operations/#devices-at-several-addresses">relay</a>), their facts
+also carry how many addresses each device is connected from when they
+refresh, an IPv6 /64 counted once. <code>sync</code> names a device at three or more
+addresses at once on one relay, or on two relays whose facts refreshed within
+15 minutes of each other:</p>
+<div class="highlight"><pre><span></span><code>phone-2: 4 addresses at once on relay r1 at 2026-12-03 14:05 UTC: if its link may have leaked, renew phone-2 and sync
+phone-2: on relays r1, r2 at once at 2026-12-03 14:07 UTC: if its link may have leaked, renew phone-2 and sync
+</code></pre></div>
+<p><code>sync</code> prints each once, from the facts that first show it; <code>status</code> ends
+with the last day's, and <code>report</code> with the last 30 days'. A phone shows one
+or two addresses. A device named once can be innocent: it moved from one
+relay to the other within those 15 minutes, or its app kept both open from
+one address, which counts alone can't tell from two places. A link passed
+around shows again and again, within days. Again, only counts reach the
+manager, and renewing stays yours.</p>
 <h2 id="certificates">Certificates<a class="headerlink" href="#certificates" title="Permanent link">&para;</a></h2>
 <p>The facts of servers and relays carry how many days their site's certificate
 has left (<code>cert_days</code>). Under 14, <code>sync</code> says so, and <code>report</code> too from the

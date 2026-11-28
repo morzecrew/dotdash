@@ -2502,6 +2502,13 @@ its facts carry the counts to the authority hourly, for the
 client, so a relay's devices are counted here.
 The facts task, and with it <code>relay-entry</code>, then runs in Xray's namespace, and
 starts Xray if it is down.</p>
+<p><code>installation.profile=device-addresses</code> (with any of the others): the relay
+counts how many addresses each device is connected from at that moment, by
+<code>&lt;device&gt;@&lt;group&gt;</code>, and its facts carry the counts to the authority hourly,
+for the <a href="../../manager/#leaked-links">manager</a>. They never carry an address
+(<a href="../operations/#devices-at-several-addresses">Devices at several addresses</a>).
+The facts task, and with it <code>relay-entry</code>, then runs in Xray's namespace, and
+starts Xray if it is down.</p>
 <h2 id="secrets">Secrets<a class="headerlink" href="#secrets" title="Permanent link">&para;</a></h2>
 <p><code>init</code> generates the relay's own keys and nonce; <code>servers</code> and <code>via</code> you
 give it.</p>
