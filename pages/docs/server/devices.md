@@ -24,9 +24,7 @@ gets every link.
 
 A changed kind reaches the device with its next subscription fetch. It
 picks links, it doesn't lock any: a CDN link the device already holds, handed
-over by hand, still works. A kind needs a name before it. Relays running a
-release from before kinds refuse such a line, and `relay-config` copies it to
-them, so update them before giving a device a kind.
+over by hand, still works. A kind needs a name before it.
 
 ## Links and the Xray config
 
@@ -37,28 +35,27 @@ sudo morzer task run client-config --output -- phone    # one
 
 Per device it prints:
 
-- an XHTTP link and a REALITY link, `server · xhttp` and `server · reality`,
-  for each server; `server · xhttp+reality` with
-  [XHTTP with REALITY](xhttp-reality.md) on; `server · kcp` with
-  [mKCP](mkcp.md) on; `server · hy2` with [Hysteria2](hysteria2.md) on; and
-  `relay · reality` for each [relay](../relay/index.md), with
-  `relay · xhttp` before it through a relay with a site of its own,
-  `relay · cdn` after that through each
-  [CDN in front of it](cdn.md#in-front-of-a-relay), `relay · hy2`
-  after it through a relay with Hysteria2, and `relay · kcp`
-  through a relay with mKCP; `server · cdn` through each CDN in front of the
+- an XHTTP link and a REALITY link, `s1 · xhttp` and `s1 · reality`,
+  for each server; `s1 · xhttp+reality` with
+  [XHTTP with REALITY](xhttp-reality.md) on; `s1 · kcp` with
+  [mKCP](mkcp.md) on; `s1 · hy2` with [Hysteria2](hysteria2.md) on; and
+  `r1 · reality` for each [relay](../relay/index.md), with
+  `r1 · xhttp` before it through a relay with a site of its own,
+  `r1 · cdn` after that through each
+  [CDN in front of it](cdn.md#in-front-of-a-relay), `r1 · hy2`
+  after it through a relay with Hysteria2, and `r1 · kcp`
+  through a relay with mKCP; `s1 · cdn` through each CDN in front of the
   server. XHTTP comes first everywhere: an app tends to
   try the first link, and REALITY over raw TCP is the transport blocked most
   often. A link is named `<route> · <transport>`, without the device's name:
   its subscription is its own, and the app shows the protocol beside it.
-  Where there are several, each is numbered, `relay 1 · cdn 2`: a
-  relay by its place among the `relays` lines, a CDN by its place in
-  `cdn_hosts` (or in its relay's `cdn=`), the same on every device, so an
-  app shows no host name; with several servers, `server 1`, `server 2` and
-  on, in the order of `servers`. With [`name`](parameters.md) set, the
-  servers' links go by it in place of `server`: `s1 · reality`, `s1 2 · xhttp`.
-  A relay with a name, as every `relay/1` line has, goes by it instead:
-  `edge-1 · reality`;
+  The route is the server group's [`name`](parameters.md) (`s1`), or `server`
+  while it has none, and a relay's name (`r1`), which every `relay/1` line
+  carries; a relay's line of 0.18 without `name=` goes by `relay`. Where
+  there are several, each is numbered, `s1 2 · xhttp`, `r1 · cdn 2`: a
+  server by its place in `servers`, a CDN by its place in `cdn_hosts` (or in
+  its relay's `cdn=`), the same on every device, so an app shows no host
+  name;
 - an Xray config for v2rayN or v2rayNG (as a custom config) that uses
   whichever link answers fastest, drops a dead one within about 30 s, and
   falls back to the [DNS tunnel](dns-tunnel.md) when it is on, or to a
@@ -75,6 +72,10 @@ subscription still carries every relay it gets:
 sudo morzer task run client-config --output -- --relay r1 phone
 ```
 
+A relay every path of which is off in `relay_flags`, a burnt one or a spare
+the [manager](../manager.md#burnt-relays) holds back, gives no link and no
+subscription URL.
+
 As QR codes in the terminal, with `qrencode`:
 
 ```sh
@@ -83,6 +84,17 @@ sudo morzer task run client-config --output -- phone | grep '^vless://' |
 ```
 
 How each app handles DNS: [DNS on devices](device-dns.md).
+
+### A device in two server groups
+
+A device is in one group. A phone that uses two, say `a` and `b`, is a
+device in each: a line in each group's `vless_clients`, with an id of its own
+in each, since a relay serving both drops an id two groups list. Each
+group's `client-config` prints the device's links to that group alone, and
+with subscriptions on, a URL of that group's, so the app holds two
+subscriptions. Happ and Hiddify show each one's name, its exit. The links
+through a relay that serves both carry its name in each, `r1 · reality`,
+and take the device to the group of the subscription they came in.
 
 ### Apps that look for a VPN
 
@@ -249,5 +261,6 @@ sudo morzer secret rotate reality_key
 sudo morzer secret rotate vless_seed
 ```
 
-With [relays](../relay/index.md) or [several servers](several-servers.md),
-change their copies too.
+With [several servers](several-servers.md), delete it on each.
+[Relays](../relay/index.md) follow within a minute; one it is still connected
+through restarts its Xray to cut it off.

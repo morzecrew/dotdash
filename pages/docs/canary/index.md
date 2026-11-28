@@ -128,7 +128,10 @@ A canary watches one server. With [several servers](../server/several-servers.md
 `canary-config` prints how to point a canary at each of the others. To watch a
 relay instead, run the commands its `relay-entry` prints on the canary,
 without the xhttp profiles: the canary then connects through the relay, as a
-phone on that network would. A relay with Hysteria2 of its own prints the
+phone on that network would. It is a device of one server group, its id a
+line in that group's `vless_clients`, so it checks the relay's entry and
+that group behind it ([Health per group](../relay/gateway.md#health-per-group)).
+A relay with Hysteria2 of its own prints the
 `hysteria2` profile and its port too, and the canary checks it under the
 relay's own site's certificate. A canary that follows the
 [manager](../manager.md) gets that port from it.
@@ -162,8 +165,9 @@ Mobile networks can be restricted where wired lines are not, so a canary on
 a wired line can't see what phones see. Run one on a small machine with a USB
 mobile modem on the network you care about, with mobile data as its only way
 out, and point it at a relay. One for each network and region that matters.
-A canary that fails there while the relay itself passes `doctor` means the
-relay's address no longer gets through for devices.
+A canary that fails there while the relay's `servers` task shows the
+canary's group `live` means the relay's address no longer gets through for
+devices.
 
 ## Reference
 

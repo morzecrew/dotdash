@@ -11,7 +11,7 @@ one tag:
 | Bundle | Runs on | What it does |
 | --- | --- | --- |
 | **[dotdash](server/index.md)** | a server outside the restricted network | Xray REALITY on 443 in front of a cover site; everything leaves through your upstream proxy |
-| **[dotdash-relay](relay/index.md)** | a machine inside the restricted network | carries phones, clients and canaries on to the server while only some addresses get through |
+| **[dotdash-relay](relay/index.md)** | a machine inside the restricted network | carries phones, clients and canaries on to their own server group while only some addresses get through |
 | **[dotdash-client](client/index.md)** | a Linux machine on the client side | a proxy port, the whole machine, or a whole LAN through dotdash |
 | **[dotdash-canary](canary/index.md)** | a machine inside the restricted network | connects as a device would, and alerts when it can't get through |
 | **[dotdash-acme-dns](server/certificates.md#an-acme-dns-server)** | a small machine of its own | answers the DNS-01 checks of the servers' and relays' [wildcard certificates](server/certificates.md) |

@@ -63,4 +63,5 @@ reach.
   relay or not: they lack VLESS Encryption and the key share Xray's REALITY
   requires.
 
-Next: [set one up](install.md).
+Next: [set one up](install.md). A relay of 0.18 already running moves to
+the gateway as in [Moving from 0.18](gateway.md#moving-from-018).

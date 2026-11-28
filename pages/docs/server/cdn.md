@@ -28,7 +28,7 @@ CDN fetches from `https://example.com`.
     sudo morzer config set cdn_hosts=cdn.example.net
     ```
 
-3. **Devices**: `client-config` prints a `server · cdn` link,
+3. **Devices**: `client-config` prints a [`s1 · cdn`](devices.md#links-and-the-xray-config) link,
    the Xray config gains an outbound through it, and subscriptions pick it up.
    Give devices the link before restrictions start, as with a
    [relay](../relay/index.md).
@@ -131,7 +131,7 @@ cheap to replace, rather than this server and its upstream.
 
 3. **Here**, replace the relay's line in `relays`
    (`sudo morzer config edit relays`). Devices get a
-   `relay · cdn` link and an outbound, shaped as
+   `r1 · cdn` link and an outbound, shaped as
    above, and [pools](devices.md#pools) take the relay's CDN names as members.
 
 A CDN reads every request it passes on, and keeps logs. Through a relay too, the
@@ -145,8 +145,9 @@ download. Keep CDN links a fallback, front a relay you can replace (below),
 and expect a CDN account to be closed one day. A relay's line from before
 0.12.0, without `cdnpath=`, gives the plain links by its own path. A
 [dotdash-client](../client/reference.md) with `cdn=skip` leaves CDN links
-out while it has any other. `off=cdn:<name>` on the relay's line takes that one CDN's
-links out of devices' and keeps the relay's others: for a CDN that gets
+out while it has any other. `off=cdn:<name>` in the relay's line in
+[`relay_flags`](parameters.md) takes that one CDN's links out of devices'
+and keeps the relay's others: for a CDN that gets
 nothing through, as its canaries [find](../canary/index.md#a-relays-cdns).
 
 #### The CDN's origin only
@@ -209,10 +210,10 @@ alone, on the CDNs' path alone, and passes nothing else.
     Where the CDN gives more than one name, a spare for when one is blocked,
     set them all, comma-separated: `http_origin_host=abc123.cdn.example.net,alt.cdn.example.net`.
 
-4. **Here**, replace the relay's line. Devices get a `relay · cdn` link
+4. **Here**, replace the relay's line. Devices get a `r1 · cdn` link
    and outbound through each name, uploading 4 KiB at a time, which
    such CDNs pass where 8 KiB fail. With several CDN names, the links are
-   numbered: `relay · cdn 1`, `relay · cdn 2`.
+   numbered: `r1 · cdn 1`, `r1 · cdn 2`.
 
 Some CDNs also give a name with a path and XHTTP settings of their own:
 often a name shared by every customer, in front of a gateway that turns your
