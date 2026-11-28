@@ -393,6 +393,10 @@ entry, which its canaries judge, nor of its other groups. A canary passing
 while the relay says `b` is down means the entry is fine and `b`'s servers
 or the way to them are not.
 
+Under the relays' `device-addresses` profile, `status` ends with the devices
+`sync` named in the last day ([Leaked links](#leaked-links)). They change no
+exit code.
+
 It reads each machine's own fleet row and the newest document on the target,
 two morzer calls, and the rest from the state, so it prints no key, path or
 id. It exits 1 when a document is refused, a machine doesn't follow the
@@ -589,6 +593,26 @@ it ever did. A long video call or a big download can too, so ask before
 renewing it. Only counts reach the manager, never an address. They
 are an hour behind at most, as the facts refresh hourly. A server or relay
 that restarts loses only what it counted since the last refresh.
+
+With the `device-addresses` profile on the relays
+([relay](relay/operations.md#devices-at-several-addresses)), their facts
+also carry how many addresses each device is connected from when they
+refresh, an IPv6 /64 counted once. `sync` names a device at three or more
+addresses at once on one relay, or on two relays whose facts refreshed within
+15 minutes of each other:
+
+```
+phone-2: 4 addresses at once on relay r1 at 2026-12-03 14:05 UTC: if its link may have leaked, renew phone-2 and sync
+phone-2: on relays r1, r2 at once at 2026-12-03 14:07 UTC: if its link may have leaked, renew phone-2 and sync
+```
+
+`sync` prints each once, from the facts that first show it; `status` ends
+with the last day's, and `report` with the last 30 days'. A phone shows one
+or two addresses. A device named once can be innocent: it moved from one
+relay to the other within those 15 minutes, or its app kept both open from
+one address, which counts alone can't tell from two places. A link passed
+around shows again and again, within days. Again, only counts reach the
+manager, and renewing stays yours.
 
 ## Certificates
 

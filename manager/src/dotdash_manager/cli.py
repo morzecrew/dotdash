@@ -15,7 +15,7 @@ from typing import Annotated
 
 import typer
 
-from . import Refused, adopt, health, join as joining, roster, rotate, state, traffic
+from . import Refused, addresses, adopt, health, join as joining, roster, rotate, state, traffic
 from . import status as overview
 from .morzer import Morzer, write_roster
 from .render import applied_keys, kept_pools, render, subscription_urls
@@ -120,6 +120,7 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
     traffic.record(st.setdefault("traffic", {}), facts, now)
     # Yesterday's whole day and today's so far.
     verdicts += traffic.unusual(st["traffic"], since=traffic.day(now - 86400))
+    verdicts += addresses.record(st.setdefault("addresses", {}), facts, now)
     verdicts += health.certs(net, facts)
     for v in verdicts:
         print(v)
@@ -182,8 +183,9 @@ def report(ctx: typer.Context) -> None:
     how long it was burnt, which paths went off, how long each path lasted,
     lifetimes per provider, and each path's latency against the canaries' own
     network; from what sync logged. With device-traffic, the devices that
-    moved far more than usual on a day. Then the certificates running out, by
-    the facts the last sync kept."""
+    moved far more than usual on a day; with device-addresses, those seen at
+    several addresses at once. Then the certificates running out, by the
+    facts the last sync kept."""
     o: Options = ctx.obj
     net, st = o.open()
     labels(net, st)
@@ -193,6 +195,10 @@ def report(ctx: typer.Context) -> None:
     if st.get("traffic", {}).get("days"):
         print(f"\ndevices far above their usual day, the last {len(st['traffic']['days'])} days (device-traffic):")
         for line in traffic.unusual(st["traffic"]) or ["none"]:
+            print(f"  {line}")
+    if st.get("addresses", {}).get("read"):
+        print(f"\ndevices at several addresses at once, the last {addresses.DAYS} days (device-addresses):")
+        for line in addresses.seen(st["addresses"]) or ["none"]:
             print(f"  {line}")
     if lines := health.certs(net, {n: k["facts"] for n, k in st.get("facts", {}).items()}):
         print("", *lines, sep="\n")
@@ -235,9 +241,10 @@ def status(
 ) -> None:
     """One line per machine: its release, what it did with its newest document,
     its health, how old its facts are and what its canaries found; then the
-    topology. Exits 1 when a document is refused, a machine isn't following,
-    its row is stale, its services are down or a relay's device list isn't
-    the one sent, or --wait ran out."""
+    topology, and the devices sync saw at several addresses at once in the
+    last day (device-addresses). Exits 1 when a document is refused, a
+    machine isn't following, its row is stale, its services are down or a
+    relay's device list isn't the one sent, or --wait ran out."""
     o: Options = ctx.obj
     # As sync opens them: who joined is in the state, and roster.yaml is
     # written under the lock, never beside a sync writing it. Then the lock
@@ -255,6 +262,9 @@ def status(
         time.sleep(POLL)
         st = state.load(o.state, net)
     print(*lines, *overview.topology(net, st), sep="\n")
+    if seen := addresses.seen(st.get("addresses", {}), since=int(time.time()) - 86400):
+        print("\ndevices at several addresses at once, the last day (device-addresses):", *(f"  {x}" for x in seen),
+              sep="\n")
     raise typer.Exit(1 if bad or (wait and pending) else 0)
 
 

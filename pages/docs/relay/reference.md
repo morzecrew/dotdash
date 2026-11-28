@@ -114,6 +114,14 @@ client, so a relay's devices are counted here.
 The facts task, and with it `relay-entry`, then runs in Xray's namespace, and
 starts Xray if it is down.
 
+`installation.profile=device-addresses` (with any of the others): the relay
+counts how many addresses each device is connected from at that moment, by
+`<device>@<group>`, and its facts carry the counts to the authority hourly,
+for the [manager](../manager.md#leaked-links). They never carry an address
+([Devices at several addresses](operations.md#devices-at-several-addresses)).
+The facts task, and with it `relay-entry`, then runs in Xray's namespace, and
+starts Xray if it is down.
+
 ## Secrets
 
 `init` generates the relay's own keys and nonce; `servers` and `via` you

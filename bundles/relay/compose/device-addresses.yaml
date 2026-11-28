@@ -1,0 +1,14 @@
+# The device-addresses profile: the facts task counts how many addresses each
+# device is connected from right now, from Xray's API on loopback, so it runs
+# in Xray's namespace (tasks/facts.sh, tasks/addresses.jq). Xray keeps those
+# addresses in memory whatever the profile, for the gateway's agent
+# (statsUserOnline, xray.json.tmpl): this only reads them, and only counts
+# leave. As under device-traffic, relay-entry's service, which the facts task
+# and relay-entry share, joins Xray's network and starts Xray if it is down.
+# The counts go to the authority with the facts, hourly (manifest
+# `published`); never an address, and nothing on disk.
+services:
+  relay-entry:
+    network_mode: service:xray
+    environment:
+      DEVICE_ADDRESSES: "true"

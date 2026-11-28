@@ -43,7 +43,9 @@ for internal, and with acme-dns the wildcard over the domain's parent
   device-traffic profile, for the facts task, which reads the bytes each
   device moves from its StatsService, in this container's namespace
   (compose/device-traffic.yaml). Online counts per device, by which the
-  agent tells a removed device still connected, which only a restart cuts. */}}
+  agent tells a removed device still connected, which only a restart cuts;
+  under the device-addresses profile, the facts task counts each device's
+  addresses from the same (compose/device-addresses.yaml). */}}
   "api": {"tag": "api", "listen": "127.0.0.1:10085", "services": ["HandlerService", "RoutingService", "StatsService"]},
   "stats": {},
   "policy": {
