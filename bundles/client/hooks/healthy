@@ -6,8 +6,10 @@
 set -euo pipefail
 
 project=${DOTDASH_CLIENT_COMPOSE_PROJECT:-dotdash-client}
-docker compose -p "$project" ps --format '{{.Service}}' | grep -qx xray \
-  || { echo "xray is not running" >&2; exit 1; }
+# Read whole, then searched: grep -q at a pipe's end can fail the pipe under
+# pipefail, by a SIGPIPE to compose.
+services=$(docker compose -p "$project" ps --format '{{.Service}}')
+grep -qx xray <<<"${services}" || { echo "xray is not running" >&2; exit 1; }
 for try in 1 2 3; do
   if out=$(docker compose -p "$project" exec -T xray /usr/local/bin/xray-entrypoint healthcheck 2>&1); then
     exit 0
