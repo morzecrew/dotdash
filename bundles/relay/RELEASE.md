@@ -1,40 +1,39 @@
-# dotdash-relay 0.18.0
+# dotdash-relay 0.19.0
 
-Released with dotdash 0.18.0. Nothing needs doing before updating from 0.17.0, and `morzer rollback` back to it works. It needs morzer 0.18.0, as 0.17.0 did.
+Released with dotdash 0.19.0. **Breaking:** a relay of 0.19 needs servers of 0.19, a `name` and a `servers` line from them, and idles until it has them. Update the servers first, then each relay, one at a time, as [Moving from 0.18](https://morzecrew.github.io/dotdash/relay/gateway/#moving-from-018) says. `morzer rollback` back to 0.18.0 is refused, as this release drops values 0.18 requires: restore the pre-update backup instead. Unattended updates leave it staged for you. It needs morzer 0.18.0, as 0.18.0 did.
 
-- **A relay the manager runs** now takes `via`, `via_link` and `via_fingerprint` from it. One that took no change from the manager since `join` gets the whole document at the next sync.
-- **`entry-check`** tries each entry as a device reaches it, and says why one fails: `sudo morzer task run entry-check --output`.
-- **The update fails, and rolls back,** if `site`, `dotdash_servers`, `dotdash_address`, `dotdash_public_key` or a `via` line holds a quote, a backslash, a brace or whitespace. None of them needs one.
+- **Its `dotdash_*` values and `vless_clients` are dropped** with the update. The `servers` secret takes their place, a `server/1` line per group, which `relay-config -- <name>` prints on one of the group's servers.
+- **`via`** is now a secret of `relay/1` lines: move the relays it goes through first.
+- **`dotdash_link` is now `server_link`:** a relay that went to its servers over XHTTP with REALITY takes `--set server_link=xhttp-reality` with its update.
+- **Health** says only that Xray and its gateway's agent work. Watch `dotdash_group_live`, or `sudo morzer task run servers --output`, for whether a group answers.
 
 ```sh
 sudo morzer update --stage
-sudo morzer update --to 0.18.0
+sudo morzer update --to 0.19.0 --set name=<relay>
 ```
 
 ### Added
 
-- The relay's `entry-check` task tries each of its entries end to end as a device would, REALITY, XHTTP through its site, mKCP and Hysteria2, and says why one fails. The `http-origin` door keeps each request's address and status in memory, so the check can tell a firewall from docker-proxy hiding the CDN's addresses.
+- Every relay is a gateway: one relay carries devices of several server groups, each to its own group's servers and exit alone. A new `servers` secret takes one `server/1` line per group, and the relay fetches each group's devices itself with no restart. A group whose servers are down gets nothing, never another's exit.
 
-- The server's `relay-config` ends with the count and digest of the devices it hands a relay, and the relay's `relay-entry` and facts give the same of its own copy, so a stale copy that rejects new devices or still lets in deleted ones shows. The manager's `status` says when a relay's list isn't the one it sent.
+- A relay's `relay-entry` prints its `relay/1` line, the one line every server's `relays` takes: `relay/1 <name> <nonce> <host> <site> <public key> <short id> <encryption>`, then its transports' fields. `nonce` is a new generated secret, from which, with the name, each server derives the relay's id.
 
-- An own-site relay's facts carry `cert_days`, the whole days left on the certificate its site serves, so an authority can warn before it runs out: when it does, XHTTP, Hysteria2 and the CDN links through the relay stop while REALITY goes on. It is left out while Caddy has no certificate.
+- A relay's `servers` task prints each server group's state, `live`, `down`, `refused` or `starting`, with its servers, devices and the age of its list. The facts carry the same under `groups`, and the `metrics` profile adds `dotdash_group_live`, `dotdash_group_devices` and `dotdash_group_list_age_seconds`.
+
+- A relay's `entry-check` tries each entry for each live group, as a checker the relay adds to each group with a random id, a line per entry per group (`reality@a`); a group that is not live has its entries left out.
+
+- A relay's `server_link` (in place of `dotdash_link`) reaches each group's servers over XHTTP with REALITY on its line's `xr=`, and `tunnel_group` names the group whose servers a cover app's `tunnel_host` is reached through.
 
 ### Changed
 
-- A relay's cover app sees each visitor's own address in `X-Forwarded-For`, where every visitor showed Xray's, so its per-address limits and lockouts no longer hit everyone at once. REALITY hands Caddy each connection behind a PROXY header that only Xray's network may send; the Hysteria2 masquerade still shows Xray's.
+- **Breaking for relays:** `servers` replaces a relay's `dotdash_*` values and `vless_clients`, `via` takes `relay/1` lines, and `name` is required. Update the servers first; a relay idles until its `servers` line is in. `morzer rollback` is refused: restore the pre-update backup (the relay's docs, Moving from 0.18).
+
+- **Breaking for relay monitoring:** a relay's health check says only that Xray runs and its gateway's agent reached it in the last two minutes, so an idle relay, or one whose groups are all down, is healthy. Watch `dotdash_group_live` for whether a group answers.
+
+- **Breaking for anything that reads a relay's facts:** `clients` and `via` are gone, `name`, `nonce` and `groups` are new, and device traffic is counted per `<device>@<group>`. From an authority, a relay takes only `servers`, `via`, `ipv6`, `server_link`, `via_link`, `via_fingerprint` and `tunnel_group`.
+
+- A subscription through a relay goes to the device's own group by its token's first 12 hex characters, so URLs keep their form and the relay never holds a whole token. Caddy no longer restarts when servers change. A token no group lists, or a group that is down, gets the relay's site.
 
 ### Fixed
 
-- A relay run by the manager takes `via`, `via_link` and `via_fingerprint` from it. The relay never declared them managed, so morzer refused the whole document that set or unset them, and such a relay took no change from the manager after `join`.
-
-- A relay's `http-origin` profile without `own-site` is refused with a message that says to add `own-site`, in place of a Compose error about a service with no image.
-
-- A relay's Hysteria2 hands a visitor without a login to its site with the Host the visitor sent, as over TCP. It sent `caddy:443`, so a cover app's redirects and cookies over HTTP/3 named another host than over TCP.
-
-- A subscription token the servers don't have gets the relay's own site, as any other path does, where it got the server's 404 page through the tunnel. One request could tell an own-site relay apart, and might name its server.
-
-- A relay's site names no server anywhere: port 80's redirect and the `http-origin` door dropped `Server: Caddy`, as port 443 already did, and every port drops the `Via: 1.1 Caddy` Caddy adds to what it passes back from a cover app, a server or Xray.
-
-### Security
-
-- A relay refuses a quote, backslash, brace or whitespace in `site`, `dotdash_servers`, `dotdash_address`, `dotdash_public_key` and each `via` line, set by hand or by an authority. Such a value could add keys to its Xray config or lines to its Caddyfile; the apply now fails and the relay stays as it was.
+- A cover app's own headers reach visitors, on the server and on own-site relays: Caddy sets `Referrer-Policy`, HSTS and `X-Content-Type-Options` only where the app sends none, and removes only its own `Server` and `Via`. Every site had answered with the same headers whatever the app, which no stock install does.
