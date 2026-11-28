@@ -31,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The server's facts carry its `name`.
 
+- The manager runs server groups: a `[[group]]` in the roster holds its devices, each server names its `group` (none needed with one), and a relay serves every group unless its `groups` narrows it. Each group has keys and a `relay_seed` of its own in the state. A group's servers get its `name`, its `relay_seed` and keys, its devices and canaries alone in `vless_clients`, a `relay/1` line in `relays` for each relay serving it, made from the relay's facts, and `relay_flags` for standby, `off=` and `split`. A relay gets a `server/1` line in its `servers` secret per group it serves, from that group's servers that applied its keys and the relay's id there, which the manager derives as the servers do (checked against the shared vector), and `via` as a secret of `relay/1` lines, `server_link` and `tunnel_group` from the roster. No relay is sent a device list, so adding a device changes no relay's document.
+
+- The manager's `status` gives each group a relay serves a line of its own in the topology, as the relay's facts say: live, down, refused or starting, its servers, its devices and the age of its list. One group down says nothing of the relay or its other groups.
+
 - The server writes each `relay/1` relay's device list, whether or not subscriptions are on: every device's id and name, the first 12 hex characters of its subscription token with `subscription` on, and the other relays' ids. A relay fetches it through its own tunnel at `list.sub.dotdash.internal/<list token>`, the token the first 32 hex characters of `sha256("<relay id>:list")`, and a device's subscription at `<prefix>.sub.dotdash.internal/<token>`. Xray hands those names to Caddy's new internal listener on port 8085, never published, for relays' users alone (a fixed freedom outbound, `sub`), and blocks every other user asking for a `dotdash.internal` name. The public site never serves a list.
 
 ### Changed
@@ -40,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking for relay monitoring:** a relay's health check says only that its own machinery works: Xray runs, and its gateway's agent reached Xray in the last two minutes. An idle relay, or one whose groups are all down, is healthy, and a `servers` line a server doesn't take yet rolls nothing back. Watch `dotdash_group_live` for whether a group answers.
 
 - **Breaking for anything that reads a relay's facts:** `clients` and `via` are gone, `name`, `nonce` and `groups` are new, and device traffic is counted per `<device>@<group>`. A relay of this release takes `servers`, `via`, `ipv6`, `server_link`, `via_link`, `via_fingerprint` and `tunnel_group` from an authority, and nothing else: the manager drives one only from its release with server groups.
+
+- **Breaking for the manager:** its roster lists devices under a `[[group]]` named as its servers should be, and refuses `devices` at the top; the state's keys become the first group's, so its servers keep theirs. It drives servers and relays of this release alone: a relay whose facts carry no `nonce`, one from before, waits in no group's `relays` until it is updated, and gets no document. Update the servers first, with the manager of before, then this manager and the relays together. Relays' clients leave the servers' `vless_clients`, `rotate` rotates every group at once, each proven by a canary watching its servers, device traffic from relays is read per `<device>@<group>`, and `status` no longer compares a relay's device list with what it sent. `join` brings a relay up idle under its roster name (`--set name=`), with no document: the next `sync` gives the servers its line and it theirs. `adopt` takes a server's keys and `relay_seed` as its group's, so relays keep their ids, and says when the server's `name` differs from its group's.
+
+- The manager keeps a burnt relay, or a spare held back, in its groups' `relays`, every path of it off in their `relay_flags`, where it had left it out: out of `relays` a relay is out of its id there, so its canaries could never get through again, and a relay going `via` it would lose its way to the servers. Devices still get none of its links, and it still leaves the pools. A relay's blocked paths and split hello go in `relay_flags` too, so a verdict restarts no server's Xray.
 
 - A subscription through a relay goes to the device's own group by its token's first 12 hex characters, which that group's list carries, so URLs keep their form and the relay never holds a whole token. Caddy no longer restarts when servers change. A token no group lists, or its server lacks, and a group that is down, get the relay's site, as any other path.
 
@@ -53,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A cover app's own headers reach visitors, on the server and on own-site relays: Caddy no longer replaces its `Referrer-Policy`, adds HSTS or `X-Content-Type-Options` over its own, or removes its `Server`. It sets those three only where the app sends none, and removes only its own `Server` and the `Via` it adds. Every site had answered with the same set, whatever the app, which no install of a stock app such as Vaultwarden does.
 
-- The manager refuses two ids that differ only in bytes 6 and 7, of devices, canaries or relays. Xray zeroes those bytes before it looks an id up, so it took both for one device, logged and routed as the one listed last. `adopt` refuses such a pair from a server, `sync` sends none out (`renew` one of the two), and the ids `sync` and `renew` make never collide that way.
+- The manager refuses two ids that differ only in bytes 6 and 7, of devices or canaries, in one group or across groups, as a relay drops both. Xray zeroes those bytes before it looks an id up, so it took both for one device, logged and routed as the one listed last. `adopt` refuses such a pair from a server, `sync` sends none out (`renew` one of the two), and the ids `sync` and `renew` make never collide that way.
 
 ## [0.18.0] - 2026-11-26
 
