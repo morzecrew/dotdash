@@ -15,7 +15,7 @@ set -euo pipefail
 
 # Renovate bumps MORZER_VERSION (renovate.json); SOPS_VERSION, MINISIGN_VERSION,
 # the installer's commit and their sums by hand.
-MORZER_VERSION=0.18.0
+MORZER_VERSION=0.19.1
 # morzer's install.sh at the v0.18.0 tag's commit. It installs any version, and
 # checks that release's archive against morzer's minisign key, which it carries.
 MORZER_INSTALL_COMMIT=ab214a0fb9514af8e9853d7eb0f739ffbf9eaa7f
