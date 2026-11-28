@@ -2346,7 +2346,8 @@ server, or <a href="../../server/several-servers/">several sharing keys</a>, wit
 <code>name</code>. Two lines pass between them: the relay's line goes into each
 server's <code>relays</code>, and each server's line for the relay goes into the
 relay's <code>servers</code>. Nobody copies devices or ids by hand. The relay fetches
-each group's devices from its servers every minute.</p>
+each group's devices from its servers every minute. A relay of 0.18 is
+updated in place instead: <a href="../gateway/#moving-from-018">Moving from 0.18</a>.</p>
 <p><img alt="Setup: install the relay with a name, relay-entry prints its line, the line into each server's relays, relay-config on each server prints a line for the relay, those lines into the relay's servers, devices get the relay's links" src="../../assets/diagrams/relay-setup.light.svg#only-light" />
 <img alt="Setup: install the relay with a name, relay-entry prints its line, the line into each server's relays, relay-config on each server prints a line for the relay, those lines into the relay's servers, devices get the relay's links" src="../../assets/diagrams/relay-setup.dark.svg#only-dark" /></p>
 <p>Each server needs a <code>name</code> first, the same on every server of a group: 1 to
@@ -2482,12 +2483,13 @@ over raw TCP, the transport blocked most often since early 2026.
 Subscriptions pick the links up by themselves; otherwise resend them. Do it
 now, while devices can still reach the server.</p>
 <p>With subscriptions on and a relay under <code>own-site</code>, each device also gets
-its subscription through the relay, which <code>client-config -- --relay r1
-phone</code> prints alone:</p>
+its subscription through the relay, under its server's
+(<code>client-config -- phone</code>):</p>
 <div class="highlight"><pre><span></span><code>https://a.example.com/&lt;token&gt;
 through the relay relay.example.net: https://relay.example.net/&lt;token&gt;
 </code></pre></div>
-<p>Give a device inside the restricted network the second one. The relay
+<p>Give a device inside the restricted network the second one, which
+<code>client-config -- --relay r1 phone</code> prints alone. The relay
 fetches it from the device's own servers through its tunnel, so the app
 keeps refreshing its links while only some addresses get through, and
 nothing between the relay and the server can read them. The relay never

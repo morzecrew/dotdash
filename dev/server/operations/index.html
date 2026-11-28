@@ -2356,7 +2356,7 @@ bundle.</p>
 <tbody>
 <tr>
 <td>Update by hand</td>
-<td><code>sudo morzer update --stage &amp;&amp; sudo morzer update --to &lt;version&gt;</code></td>
+<td><code>sudo morzer update --stage &amp;&amp; sudo morzer update --to &lt;version&gt;</code>; with relays of 0.18, see <a href="../../relay/gateway/#moving-from-018">Moving from 0.18</a></td>
 </tr>
 <tr>
 <td>New morzer</td>
@@ -2420,8 +2420,8 @@ machine's own.</p>
 </tr>
 <tr>
 <td>relay</td>
-<td><code>vless_clients</code>, <code>dotdash_id</code>, <code>dotdash_encryption</code>, <code>dotdash_short_id</code>, <code>dotdash_servers</code>, <code>dotdash_address</code>, <code>dotdash_port</code>, <code>dotdash_public_key</code>, <code>ipv6</code></td>
-<td>its <code>relay-entry</code> line, at <a href="../../relay/reference/"><code>entry_host</code></a></td>
+<td><code>servers</code>, <code>via</code>, <code>ipv6</code>, <code>server_link</code>, <code>via_link</code>, <code>via_fingerprint</code>, <code>tunnel_group</code></td>
+<td>its <code>relay/1</code> line's fields, at <a href="../../relay/reference/"><code>entry_host</code></a>, its <code>name</code> and <code>nonce</code>, each server group's state (<code>groups</code>), and under <code>own-site</code> <code>cert_days</code></td>
 </tr>
 <tr>
 <td>canary</td>

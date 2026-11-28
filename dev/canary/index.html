@@ -2330,7 +2330,10 @@ reassembling TCP but not TLS records, and the manager then
 <code>canary-config</code> prints how to point a canary at each of the others. To watch a
 relay instead, run the commands its <code>relay-entry</code> prints on the canary,
 without the xhttp profiles: the canary then connects through the relay, as a
-phone on that network would. A relay with Hysteria2 of its own prints the
+phone on that network would. It is a device of one server group, its id a
+line in that group's <code>vless_clients</code>, so it checks the relay's entry and
+that group behind it (<a href="../relay/gateway/#health-per-group">Health per group</a>).
+A relay with Hysteria2 of its own prints the
 <code>hysteria2</code> profile and its port too, and the canary checks it under the
 relay's own site's certificate. A canary that follows the
 <a href="../manager/">manager</a> gets that port from it.</p>
@@ -2356,8 +2359,9 @@ relay's address and keys it already holds.</p>
 a wired line can't see what phones see. Run one on a small machine with a USB
 mobile modem on the network you care about, with mobile data as its only way
 out, and point it at a relay. One for each network and region that matters.
-A canary that fails there while the relay itself passes <code>doctor</code> means the
-relay's address no longer gets through for devices.</p>
+A canary that fails there while the relay's <code>servers</code> task shows the
+canary's group <code>live</code> means the relay's address no longer gets through for
+devices.</p>
 <h2 id="reference">Reference<a class="headerlink" href="#reference" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

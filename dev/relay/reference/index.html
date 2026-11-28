@@ -2454,7 +2454,7 @@ each device's own servers through the relay's tunnel by the token's first
 12 hex characters, and XHTTP on the secret path
 <code>xhttp_path</code>, which <code>init</code> generates. With <code>cdn_hosts</code> set, <code>relay-entry</code>
 ends the relay's line with <code>cdn=&lt;name&gt;,...</code> and <code>cdnpath=&lt;path&gt;</code>, and the
-server gives each device a <code>relay · cdn</code> link through each, by a secret path
+server gives each device a <code>r1 · cdn</code> link through each, by a secret path
 of the CDNs' own (<code>cdn_xhttp_path</code>, generated too) that a CDN reading the
 requests never learns the other from
 (<a href="../../server/cdn/#in-front-of-a-relay">CDN in front of a relay</a>). See
@@ -2473,7 +2473,7 @@ site's certificate, each device's UUID its login, and carries it on to the
 servers like REALITY. It needs <code>own-site</code>, whose certificate it serves:
 without it the profile is refused. <code>relay-entry</code> then ends the relay's line
 with <code>hy2=&lt;port&gt;</code>, from which the server gives each device a
-<code>relay · hy2</code> link. Open the UDP port in the provider's firewall, and
+<code>r1 · hy2</code> link. Open the UDP port in the provider's firewall, and
 replace the relay's line on the server after turning it on.</p>
 <p><code>installation.profile=own-site,http-origin</code>: the relay's Caddy also listens
 in plain HTTP on <code>http_origin_port</code>, a door for a
@@ -2483,7 +2483,7 @@ alone, which it passes on to Xray's XHTTP inbound; everyone else gets a 404.
 It needs <code>own-site</code>, whose Caddy is the door: without it the profile is
 refused. <code>relay-entry</code> then ends the relay's line with <code>cdnpath=&lt;path&gt;</code> and
 <code>origin=&lt;http_origin_host&gt;</code>, from which the server gives each device a
-<code>relay · cdn</code> link through that name. Where the CDN gives several names,
+<code>r1 · cdn</code> link through that name. Where the CDN gives several names,
 set them all, comma-separated: each gets a link of its own, <code>cdn 1</code>,
 <code>cdn 2</code> and on. A name the CDN gives with a path of its own takes it after
 the name, <code>&lt;name&gt;/&lt;path&gt;</code>, and its settings go in the server's <code>cdn_extra</code>
@@ -2492,7 +2492,7 @@ the name, <code>&lt;name&gt;/&lt;path&gt;</code>, and its settings go in the ser
 relay serves <a href="../../server/mkcp/">mKCP</a> on UDP <code>kcp_port</code> too, under its own
 <code>kcp_seed</code>, and carries it on to the servers like REALITY. <code>relay-entry</code> then
 ends the relay's line with <code>kcp=&lt;port&gt;,&lt;header&gt;,&lt;seed&gt;</code>, from which the server
-gives each device a <code>relay · kcp</code> link. Open the UDP port in the
+gives each device a <code>r1 · kcp</code> link. Open the UDP port in the
 provider's firewall, and replace the relay's line on the server after turning
 it on.</p>
 <p><code>installation.profile=device-traffic</code> (with any of the others): the relay

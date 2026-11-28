@@ -4185,6 +4185,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>
 <p>The server writes each <code>relay/1</code> relay's device list, whether or not subscriptions are on: every device's id and name, the first 12 hex characters of its subscription token with <code>subscription</code> on, and the other relays' ids. A relay fetches it through its own tunnel at <code>list.sub.dotdash.internal/&lt;list token&gt;</code>, the token the first 32 hex characters of <code>sha256("&lt;relay id&gt;:list")</code>, and a device's subscription at <code>&lt;prefix&gt;.sub.dotdash.internal/&lt;token&gt;</code>. Xray hands those names to Caddy's new internal listener on port 8085, never published, for relays' users alone (a fixed freedom outbound, <code>sub</code>), and blocks every other user asking for a <code>dotdash.internal</code> name. The public site never serves a list.</p>
 </li>
+<li>
+<p><code>client-config --check</code> warns of each relay line of 0.18 left in <code>relays</code>, which the next release won't read, and of a client in <code>vless_clients</code> named as a <code>relay/1</code> line's relay: likely that relay's client of 0.18, which nothing needs once the relay runs this release.</p>
+</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -4218,6 +4221,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
+<li>
+<p><code>client-config</code> prints no subscription URL through a relay whose every path is off in <code>relay_flags</code>, a burnt relay or a spare the manager holds back, as it already printed no link through it: the URL gave devices the address of a relay they were not to use.</p>
+</li>
+<li>
+<p><code>relay-config</code>, for a relay of 0.18, prints that release's <code>init</code> (<code>dotdash-relay:0.18.0</code>): <code>stable</code> is now a gateway relay, which refuses the <code>dotdash_*</code> values it sets.</p>
+</li>
 <li>
 <p>A cover app's own headers reach visitors, on the server and on own-site relays: Caddy no longer replaces its <code>Referrer-Policy</code>, adds HSTS or <code>X-Content-Type-Options</code> over its own, or removes its <code>Server</code>. It sets those three only where the app sends none, and removes only its own <code>Server</code> and the <code>Via</code> it adds. Every site had answered with the same set, whatever the app, which no install of a stock app such as Vaultwarden does.</p>
 </li>

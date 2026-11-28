@@ -733,6 +733,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#a-device-in-two-server-groups" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A device in two server groups
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#apps-that-look-for-a-vpn" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2193,6 +2204,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#a-device-in-two-server-groups" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A device in two server groups
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#apps-that-look-for-a-vpn" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2361,37 +2383,34 @@ gets every link.</p>
 </code></pre></div>
 <p>A changed kind reaches the device with its next subscription fetch. It
 picks links, it doesn't lock any: a CDN link the device already holds, handed
-over by hand, still works. A kind needs a name before it. Relays running a
-release from before kinds refuse such a line, and <code>relay-config</code> copies it to
-them, so update them before giving a device a kind.</p>
+over by hand, still works. A kind needs a name before it.</p>
 <h2 id="links-and-the-xray-config">Links and the Xray config<a class="headerlink" href="#links-and-the-xray-config" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>client-config<span class="w"> </span>--output<span class="w">             </span><span class="c1"># every device</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>client-config<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>phone<span class="w">    </span><span class="c1"># one</span>
 </code></pre></div>
 <p>Per device it prints:</p>
 <ul>
-<li>an XHTTP link and a REALITY link, <code>server · xhttp</code> and <code>server · reality</code>,
-  for each server; <code>server · xhttp+reality</code> with
-  <a href="../xhttp-reality/">XHTTP with REALITY</a> on; <code>server · kcp</code> with
-  <a href="../mkcp/">mKCP</a> on; <code>server · hy2</code> with <a href="../hysteria2/">Hysteria2</a> on; and
-  <code>relay · reality</code> for each <a href="../../relay/">relay</a>, with
-  <code>relay · xhttp</code> before it through a relay with a site of its own,
-  <code>relay · cdn</code> after that through each
-  <a href="../cdn/#in-front-of-a-relay">CDN in front of it</a>, <code>relay · hy2</code>
-  after it through a relay with Hysteria2, and <code>relay · kcp</code>
-  through a relay with mKCP; <code>server · cdn</code> through each CDN in front of the
+<li>an XHTTP link and a REALITY link, <code>s1 · xhttp</code> and <code>s1 · reality</code>,
+  for each server; <code>s1 · xhttp+reality</code> with
+  <a href="../xhttp-reality/">XHTTP with REALITY</a> on; <code>s1 · kcp</code> with
+  <a href="../mkcp/">mKCP</a> on; <code>s1 · hy2</code> with <a href="../hysteria2/">Hysteria2</a> on; and
+  <code>r1 · reality</code> for each <a href="../../relay/">relay</a>, with
+  <code>r1 · xhttp</code> before it through a relay with a site of its own,
+  <code>r1 · cdn</code> after that through each
+  <a href="../cdn/#in-front-of-a-relay">CDN in front of it</a>, <code>r1 · hy2</code>
+  after it through a relay with Hysteria2, and <code>r1 · kcp</code>
+  through a relay with mKCP; <code>s1 · cdn</code> through each CDN in front of the
   server. XHTTP comes first everywhere: an app tends to
   try the first link, and REALITY over raw TCP is the transport blocked most
   often. A link is named <code>&lt;route&gt; · &lt;transport&gt;</code>, without the device's name:
   its subscription is its own, and the app shows the protocol beside it.
-  Where there are several, each is numbered, <code>relay 1 · cdn 2</code>: a
-  relay by its place among the <code>relays</code> lines, a CDN by its place in
-  <code>cdn_hosts</code> (or in its relay's <code>cdn=</code>), the same on every device, so an
-  app shows no host name; with several servers, <code>server 1</code>, <code>server 2</code> and
-  on, in the order of <code>servers</code>. With <a href="../parameters/"><code>name</code></a> set, the
-  servers' links go by it in place of <code>server</code>: <code>s1 · reality</code>, <code>s1 2 · xhttp</code>.
-  A relay with a name, as every <code>relay/1</code> line has, goes by it instead:
-  <code>edge-1 · reality</code>;</li>
+  The route is the server group's <a href="../parameters/"><code>name</code></a> (<code>s1</code>), or <code>server</code>
+  while it has none, and a relay's name (<code>r1</code>), which every <code>relay/1</code> line
+  carries; a relay's line of 0.18 without <code>name=</code> goes by <code>relay</code>. Where
+  there are several, each is numbered, <code>s1 2 · xhttp</code>, <code>r1 · cdn 2</code>: a
+  server by its place in <code>servers</code>, a CDN by its place in <code>cdn_hosts</code> (or in
+  its relay's <code>cdn=</code>), the same on every device, so an app shows no host
+  name;</li>
 <li>an Xray config for v2rayN or v2rayNG (as a custom config) that uses
   whichever link answers fastest, drops a dead one within about 30 s, and
   falls back to the <a href="../dns-tunnel/">DNS tunnel</a> when it is on, or to a
@@ -2406,11 +2425,23 @@ URL, and with <code>--full</code> its links, for a device to take by hand. The d
 subscription still carries every relay it gets:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>client-config<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>--relay<span class="w"> </span>r1<span class="w"> </span>phone
 </code></pre></div>
+<p>A relay every path of which is off in <code>relay_flags</code>, a burnt one or a spare
+the <a href="../../manager/#burnt-relays">manager</a> holds back, gives no link and no
+subscription URL.</p>
 <p>As QR codes in the terminal, with <code>qrencode</code>:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>client-config<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>phone<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s1">'^vless://'</span><span class="w"> </span><span class="p">|</span>
 <span class="w">  </span><span class="k">while</span><span class="w"> </span><span class="nb">read</span><span class="w"> </span>-r<span class="w"> </span>link<span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span>qrencode<span class="w"> </span>-t<span class="w"> </span>ansiutf8<span class="w"> </span><span class="s2">"</span><span class="nv">$link</span><span class="s2">"</span><span class="p">;</span><span class="w"> </span><span class="k">done</span>
 </code></pre></div>
 <p>How each app handles DNS: <a href="../device-dns/">DNS on devices</a>.</p>
+<h3 id="a-device-in-two-server-groups">A device in two server groups<a class="headerlink" href="#a-device-in-two-server-groups" title="Permanent link">&para;</a></h3>
+<p>A device is in one group. A phone that uses two, say <code>a</code> and <code>b</code>, is a
+device in each: a line in each group's <code>vless_clients</code>, with an id of its own
+in each, since a relay serving both drops an id two groups list. Each
+group's <code>client-config</code> prints the device's links to that group alone, and
+with subscriptions on, a URL of that group's, so the app holds two
+subscriptions. Happ and Hiddify show each one's name, its exit. The links
+through a relay that serves both carry its name in each, <code>r1 · reality</code>,
+and take the device to the group of the subscription they came in.</p>
 <h3 id="apps-that-look-for-a-vpn">Apps that look for a VPN<a class="headerlink" href="#apps-that-look-for-a-vpn" title="Permanent link">&para;</a></h3>
 <p>Some apps on a phone look for a VPN, and refuse to run or report it. One way
 they look is to try the local proxy ports an app like v2rayNG opens: with no
@@ -2555,8 +2586,9 @@ shared keys; to hide the server from it too, rotate them and resend links
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>rotate<span class="w"> </span>reality_key
 sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>rotate<span class="w"> </span>vless_seed
 </code></pre></div>
-<p>With <a href="../../relay/">relays</a> or <a href="../several-servers/">several servers</a>,
-change their copies too.</p>
+<p>With <a href="../several-servers/">several servers</a>, delete it on each.
+<a href="../../relay/">Relays</a> follow within a minute; one it is still connected
+through restarts its Xray to cut it off.</p>
 
 
 

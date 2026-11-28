@@ -2183,8 +2183,10 @@ fails over between them. Add and revoke devices on each.</p>
 <span class="k">for</span><span class="w"> </span>s<span class="w"> </span><span class="k">in</span><span class="w"> </span>vless_clients<span class="w"> </span>vless_seed<span class="w"> </span>reality_key<span class="w"> </span>reality_short_id<span class="w"> </span>xhttp_path<span class="w"> </span>kcp_seed<span class="w"> </span>subscription_key<span class="w"> </span>relay_seed<span class="p">;</span><span class="w"> </span><span class="k">do</span>
 <span class="w">  </span>sudo<span class="w"> </span>cat<span class="w"> </span>/run/dotdash/secrets/<span class="nv">$s</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>ssh<span class="w"> </span>b.example.com<span class="w"> </span>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">$s</span>
 <span class="k">done</span>
-sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>get<span class="w"> </span>relays<span class="w"> </span><span class="p">|</span><span class="w"> </span>ssh<span class="w"> </span>b.example.com<span class="w"> </span>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>--set-file<span class="w"> </span><span class="nv">relays</span><span class="o">=</span>-
-<span class="c1"># on every server</span>
+<span class="k">for</span><span class="w"> </span>p<span class="w"> </span><span class="k">in</span><span class="w"> </span>relays<span class="w"> </span>relay_flags<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">  </span>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>get<span class="w"> </span><span class="nv">$p</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>ssh<span class="w"> </span>b.example.com<span class="w"> </span>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>--set-file<span class="w"> </span><span class="nv">$p</span><span class="o">=</span>-
+<span class="k">done</span>
+<span class="c1"># on every server: the same servers, and the same name</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">servers</span><span class="o">=</span>example.com,b.example.com<span class="w"> </span><span class="nv">name</span><span class="o">=</span>s1
 </code></pre></div>
 <ul>
@@ -2197,14 +2199,19 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w">
 <li><strong><code>kcp_seed</code>:</strong> every server's mKCP links carry this server's seed, so
   with another seed there they are dead.</li>
 <li><strong><code>subscription_key</code>:</strong> a device's URL is the same token on every server.
-  A relay fetches it from the first server that answers, so with another
+  A relay fetches it from whichever server it reaches, so with another
   key there the URL gets a 404.</li>
 <li>While <a href="../secrets/#rotating-the-reality-key">rotating the REALITY key</a>,
   copy <code>reality_key_second</code> and <code>reality_short_id_second</code> too.</li>
-<li><strong><code>relay_seed</code>, <code>relays</code> and <code>name</code>:</strong> a relay's id is derived from
-  <code>relay_seed</code>, so every server lets it in by the same id and prints it the
-  same <code>server/1</code> line, which names the group by <code>name</code>. Copy <code>relay_flags</code>
-  too where you use it.</li>
+<li><strong><code>relay_seed</code>, <code>name</code>, <code>relays</code> and <code>relay_flags</code>:</strong> the servers are one
+  group to each <a href="../../relay/">relay</a>. A relay's id is derived from
+  <code>relay_seed</code>, so every server lets it in by the same id, and each prints it
+  the same <code>server/1</code> line, which names the group by <code>name</code> and lists every
+  server: <code>server/1 s1 example.com,b.example.com …</code>. The relay holds that one
+  line for the group, uses whichever server answers fastest, and fetches the
+  group's devices from any of them. A server added later goes into that line:
+  print it again with <code>relay-config -- &lt;relay&gt;</code> and replace the group's line
+  in each relay's <code>servers</code>.</li>
 </ul>
 
 

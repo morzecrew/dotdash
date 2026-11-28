@@ -2421,7 +2421,7 @@ CDN fetches from <code>https://example.com</code>.</p>
 </code></pre></div>
 </li>
 <li>
-<p><strong>Devices</strong>: <code>client-config</code> prints a <code>server · cdn</code> link,
+<p><strong>Devices</strong>: <code>client-config</code> prints a <a href="../devices/#links-and-the-xray-config"><code>s1 · cdn</code></a> link,
    the Xray config gains an outbound through it, and subscriptions pick it up.
    Give devices the link before restrictions start, as with a
    <a href="../../relay/">relay</a>.</p>
@@ -2517,7 +2517,7 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
 <li>
 <p><strong>Here</strong>, replace the relay's line in <code>relays</code>
    (<code>sudo morzer config edit relays</code>). Devices get a
-   <code>relay · cdn</code> link and an outbound, shaped as
+   <code>r1 · cdn</code> link and an outbound, shaped as
    above, and <a href="../devices/#pools">pools</a> take the relay's CDN names as members.</p>
 </li>
 </ol>
@@ -2532,8 +2532,9 @@ download. Keep CDN links a fallback, front a relay you can replace (below),
 and expect a CDN account to be closed one day. A relay's line from before
 0.12.0, without <code>cdnpath=</code>, gives the plain links by its own path. A
 <a href="../../client/reference/">dotdash-client</a> with <code>cdn=skip</code> leaves CDN links
-out while it has any other. <code>off=cdn:&lt;name&gt;</code> on the relay's line takes that one CDN's
-links out of devices' and keeps the relay's others: for a CDN that gets
+out while it has any other. <code>off=cdn:&lt;name&gt;</code> in the relay's line in
+<a href="../parameters/"><code>relay_flags</code></a> takes that one CDN's links out of devices'
+and keeps the relay's others: for a CDN that gets
 nothing through, as its canaries <a href="../../canary/#a-relays-cdns">find</a>.</p>
 <h4 id="the-cdns-origin-only">The CDN's origin only<a class="headerlink" href="#the-cdns-origin-only" title="Permanent link">&para;</a></h4>
 <p>Devices behind a CDN connect to the CDN's addresses, never to the relay's, so
@@ -2584,10 +2585,10 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
 set them all, comma-separated: <code>http_origin_host=abc123.cdn.example.net,alt.cdn.example.net</code>.</p>
 </li>
 <li>
-<p><strong>Here</strong>, replace the relay's line. Devices get a <code>relay · cdn</code> link
+<p><strong>Here</strong>, replace the relay's line. Devices get a <code>r1 · cdn</code> link
    and outbound through each name, uploading 4 KiB at a time, which
    such CDNs pass where 8 KiB fail. With several CDN names, the links are
-   numbered: <code>relay · cdn 1</code>, <code>relay · cdn 2</code>.</p>
+   numbered: <code>r1 · cdn 1</code>, <code>r1 · cdn 2</code>.</p>
 </li>
 </ol>
 <p>Some CDNs also give a name with a path and XHTTP settings of their own:

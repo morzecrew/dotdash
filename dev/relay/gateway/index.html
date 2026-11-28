@@ -2396,24 +2396,44 @@ relay of that group.</p>
 <p>A relay at 0.19 needs servers at 0.19: update the servers first. A server at
 0.19 still reads the relay lines of 0.18 for one release, so its update keeps
 every link. Each relay then idles from its update until its <code>servers</code> line
-is in, a few minutes. Rehearse it on a spare first. For server S and relays
-R1…Rn:</p>
+is in, a few minutes, and the canaries watching it fail meanwhile.
+Unattended updates take the servers to 0.19 by themselves, but never a
+relay: one that can't be rolled back waits, staged, for you. Rehearse it on
+a spare first. For a server group S, one server or
+<a href="../../server/several-servers/">several sharing keys</a>, and relays R1…Rn:</p>
 <ol>
 <li>
 <p><strong>Before.</strong> On S, keep the old lines for the way back, and pick each
-   relay's name and S's name. Leave each relay's old <code>&lt;uuid&gt; &lt;name&gt;</code> line in
-   S's <code>vless_clients</code> until the end.</p>
+   relay's name and S's name.</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>get<span class="w"> </span>relays<span class="w"> </span>&gt;<span class="w"> </span>~/relays.0.18
 </code></pre></div>
+<ul>
+<li>Leave each relay's old <code>&lt;uuid&gt; &lt;name&gt;</code> line in S's <code>vless_clients</code>
+  until the end. A client there named <code>relay-&lt;the relay's new name&gt;</code>
+  blocks the relay's <code>relay/1</code> line, which S refuses beside it: pick
+  another name for the relay, or rename the client first.</li>
+<li>Note each old line's <code>standby</code>, <code>off=</code> and <code>split</code>: a <code>relay/1</code> line
+  carries none of them. They go in S's <code>relay_flags</code>, by the relay's
+  name.</li>
+</ul>
 </li>
 <li>
-<p><strong>S first.</strong> Its devices see no change: the old relays still come in by
-   their lines in <code>vless_clients</code>.</p>
+<p><strong>S first</strong>, each of its servers. Its devices see no change: the old
+   relays still come in by their clients in <code>vless_clients</code>.</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>self-update<span class="w">                       </span><span class="c1"># if the release notes ask for a newer morzer</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>update<span class="w"> </span>--stage
 sudo<span class="w"> </span>morzer<span class="w"> </span>update<span class="w"> </span>--to<span class="w"> </span><span class="m">0</span>.19.0<span class="w"> </span>--set<span class="w"> </span><span class="nv">name</span><span class="o">=</span>s
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>client-config<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>--check
 </code></pre></div>
+<p><code>--check</code> warns of each line of 0.18 left in <code>relays</code>, until step 4.
+With several servers, each generated a <code>relay_seed</code> of its own on its
+update, and they need one: copy the first one's to the others before any
+<code>relay/1</code> line goes in, as the other shared secrets:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>cat<span class="w"> </span>/run/dotdash/secrets/relay_seed<span class="w"> </span><span class="p">|</span><span class="w"> </span>ssh<span class="w"> </span>b.example.com<span class="w"> </span>sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>relay_seed
+</code></pre></div>
+<p>Until it is updated, a relay keeps its own copy of the devices: a device
+added to or deleted from S reaches it only once you set that copy again,
+from <code>relay-config -- &lt;its client's name&gt;</code>, as before.</p>
 </li>
 <li>
 <p><strong>Each relay, one at a time.</strong> Devices use the others meanwhile.</p>
@@ -2421,33 +2441,45 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> <
 sudo<span class="w"> </span>morzer<span class="w"> </span>update<span class="w"> </span>--stage
 sudo<span class="w"> </span>morzer<span class="w"> </span>update<span class="w"> </span>--to<span class="w"> </span><span class="m">0</span>.19.0<span class="w"> </span>--set<span class="w"> </span><span class="nv">name</span><span class="o">=</span>ri
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>&lt;its<span class="w"> </span>domain,<span class="w"> </span>or<span class="w"> </span>its<span class="w"> </span>IP&gt;
-<span class="c1"># on S: replace Ri's old line with that relay/1 line. The same host,</span>
-<span class="c1"># keys and transports, so devices' links don't change</span>
+<span class="c1"># on each server of S: replace Ri's old line with that relay/1 line. The</span>
+<span class="c1"># same host, keys and transports, so devices' links don't change, but</span>
+<span class="c1"># for their name, now Ri's</span>
 sudo<span class="w"> </span><span class="nv">EDITOR</span><span class="o">=</span>nano<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>edit<span class="w"> </span>relays
+sudo<span class="w"> </span><span class="nv">EDITOR</span><span class="o">=</span>nano<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>edit<span class="w"> </span>relay_flags<span class="w">   </span><span class="c1"># its old line's flags, if it had any: "ri standby"</span>
+<span class="c1"># on one server of S</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-config<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>ri
 <span class="c1"># on Ri</span>
 sudo<span class="w"> </span><span class="nv">EDITOR</span><span class="o">=</span>nano<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>servers<span class="w">   </span><span class="c1"># the server/1 line</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>servers<span class="w"> </span>--output<span class="w">         </span><span class="c1"># within a minute: s live</span>
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>entry-check<span class="w"> </span>--output
 </code></pre></div>
-<p>A relay with <code>via</code>: move the relays it goes through first, then give it
-<code>sudo EDITOR=nano morzer secret edit via</code> with each one's <code>relay/1</code> line,
-before <code>servers</code>. The <code>via</code> parameter's old lines are dropped with the
-update (<code>config list</code> marks the value stale; <code>config unset via</code> clears
-it). <code>dotdash_link</code> is now <code>server_link</code>. Under <code>own-site</code>, a device that
-refreshes its subscription through the relay during the gap gets the
-site; its app keeps its old links, and the next refresh works.</p>
+<ul>
+<li>A relay with <code>via</code>: move the relays it goes through first, then give
+  it <code>sudo EDITOR=nano morzer secret edit via</code> with each one's <code>relay/1</code>
+  line, before <code>servers</code>. The <code>via</code> parameter's old lines are dropped
+  with the update (<code>config list</code> marks the value stale;
+  <code>config unset via</code> clears it).</li>
+<li><code>dotdash_link</code> is now <code>server_link</code>: a relay that went to S over XHTTP
+  with REALITY takes <code>--set server_link=xhttp-reality</code> with its update.</li>
+<li>Under <code>own-site</code>, a device that refreshes its subscription through the
+  relay during the gap gets the site; its app keeps its old links, and
+  the next refresh works.</li>
+</ul>
 </li>
 <li>
 <p><strong>The end.</strong> On S, once every relay's line in <code>relays</code> is a <code>relay/1</code>
    line, delete each relay's old line from <code>vless_clients</code>:
-   <code>sudo EDITOR=nano morzer secret edit vless_clients</code>.</p>
+   <code>sudo EDITOR=nano morzer secret edit vless_clients</code>.
+   <code>client-config --check</code> warns while a line of 0.18 is left in <code>relays</code>,
+   and of a client named as a <code>relay/1</code> line's relay, which is likely its
+   old line.</p>
 </li>
 </ol>
 <p><strong>The way back</strong>, relays first: a server back at 0.18 can't read <code>relay/1</code>
 lines. A relay's <code>morzer rollback</code> is refused, as 0.19 drops values 0.18
 requires: restore its pre-update backup instead, then put its old line back
-in S's <code>relays</code> from <code>~/relays.0.18</code>.</p>
+in S's <code>relays</code> from <code>~/relays.0.18</code>, and its client in <code>vless_clients</code> if
+step 4 deleted it.</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>restore<span class="w"> </span>--backup<span class="w"> </span>&lt;the<span class="w"> </span>pre-update<span class="w"> </span>one&gt;<span class="w"> </span>--force<span class="w"> </span>--confirm<span class="w"> </span>&lt;installation-id&gt;
 </code></pre></div>
 <p>S goes back with <code>sudo morzer rollback</code> once no <code>relay/1</code> line is left in

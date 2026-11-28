@@ -2474,7 +2474,7 @@ same.</p>
 </tr>
 <tr>
 <td>The relay's <code>nonce</code> or <code>name</code></td>
-<td>The same, then <code>relay-config</code> on each server again, as the relay's id there changes: replace its <code>servers</code> lines.</td>
+<td>The same, then <code>relay-config</code> on one server of each group again, as the relay's id there changes: replace its <code>servers</code> lines.</td>
 </tr>
 <tr>
 <td>The relay's address</td>
@@ -2730,6 +2730,8 @@ relay's machinery fails.</p>
 <h2 id="updates">Updates<a class="headerlink" href="#updates" title="Permanent link">&para;</a></h2>
 <p>As for the server: <code>sudo morzer self-update</code> when a release needs a newer
 morzer, then <code>sudo morzer update --stage &amp;&amp; sudo morzer update --to &lt;version&gt;</code>.
+A relay of 0.18 moves to the gateway after its servers, by hand:
+<a href="../gateway/#moving-from-018">Moving from 0.18</a>.
 Unattended updates follow
 <code>update.channel=oci://ghcr.io/morzecrew/dotdash-relay:stable</code>; see
 <a href="../../server/operations/#unattended-updates">Operations</a>.</p>
