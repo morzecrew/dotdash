@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A relay's `device-addresses` profile puts in its facts how many addresses each device is connected from right now, an IPv6 /64 counted once, never an address. The manager names a device at three or more at once on one relay, or on two relays at once: a link that may have leaked.
 
+### Changed
+
+- With `direct=false`, subscriptions are named after the exit too, as any site that shows a visitor's IP names it to the device anyway. They carried no name, so Happ showed the subscription's host.
+
 ### Fixed
 
 - The subscription's name, the server's exit, goes in `Profile-Title` as plain UTF-8, at most 24 bytes. Its `base64:` form ran to 31 to 39 characters, past the 25 Happ takes, so newer Happ showed the subscription's host instead.

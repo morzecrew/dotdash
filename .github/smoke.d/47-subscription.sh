@@ -92,13 +92,6 @@ for _ in $(seq 30); do
 done
 [ "${title}" = "${want}" ] || die "the subscription is not named after its exit: $(headers "${url}" | grep -i '^profile-title' || echo none)"
 echo "${0##*/}: the subscription is named after the exit, its country's flag and IPv4"
-# direct=false: no title, since a direct upstreams line makes the exit this
-# server's own address.
-sudo morzer config set direct=false >/dev/null || die "could not set direct=false"
-for _ in $(seq 30); do headers "${url}" | grep -qi '^profile-title:' || break; sleep 2; done
-! headers "${url}" | grep -qi '^profile-title:' || die "with direct=false the subscription is still named after the exit"
-sudo morzer config unset direct >/dev/null || die "could not unset direct"
-echo "${0##*/}: with direct=false the subscription carries no title"
 
 config=$(sudo morzer task run client-config --output -- --full | sed -n '/^{$/,/^}$/p')
 [ -n "${config}" ] || die "client-config --full prints no Xray config"
