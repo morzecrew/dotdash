@@ -293,6 +293,8 @@
       
         
       
+        
+      
     
     
     
@@ -1370,6 +1372,8 @@
       
         
       
+        
+      
     
     
     
@@ -1441,6 +1445,33 @@
     
   
   Set up a relay
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./gateway/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  One relay, several server groups
 
     
   </span>
@@ -2075,6 +2106,8 @@
       
         
       
+        
+      
     
     
     
@@ -2110,10 +2143,11 @@
 <p>Some networks let only a set list of addresses through, for a region or for
 mobile data. A device there can't reach a dotdash server outside at all. The
 <code>dotdash-relay</code> bundle (<code>ghcr.io/morzecrew/dotdash-relay</code>) runs on a machine
-inside that network, whose address does get through, and carries devices on
-to the server.</p>
-<p><img alt="A phone connects to the relay inside the restricted network on 443 under the name of a site next to it; the relay carries it on to whichever dotdash server answers fastest" src="../assets/diagrams/relay.light.svg#only-light" />
-<img alt="A phone connects to the relay inside the restricted network on 443 under the name of a site next to it; the relay carries it on to whichever dotdash server answers fastest" src="../assets/diagrams/relay.dark.svg#only-dark" /></p>
+inside that network, whose address does get through, and carries each device
+on to its own server group: one server, or several sharing keys. One relay
+can serve several groups (<a href="gateway/">gateway</a>).</p>
+<p><img alt="A phone of group a connects to the relay inside the restricted network on 443 under the name of its site; the relay carries it on to group a's fastest server, and devices of group b to group b's" src="../assets/diagrams/relay.light.svg#only-light" />
+<img alt="A phone of group a connects to the relay inside the restricted network on 443 under the name of its site; the relay carries it on to group a's fastest server, and devices of group b to group b's" src="../assets/diagrams/relay.dark.svg#only-dark" /></p>
 <h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Devices connect to the relay on 443 with REALITY, under the name of a
@@ -2122,17 +2156,19 @@ to the server.</p>
   parameter). To the network, the connection looks like one to that site.</li>
 <li>Anyone probing the relay's 443 without its keys meets that site: its own,
   with a certificate for its name, or the borrowed site's real handshake.</li>
-<li>The relay has keys of its own, and its own copy of the devices allowed in.
-  A device uses the same id as on the server, with a separate link per relay,
-  <code>relay · reality</code>, numbered with several relays (<code>relay 2 · reality</code>) by
-  its place in the server's <code>relays</code>, or named after the relay's <code>name</code>.</li>
-<li>The relay goes on to the server as one client of its own, a line in the
-  server's <code>vless_clients</code>. With <a href="../server/several-servers/">several servers</a>,
-  it uses whichever answers fastest, so a ban on one address doesn't cut it off.</li>
+<li>The relay has keys of its own. A device uses the same id as on its server,
+  with a separate link per relay, named after the relay: <code>r1 · reality</code>. The
+  relay fetches each group's devices from its servers every minute, through
+  its own tunnel, so nobody copies them by hand.</li>
+<li>The relay goes on to each group's servers as one client of its own, by an
+  id each server derives from its own secret and the relay's line. With
+  <a href="../server/several-servers/">several servers</a> in a group, it uses
+  whichever answers fastest, so a ban on one address doesn't cut it off.</li>
 <li>It can go through another relay instead (<code>via</code>), so the servers never
   see its address: <a href="operations/#through-another-relay">Through another relay</a>.</li>
 <li>Nothing leaves the relay except to dotdash: traffic still exits through
-  the server's upstream proxy.</li>
+  its group's upstream proxy, and a device never reaches another group's
+  servers or exit.</li>
 </ul>
 <p>It can also help where home and mobile lines slow down TLS to faraway
 hosting: devices then reach only a nearby address, and the relay's own

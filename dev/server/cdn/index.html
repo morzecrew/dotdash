@@ -293,6 +293,8 @@
       
         
       
+        
+      
     
     
     
@@ -1515,6 +1517,8 @@
       
         
       
+        
+      
     
     
     
@@ -1583,6 +1587,33 @@
     
   
   Set up a relay
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../relay/gateway/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  One relay, several server groups
 
     
   </span>
@@ -2434,7 +2465,7 @@ send those devices their links again.</p>
 <p>A CDN is refused subscriptions. A subscription read in the clear gives away
 every link, the device's keys and every relay and CDN name, so one request
 to the provider would list every way in. The server and
-<a href="../../relay/install/#6-devices">relays with their own site</a> answer a
+<a href="../../relay/install/#8-devices">relays with their own site</a> answer a
 subscription request a CDN passed on with the site, as any other path: its
 404, or your app's answer. They recognise
 one by the headers a CDN adds to say so (<code>X-Forwarded-For</code>, <code>Via</code>, <code>Forwarded</code>
@@ -2477,7 +2508,7 @@ cheap to replace, rather than this server and its upstream.</p>
    any name.</li>
 <li>
 <p><strong>On the relay</strong>, list the names devices use, then print its line again
-   (<a href="../../relay/install/#4-on-the-relay-its-line">its line</a>); it now ends in
+   (<a href="../../relay/install/#3-on-the-relay-its-line">its line</a>); it now ends in
    <code>cdn=cdn.example.net cdnpath=…</code>:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">cdn_hosts</span><span class="o">=</span>cdn.example.net
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>&lt;address&gt;

@@ -293,6 +293,8 @@
       
         
       
+        
+      
     
     
     
@@ -1370,6 +1372,8 @@
       
         
       
+        
+      
     
     
     
@@ -1441,6 +1445,33 @@
     
   
   Set up a relay
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gateway/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  One relay, several server groups
 
     
   </span>
@@ -2222,6 +2253,8 @@
       
         
       
+        
+      
     
     
     
@@ -2278,7 +2311,12 @@
 <tr>
 <td><code>tunnel_host</code></td>
 <td><code>none</code></td>
-<td>with <code>own-site</code>, one host a cover app may call through the tunnel at <code>http://caddy:8090</code>, with no TLS: Caddy sends it on as HTTPS inside the link to the servers or the relays in <code>via</code>, so this machine shows one TLS client, Xray's (<a href="../../server/cover-site/#an-app-installed-with-morzer">cover site</a>)</td>
+<td>with <code>own-site</code>, one host a cover app may call through the tunnel at <code>http://caddy:8090</code>, with no TLS: Caddy sends it on as HTTPS inside the link to <code>tunnel_group</code>'s servers, or through the relays in <code>via</code>, so this machine shows one TLS client, Xray's (<a href="../../server/cover-site/#an-app-installed-with-morzer">cover site</a>)</td>
+</tr>
+<tr>
+<td><code>tunnel_group</code></td>
+<td>empty</td>
+<td>the server group, by its name in <code>servers</code>, whose servers <code>tunnel_host</code> is reached through; empty for the first line's</td>
 </tr>
 <tr>
 <td><code>cert_issuer</code></td>
@@ -2317,28 +2355,8 @@
 </tr>
 <tr>
 <td><code>name</code></td>
-<td><code>none</code></td>
-<td>a label of up to 24 letters, digits, dots, dashes or underscores that devices' links through the relay carry in place of <code>relay &lt;n&gt;</code>: <code>edge-1 · reality</code>. <code>relay-entry</code> ends the line with <code>name=</code>; a name an earlier line took goes by the number. Every device's app shows it, so pick one that says nothing about where the relay is hosted</td>
-</tr>
-<tr>
-<td><code>dotdash_servers</code></td>
 <td>none, given at <code>init</code></td>
-<td>the dotdash servers sharing one set of keys, comma-separated domains; the relay uses whichever answers fastest</td>
-</tr>
-<tr>
-<td><code>dotdash_port</code></td>
-<td><code>443</code></td>
-<td>the servers' <code>https_port</code></td>
-</tr>
-<tr>
-<td><code>dotdash_public_key</code></td>
-<td>none, given at <code>init</code></td>
-<td>the servers' REALITY public key, the <code>pbk</code> of their links</td>
-</tr>
-<tr>
-<td><code>dotdash_address</code></td>
-<td><code>none</code></td>
-<td>where to connect when <code>dotdash_servers</code> names one server, such as its IP; <code>none</code> reaches each server by its name</td>
+<td>the relay's name, 1 to 24 letters, digits, dots, dashes or underscores, unique among each group's relays: it heads the relay's line, each server derives the relay's id from it and the <code>nonce</code>, and devices' links through the relay carry it, <code>r1 · reality</code>. Every device's app shows it, so pick one that says nothing about where the relay is hosted</td>
 </tr>
 <tr>
 <td><code>metrics_textfile</code></td>
@@ -2346,24 +2364,14 @@
 <td>with the <code>metrics</code> profile, the node exporter's textfile directory, writable by 65532 (<a href="../operations/#metrics">Metrics</a>)</td>
 </tr>
 <tr>
-<td><code>dotdash_link</code></td>
+<td><code>server_link</code></td>
 <td><code>reality</code></td>
-<td>how the relay reaches the servers: <code>reality</code>, a REALITY connection with Vision for each device's; <code>xhttp-reality</code>, XHTTP with REALITY on <code>dotdash_xhttp_reality_port</code>, connections reused across devices, about 100 ms sooner to a page's first byte for about twice the CPU here and on the server. Needs the servers' <a href="../../server/xhttp-reality/"><code>xhttp-reality</code></a> profile and the <code>dotdash_xhttp_path</code> secret, both of which <code>relay-config</code> prints</td>
-</tr>
-<tr>
-<td><code>dotdash_xhttp_reality_port</code></td>
-<td><code>8443</code></td>
-<td>the servers' <code>xhttp_reality_port</code>, for <code>dotdash_link=xhttp-reality</code></td>
-</tr>
-<tr>
-<td><code>via</code></td>
-<td>none</td>
-<td>other relays to go through instead of the servers, one line each as its <code>relay-entry</code> prints it; with several, whichever answers fastest (<a href="../operations/#through-another-relay">Through another relay</a>). Not with <code>dotdash_link=xhttp-reality</code></td>
+<td>how the relay reaches each group's servers: <code>reality</code>, a REALITY connection with Vision for each device's; <code>xhttp-reality</code>, XHTTP with REALITY on the port and path of the group's line's <code>xr=</code>, connections reused across devices, about 100 ms sooner to a page's first byte for about twice the CPU here and on the server; a line without <code>xr=</code> (servers without the <a href="../../server/xhttp-reality/"><code>xhttp-reality</code></a> profile) keeps REALITY</td>
 </tr>
 <tr>
 <td><code>via_link</code></td>
 <td><code>reality</code></td>
-<td>how the relay reaches those in <code>via</code>: <code>reality</code>, REALITY with Vision, a connection for each device's; <code>xhttp</code>, XHTTP through each one's own site under its certificate, connections reused across devices, for which each line has to carry <code>own-site &lt;path&gt;</code>, as <code>relay-entry</code> prints it under <code>own-site</code></td>
+<td>how the relay reaches those in <code>via</code>: <code>reality</code>, REALITY with Vision, a connection for each device's; <code>xhttp</code>, XHTTP through each one's own site under its certificate, connections reused across devices, for which each line has to carry <code>xhttp=&lt;path&gt;</code>, as <code>relay-entry</code> prints it under <code>own-site</code></td>
 </tr>
 <tr>
 <td><code>via_fingerprint</code></td>
@@ -2373,7 +2381,7 @@
 <tr>
 <td><code>probe_url</code></td>
 <td><code>https://www.gstatic.com/generate_204</code></td>
-<td>what the health check fetches through dotdash; any 2xx is healthy</td>
+<td>what the relay fetches through each server every 30 seconds, to pick a group's fastest; any 2xx counts</td>
 </tr>
 <tr>
 <td><code>tcp_congestion</code></td>
@@ -2431,16 +2439,19 @@ domain under <code>own-site</code>, the <code>own-site</code>, <code>mkcp</code>
 <code>http-origin</code> profiles, <code>kcp_port</code>, <code>kcp_header</code>, <code>kcp_open</code>,
 <code>hysteria2_port</code>, <code>cdn_hosts</code>, <code>http_origin_host</code>, <code>cdn_only</code>, <code>name</code>, and a
 rotated <code>reality_key</code>, <code>reality_short_id</code>, <code>vless_seed</code>, <code>xhttp_path</code>,
-<code>cdn_xhttp_path</code> or <code>kcp_seed</code>. The rest change nothing on the servers:
-<code>http_origin_port</code> (the CDN needs it, the servers don't), <code>http_origin_from</code>,
-<code>cover</code>, <code>tunnel_host</code>, <code>cert_issuer</code>, <code>https_port</code>, <code>http_port</code>, <code>listen</code>,
-<code>via</code>, the <code>dotdash_*</code> parameters and the rest.</p>
+<code>cdn_xhttp_path</code>, <code>kcp_seed</code> or <code>nonce</code>. A new <code>name</code> or <code>nonce</code> is a new
+id on every server, so each server's <code>relay-config</code> line changes too. The
+rest change nothing on the servers: <code>http_origin_port</code> (the CDN needs it,
+the servers don't), <code>http_origin_from</code>, <code>cover</code>, <code>tunnel_host</code>,
+<code>tunnel_group</code>, <code>cert_issuer</code>, <code>https_port</code>, <code>http_port</code>, <code>listen</code>,
+<code>server_link</code>, <code>via</code> and the rest.</p>
 <h2 id="profiles">Profiles<a class="headerlink" href="#profiles" title="Permanent link">&para;</a></h2>
 <p><code>installation.profile=own-site</code>: the relay serves a site of its own under its
 domain (<code>--domain</code> at <code>init</code>, or <code>installation.domains</code>), and REALITY hands it
 every connection without the relay's keys. It publishes port 80 too, for the
 certificate. The site also serves devices their subscriptions, fetched from
-the servers through the relay's tunnel, and XHTTP on the secret path
+each device's own servers through the relay's tunnel by the token's first
+12 hex characters, and XHTTP on the secret path
 <code>xhttp_path</code>, which <code>init</code> generates. With <code>cdn_hosts</code> set, <code>relay-entry</code>
 ends the relay's line with <code>cdn=&lt;name&gt;,...</code> and <code>cdnpath=&lt;path&gt;</code>, and the
 server gives each device a <code>relay · cdn</code> link through each, by a secret path
@@ -2485,14 +2496,15 @@ gives each device a <code>relay · kcp</code> link. Open the UDP port in the
 provider's firewall, and replace the relay's line on the server after turning
 it on.</p>
 <p><code>installation.profile=device-traffic</code> (with any of the others): the relay
-counts the bytes each device moves through it, and its facts carry the counts
-to the authority hourly, for the <a href="../../manager/#leaked-links">manager</a>. The
-server counts the relay as one client, so a relay's devices are counted here.
+counts the bytes each device moves through it, by <code>&lt;device&gt;@&lt;group&gt;</code>, and
+its facts carry the counts to the authority hourly, for the
+<a href="../../manager/#leaked-links">manager</a>. The server counts the relay as one
+client, so a relay's devices are counted here.
 The facts task, and with it <code>relay-entry</code>, then runs in Xray's namespace, and
 starts Xray if it is down.</p>
 <h2 id="secrets">Secrets<a class="headerlink" href="#secrets" title="Permanent link">&para;</a></h2>
-<p><code>init</code> generates the relay's own keys; the rest come from the server's
-<code>relay-config</code>.</p>
+<p><code>init</code> generates the relay's own keys and nonce; <code>servers</code> and <code>via</code> you
+give it.</p>
 <table>
 <thead>
 <tr>
@@ -2503,24 +2515,19 @@ starts Xray if it is down.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>vless_clients</code></td>
+<td><code>servers</code></td>
 <td>no</td>
-<td>the devices the relay lets in, one <code>&lt;uuid&gt; [name [desktop|mobile]]</code> per line</td>
+<td>one <code>server/1</code> line per server group, as one of its servers prints it with <code>relay-config -- &lt;relay&gt;</code>; empty: no group, and the relay lets nobody in (<a href="../operations/#server-groups">Server groups</a>)</td>
 </tr>
 <tr>
-<td><code>dotdash_id</code></td>
+<td><code>via</code></td>
 <td>no</td>
-<td>the id the relay uses on the server, its line in the server's <code>vless_clients</code></td>
+<td>other relays to go through instead of the servers, one <code>relay/1</code> line each as its <code>relay-entry</code> prints it; with several, whichever answers fastest (<a href="../operations/#through-another-relay">Through another relay</a>)</td>
 </tr>
 <tr>
-<td><code>dotdash_encryption</code></td>
-<td>no</td>
-<td>the <code>encryption=</code> value of the server's links</td>
-</tr>
-<tr>
-<td><code>dotdash_short_id</code></td>
-<td>no</td>
-<td>the <code>sid=</code> value of the server's REALITY links</td>
+<td><code>nonce</code></td>
+<td>yes</td>
+<td>16 hex characters in the relay's line, from which, with its name, each server derives the relay's id there</td>
 </tr>
 <tr>
 <td><code>vless_seed</code></td>
@@ -2553,17 +2560,20 @@ starts Xray if it is down.</p>
 <td>with <code>own-site</code>, the secret path CDNs in front fetch XHTTP by, apart from <code>xhttp_path</code></td>
 </tr>
 <tr>
-<td><code>dotdash_xhttp_path</code></td>
-<td>no</td>
-<td>with <code>dotdash_link=xhttp-reality</code>, the <code>path=</code> of the servers' XHTTP links, from <code>relay-config</code></td>
-</tr>
-<tr>
 <td><code>acme_dns</code></td>
 <td>no</td>
 <td>with <code>cert_issuer=acme-dns</code>, the <a href="../../acme-dns/">acme-dns</a> registration as JSON</td>
 </tr>
 </tbody>
 </table>
+<p>A <code>servers</code> line:</p>
+<div class="highlight"><pre><span></span><code>server/1 &lt;name&gt; &lt;host&gt;[,&lt;host&gt;...] &lt;port&gt; &lt;public key&gt; &lt;short id&gt; &lt;encryption&gt; &lt;relay id&gt; [xr=&lt;port&gt;,&lt;path&gt;] [address=&lt;ip&gt;[,&lt;ip&gt;...]]
+</code></pre></div>
+<p>the group's name, its servers, which share their keys, the port they take
+REALITY on, their keys, the relay's id there (its way into the group, and a
+credential), <code>xr=</code> under their <code>xhttp-reality</code> profile, and <code>address=</code>, which
+you may add, one IP per host in order, for the relay to dial in place of the
+names.</p>
 <h2 id="tasks">Tasks<a class="headerlink" href="#tasks" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2575,15 +2585,19 @@ starts Xray if it is down.</p>
 <tbody>
 <tr>
 <td><code>relay-entry --output -- &lt;address&gt;</code></td>
-<td>the relay's line for the server's <code>relays</code>, and how a canary checks the relay; with no address, at <code>entry_host</code></td>
+<td>the relay's <code>relay/1</code> line for every server's <code>relays</code>, and how a canary checks the relay; with no address, at <code>entry_host</code></td>
+</tr>
+<tr>
+<td><code>servers --output</code></td>
+<td>each server group's state, a line each: <code>live</code>, <code>down</code>, <code>refused</code> or <code>starting</code>, each of its servers, its devices and the age of its list (<a href="../gateway/#health-per-group">Health per group</a>)</td>
 </tr>
 <tr>
 <td><code>entry-check --output</code></td>
-<td>each of the relay's entries checked end to end as a device reaches it, and the <code>http-origin</code> door by its log, a line each with why it fails (<a href="../operations/#check-each-entry">Check each entry</a>)</td>
+<td>each of the relay's entries checked end to end as a device of each live group reaches it, and the <code>http-origin</code> door by its log, a line each with why it fails (<a href="../operations/#check-each-entry">Check each entry</a>)</td>
 </tr>
 <tr>
 <td><code>facts --output</code></td>
-<td>the same line as JSON, which the relay publishes to an authority it <a href="../../server/operations/#managed-from-elsewhere">follows</a>; under <code>own-site</code> also <code>cert_days</code>, the whole days left on the site's certificate; and <code>clients</code>, how many devices it lets in and their <a href="../operations/#devices">digest</a></td>
+<td>the same line as JSON, with the relay's <code>name</code>, <code>nonce</code> and each group's state under <code>groups</code>, which the relay publishes to an authority it <a href="../../server/operations/#managed-from-elsewhere">follows</a>; under <code>own-site</code> also <code>cert_days</code>, the whole days left on the site's certificate</td>
 </tr>
 </tbody>
 </table>

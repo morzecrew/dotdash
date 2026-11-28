@@ -16,7 +16,7 @@
       
       
       
-        <link rel="prev" href="../install/">
+        <link rel="prev" href="../gateway/">
       
       
         <link rel="next" href="../reference/">
@@ -285,6 +285,8 @@
       
         
           
+        
+      
         
       
         
@@ -1370,6 +1372,8 @@
       
         
       
+        
+      
     
     
     
@@ -1441,6 +1445,33 @@
     
   
   Set up a relay
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gateway/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  One relay, several server groups
 
     
   </span>
@@ -1563,10 +1594,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#servers" class="md-nav__link">
+  <a href="#server-groups" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Servers
+        Server groups
       </span>
     </span>
   </a>
@@ -2229,10 +2260,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#servers" class="md-nav__link">
+  <a href="#server-groups" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Servers
+        Server groups
       </span>
     </span>
   </a>
@@ -2376,6 +2407,8 @@
       
         
       
+        
+      
     
     
     
@@ -2408,30 +2441,16 @@
 
 
 <h1 id="running-a-relay">Running a relay<a class="headerlink" href="#running-a-relay" title="Permanent link">&para;</a></h1>
-<p>The relay keeps copies of what it got from the server: the devices, and the
-server's keys. Whatever changes one side has to reach the other.</p>
+<p>The relay keeps one line per server group, in <code>servers</code>, and each server
+keeps the relay's line in <code>relays</code>. Its devices it fetches from each group's
+servers by itself.</p>
 <h2 id="devices">Devices<a class="headerlink" href="#devices" title="Permanent link">&para;</a></h2>
-<p>A device added to or deleted from the server's <code>vless_clients</code> has to
-change on the relay too. After the change on the server, <code>relay-config</code>
-prints the relay's new copy:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># on the server</span>
-sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-config<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>relay
-<span class="c1"># on the relay: the vless_clients block of that output</span>
-sudo<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span><span class="nb">set</span><span class="w"> </span>vless_clients<span class="w"> </span><span class="s">&lt;&lt;'END'</span>
-<span class="s">…</span>
-<span class="s">END</span>
-</code></pre></div>
-<p>A relay copy you forget rejects a device added on the server, and still lets
-in one deleted there. To check, compare the digests: <code>relay-config</code> ends with
-the devices its copy lets in and their digest, and the relay's <code>relay-entry</code>
-prints the same of its own copy:</p>
-<div class="highlight"><pre><span></span><code>The devices this copy lets in: 14, digest 3f9a1c2b.     # relay-config, on the server
-The devices it lets in: 14, digest 3f9a1c2b.            # relay-entry, on the relay
-</code></pre></div>
-<p>The same digest means the same devices. The relay's facts carry it too, and
-under the <a href="../../manager/#status">manager</a>, <code>status</code> says when a relay's list
-isn't the one the manager sent. It is taken over the devices' ids alone, and
-reveals none of them.</p>
+<p>Nothing to do on the relay. A device added to or deleted from its server's
+<code>vless_clients</code> reaches the relay within a minute. A deleted device still
+connected restarts the relay's Xray, which alone cuts its open connections;
+every device's connections then drop once. The <code>servers</code> task gives each
+group's device count and the digest of its list, and the facts carry the
+same.</p>
 <h2 id="keys">Keys<a class="headerlink" href="#keys" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2442,16 +2461,24 @@ reveals none of them.</p>
 </thead>
 <tbody>
 <tr>
-<td>The server's <code>reality_key</code>, <code>vless_seed</code> or <code>reality_short_id</code></td>
-<td>Run <code>relay-config</code> again, and on the relay set <code>dotdash_public_key</code>, <code>dotdash_encryption</code> and <code>dotdash_short_id</code> from it. Until then the relay can't reach the server.</td>
+<td>A server group's <code>reality_key</code>, <code>vless_seed</code> or <code>reality_short_id</code></td>
+<td>Run <code>relay-config -- &lt;relay&gt;</code> on one of its servers again, and replace that group's line in the relay's <code>servers</code>. Until then the group shows <code>down</code> there.</td>
+</tr>
+<tr>
+<td>A group's <code>relay_seed</code></td>
+<td>The same, for every relay of the group: each has a new id there.</td>
 </tr>
 <tr>
 <td>The relay's own keys (<code>secret rotate</code> on the relay)</td>
-<td>Run <code>relay-entry</code> again, replace the relay's line in the server's <code>relays</code>, and send devices their links again (subscriptions pick them up).</td>
+<td>Run <code>relay-entry</code> again, replace the relay's line in every server's <code>relays</code>, and send devices their links again (subscriptions pick them up). Its <code>servers</code> lines stay.</td>
+</tr>
+<tr>
+<td>The relay's <code>nonce</code> or <code>name</code></td>
+<td>The same, then <code>relay-config</code> on each server again, as the relay's id there changes: replace its <code>servers</code> lines.</td>
 </tr>
 <tr>
 <td>The relay's address</td>
-<td>The same: <code>relay-entry -- &lt;new address&gt;</code>, then replace the line.</td>
+<td><code>relay-entry -- &lt;new address&gt;</code>, then replace the line on every server.</td>
 </tr>
 </tbody>
 </table>
@@ -2460,8 +2487,7 @@ reveals none of them.</p>
 the old value before a change (<code>sudo morzer config get &lt;name&gt;</code>). To undo it,
 set that value again. If the parameter goes into the relay's line
 (<a href="../reference/#what-changes-the-relays-line">which do</a>), run <code>relay-entry</code>
-and replace the line on every server too. Under the
-<a href="../../manager/#a-relays-transports">manager</a>, the next <code>sync</code> does that.</p>
+and replace the line on every server too.</p>
 <h2 id="a-site-of-its-own-later">A site of its own, later<a class="headerlink" href="#a-site-of-its-own-later" title="Permanent link">&para;</a></h2>
 <p>A relay set up with a borrowed site moves to one of its own in place. Point a
 domain at it and open port 80, then:</p>
@@ -2469,47 +2495,57 @@ domain at it and open port 80, then:</p>
 sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>installation.profile<span class="o">=</span>own-site
 sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span><span class="m">198</span>.51.100.7
 </code></pre></div>
-<p>The site in the line changes and the line gains <code>own-site</code>, so replace the
-relay's line in the server's <code>relays</code>, and send devices their links again
+<p>The site in the line changes and the line gains <code>xhttp=</code>, so replace the
+relay's line in every server's <code>relays</code>, and send devices their links again
 (subscriptions pick them up), with the subscription URL through the relay for
 those inside the restricted network.
 <code>sudo morzer config unset installation.profile</code> goes back to the borrowed
 site.</p>
-<h2 id="servers">Servers<a class="headerlink" href="#servers" title="Permanent link">&para;</a></h2>
-<p>The relay goes to every server in <code>dotdash_servers</code> and uses whichever
-answers fastest. With a <a href="../../server/several-servers/">new server</a> sharing
-the keys:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">dotdash_servers</span><span class="o">=</span>example.com,b.example.com
+<h2 id="server-groups">Server groups<a class="headerlink" href="#server-groups" title="Permanent link">&para;</a></h2>
+<p><code>servers</code> holds one <code>server/1</code> line per group, each as one of the group's
+servers prints it with <code>relay-config -- &lt;relay&gt;</code>. To add a group: its
+servers' <code>name</code>, the relay's line in their <code>relays</code>, then its line here.
+To drop one, delete its line. Either way:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span><span class="nv">EDITOR</span><span class="o">=</span>nano<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>servers
 </code></pre></div>
-<p>Under <code>own-site</code>, <code>sudo morzer apply</code> afterwards: the site fetches
-subscriptions from these servers, and only an apply restarts it with the new
-list.</p>
+<p>Xray restarts on it, and every device's connections drop once. A line Xray
+can't read keeps it from starting: <code>doctor</code> says so at once, and Xray's log
+(<code>sudo docker compose -p dotdash-relay logs xray</code>) names the line.</p>
+<p>A <a href="../../server/several-servers/">new server</a> sharing a group's keys goes
+into that group's line, which its <code>relay-config</code> prints with every server of
+the group. The relay uses whichever of a group's servers answers fastest,
+and the group stays live while one serves its list.</p>
+<p><code>server_link=xhttp-reality</code> reaches each group's servers over XHTTP with
+REALITY, on the port and path the line's <code>xr=</code> gives, which a server under
+its <a href="../../server/xhttp-reality/"><code>xhttp-reality</code></a> profile prints: a few
+connections reused across devices, about 100 ms sooner to a page's first
+byte for about twice the CPU on both machines. A line without <code>xr=</code> keeps
+REALITY.</p>
 <h2 id="through-another-relay">Through another relay<a class="headerlink" href="#through-another-relay" title="Permanent link">&para;</a></h2>
 <p>A relay on an address you can't afford to lose can go through another relay
 instead of to the servers. Its one connection out is then to that relay,
-which carries it on as one of its devices, and the servers never see its
+which carries it on as one of its own, and the servers never see its
 address.</p>
 <ol>
-<li>On the server, a client for this relay in <code>vless_clients</code>, and the relay
-   installed from <code>relay-config</code>, as for any relay.</li>
-<li>The other relay lets this one in by that client's id. Its copy of
-   <code>vless_clients</code> holds every client but its own: after adding this relay's
-   client on the server, set the other relay's copy again from its own
-   <code>relay-config</code> (<a href="#devices">Devices</a>).</li>
 <li>
 <p>On the other relay, its line:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>relay-entry<span class="w"> </span>--output<span class="w"> </span>--<span class="w"> </span>&lt;its<span class="w"> </span>address&gt;
 </code></pre></div>
 </li>
 <li>
-<p>On this relay, that line in <code>via</code>:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span>edit<span class="w"> </span>via
+<p>On this relay, that line in <code>via</code>, before <code>servers</code>:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span><span class="nv">EDITOR</span><span class="o">=</span>nano<span class="w"> </span>morzer<span class="w"> </span>secret<span class="w"> </span>edit<span class="w"> </span>via
 </code></pre></div>
 </li>
+<li>
+<p>On each server of each group, both relays' lines in <code>relays</code>. The other
+   relay lets this one in because its group's list holds this relay's id; a
+   group the other relay doesn't serve shows <code>down</code> here.</p>
+</li>
 </ol>
-<p>The apply's health check goes through the other relay, and morzer rolls back
-a line it can't get through. With two lines, it uses whichever relay answers
-fastest, so one going down doesn't cut it off.</p>
+<p>With two lines in <code>via</code>, it uses whichever relay answers fastest, so one
+going down doesn't cut it off. <code>servers</code> then names the relays on the way
+for each group.</p>
 <p>How it reaches the other relay, <code>via_link</code>:</p>
 <ul>
 <li><code>reality</code> (the default): REALITY with Vision, one connection for each of
@@ -2519,7 +2555,7 @@ fastest, so one going down doesn't cut it off.</p>
   device's <code>xhttp</code> link to a relay. To whoever watches this relay, that is a
   machine fetching from a website, rather than as many connections as its
   devices make. The other relay needs <code>own-site</code>, and its line then carries
-  <code>own-site &lt;path&gt;</code>, which this one needs.</li>
+  <code>xhttp=&lt;path&gt;</code>, which this one needs.</li>
 </ul>
 <p>On the <code>xhttp</code> leg, <code>via_fingerprint</code> sets the TLS client hello this relay
 shows the other one. The default, <code>chrome</code>, mimics that browser, as the leg
@@ -2532,31 +2568,18 @@ browsers, and <code>random</code> a different one per connection. It changes not
 the <code>reality</code> leg or on the way to the servers.</p>
 <h3 id="both-ways-at-once">Both ways at once<a class="headerlink" href="#both-ways-at-once" title="Permanent link">&para;</a></h3>
 <p>While the other relay's address gets through, devices can reach it directly
-and leave this one idle; once it doesn't, they go through this one. Put both
-relays' lines in the server's <code>relays</code>, the other relay's first: devices get
-the other relay's links and this one's, which go through it. A
-<a href="../reference/"><code>name</code></a> on each says which is which in the apps, such as
-<code>name=y</code> on the other relay and <code>name=y-via-x</code> on this one: <code>y · reality</code>,
-<code>y · xhttp</code>, <code>y-via-x · reality</code>. In apps where you pick a link, pick the
-other relay's and keep this one's for when they stop working; Xray configs
-that pick the fastest pick the shorter way while it works, though they check
-every link every 30 seconds, this one's too.</p>
+and leave this one idle; once it doesn't, they go through this one. With
+both relays' lines in the servers' <code>relays</code>, devices get the other relay's
+links and this one's, which go through it, each named by its relay's name:
+<code>y · reality</code>, <code>y · xhttp</code>, <code>y-via-x · reality</code>. In apps where you pick a
+link, pick the other relay's and keep this one's for when they stop working;
+Xray configs that pick the fastest pick the shorter way while it works,
+though they check every link every 30 seconds, this one's too.</p>
 <ul>
-<li><code>dotdash_servers</code> and the server's keys stay as they are: under
-  <code>own-site</code>, the site still fetches devices' subscriptions from the servers,
-  through the other relay.</li>
-<li>Or the other relay has no line in the server's <code>relays</code>: then no device
-  gets a link to it and only this relay knows its address, so its firewall
-  can let in this relay alone (with <code>cert_issuer=acme-dns</code>, which needs no
-  port 80). Either way, the server's firewall can let in the relays alone.</li>
 <li>Each relay on the way adds its round trip to every new connection.</li>
-<li><code>dotdash_link=xhttp-reality</code> is a way to the servers only: with <code>via</code>,
-  the link is <code>reality</code>.</li>
-<li>Devices added on the server go into this relay's copy as before. The other
-  relay's copy needs this relay's client, and its own devices if any.</li>
+<li><code>server_link=xhttp-reality</code> is a way to the servers only: with <code>via</code>, the
+  link is <code>via_link</code>'s.</li>
 </ul>
-<p>With the <a href="../../manager/">manager</a>, <code>via</code> in the relay's entry of
-<code>network.toml</code> does all of this.</p>
 <h2 id="move-a-relay">Move a relay<a class="headerlink" href="#move-a-relay" title="Permanent link">&para;</a></h2>
 <p>A relay whose links name its domain moves to a new machine, or a new address,
 with a DNS change, and devices keep their links. It keeps its keys, which a
@@ -2574,38 +2597,50 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>update<span class="w">
 </code></pre></div>
 <p>Point the relay's domain at the new address, and open 443, and 80 under
 <code>own-site</code>. Shut the old machine down: two live relays with one installation
-id confuse each other's backups. A relay whose links name its IP needs a new
-line from <code>relay-entry</code> in the server's <code>relays</code>, and new links for devices.
-Under the manager, the imported relay has a new signing key and age
-identity: <a href="../../manager/#a-rebuilt-machine">join it again</a>.</p>
+id confuse each other's backups. The imported relay keeps its name and
+nonce, so its id on every server and its <code>servers</code> lines stay. A relay whose
+links name its IP needs a new line from <code>relay-entry</code> in every server's
+<code>relays</code>, and new links for devices. Under the manager, the imported relay
+has a new signing key and age identity:
+<a href="../../manager/#a-rebuilt-machine">join it again</a>.</p>
 <h2 id="watching-it">Watching it<a class="headerlink" href="#watching-it" title="Permanent link">&para;</a></h2>
-<p><code>doctor</code> and each <code>apply</code> fetch <code>probe_url</code> through dotdash, so they fail
-when the relay can't reach the server. Have them alert you:</p>
+<p><code>doctor</code> and each <code>apply</code> check the relay's own machinery: Xray runs, and
+its agent reached Xray within the last two minutes. They no longer say
+whether a server group answers, which each group's state does
+(<a href="../gateway/#health-per-group">Health per group</a>):</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>servers<span class="w"> </span>--output
+</code></pre></div>
+<p>Under the <code>metrics</code> profile, alert on <code>dotdash_group_live == 0</code>, and have
+<code>doctor</code> alert on the machinery:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>notify<span class="w"> </span>target<span class="w"> </span>add<span class="w"> </span>https://hooks.example/morzer
 </code></pre></div>
 <p>What the relay can't see is whether devices reach it: only a machine on the
 networks devices use can. A <a href="../../canary/#on-a-mobile-line">canary on a mobile line</a>
-checks the relay as it checks a server, with the commands <code>relay-entry</code> prints.</p>
+checks the relay as it checks a server, as a device of one group, with the
+commands <code>relay-entry</code> prints.</p>
 <h2 id="check-each-entry">Check each entry<a class="headerlink" href="#check-each-entry" title="Permanent link">&para;</a></h2>
-<p><code>entry-check</code> tries each of the relay's entries as a device would, end to
-end, and says why one fails:</p>
+<p><code>entry-check</code> tries each of the relay's entries as a device of each live
+server group would, end to end, a line per entry per group, and says why one
+fails:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>morzer<span class="w"> </span>task<span class="w"> </span>run<span class="w"> </span>entry-check<span class="w"> </span>--output
 </code></pre></div>
-<div class="highlight"><pre><span></span><code>servers  ok: the relay reaches the servers, or the relays in via
-reality  ok: a device's REALITY link under relay.example.net gets through
-xhttp    ok: the site passes the XHTTP path on to Xray, under its own certificate
-mkcp     ok: mKCP answers on UDP 8447
-hy2      ok: Hysteria2 answers on UDP 443, under the site's certificate
-cdn      not checked here: a CDN's half takes a fetch through it, which cdn-check on a server makes
-door     FAIL: all 41 requests in the last hour refused, all from 172.19.0.1, Docker's own address: docker-proxy hides the CDN's (over IPv6, or with its userland proxy). Set http_origin_from=any, or listen=0.0.0.0 to publish the door on IPv4 alone
+<div class="highlight"><pre><span></span><code>servers@a        ok: a.example.com ok
+reality@a        ok: a device's REALITY link under relay.example.net gets through
+xhttp@a          ok: the site passes the XHTTP path on to Xray, under its own certificate
+mkcp@a           ok: mKCP answers on UDP 8447
+hy2@a            ok: Hysteria2 answers on UDP 443, under the site's certificate
+servers@b        FAIL: b is down: b.example.com down (503 Service Unavailable); its entries are not checked, as every one fails with it (the servers task says more)
+cdn              not checked here: a CDN's half takes a fetch through it, which cdn-check on a server makes
+door             FAIL: all 41 requests in the last hour refused, all from 172.19.0.1, Docker's own address: docker-proxy hides the CDN's (over IPv6, or with its userland proxy). Set http_origin_from=any, or listen=0.0.0.0 to publish the door on IPv4 alone
 </code></pre></div>
 <ul>
 <li><strong>The entries.</strong> An Xray client inside the relay dials each of its
-  inbounds with the relay's own keys and the first device's id, and fetches
-  <code>probe_url</code> through it, on to the servers. <code>servers</code> goes straight to the
-  servers first: when it fails, every entry fails with it, and <code>doctor</code>
-  says more. The site's TLS is pinned to the certificate Caddy holds, so a
-  failure there names what Xray saw.</li>
+  inbounds with the relay's own keys, as the group's checker, a user the
+  relay adds to each group with a random id, so no device's id is needed,
+  and fetches <code>probe_url</code> through it, on to that group's servers. A group
+  that is not live has its entries left out, as every one fails with it. The
+  site's TLS is pinned to the certificate Caddy holds, so a failure there
+  names what Xray saw.</li>
 <li><strong>The door.</strong> Under <code>http-origin</code>, Caddy logs each request to the door,
   its address and status alone, never its path or headers, in memory, the
   newest megabyte or two. The check reads the last hour of it. No request at
@@ -2623,8 +2658,9 @@ door     FAIL: all 41 requests in the last hour refused, all from 172.19.0.1, Do
 <h2 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h2>
 <p>With morzer's own metrics in the node exporter's textfile directory
 (<a href="https://github.com/morzecrew/morzer/tree/main/pages/docs/operating"><code>metrics.textfile</code></a>),
-the <code>metrics</code> profile adds the relay's, in the same directory: its traffic per inbound and outbound, and with several servers its verdicts on each. Nothing is
-counted per device. The exporters run as 65532, so the directory has to be
+the <code>metrics</code> profile adds the relay's, in the same directory: its traffic
+per inbound and outbound, its verdicts on each server, and each server
+group's state. Nothing is counted per device. The exporters run as 65532, so the directory has to be
 writable by it:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>setfacl<span class="w"> </span>-m<span class="w"> </span>u:65532:rwx<span class="w"> </span>/var/lib/prometheus/node-exporter
 sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="nv">metrics_textfile</span><span class="o">=</span>/var/lib/prometheus/node-exporter<span class="w">   </span><span class="c1"># its default</span>
@@ -2669,10 +2705,28 @@ sudo<span class="w"> </span>morzer<span class="w"> </span>config<span class="w">
 <td><code>role</code></td>
 <td>Xray's Go heap, beside its <code>GOMEMLIMIT</code></td>
 </tr>
+<tr>
+<td><code>dotdash_group_live</code></td>
+<td><code>role</code>, <code>group</code></td>
+<td>1 while one of the group's servers serves the relay its list</td>
+</tr>
+<tr>
+<td><code>dotdash_group_devices</code></td>
+<td><code>role</code>, <code>group</code></td>
+<td>the group's devices the relay lets in</td>
+</tr>
+<tr>
+<td><code>dotdash_group_list_age_seconds</code></td>
+<td><code>role</code>, <code>group</code></td>
+<td>the age of the group's list the relay holds</td>
+</tr>
 </tbody>
 </table>
 <p>Every series also carries <code>product</code>. <code>rate(dotdash_inbound_bytes_total[5m])</code>
-per inbound shows which transport devices use.</p>
+per inbound shows which transport devices use. Each server's outbound is
+tagged <code>&lt;group&gt;-&lt;n&gt;</code>, so group names reach whoever scrapes the metrics.
+Alert on <code>dotdash_group_live == 0</code>: morzer's own alerts fire only when the
+relay's machinery fails.</p>
 <h2 id="updates">Updates<a class="headerlink" href="#updates" title="Permanent link">&para;</a></h2>
 <p>As for the server: <code>sudo morzer self-update</code> when a release needs a newer
 morzer, then <code>sudo morzer update --stage &amp;&amp; sudo morzer update --to &lt;version&gt;</code>.
@@ -2716,7 +2770,7 @@ Unattended updates follow
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../install/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Set up a relay">
+          <a href="../gateway/" class="md-footer__link md-footer__link--prev" aria-label="Previous: One relay, several server groups">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -2726,7 +2780,7 @@ Unattended updates follow
                 Previous
               </span>
               <div class="md-ellipsis">
-                Set up a relay
+                One relay, several server groups
               </div>
             </div>
           </a>

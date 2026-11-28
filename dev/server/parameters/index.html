@@ -293,6 +293,8 @@
       
         
       
+        
+      
     
     
     
@@ -1442,6 +1444,8 @@
       
         
       
+        
+      
     
     
     
@@ -1510,6 +1514,33 @@
     
   
   Set up a relay
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../relay/gateway/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  One relay, several server groups
 
     
   </span>
@@ -2411,7 +2442,7 @@
 <tr>
 <td><code>relay_flags</code></td>
 <td>a comment</td>
-<td>one <code>&lt;name&gt; &lt;flag&gt;...</code> line per relay that needs one: <code>off=&lt;path&gt;[,&lt;path&gt;]</code> (<code>reality</code>, <code>xhttp</code>, <code>mkcp</code>, <code>hysteria2</code>, or <code>cdn:&lt;name&gt;</code> for one CDN in front of it) leaves out paths its canaries find <a href="../../manager/#blocked-paths">blocked</a>, <code>split</code> keeps REALITY through it with its hello split, and <code>standby</code> makes it the <a href="../../relay/install/#5-on-the-server-add-the-line-to-relays">last resort</a>, unchecked. A change restarts no Xray, as an edit to <code>relays</code> does</td>
+<td>one <code>&lt;name&gt; &lt;flag&gt;...</code> line per relay that needs one: <code>off=&lt;path&gt;[,&lt;path&gt;]</code> (<code>reality</code>, <code>xhttp</code>, <code>mkcp</code>, <code>hysteria2</code>, or <code>cdn:&lt;name&gt;</code> for one CDN in front of it) leaves out paths its canaries find <a href="../../manager/#blocked-paths">blocked</a>, <code>split</code> keeps REALITY through it with its hello split, and <code>standby</code> makes it the <a href="../../relay/install/#4-on-each-server-the-relays-line-in-relays">last resort</a>, unchecked. A change restarts no Xray, as an edit to <code>relays</code> does</td>
 </tr>
 <tr>
 <td><code>pools</code></td>

@@ -289,6 +289,8 @@
       
         
       
+        
+      
     
     
     
@@ -1366,6 +1368,8 @@
       
         
       
+        
+      
     
     
     
@@ -1434,6 +1438,33 @@
     
   
   Set up a relay
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../relay/gateway/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  One relay, several server groups
 
     
   </span>
@@ -4113,6 +4144,21 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>Every relay is a gateway: one relay carries devices of any number of server groups, each to that group's own servers and exit alone. Its new <code>servers</code> secret holds one <code>server/1</code> line per group, as one of the group's servers prints it with <code>relay-config -- &lt;relay&gt;</code>. The relay fetches each group's device list through its own tunnel every minute, and adds and removes devices through Xray's API with no restart; only a device deleted while connected restarts its Xray, which alone cuts an open connection. Nobody copies devices to a relay again. The routing comes from the xray image's <code>$gateway</code>, whose three rules fail closed: a group whose servers are all down gets nothing, and never another group's servers or exit. An id two groups list is dropped from both.</p>
+</li>
+<li>
+<p>A relay's <code>relay-entry</code> prints its <code>relay/1</code> line, <code>relay/1 &lt;name&gt; &lt;nonce&gt; &lt;host&gt; &lt;site&gt; &lt;public key&gt; &lt;short id&gt; &lt;encryption&gt;</code>, then <code>xhttp=&lt;path&gt;</code> and its other transports' fields: the one line every server's <code>relays</code> takes. <code>nonce</code> is a new generated secret, from which, with the name, each server derives the relay's id.</p>
+</li>
+<li>
+<p>A relay's <code>servers</code> task prints each server group's state, a line each: <code>live</code>, <code>down</code>, <code>refused</code> or <code>starting</code>, its servers, its devices and the age of its list. The facts carry the same under <code>groups</code>, with the relay's <code>name</code> and <code>nonce</code>, and the <code>metrics</code> profile adds <code>dotdash_group_live</code>, <code>dotdash_group_devices</code> and <code>dotdash_group_list_age_seconds</code> per group.</p>
+</li>
+<li>
+<p>A relay's <code>entry-check</code> tries each entry for each live group, as a checker the relay adds to each group with a random id, a line per entry per group (<code>reality@a</code>); a group that is not live has its entries left out.</p>
+</li>
+<li>
+<p>A relay's <code>server_link</code> (in place of <code>dotdash_link</code>) reaches each group's servers over XHTTP with REALITY on its line's <code>xr=</code>, and <code>tunnel_group</code> names the group whose servers a cover app's <code>tunnel_host</code> is reached through.</p>
+</li>
+<li>
 <p>The server reads <code>relay/1</code> lines in <code>relays</code>, as a gateway relay's <code>relay-entry</code> will print them: <code>relay/1 &lt;name&gt; &lt;nonce&gt; &lt;host&gt; &lt;site&gt; &lt;public key&gt; &lt;short id&gt; &lt;encryption&gt;</code>, then <code>xhttp=&lt;path&gt;</code> and the other transports' fields. Each relay comes in by an id the image derives from a new generated secret, <code>relay_seed</code>, and the relay's name and nonce, so nobody adds a relay to <code>vless_clients</code> again, and deleting its line revokes it. Copy <code>relay_seed</code> to every server in <code>servers</code>, as the keys.</p>
 </li>
 <li>
@@ -4136,6 +4182,18 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
+<li>
+<p><strong>Breaking for relays:</strong> a relay's <code>dotdash_servers</code>, <code>dotdash_address</code>, <code>dotdash_port</code>, <code>dotdash_public_key</code>, <code>dotdash_link</code> and <code>dotdash_xhttp_reality_port</code> parameters and its <code>vless_clients</code>, <code>dotdash_id</code>, <code>dotdash_encryption</code>, <code>dotdash_short_id</code> and <code>dotdash_xhttp_path</code> secrets are gone: the <code>servers</code> secret takes their place. <code>via</code> is now a secret of <code>relay/1</code> lines, and <code>name</code> is required. Update the servers first, as a relay needs a server of this release: a server still reads the relay lines of the release before. A relay idles from its update until its <code>servers</code> line is in. <code>morzer rollback</code> from a relay of this release is refused, as it drops values the one before requires: restore its pre-update backup instead. The steps are in the relay's docs, under One relay, several server groups: Moving from 0.18.</p>
+</li>
+<li>
+<p><strong>Breaking for relay monitoring:</strong> a relay's health check says only that its own machinery works: Xray runs, and its gateway's agent reached Xray in the last two minutes. An idle relay, or one whose groups are all down, is healthy, and a <code>servers</code> line a server doesn't take yet rolls nothing back. Watch <code>dotdash_group_live</code> for whether a group answers.</p>
+</li>
+<li>
+<p><strong>Breaking for anything that reads a relay's facts:</strong> <code>clients</code> and <code>via</code> are gone, <code>name</code>, <code>nonce</code> and <code>groups</code> are new, and device traffic is counted per <code>&lt;device&gt;@&lt;group&gt;</code>. A relay of this release takes <code>servers</code>, <code>via</code>, <code>ipv6</code>, <code>server_link</code>, <code>via_link</code>, <code>via_fingerprint</code> and <code>tunnel_group</code> from an authority, and nothing else: the manager drives one only from its release with server groups.</p>
+</li>
+<li>
+<p>A subscription through a relay goes to the device's own group by its token's first 12 hex characters, which that group's list carries, so URLs keep their form and the relay never holds a whole token. Caddy no longer restarts when servers change. A token no group lists, or its server lacks, and a group that is down, get the relay's site, as any other path.</p>
+</li>
 <li>
 <p><strong>Breaking for anything that reads link names:</strong> with <code>name</code> set, the servers' own links are named by it, not <code>server</code>.</p>
 </li>
