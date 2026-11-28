@@ -55,3 +55,13 @@ def test_a_fleet_without_counts_keeps_nothing():
     t: dict = {}
     record(t, {"s": {"domain": "x"}}, MIDNIGHT)
     assert t == {}
+
+
+def test_a_relay_counts_each_device_as_device_at_group():
+    """A relay knows a device by its group too; the device's day is one, its
+    own server's count of it added."""
+    t: dict = {}
+    relay = lambda n: {"started": MIDNIGHT, "devices": {"a@g": n, "relay-x@g": n, "canary-c@g": n}}
+    record(t, {**counts(MIDNIGHT, 100), "r": {"traffic": relay(10)}}, MIDNIGHT)
+    record(t, {**counts(MIDNIGHT, 150), "r": {"traffic": relay(40)}}, MIDNIGHT + 3600)
+    assert t["days"][day(MIDNIGHT)] == {"a": 80}

@@ -1,6 +1,7 @@
-"""What the manager made and keeps beside the roster, dotdash-state.json: the
-shared keys, every device's id, the client machines' proxy passwords and what
-went out. Every credential in the network is in it, so it is written 0600."""
+"""What the manager made and keeps beside the roster, dotdash-state.json: each
+server group's keys, every device's id, the client machines' proxy passwords
+and what went out. Every credential in the network is in it, so it is written
+0600."""
 
 import base64
 import fcntl
@@ -17,7 +18,7 @@ from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
 from . import Refused
 from .roster import Network
 
-# Each secret the servers share, as its generator in bundles/server/secrets.schema.yaml makes it.
+# Each secret a group's servers share, as its generator in bundles/server/secrets.schema.yaml makes it.
 SHARED_KEYS = {
     "reality_key": lambda: b64url(secrets.token_bytes(32)),
     "vless_seed": lambda: secrets.token_hex(64),
@@ -25,6 +26,7 @@ SHARED_KEYS = {
     "xhttp_path": lambda: secrets.token_hex(16),
     "kcp_seed": lambda: secrets.token_hex(16),
     "subscription_key": lambda: secrets.token_hex(32),
+    "relay_seed": lambda: secrets.token_hex(32),
 }
 
 
@@ -69,12 +71,23 @@ def load(path: Path, net: Network) -> dict:
     """The state, with whatever the roster now needs and it lacks made, and
     the ids and passwords of whoever left it dropped: one taken out and added
     again gets a new id (so new links and subscription URL) or password, and
-    what leaked of the old ones lets no one in."""
+    what leaked of the old ones lets no one in. A group's keys are kept by
+    its name, and kept after it leaves the roster: one renamed gets new keys,
+    and its old ones are there to name it back."""
     state = json.loads(path.read_text()) if path.exists() else {}
     keys = state.setdefault("keys", {})
-    for name, make in SHARED_KEYS.items():
-        keys.setdefault(name, make())
-    names = net.clients_of("server")
+    # A state from before groups holds one set of keys, the servers' then:
+    # the first group's now, and so its rotation's second key too.
+    if net.group and "reality_key" in keys:
+        keys = state["keys"] = {net.group[0].name: keys}
+        if "reality_key" in state.get("rotation", {}).get("second", {}):
+            state["rotation"]["second"] = {net.group[0].name: state["rotation"]["second"]}
+    # The relays sent via, from before a relay's document named via always.
+    state.pop("via", None)
+    for g in net.group:
+        for name, make in SHARED_KEYS.items():
+            keys.setdefault(g.name, {}).setdefault(name, make())
+    names = [n for g in net.group for n in net.clients_of(g.name)]
     ids = state["ids"] = {n: i for n, i in state.get("ids", {}).items() if n in names}
     for name in names:
         if name not in ids:

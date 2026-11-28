@@ -10,8 +10,10 @@ target = "file:///tmp/t"
 key = "a.key"
 identity = "a.age"
 authority = "RWQ"
-devices = ["phone"]
 pools = { a = ["phone", "203.0.113.5", "c.example.net"], b = ["203.0.113.5"] }
+[[group]]
+name = "g"
+devices = ["phone"]
 [[server]]
 name = "s"
 [[relay]]
@@ -26,8 +28,9 @@ name = "c2"
 watches = "r2"
 """
 R1 = {"entry_host": "203.0.113.5", "site": "one.example.net", "public_key": "P", "short_id": "S", "encryption": "E",
-      "cdn_hosts": ["c.example.net"]}
-R2 = {**R1, "entry_host": "203.0.113.6", "site": "two.example.net", "cdn_hosts": []}
+      "cdn_hosts": ["c.example.net"], "name": "r1", "nonce": "0123456789abcdef"}
+R2 = {**R1, "entry_host": "203.0.113.6", "site": "two.example.net", "cdn_hosts": [], "name": "r2"}
+EVERY = "cdn:c.example.net,hysteria2,mkcp,reality,xhttp"
 
 
 def canary(relay: dict, at: int, up: bool, internet: bool | None = True) -> dict:
@@ -108,13 +111,16 @@ def test_every_relay_failing_at_once_drops_none():
     assert burnt == set() and "check the canaries' network" in say[-1]
 
 
-def test_a_burnt_relay_leaves_the_servers_relays_and_pools():
+def test_a_burnt_relay_loses_every_path_and_the_pools_but_stays_in_relays():
+    """Out of relays, it would be out of its id there, and its canaries could
+    never get through again."""
     net = loads(ROSTER)
     st = state.load(Path("/nonexistent"), net)
-    facts = {"s": {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
+    facts = {"s": {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["g"]["reality_key"]),
                    "encryption": "E"}, "r1": R1, "r2": R2}
     params = render(net, st, facts, {"r1"})[0]["s"]["parameters"]
-    assert params["relays"] == "203.0.113.6 two.example.net P S E"
+    assert params["relays"] == f"{relay_line(R1)}\n{relay_line(R2)}"
+    assert params["relay_flags"] == f"r1 off={EVERY}"
     assert params["pools"] == "a phone"
     docs = render(net, st, facts)[0]
     assert docs["s"]["parameters"]["pools"] == "a phone 203.0.113.5 c.example.net\nb 203.0.113.5"
@@ -124,7 +130,7 @@ def test_a_burnt_relays_door_names_leave_the_pools_too():
     net = loads(ROSTER.replace('"c.example.net"]', '"c.example.net", "o.example.org", "alt.example.org"]'))
     st = state.load(Path("/nonexistent"), net)
     r1 = {**R1, "cdn_path": "y", "origin_host": "o.example.org,alt.example.org"}
-    facts = {"s": {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
+    facts = {"s": {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["g"]["reality_key"]),
                    "encryption": "E"}, "r1": r1, "r2": R2}
     assert render(net, st, facts, {"r1"})[0]["s"]["parameters"]["pools"] == "a phone"
 
@@ -132,7 +138,7 @@ def test_a_burnt_relays_door_names_leave_the_pools_too():
 def test_a_burnt_or_held_relay_claiming_anothers_host_moves_it_in_no_pool():
     net = loads(SPARES)
     st = state.load(Path("/nonexistent"), net)
-    server = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
+    server = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["g"]["reality_key"]),
               "encryption": "E"}
     # r2 burnt and r3, a spare held back, both name r1's address and CDN host.
     liar = {**R2, "cdn_hosts": ["c.example.net"], "origin_host": "203.0.113.5"}
@@ -221,10 +227,9 @@ def test_a_path_blocked_on_one_relay_goes_off_its_line_and_comes_back():
         facts, (off, say) = paths_run(net, health, at, {"reality": False, "xhttp": True}, {"reality": True, "xhttp": True})
     assert off == {"r1": {"reality"}} and any(line.startswith("blocked: relay r1: reality") for line in say)
     st = state.load(Path("/nonexistent"), net)
-    facts["s"] = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
+    facts["s"] = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["g"]["reality_key"]),
                   "encryption": "E"}
-    relays = render(net, st, facts, set(), off)[0]["s"]["parameters"]["relays"].splitlines()
-    assert relays[0].endswith(" cdn=c.example.net off=reality") and "off=" not in relays[1]
+    assert render(net, st, facts, set(), off)[0]["s"]["parameters"]["relay_flags"] == "r1 off=reality"
     # One reading through, and the path is back.
     _, (off, _) = paths_run(net, health, BURN_AFTER + 1, {"reality": True, "xhttp": True}, {"reality": True, "xhttp": True})
     assert off == {}
@@ -278,8 +283,8 @@ spare = true
 name = "c4"
 watches = "r4"
 """
-R3 = {**R1, "entry_host": "203.0.113.7", "site": "three.example.net", "cdn_hosts": []}
-R4 = {**R1, "entry_host": "203.0.113.8", "site": "four.example.net", "cdn_hosts": ["d.example.net"]}
+R3 = {**R1, "entry_host": "203.0.113.7", "site": "three.example.net", "cdn_hosts": [], "name": "r3"}
+R4 = {**R1, "entry_host": "203.0.113.8", "site": "four.example.net", "cdn_hosts": ["d.example.net"], "name": "r4"}
 
 
 def spare_run(net, health, at, r1_up=False, r4_up=True):
@@ -292,12 +297,14 @@ def spare_run(net, health, at, r1_up=False, r4_up=True):
 def test_spares_wait_out_of_sight_then_the_watched_one_stands_in_for_a_burnt_relay():
     net, health = loads(SPARES), {}
     st = state.load(Path("/nonexistent"), net)
-    server = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
+    server = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["g"]["reality_key"]),
               "encryption": "E"}
     facts, burnt, (held, stands, say) = spare_run(net, health, 1)
     assert burnt == set() and held == {"r3", "r4"} and stands == {} and say == []
+    # In relays, so their canaries get through them, but with every path off.
     params = render(net, st, {**facts, "s": server}, burnt | held, None, stands)[0]["s"]["parameters"]
-    assert "203.0.113.7" not in params["relays"] and "203.0.113.8" not in params["relays"]
+    assert params["relay_flags"].splitlines() == ["r3 off=hysteria2,mkcp,reality,xhttp",
+                                                  "r4 off=cdn:d.example.net,hysteria2,mkcp,reality,xhttp"]
     for at in range(2, BURN_AFTER + 1):
         facts, burnt, (held, stands, say) = spare_run(net, health, at)
     # r4, which its canary got through to, before r3, which none watches.
@@ -305,7 +312,7 @@ def test_spares_wait_out_of_sight_then_the_watched_one_stands_in_for_a_burnt_rel
     assert say[0].startswith("spare: r4 stands in for burnt relay r1") and "check it" not in say[0]
     docs = render(net, st, {**facts, "s": server}, burnt | held, None, stands)[0]
     params = docs["s"]["parameters"]
-    assert "203.0.113.8 four.example.net" in params["relays"] and "203.0.113.5" not in params["relays"]
+    assert params["relay_flags"].splitlines() == [f"r1 off={EVERY}", "r3 off=hysteria2,mkcp,reality,xhttp"]
     assert params["pools"] == "a phone 203.0.113.8 d.example.net\nb 203.0.113.8 d.example.net"
     assert "r4" in docs and "c4" in docs
     # r1 back: r4 waits again.
@@ -342,6 +349,8 @@ target = "t"
 key = "k"
 identity = "i"
 authority = "a"
+[[group]]
+name = "g"
 [[server]]
 name = "a"
 [[canary]]
@@ -350,7 +359,7 @@ watches = "a"
 ''')
     st = state_mod.load(Path("/nonexistent"), net)
     server = {"domain": "a.example.net", "https_port": 443, "encryption": "E",
-              "public_key": state_mod.public_key(st["keys"]["reality_key"])}
+              "public_key": state_mod.public_key(st["keys"]["g"]["reality_key"])}
     health: dict = {}
     def reading(at, reality, split):
         canary = {"server": "a.example.net", "address": "a.example.net", "checked_at": at,
@@ -392,6 +401,8 @@ target = "t"
 key = "k"
 identity = "i"
 authority = "a"
+[[group]]
+name = "g"
 [[server]]
 name = "a"
 [[relay]]
@@ -407,9 +418,10 @@ watches = "r2"
 ''')
     st = state_mod.load(Path("/nonexistent"), net)
     server = {"domain": "a.example.net", "https_port": 443, "encryption": "E",
-              "public_key": state_mod.public_key(st["keys"]["reality_key"])}
-    relay = {"entry_host": "203.0.113.5", "site": "www.example.net", "public_key": "P", "short_id": "S", "encryption": "E"}
-    other = {**relay, "entry_host": "203.0.113.6", "site": "www.example.org"}
+              "public_key": state_mod.public_key(st["keys"]["g"]["reality_key"])}
+    relay = {"entry_host": "203.0.113.5", "site": "www.example.net", "public_key": "P", "short_id": "S", "encryption": "E",
+             "name": "r1", "nonce": "0123456789abcdef"}
+    other = {**relay, "entry_host": "203.0.113.6", "site": "www.example.org", "name": "r2"}
     health: dict = {}
     for at in range(1, BURN_AFTER + 1):
         c1 = {"server": "www.example.net", "address": "203.0.113.5", "checked_at": at,
@@ -421,8 +433,7 @@ watches = "r2"
     on, say = splits(net, health)
     assert off == {"r1": {"reality"}} and on == {"r1"} and say[0].startswith("split: relay r1:")
     docs, _ = render(net, st, {"a": server, "r1": relay, "r2": other}, off=off, split=on)
-    assert docs["a"]["parameters"]["relays"].splitlines() == [
-        "203.0.113.5 www.example.net P S E off=reality split", "203.0.113.6 www.example.org P S E"]
+    assert docs["a"]["parameters"]["relay_flags"] == "r1 off=reality split"
     assert "hello_split" not in docs["a"]["parameters"]
     assert splits(net, health, burnt={"r1"})[0] == set()  # a burnt relay stays out
 
@@ -454,6 +465,8 @@ target = "t"
 key = "k"
 identity = "i"
 authority = "a"
+[[group]]
+name = "g"
 [[server]]
 name = "a"
 [[relay]]
@@ -485,6 +498,8 @@ target = "t"
 key = "k"
 identity = "i"
 authority = "a"
+[[group]]
+name = "g"
 [[server]]
 name = "a"
 [[relay]]
@@ -569,7 +584,7 @@ def sync_with(tmp_path, monkeypatch, roster: str, st: dict, facts: dict):
 
 
 def test_a_server_whose_publish_failed_stays_split_for_the_next_sync(tmp_path, monkeypatch):
-    roster = 'target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[server]]\nname = "a"\nid = "inst_A"\nkey = "RWa"\n'
+    roster = 'target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[group]]\nname = "g"\n[[server]]\nname = "a"\nid = "inst_A"\nkey = "RWa"\n'
     st = {**state.load(Path("/nonexistent"), loads(roster)), "split": ["a"]}
     run = sync_with(tmp_path, monkeypatch, roster, st, {})
     # No longer split: hello_split off, which a failed publish never delivered.
@@ -582,21 +597,16 @@ def test_a_server_whose_publish_failed_stays_split_for_the_next_sync(tmp_path, m
     assert "hello_split" not in run(0)[1]["a"]["parameters"]
 
 
-def test_via_is_unset_only_on_a_relay_a_document_gave_it(tmp_path, monkeypatch):
-    roster = ('target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[server]]\nname = "s"\nid = "inst_S"\nkey = "RWs"\n'
+def test_via_goes_to_a_relay_the_roster_gives_it_and_is_unset_on_any_other(tmp_path, monkeypatch):
+    roster = ('target = "t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n[[group]]\nname = "g"\n'
+              '[[server]]\nname = "s"\nid = "inst_S"\nkey = "RWs"\n'
               '[[relay]]\nname = "r1"\nid = "inst_R1"\nkey = "RW1"\n[[relay]]\nname = "r2"\nid = "inst_R2"\nkey = "RW2"\n')
-    via = roster + 'via = ["r1"]\n'
     st = state.load(Path("/nonexistent"), loads(roster))
-    server = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["reality_key"]),
+    server = {"domain": "s.example.net", "https_port": 443, "public_key": state.public_key(st["keys"]["g"]["reality_key"]),
               "encryption": "E"}
-    run = sync_with(tmp_path, monkeypatch, via, st, {"s": server, "r1": {**R1, "via": True}, "r2": {**R2, "via": True}})
+    run = sync_with(tmp_path, monkeypatch, roster + 'via = ["r1"]\n', st, {"s": server, "r1": R1, "r2": R2})
     _, sent, kept = run(0)
-    assert "via" in sent["r2"]["parameters"] and kept["via"] == ["r2"]
-    assert "unset" not in sent["r1"], "r1 never had via: a release that doesn't manage it would refuse the document"
+    assert sent["r2"]["secrets"]["via"] == relay_line(R1) and sent["r1"]["unset"]["secrets"] == ["via"]
+    assert "via" not in kept, "the manager owns via on every relay of this release: nothing to remember"
     (tmp_path / "network.toml").write_text(roster)
-    _, sent, kept = run(1)
-    assert sent["r2"]["unset"] == {"parameters": ["via", "via_link", "via_fingerprint"]} and kept["via"] == ["r2"]
-    _, sent, kept = run(0)
-    assert "unset" in sent["r2"] and kept["via"] == []
-    assert "unset" not in run(0)[1]["r2"]
-
+    assert run(0)[1]["r2"]["unset"] == {"secrets": ["via"], "parameters": ["tunnel_group"]}

@@ -1,9 +1,9 @@
 # Manager
 
-`dotdash-manager` runs a whole network from one roster: servers, relays,
-canaries, client machines and devices. It makes the keys the servers share,
-gives every server and relay the same devices, writes the servers' `relays`
-and the relays' way to the servers from what each machine reports, and keeps
+`dotdash-manager` runs a whole network from one roster: server groups and
+their devices, servers, relays, canaries and client machines. It makes each
+group's keys, gives each group's servers its devices, writes the servers'
+`relays` and each relay's `servers` from what each machine reports, and keeps
 canaries and clients pointed at them.
 
 It never logs in to a machine. Each machine follows it through morzer's
@@ -20,7 +20,8 @@ network.toml ──▶ dotdash-manager sync ──▶ one document per machine �
 
 It needs morzer and age-keygen beside it, and installs with
 [uv](https://docs.astral.sh/uv/) at the tag of the release your machines run,
-such as `v0.7.0`:
+such as `v0.7.0`. A manager with server groups runs servers and relays of
+0.19 or later ([Moving to server groups](#moving-to-server-groups)):
 
 ```sh
 uv tool install "git+https://github.com/morzecrew/dotdash@<tag>#subdirectory=manager"
@@ -49,20 +50,34 @@ authority = "RWQ…"                          # what state key generate printed
 subscription = true                         # every device gets a subscription URL
 ipv6 = "allow"                              # or block, on the relays
 direct = false                              # optional: devices reach servers only through relays and CDNs
-devices = ["phone", "laptop"]
 desktops = ["laptop"]                       # optional: devices that get no CDN link (desktops in Devices)
 # optional: every server's cdn_extra, by CDN name (A CDN that fetches in plain HTTP)
 cdn_extra = { "edge.example.net" = { uplinkHTTPMethod = "GET", xPaddingObfsMode = true } }
+# optional: the servers' pools, member by member
+pools = { p = ["laptop", "203.0.113.5"] }
 
-[pools]                                     # optional: the server's pools, member by member
-a = ["laptop", "203.0.113.5"]
+[[group]]                                   # servers sharing keys, and their devices
+name = "a"                                  # its servers' name: opaque, as apps show it
+devices = ["phone", "laptop"]
+
+[[group]]
+name = "b"
+devices = ["tablet"]
 
 [[server]]
-name = "a"
+name = "a1"
+group = "a"                                 # optional with one [[group]]
 cdn_hosts = ["cdn.example.net"]             # optional: this server's cdn_hosts
 
+[[server]]
+name = "b1"
+group = "b"
+
 [[relay]]
-name = "r1"
+name = "r1"                                 # its own name parameter too, at join
+groups = ["a"]                              # optional: the groups it carries; every group by default
+server_link = "xhttp-reality"               # optional: reality (the default), or XHTTP with REALITY where servers have it
+tunnel_group = "a"                          # optional: the group a cover app's tunnel_host goes through; its first by default
 provider = "hoster-a"                       # optional: your own name for who hosts it
 address_since = 2026-11-01                  # optional: since when it has this address
 standby = true                              # optional: devices use it only once every other link fails
@@ -88,25 +103,58 @@ setting.
 
 A relay with `via` goes through those relays instead of the servers
 ([Through another relay](relay/operations.md#through-another-relay)): they
-let it in by its own id, and its document waits for their facts. A relay
-running a release from before `via` waits to be updated rather than going to
-the servers.
+let it in by its id on each group, so each of them serves every group it
+does. Its document waits for their facts.
 
-Names are lowercase letters, digits and dashes. `relay-` and `canary-` start
-the names the manager gives relays' and canaries' own devices. A field the
-roster doesn't know is refused, so a mistyped one can't pass unnoticed.
+Names are lowercase letters, digits and dashes; a relay's at most 24, as its
+own `name` takes them, and a group's 1 to 16 letters and digits, starting
+with a letter. `relay-` and `canary-` start the names the manager gives
+relays' and canaries' own devices. A field the roster doesn't know is
+refused, so a mistyped one can't pass unnoticed. In TOML, every top-level key
+comes before the first `[[group]]`.
+
+## Server groups
+
+A group is servers that share keys, as [several servers](server/several-servers.md)
+do, and the devices they let in. Each group has its own keys, `relay_seed`
+and exit, and its devices reach no other group's servers. A network of one
+group, as before, is one `[[group]]`, and its servers need no `group`.
+
+- **Each group's servers** get its keys, its devices and its name, which
+  relays know the group by and the servers' own links are named by
+  (`a · reality`). A device is in one group: a phone that uses two is two
+  devices, with a subscription each.
+- **Every relay serves every group**, unless `groups` narrows it: one relay
+  carries each device to its own group's servers and exit alone
+  ([One relay, several server groups](relay/gateway.md)). The servers of
+  each group it serves get its `relay/1` line in `relays`, from its facts.
+  The relay gets a `server/1` line in its `servers` per group, made of that
+  group's servers that applied its keys and the relay's id there, which the
+  manager derives from the group's `relay_seed` and the relay's name and
+  nonce, as the servers do. Nobody adds a relay to `vless_clients`, and no
+  document carries a relay devices: it fetches each group's list from its
+  servers every minute, so a device added reaches it with no new document.
+- **A canary** is a device of one group: the group of the server it
+  watches, or for a relay the first group it serves that has a server.
+- **A group's keys** are kept in the state by its name. Renaming a group
+  gives its servers new keys, which cuts its devices off, as a new group:
+  name it back, and its old keys are still there.
+
+A relay whose group's servers are changing keys (a rotation's swap, or a
+server that joined on keys of its own) keeps its last document until they
+applied them, rather than drop that group's devices. A group that has no
+server with facts yet is left out of its `servers` until one has.
 
 ## Add a machine
 
-Name it in the roster first, run `sync` so the servers learn its device, then
-pipe `join`'s script to the new machine over ssh, and what it prints back to
-`joined`:
+Name it in the roster first, then pipe `join`'s script to the new machine
+over ssh, and what it prints back to `joined`. A canary needs a `sync` first,
+so its group's servers learn its device:
 
 ```sh
-dotdash-manager sync
 dotdash-manager join r1 --site site.example.net --entry-host 203.0.113.7 \
   | ssh root@203.0.113.7 sh | dotdash-manager joined r1
-dotdash-manager sync          # r1 gets its document
+dotdash-manager sync          # r1's line to the servers, theirs to r1
 ```
 
 The script installs what the machine lacks (`scripts/bootstrap.sh`, as on a
@@ -124,9 +172,14 @@ What each kind needs to be installed:
 - **A server:** `--domain` and `--upstreams <file>`, its ways out, one per
   line. It comes up on keys of its own: the first document replaces them, and
   relays, canaries and clients move to it once its facts show the manager's
-  key. A relay, canary or client waits for a server that has.
+  key. A relay's line for its group waits for a server of the group that
+  has, and so do the group's canaries and clients.
 - **A relay:** `--site` and `--entry-host` (a neighbour's site, and the
-  address devices reach it at), or `--domain` for one of its own site.
+  address devices reach it at), or `--domain` for one of its own site. It
+  comes up idle under its roster name, with a nonce it makes, which its facts
+  carry. The next `sync` puts its `relay/1` line in the servers' `relays`
+  and their `server/1` lines in its `servers`; within a minute of applying
+  both it has each group's devices.
 - **A canary or a client:** nothing more.
 
 Backups go to the manager's target under `backups/<name>/`, a prefix of the
@@ -173,33 +226,40 @@ run its `join` again: the script replaces the credential it holds.
 
 A network set up by hand moves to the manager without devices noticing: the
 manager takes a running server's keys and its devices' ids instead of making
-its own, so devices keep their links and subscription URLs. Name the server,
-its relays and the devices in the roster under the names the server already
-uses (`client-config` prints them), then, before the first `sync`:
+its own, so devices keep their links and subscription URLs. Move the servers
+and relays to 0.19 first, by hand ([Moving from 0.18](relay/gateway.md#moving-from-018)).
+Name each group, its servers, the relays and the devices in the roster under
+the names the servers already use (`client-config` prints them; a group is
+named by its servers' `name`), then, before the first `sync`, adopt one
+server of each group:
 
 ```sh
-dotdash-manager adopt a       # prints what to run on server a
-ssh root@a.example 'sudo sh -c …' | dotdash-manager adopt a
+dotdash-manager adopt a1      # prints what to run on server a1
+ssh root@a1.example 'sudo sh -c …' | dotdash-manager adopt a1
 ```
 
-It says which devices keep their links, which are new to the server, and
-which the server has but the roster doesn't, which lose access at the next
-`sync` unless you add them. It also names the server's desktops missing from
-the roster's `desktops`, which would get CDN links at the next `sync` unless
-you add them there. And it names each of the server's `subscription`,
-`cdn_hosts`, `pools` and `direct` that the roster would change at the first
+It takes the server's keys as its group's, its `relay_seed` too, so every
+relay keeps its id there and the `server/1` line it holds. It says which of
+the group's devices keep their links, which are new to the server, and which
+the server has but the group doesn't, which lose access at the next `sync`
+unless you add them; a relay's client from 0.18 left in `vless_clients` is
+dropped. It also names the server's desktops missing from the roster's
+`desktops`, which would get CDN links at the next `sync` unless you add them
+there. And it names each of the server's `subscription`, `cdn_hosts`,
+`pools`, `direct` and `name` that the roster would change at the first
 `sync`: with `subscription` left out of the roster, for one, every device's
 subscription URL stops. Finish a [key rotation](#rotating-the-reality-key)
 first: only the current key is taken. Once the manager has published, `adopt`
 refuses, since it would change the keys on every machine again; `--force` when
 that is meant.
 
-Then join every machine as above, the running server and relays included,
+Then join every machine as above, the running servers and relays included,
 with no options: the script finds them installed and only points them at the
-manager. Relays keep their own keys, so devices keep their relay links too.
-Join the relays before the server: the server's document writes `relays`
-from the relays' facts, so a relay that hasn't joined yet is left out of it,
-and devices lose its links until it joins.
+manager. Relays keep their own keys, name and nonce, so devices keep their
+relay links too, and the lines in `relays` and `servers` stay what they are.
+Join the relays before the servers: a server's document writes `relays` from
+the relays' facts, so a relay that hasn't joined yet is left out of it, and
+devices lose its links until it joins.
 
 ## Keep it current
 
@@ -211,12 +271,13 @@ dotdash-manager status --wait    # until every machine applied it
 
 `sync` publishes only documents that changed, and renews the rest every three
 days: a document expires after seven. Run it from a timer to keep it ahead of
-that. A device added to `devices` reaches every server and relay at the next
-sync; one removed loses its access everywhere, each machine within its next
-cycle. The manager forgets its id at that sync, so a device added back later
-gets a new one: new links and a new subscription URL, and its old ones let no
-one in. The same goes for a relay's or canary's own id and a client machine's
-proxy password.
+that. A device added to a group's `devices` reaches its servers at the next
+sync, and the relays a minute after they applied it, from the servers' lists;
+one removed loses its access everywhere, each server within its next cycle
+and each relay a minute after. The manager forgets its id at that sync, so a
+device added back later gets a new one: new links and a new subscription URL,
+and its old ones let no one in. The same goes for a canary's own id and a
+client machine's proxy password.
 
 ## A device's link
 
@@ -245,8 +306,9 @@ dotdash-manager sync
 dotdash-manager status --wait
 ```
 
-`renew` prints the device's new URLs, which work once the servers applied
-the `sync`. Its old links and URL stop once every server and relay has. The
+`renew` prints the device's new URLs, which work once its servers applied
+the `sync`. Its old links and URL stop once they have, and every relay a
+minute later. The
 device fetches its new links from the new URL, so send it that.
 
 Before it uses a machine's facts, `sync` checks them. Facts no release
@@ -283,17 +345,22 @@ dotdash-manager --new-state sync
 `status` prints a line per machine, then the topology:
 
 ```
-machine  kind    release  document                           health                facts  canaries
-a        server  0.18.0   applied 12                         5/5 up, row 12m ago   10m    reality ok, xhttp ok
-r1       relay   0.18.0   REFUSED 9 unmanageable: via_link   4/4 up, row 40m ago   20m    reality off, xhttp ok
-r2       relay   0.17.0   pending 4, last fetch unreachable  STALE, row 4h10m ago  5h 0m  unwatched
-c1       canary  0.18.0   applied 3                          2/2 up, row 20m ago   20m    read 30m ago
-r3       relay   -        not joined: run join r3            -                     -      -
+machine  kind    release  document                                  health                facts  canaries
+a1       server  0.19.0   applied 12                                5/5 up, row 12m ago   10m    reality ok, xhttp ok
+b1       server  0.18.0   REFUSED 9 unmanageable: name, relay_seed  5/5 up, row 30m ago   30m    unwatched
+r1       relay   0.19.0   applied 7                                 4/4 up, row 40m ago   20m    reality off, xhttp ok
+r2       relay   0.19.0   pending 4, last fetch unreachable         STALE, row 4h10m ago  5h 0m  unwatched
+c1       canary  0.18.0   applied 3                                 2/2 up, row 20m ago   20m    read 30m ago
+r3       relay   -        not joined: run join r3                   -                     -      -
 
 topology, from the facts the last sync read:
-  server a: a.example.net:443: reality, xhttp, mkcp 8447
-  relay r1: 203.0.113.5, site r1.example.net: reality, xhttp, hy2 443, cdn c.example.net; name edge-1; off=reality
-  relay r2: 198.51.100.9, site www.example.org: reality; via r1 (reality); spare
+  server a1 (a): a1.example.net:443: reality, xhttp, mkcp 8447
+  server b1 (b): b1.example.net:443: reality, xhttp
+  relay r1: 203.0.113.5, site r1.example.net: reality, xhttp, hy2 443, cdn c.example.net; name r1; off=reality
+    group a: live, a1.example.net ok; 14 devices, list 42 s old
+    group b: DOWN, b1.example.net down; 3 devices, list 300 s old
+  relay r2: 198.51.100.9, site www.example.org: reality; name r2; via r1 (reality); spare
+    group a: not in its servers yet
   pool p: phone, 203.0.113.5
   canary c1 watches r1
 ```
@@ -312,14 +379,26 @@ topology, from the facts the last sync read:
 - **canaries**: each path, as its canaries found it at the last `sync`, and
   `BURNT` before them; for a canary, how old its last reading is.
 
-Below the table come notes: a machine whose facts task failed, and a relay
-whose device list, by the digest its facts carry, isn't the one the manager
-sent it, which a hand edit on the relay does.
+Below the table come notes: a machine whose facts task failed.
+
+The topology gives each group a relay serves its own line, as the relay's
+facts say ([Health per group](relay/gateway.md#health-per-group)): `live`
+while one of the group's servers serves the relay its device list, so the
+group's devices get through it; `DOWN` while none answers; `REFUSED` while
+they answer that they have no list for it (its `relay/1` line isn't in their
+`relays` yet, or its `server/1` line is out of date); `starting` before its
+first round; `not in its servers yet` until its document gives it the
+group's line. Each group is its own: one down says nothing of the relay's
+entry, which its canaries judge, nor of its other groups. A canary passing
+while the relay says `b` is down means the entry is fine and `b`'s servers
+or the way to them are not.
 
 It reads each machine's own fleet row and the newest document on the target,
 two morzer calls, and the rest from the state, so it prints no key, path or
 id. It exits 1 when a document is refused, a machine doesn't follow the
-manager, a row is stale, a service is down or a relay's device list differs.
+manager, a row is stale or a service is down. A group's state changes no
+exit code: it is from the facts the last `sync` read, from before the
+documents it sent.
 After a `sync`,
 `status --wait` asks again every 30 seconds until every machine has applied
 or refused its newest document, for up to 20 minutes (`--timeout`), and exits
@@ -330,14 +409,17 @@ or refused its newest document, for up to 20 minutes (`--timeout`), and exits
 Before every fleet publish, about hourly, each canary that follows the manager
 reports whether each of its paths to the server or relay it watches gets
 through. When every canary watching a relay got through none of its paths
-three readings in a row, `sync` leaves that relay out of the servers' `relays`
-and `pools`, and of client machines' subscription URLs, and says so. A
+three readings in a row, `sync` takes every path of that relay off in the
+servers' `relay_flags`, and the relay out of their `pools` and of client
+machines' subscription URLs, and says so. It stays in their `relays`: out of
+them, the servers would no longer know its id, and its canaries could never
+get through it again. A
 reading counts only beside the newest of the other canaries watching the same
 relay within 90 minutes, so a canary gone quiet can't hold the relay up with an
 old success:
 
 ```
-burnt: relay r1: its canaries got through none of its paths in 3 readings; left out of the servers' relays and pools until a canary gets through again; its own fleet row (40m old) says it runs: blocked on the way, not down; replace it
+burnt: relay r1: its canaries got through none of its paths in 3 readings; devices get none of its links, and it leaves the pools, until a canary gets through again; its own fleet row (40m old) says it runs: blocked on the way, not down; replace it
 ```
 
 Devices stop getting its links at their next subscription refresh. The relay
@@ -391,7 +473,8 @@ watches = "r3"
 ```
 
 A spare gets its document and runs like any relay, and its canary watches it,
-but devices don't get it: it's out of the servers' `relays` and `pools`. When
+but devices don't get it: every path of it is off in the servers'
+`relay_flags`, and it is out of their `pools`. When
 a relay burns, the first spare that isn't burnt itself stands in for it, and
 takes its place in the pools. Spares a canary has got through to go first,
 in roster order; one no canary has checked yet still stands in, and `sync`
@@ -491,7 +574,8 @@ until they update.
 With the `device-traffic` profile on the servers and relays
 ([server](server/operations.md#device-traffic),
 [relay](relay/reference.md)), their facts carry how many bytes each device
-has moved. `sync` adds each device's bytes up by day, over the last 30 days.
+has moved; a relay counts each as `<device>@<group>`, and the manager adds
+that to the device. `sync` adds each device's bytes up by day, over the last 30 days.
 It names a device whose day reached five times its median day and at least
 2 GB, once it has 7 days to judge by:
 
@@ -526,7 +610,8 @@ release, gets no warning.
 
 `rotate` changes the servers' REALITY key with no device cut off, over their
 second key ([Rotating the REALITY key](server/secrets.md#rotating-the-reality-key)),
-in three steps, each published by the next `sync`:
+in three steps, each published by the next `sync`. Every group rotates at
+once, each to a next key of its own:
 
 ```sh
 dotdash-manager rotate start     # the next key second on the servers; their canaries move to it
@@ -539,10 +624,12 @@ dotdash-manager sync
 
 - **`start`** gives the servers a next key as their second. Only the canaries
   watching servers move to it: devices and relays keep the current key.
-- **`swap`** refuses until one of those canaries has got REALITY through on
-  the next key since `start`. It then makes the next key the servers' key and
+- **`swap`** refuses until, for each group, one of the canaries watching its
+  servers has got REALITY through on its next key since `start`, and names
+  the groups none has. It then makes each next key its servers' key and
   keeps the old one second. Subscriptions, client machines and relays move to
-  the new key, and devices still on the old one keep getting in.
+  the new key, and devices still on the old one keep getting in. A relay
+  keeps its last document until a group's servers have applied the swap.
 - **`finish`** refuses for a week after `swap`, the devices' time to fetch
   their subscriptions or get new links. It then turns the old key off, and
   removes it from the servers' secret stores, so their later backups no longer
@@ -557,7 +644,7 @@ REALITY port cut while XHTTP through its own site still answers, mKCP
 dropped, or one path's connections frozen after their first few kilobytes,
 which a canary's [freeze download](canary/index.md#what-it-checks) catches. When every canary watching a relay got through none of its readings
 on one path three times in a row, and another path got through, `sync` puts
-that path on the relay's line as `off=`:
+that path in the servers' `relay_flags` as `off=`, by the relay's name:
 
 ```
 blocked: relay r1: reality got through for none of its canaries in 3 readings; devices get its other paths until one gets through again
@@ -577,9 +664,6 @@ address is blocked.
   the relay's other paths get through: devices lose that CDN's links and keep
   the rest. It is one relay's, so it is never kept for being blocked on every
   relay. Check the CDN's settings and the relay's site.
-- **A server released before `off=` ignores the field** and gives devices
-  every link through the relay, as before. So does one released before
-  `off=cdn:<name>`, for a line naming a CDN there: update the servers first.
 
 ## A name blocked by SNI
 
@@ -602,7 +686,8 @@ split: server a: REALITY gets through only with its hello split into TLS records
 - **Why not always on.** The split hello is a fingerprint of its own, which a
   classifier picks up (dotdash-lab #33).
 - **Relays too.** A relay's canaries can find the same of its site's name.
-  Its line then gets `split` beside `off=reality`. Share links lose REALITY
+  Its `relay_flags` line then gets `split` beside `off=reality`. A change
+  there restarts no server's Xray, as one to `relays` would. Share links lose REALITY
   through it, as for any blocked path, while devices' Xray configs keep it,
   split. A relay with REALITY as its only path isn't burnt while its split
   hello gets through. A burnt relay stays out.
@@ -614,17 +699,22 @@ knows stay the operator's, set on that machine as before. A value the manager
 sets is refused by `config set` on the machine while sync is on; `--force`
 changes it until the next document.
 
-Give every server the same profiles and transport ports, though: each server's
-links and configs name the others with its own `https_port`, XHTTP with
-REALITY, mKCP (port, header and opener) and Hysteria2 ports. `sync` says when
-the servers that applied the keys differ in any of those.
+A relay's own keys, `name` and `nonce` stay its own too: its facts carry
+them, and the manager builds its `relay/1` line from them.
+
+Give every server of a group the same profiles and transport ports, though:
+each server's links and configs name the others with its own `https_port`,
+XHTTP with REALITY, mKCP (port, header and opener) and Hysteria2 ports. `sync`
+says when a group's servers that applied its keys differ in any of those.
 
 ## A relay's transports
 
 Change them on the relay itself: a profile, a port, `cdn_hosts`, `name`, and
 its firewall to match. Its facts carry its new line after the apply, and the
-next `sync` puts that line in every server's `relays`; devices get the new
-links at their next refresh. Nothing is edited on the servers. Which
+next `sync` puts that line in the `relays` of every group it serves; devices
+get the new links at their next refresh. Nothing is edited on the servers. A
+new `name` is a new id on every group, so that `sync` also gives the relay
+new `server/1` lines, and it idles until both sides applied them. Which
 parameters go into the line is in the
 [relay reference](relay/reference.md#what-changes-the-relays-line);
 `http_origin_from` doesn't, so a change to it needs nothing more. Then
@@ -640,7 +730,7 @@ sudo morzer config get cdn_hosts      # on the relay, before the change
 
 ## Back up the state
 
-`dotdash-state.json` holds the keys the servers share and every device's id.
+`dotdash-state.json` holds each group's keys and every device's id.
 Lost, the next `sync` with `--new-state` gives every server new keys, and
 every device new links and a new subscription URL. Keep a copy off the
 operator's box after each change to the roster, encrypted to an age
@@ -672,16 +762,18 @@ first, as they win.
 
 - **A server** comes back with the manager's keys and devices, from its
   first document, so devices keep their links and subscription URLs.
-- **A relay installed afresh** comes back with new keys of its own, so its
-  line changes. The next `sync` puts it in the servers' `relays`, and
-  devices' subscriptions pick up its new links; links sent by hand have to
-  be sent again. One [moved from its backup](relay/operations.md#move-a-relay)
-  keeps its keys and its line.
+- **A relay installed afresh** comes back with new keys and a new nonce, so
+  its line and its id on every group change. The next `sync` puts its line
+  in the servers' `relays` and their new `server/1` lines in its `servers`,
+  and devices' subscriptions pick up its new links; links sent by hand have
+  to be sent again. One [moved from its backup](relay/operations.md#move-a-relay)
+  keeps its keys, its nonce and its line.
 
 ## A lost server
 
-With the state, a server lost with no backup comes back with the same keys,
-and devices keep their links and subscription URLs:
+With the state, a server lost with no backup comes back with its group's
+keys and `relay_seed`, so devices keep their links and subscription URLs and
+relays their ids:
 
 1. Bring up a new machine, and point the server's domain at it.
 2. Join it under the server's name in the roster, with its domain and
@@ -697,6 +789,36 @@ and devices keep their links and subscription URLs:
    canaries and client machines follow at the next `sync`.
 
 Relays reach the server by its domain, so they reconnect once its DNS
-points at the new address. Under a new domain, the next `sync` gives every
-server and relay the new one, and devices that fetch their subscription
-through a relay get links to it at their next refresh.
+points at the new address. Under a new domain, the next `sync` gives its
+group's servers and every relay serving the group the new one, and devices
+that fetch their subscription through a relay get links to it at their next
+refresh.
+
+## Moving to server groups
+
+A manager from before server groups ran one set of servers, and its relays
+by copies of every device. One with groups runs servers and relays of 0.19
+or later: a relay of 0.19 refuses the documents of the manager before, and
+one of 0.18 those of this one. To move a network the manager already runs:
+
+1. **The servers first**, to 0.19, with the manager of before still running:
+   they take its documents, and read the relays' lines of 0.18 for one
+   release.
+2. **Then this manager, its roster and the relays.** Install the manager of
+   the servers' release, and move the roster's `devices` into a `[[group]]`,
+   named as the servers should be (it becomes their `name`): the manager
+   refuses `devices` at the top, and says so, and the manager of before
+   refuses `[[group]]`. The state's keys become the first `[[group]]`'s, so
+   its servers keep theirs. Then `sync`, and update the relays to 0.19 right
+   after. From that `sync` a relay of 0.18 is in no group's `relays`, and its
+   client leaves `vless_clients` (`sync` says it waits for its update), so
+   devices have only the servers' own links until it is updated: none with
+   `direct = false`. An updated relay comes up idle, and the next `sync`
+   gives the servers its `relay/1` line and it its `servers`; `status` then
+   shows its groups `live`.
+
+Its first `sync` gives the servers `name`, `relay_seed` and `relay_flags`:
+the servers derive relays' ids now. A network set up by hand moves to 0.19
+by hand, one relay at a time and with no gap
+([Moving from 0.18](relay/gateway.md#moving-from-018)), and then to the
+manager as in [Moving a running network](#moving-a-running-network).

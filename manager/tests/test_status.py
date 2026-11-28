@@ -22,11 +22,16 @@ key = "k"
 identity = "i"
 authority = "a"
 subscription = true
-devices = ["phone", "laptop"]
 desktops = ["laptop"]
 pools = { p = ["phone", "203.0.113.5"] }
+[[group]]
+name = "a"
+devices = ["phone", "laptop"]
+[[group]]
+name = "b"
 [[server]]
 name = "a"
+group = "a"
 id = "inst_A"
 key = "RWa"
 cdn_hosts = ["cdn.example.net"]
@@ -55,7 +60,10 @@ device = "phone"
 """
 R1 = {"entry_host": "203.0.113.5", "site": "r1.example.net", "public_key": "P", "short_id": "S", "encryption": "E",
       "own_site": {"xhttp_path": "secretpath"}, "kcp": {"port": 8447, "header": "dtls", "seed": "K"},
-      "hysteria2": {"port": 443}, "cdn_hosts": ["c.example.net"], "origin_host": "o.example.net/e/tok/s/", "name": "edge-1"}
+      "hysteria2": {"port": 443}, "cdn_hosts": ["c.example.net"], "origin_host": "o.example.net/e/tok/s/", "name": "edge-1",
+      "nonce": "0123456789abcdef",
+      "groups": {"a": {"state": "live", "servers": {"a.example.net": True, "a2.example.net": False}, "devices": 3,
+                       "digest": "0123abcd", "list_age": 42}}}
 STATE = {
     "facts": {"a": {"id": "inst_A", "at": NOW - 600, "facts": {"domain": "a.example.net", "https_port": 443}},
               "r1": {"id": "inst_R1", "at": NOW - 1200, "facts": R1},
@@ -104,9 +112,11 @@ def test_a_document_applied_refused_or_waited_for():
 
 def test_the_topology_names_entries_never_a_key_or_a_path():
     out = "\n".join(overview.topology(loads(ROSTER), STATE))
-    assert "  server a: a.example.net:443: reality, xhttp, cdn cdn.example.net" in out
+    assert "  server a (a): a.example.net:443: reality, xhttp, cdn cdn.example.net" in out
     assert ("  relay r1: 203.0.113.5, site r1.example.net: reality, xhttp, mkcp 8447, hy2 443, cdn c.example.net, "
-            "origin o.example.net; name edge-1; off=reality") in out
+            "origin o.example.net; name edge-1; off=reality\n"
+            "    group a: live, a.example.net ok, a2.example.net down; 3 devices, list 42 s old\n"
+            "    group b: not in its servers yet") in out
     assert "  relay r2: no facts yet; via r1 (reality); spare" in out
     assert "  pool p: phone, 203.0.113.5\n  desktops: laptop\n  canary c1 watches r1\n  client home follows phone" in out
     assert not any(s in out for s in ("secretpath", "tok", "K", " P ", " S "))
@@ -114,7 +124,7 @@ def test_the_topology_names_entries_never_a_key_or_a_path():
 
 def test_wait_asks_again_until_every_document_is_applied_or_refused(tmp_path, monkeypatch):
     (tmp_path / "network.toml").write_text('target = "file:///t"\nkey = "k"\nidentity = "i"\nauthority = "a"\n'
-                                           '[[server]]\nname = "a"\nid = "inst_A"\nkey = "RWa"\n')
+                                           '[[group]]\nname = "g"\n[[server]]\nname = "a"\nid = "inst_A"\nkey = "RWa"\n')
     (tmp_path / "dotdash-state.json").write_text(json.dumps({}))
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(cli, "POLL", 0)
@@ -139,21 +149,22 @@ def test_wait_asks_again_until_every_document_is_applied_or_refused(tmp_path, mo
     r = CliRunner().invoke(cli.app, ["status", "--wait"])
     assert r.exit_code == 0, r.output
     assert "applied 2" in r.output
-    assert "server a: a.example.net:443" in r.output, "the state a sync left while it waited is not read"
+    assert "server a (g): a.example.net:443" in r.output, "the state a sync left while it waited is not read"
     monkeypatch.setattr(Morzer, "rows", lambda self: row(1))
     r = CliRunner().invoke(cli.app, ["status", "--wait", "--timeout", "0"])
     assert r.exit_code == 1 and "pending 2" in r.output
 
 
-def test_a_relay_whose_device_list_is_not_the_one_sent_is_said():
-    r2 = loads(ROSTER).find("r2")
-    row = {"sync": {"applied": {"serial": 1, "at": "2027-01-15T08:00:00Z"}}}
-    applied = 1_800_000_000 - 1_800_000_000 % 86400 + 8 * 3600
-    st = lambda at, digest: {"facts": {"r2": {"id": "inst_R2", "at": at, "facts": {"clients": {"count": 2, "digest": digest}}}},
-                             "published": {"inst_R2": {"digest": "x", "at": 0, "clients": "0123abcd"}}}
-    assert overview.devices(r2, st(applied + 60, "deadbeef"), row) == (
-        "r2: its device list (2, digest deadbeef) is not the one the manager sent (digest 0123abcd): "
-        "changed on the relay by hand? The manager's next document for it puts it back")
-    assert overview.devices(r2, st(applied + 60, "0123abcd"), row) is None
-    # Facts read before its last apply carry the list from before it.
-    assert overview.devices(r2, st(applied - 60, "deadbeef"), row) is None
+def test_each_group_a_relay_serves_has_a_state_of_its_own():
+    """Live while one of the group's servers serves the relay its list; one
+    group down says nothing of the relay or its other groups."""
+    net = loads(ROSTER)
+    r1 = net.find("r1")
+    f = {"groups": {"a": {"state": "down", "servers": {"a.example.net": False}, "devices": 3},
+                    "b": {"state": "refused", "servers": {"b.example.net": True}}, "c": {"state": "live"}}}
+    assert overview.groups(net, r1, f) == ["    group a: DOWN, a.example.net down; 3 devices",
+                                           "    group b: REFUSED, b.example.net ok"]
+    assert overview.groups(net, r1, {"groups": {"b": {"state": "starting"}}}) == [
+        "    group a: not in its servers yet", "    group b: starting"]
+    narrowed = loads(ROSTER.replace('via = ["r1"]\n', "").replace('name = "r1"\n', 'name = "r1"\ngroups = ["b"]\n'))
+    assert overview.groups(narrowed, narrowed.find("r1"), f) == ["    group b: REFUSED, b.example.net ok"]

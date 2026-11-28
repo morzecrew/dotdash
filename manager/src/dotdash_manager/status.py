@@ -4,8 +4,6 @@ are and what its canaries found; then the topology. From what morzer returns
 (each machine's fleet row, state ls's newest serials) and what the last sync
 kept. Pure: it reads nothing and writes nothing, and prints no secret."""
 
-from datetime import datetime
-
 from .health import BURN_AFTER
 from .report import span
 from .roster import Network
@@ -66,27 +64,6 @@ def canaries(net: Network, st: dict, name: str, kind: str, now: int) -> str:
     return ("BURNT: " if h.get("fails", 0) >= BURN_AFTER else "") + (paths or "no path")
 
 
-def epoch(at: str | None) -> float | None:
-    try:
-        return datetime.fromisoformat(at).timestamp() if at else None
-    except ValueError:
-        return None
-
-
-def devices(m, st: dict, row: dict | None) -> str | None:
-    """A relay whose device list, by the digest its facts carry, is not the
-    one the manager last sent it: changed on the relay by hand. Said only of
-    facts read after its last apply, which carry what that apply gave it."""
-    kept = st.get("facts", {}).get(m.name)
-    has = (kept or {}).get("facts", {}).get("clients")
-    sent = st.get("published", {}).get(m.id, {}).get("clients")
-    applied = epoch((((row or {}).get("sync") or {}).get("applied") or {}).get("at"))
-    if not (has and sent and applied) or kept["at"] <= applied or has["digest"] == sent:
-        return None
-    return (f"{m.name}: its device list ({has['count']}, digest {has['digest']}) is not the one the manager sent "
-            f"(digest {sent}): changed on the relay by hand? The manager's next document for it puts it back")
-
-
 def table(rows: list[list[str]]) -> list[str]:
     widths = [max(len(r[i]) for r in rows) for i in range(len(rows[0]))]
     return ["  ".join(c.ljust(w) for c, w in zip(r, widths, strict=True)).rstrip() for r in rows]
@@ -94,8 +71,7 @@ def table(rows: list[list[str]]) -> list[str]:
 
 def machines(net: Network, st: dict, rows: dict, published: dict, now: int) -> tuple[list[str], bool, bool]:
     """The table and its notes, whether any document is still pending, and
-    whether anything is bad: refused, not followed, stale, down, or a relay's
-    device list not the one sent."""
+    whether anything is bad: refused, not followed, stale or down."""
     out = [["machine", "kind", "release", "document", "health", "facts", "canaries"]]
     notes, pending, bad = [], False, False
     for m in net.machines:
@@ -113,31 +89,49 @@ def machines(net: Network, st: dict, rows: dict, published: dict, now: int) -> t
         out.append([m.name, m.kind, release, doc, well, facts, canaries(net, st, m.name, m.kind, now)])
         if row and row["facts_problem"]:
             notes.append(f"{m.name}: its last facts run didn't replace them: {row['facts_problem']}")
-        stale = devices(m, st, row) if m.kind == "relay" and said == "ok" else None
-        notes += [stale] if stale else []
         pending |= said == "pending"
-        bad |= said == "bad" or down or bool(stale)
+        bad |= said == "bad" or down
     return table(out) + (["", *notes] if notes else []), pending, bad
 
 
+def groups(net: Network, r, f: dict) -> list[str]:
+    """Each group a relay serves, as its gateway last found it (its facts'
+    groups): live while one of the group's servers serves it its device list,
+    so its devices get through; down while none answers; refused while they
+    answer that they have no list for it; starting before its first round.
+    Per group alone: one down says nothing of the relay or its other groups."""
+    out = []
+    for g in net.groups_of(r):
+        x = (f.get("groups") or {}).get(g)
+        if x is None:
+            out.append(f"    group {g}: not in its servers yet")
+            continue
+        said = [x["state"] if x["state"] in ("live", "starting") else x["state"].upper()]
+        said += [f"{h} {'ok' if ok else 'down'}" for h, ok in sorted((x.get("servers") or {}).items())]
+        out.append(f"    group {g}: {', '.join(said)}" + (f"; {x['devices']} devices" if "devices" in x else "")
+                   + (f", list {x['list_age']} s old" if "list_age" in x else ""))
+    return out
+
+
 def topology(net: Network, st: dict) -> list[str]:
-    """The servers and what they serve, each relay's entries, its via, and
-    whether it is a spare, standing in, standby, burnt or has paths off; the
-    pools, the desktops and what each canary watches. As the last sync read
-    the facts. Addresses and names, never a key or a path."""
+    """The servers by group and what they serve, each relay's entries, its
+    via, whether it is a spare, standing in, standby, burnt or has paths off,
+    and each group it serves; the pools, the desktops and what each canary
+    watches. As the last sync read the facts. Addresses and names, never a key
+    or a path."""
     facts = {n: k["facts"] for n, k in st.get("facts", {}).items()}
     hl, stands = st.get("health", {}), st.get("stands", {})
     out = ["", "topology, from the facts the last sync read:"]
     for s in net.server:
         f = facts.get(s.name)
         if not f:
-            out.append(f"  server {s.name}: no facts yet")
+            out.append(f"  server {s.name} ({net.group_of(s)}): no facts yet")
             continue
         serves = ["reality", "xhttp"] + ([f"xhttp-reality {f['xhttp_reality_port']}"] if "xhttp_reality_port" in f else [])
         serves += [f"mkcp {f['kcp']['port']}"] if "kcp" in f else []
         serves += [f"hy2 {f['hysteria2_port']}"] if "hysteria2_port" in f else []
         serves += [f"cdn {','.join(s.cdn_hosts)}"] if s.cdn_hosts else []
-        out.append(f"  server {s.name}: {f['domain']}:{f['https_port']}: {', '.join(serves)}")
+        out.append(f"  server {s.name} ({net.group_of(s)}): {f['domain']}:{f['https_port']}: {', '.join(serves)}")
     for r in net.relay:
         f, h = facts.get(r.name), hl.get(r.name, {})
         marks = [f"via {', '.join(r.via)} ({r.via_link})"] if r.via else []
@@ -160,6 +154,7 @@ def topology(net: Network, st: dict) -> list[str]:
         marks = ([f"name {f['name']}"] if f.get("name") else []) + (["cdn-only"] if f.get("cdn_only") else []) + marks
         out.append(f"  relay {r.name}: {f['entry_host']}, site {f['site']}: {', '.join(entries)}"
                    + "".join(f"; {x}" for x in marks))
+        out += groups(net, r, f)
     out += [f"  pool {p}: {', '.join(ms)}" for p, ms in net.pools.items()]
     out += [f"  desktops: {', '.join(net.desktops)}"] if net.desktops else []
     out += [f"  canary {c.name} watches {c.watches}" for c in net.canary]

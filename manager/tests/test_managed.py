@@ -16,21 +16,34 @@ identity = "i"
 authority = "a"
 subscription = true
 direct = false
-devices = ["phone", "laptop"]
 desktops = ["laptop"]
 cdn_extra = { "edge.example.net" = { uplinkHTTPMethod = "GET" } }
 pools = { p = ["phone", "203.0.113.5"] }
+[[group]]
+name = "a"
+devices = ["phone", "laptop"]
+[[group]]
+name = "b"
+devices = ["tablet"]
 [[server]]
 name = "a"
+group = "a"
 cdn_hosts = ["cdn.example.net"]
+[[server]]
+name = "b"
+group = "b"
 [[relay]]
 name = "r1"
+standby = true
 [[relay]]
 name = "r2"
 via = ["r1"]
 via_link = "xhttp"
+server_link = "xhttp-reality"
+tunnel_group = "b"
 [[relay]]
 name = "r3"
+groups = ["a"]
 [[canary]]
 name = "c1"
 watches = "a"
@@ -43,13 +56,8 @@ device = "phone"
 """
 RELAY = {"entry_host": "203.0.113.5", "site": "r1.example.net", "public_key": "P", "short_id": "S", "encryption": "E",
          "own_site": {"xhttp_path": "x"}, "kcp": {"port": 8447, "header": "dtls", "seed": "K"}, "hysteria2": {"port": 443},
-         "cdn_hosts": ["c.example.net"], "cdn_path": "y", "origin_host": "o.example.org", "via": True}
-
-
-RELAY_BEFORE_GATEWAY = {
-    *(("parameters", n) for n in ("dotdash_servers", "dotdash_address", "dotdash_port", "dotdash_public_key", "via")),
-    *(("secrets", n) for n in ("vless_clients", "dotdash_id", "dotdash_encryption", "dotdash_short_id")),
-}
+         "cdn_hosts": ["c.example.net"], "cdn_path": "y", "origin_host": "o.example.org", "name": "r1",
+         "nonce": "0123456789abcdef"}
 
 
 def managed(kind: str) -> dict[str, set[str]]:
@@ -66,16 +74,18 @@ def managed(kind: str) -> dict[str, set[str]]:
 
 def test_every_name_a_document_carries_is_managed_by_its_bundle():
     net = loads(ROSTER)
-    st = {**state.load(Path("/nonexistent"), net), "via": ["r3"], "split": ["a"]}
-    pbk = state.public_key(st["keys"]["reality_key"])
-    facts = {"a": {"domain": "a.example.net", "https_port": 443, "public_key": pbk, "encryption": "E",
-                   "xhttp_reality_port": 8443, "kcp": {"port": 8447, "header": "dtls", "open": "quic"},
-                   "hysteria2_port": 443},
-             "r1": RELAY, "r2": {**RELAY, "entry_host": "203.0.113.6"}, "r3": {**RELAY, "entry_host": "203.0.113.7"}}
+    st = {**state.load(Path("/nonexistent"), net), "split": ["a"]}
+    server = lambda g: {"domain": f"{g}.example.net", "https_port": 443, "public_key": state.public_key(st["keys"][g]["reality_key"]),
+                        "encryption": "E", "xhttp_reality_port": 8443, "kcp": {"port": 8447, "header": "dtls", "open": "quic"},
+                        "hysteria2_port": 443}
+    facts = {"a": server("a"), "b": server("b"), "r1": RELAY, "r2": {**RELAY, "entry_host": "203.0.113.6", "name": "r2"},
+             "r3": {**RELAY, "entry_host": "203.0.113.7", "name": "r3"}}
     docs = []
     for phase in "next", "done":
-        st["rotation"] = {"phase": phase, "since": 0, "second": {k: st["keys"][k] for k in rotate.KEYS}}
-        docs += [render(net, st, facts, split={"a"})[0], render(net, st, facts)[0], render(net, st, {})[0]]
+        st["rotation"] = {"phase": phase, "since": 0,
+                          "second": {g: {k: st["keys"][g][k] for k in rotate.KEYS} for g in ("a", "b")}}
+        docs += [render(net, st, facts, burnt={"r3"}, off={"r1": {"xhttp"}}, split={"a", "r1"})[0], render(net, st, facts)[0],
+                 render(net, st, {})[0]]
     sent = set()
     for rendered in docs:
         for name, doc in rendered.items():
@@ -87,9 +97,8 @@ def test_every_name_a_document_carries_is_managed_by_its_bundle():
                                             ("relay", "secrets"), ("canary", "parameters"), ("canary", "secrets"),
                                             ("client", "secrets")}
     unmanaged = sorted((k, s, n) for k, s, n in sent if n not in managed(k).get(s, set()))
-    # The relay's names from before its gateway, which render sends until the
-    # manager knows server groups (the relay gateway design's PR 8): a relay
-    # from 0.19.0 on refuses such a document. Equal, so that PR drops this.
-    assert {(s, n) for k, s, n in unmanaged if k == "relay"} == RELAY_BEFORE_GATEWAY
-    unmanaged = [u for u in unmanaged if u[0] != "relay"]
     assert unmanaged == [], f"a machine refuses a document naming these, which its manifest's managed lacks: {unmanaged}"
+    # And every name the gateway documents carry is exercised, so dropping one shows here.
+    assert {n for k, _, n in sent if k == "relay"} == {"ipv6", "server_link", "via_link", "via_fingerprint", "tunnel_group",
+                                                      "servers", "via"}
+    assert {"name", "relays", "relay_flags", "relay_seed"} <= {n for k, _, n in sent if k == "server"}

@@ -1,7 +1,8 @@
 """adopt: a server that ran before the manager keeps its keys and its devices'
-ids, so devices keep their links and subscription URLs. The server prints
-its shared keys and vless_clients (COMMAND, run on it over ssh), and the
-manager takes them into its state in place of the ones it made."""
+ids, so devices keep their links and subscription URLs, and its relay_seed,
+so relays keep their ids there. The server prints its shared keys and
+vless_clients (COMMAND, run on it over ssh), and the manager takes them into
+its group's in its state, in place of the ones it made."""
 
 import base64
 import binascii
@@ -14,13 +15,15 @@ from .state import SHARED_KEYS, check_ids, public_key
 
 # What the first sync sets on the server besides keys and devices. adopt reads
 # them as the server has them, since a difference reaches every device.
-SETTINGS = ("subscription", "cdn_hosts", "pools", "direct")
+SETTINGS = ("subscription", "cdn_hosts", "pools", "direct", "name")
+# A server released before relay ids has no relay_seed: the manager's own goes.
+OPTIONAL = ("relay_seed",)
 
-# Run as root on the server: each shared key and vless_clients, one line each,
-# as its name and its rendered file's base64; then each of SETTINGS morzer
-# gives, as setting:<name> and its value's base64.
+# Run as root on the server: each shared key it has and vless_clients, one
+# line each, as its name and its rendered file's base64; then each of SETTINGS
+# morzer gives, as setting:<name> and its value's base64.
 COMMAND = ("cd /run/dotdash/secrets && for f in " + " ".join([*SHARED_KEYS, "vless_clients"])
-           + ' ; do b=$(base64 -w0 < "$f") || exit 1; printf "%s %s\\n" "$f" "$b"; done'
+           + ' ; do [ -e "$f" ] || continue; b=$(base64 -w0 < "$f") || exit 1; printf "%s %s\\n" "$f" "$b"; done'
            + " ; for p in " + " ".join(SETTINGS)
            + ' ; do v=$(morzer --product dotdash config get "$p" 2>/dev/null)'
            + ' && printf "setting:%s %s\\n" "$p" "$(printf %s "$v" | base64 -w0)"; done; true')
@@ -43,10 +46,10 @@ def parse(text: str) -> tuple[dict[str, str], dict[str, str], int, set[str]]:
             values[name] = base64.b64decode(b64, validate=True).decode()
         except (binascii.Error, UnicodeDecodeError):
             raise Refused(f"the server's {name} is not base64 of text: is it what `adopt` prints to run?") from None
-    missing = [k for k in [*SHARED_KEYS, "vless_clients"] if k not in values]
+    missing = [k for k in [*SHARED_KEYS, "vless_clients"] if k not in values and k not in OPTIONAL]
     if missing:
         raise Refused(f"the server's output lacks {', '.join(missing)}: run all of what `adopt` prints, on the server, as root")
-    keys = {k: values[k].strip() for k in SHARED_KEYS}
+    keys = {k: values[k].strip() for k in SHARED_KEYS if k in values}
     for k, v in keys.items():
         if not v or any(c.isspace() for c in v):
             raise Refused(f"the server's {k} is empty or more than one word")
@@ -77,23 +80,27 @@ def parse(text: str) -> tuple[dict[str, str], dict[str, str], int, set[str]]:
     return keys, ids, unnamed, desktops
 
 
-def take(state: dict, net: Network, keys: dict[str, str], ids: dict[str, str], unnamed: int,
+def take(state: dict, net: Network, group: str, keys: dict[str, str], ids: dict[str, str], unnamed: int,
          desktops: set[str] | frozenset[str] = frozenset()) -> list[str]:
-    """Puts the server's keys and the ids of the roster's names into the state,
-    and says what devices keep their links, which ones get new ones, which
-    lose access at the next sync, and which desktops the roster doesn't call
-    one, so they would get CDN links."""
-    state["keys"].update(keys)
-    names = net.clients_of("server")
+    """Puts the server's keys into its group's and the ids of the group's
+    names into the state, and says what devices keep their links, which ones
+    get new ones, which lose access at the next sync, and which desktops the
+    roster doesn't call one, so they would get CDN links."""
+    state["keys"][group].update(keys)
+    names = net.clients_of(group)
     kept = [n for n in names if n in ids]
     for n in kept:
         state["ids"][n] = ids[n]
     check_ids(state["ids"])
-    said = [f"adopted: the server's keys; ids of {len(kept)} of the roster's {len(names)} names"]
+    said = [f"adopted: the server's keys, as {group}'s; ids of {len(kept)} of {group}'s {len(names)} names"]
     if new := [n for n in names if n not in ids]:
         said.append("new to the server, so new links: " + ", ".join(new))
-    if gone := sorted(set(ids) - set(names)):
-        said.append("on the server but not in the roster, losing access at the next sync unless added: " + ", ".join(gone))
+    gone = sorted(set(ids) - set(names))
+    if relays := [n for n in gone if n.startswith("relay-")]:
+        said.append("relays' clients of the release before, dropped at the next sync: relays come in by the ids the "
+                    "servers derive for their relay/1 lines: " + ", ".join(relays))
+    if gone := [n for n in gone if n not in relays]:
+        said.append(f"on the server but not in {group}, losing access at the next sync unless added: " + ", ".join(gone))
     if unnamed:
         said.append(f"{unnamed} line(s) of the server's vless_clients name no device: they lose access at the next sync")
     if lacking := [n for n in kept if n in desktops and n not in net.desktops]:
@@ -133,6 +140,9 @@ def changes(net: Network, server, have: dict[str, str]) -> list[str]:
         said.append("pools: the server's differ from the roster's [pools], which the next sync sets")
     if net.direct is not None and have.get("direct") in ("true", "false") and have["direct"] != str(net.direct).lower():
         said.append(f"direct: the server has {have['direct']}, the roster {str(net.direct).lower()}, which the next sync sets")
+    if have.get("name", "none") not in ("none", net.group_of(server)):
+        said.append(f"name: the server has {have['name']}, its group {net.group_of(server)}, which the next sync sets: "
+                    "its own links are named by it, and each relay's servers line for it changes with that sync")
     if net.relay:
         said.append("join the relays before this server: until a relay's facts are in, the server's document leaves "
                     "its line out of relays, and devices lose its links")

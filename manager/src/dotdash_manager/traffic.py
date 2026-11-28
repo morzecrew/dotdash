@@ -2,8 +2,8 @@
 the servers' and relays' facts, and the days a device moved far more than it
 usually does: a link passed around shows as its device moving much more than
 it ever did. A device behind a relay reaches the server under the relay's id,
-so the relay counts it and the server counts the relay; the relays' and
-canaries' own ids are left out. Counts only, never an address."""
+so the relay counts it, as <device>@<group>, and the server counts the relay;
+the relays' and canaries' own ids are left out. Counts only, never an address."""
 
 import statistics
 import time
@@ -37,10 +37,12 @@ def record(t: dict, facts: dict, now: int) -> None:
         if prev is None:
             continue
         again = abs(c.get("started", 0) - prev.get("started", 0)) > 60
-        for d, n in c["devices"].items():
+        for key, n in c["devices"].items():
+            # A device's name holds no @, and is unique across groups.
+            d = key.split("@")[0]
             if d.startswith(("relay-", "canary-")):
                 continue
-            moved = n if again else n - prev["devices"].get(d, 0)
+            moved = n if again else n - prev["devices"].get(key, 0)
             if moved > 0:
                 today[d] = today.get(d, 0) + moved
     for old in sorted(days)[:-DAYS]:

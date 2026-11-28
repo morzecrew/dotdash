@@ -18,7 +18,7 @@ import typer
 from . import Refused, adopt, health, join as joining, roster, rotate, state, traffic
 from . import status as overview
 from .morzer import Morzer, write_roster
-from .render import applied_keys, clients_digest, kept_pools, render, subscription_urls
+from .render import applied_keys, kept_pools, render, subscription_urls
 from .report import report as report_lines
 from .roster import Network
 
@@ -146,14 +146,9 @@ def sync(ctx: typer.Context, dry_run: Annotated[bool, typer.Option("--dry-run", 
         print(f"{m.name}: {'would publish' if dry_run else 'published'}")
         holds.add(m.name)
         st["published"][m.id] = {"digest": digest, "at": int(time.time())}
-        # What a relay's facts say of the device list it has, status compares with this.
-        if "vless_clients" in doc.get("secrets", {}):
-            st["published"][m.id]["clients"] = clients_digest(doc["secrets"]["vless_clients"])
-    # Who was sent hello_split and via, for the next render to take them off
-    # where they no longer hold, and to name them nowhere else.
-    names = {m.name for m in net.machines}
-    for key, has in (("split", split), ("via", {n for n, d in docs.items() if "via" in d.get("parameters", {})})):
-        st[key] = sorted(sent(set(st.get(key, [])), holds, has) & names)
+    # Who was sent hello_split, for the next render to take it off where it no
+    # longer holds, and to name it nowhere else.
+    st["split"] = sorted(sent(set(st.get("split", [])), holds, split) & {m.name for m in net.machines})
     # Once, at the end: the keys were kept before anything went out (open),
     # and the rest a sync that stops short reads again from the same facts.
     if not dry_run:
@@ -220,7 +215,7 @@ def rotate_key(
         print(rotate.status(st, now))
         return
     if step == "start":
-        said = rotate.start(st, now)
+        said = rotate.start(st, net, now)
     elif step == "swap":
         facts = Morzer(net, o.morzer_roster, o.morzer).gather(st.setdefault("facts", {}), now)
         said = rotate.swap(st, net, facts, now, force)
@@ -272,9 +267,10 @@ def device_urls(o: Options, net: Network, st: dict, device: str) -> list[str]:
         raise Refused("subscription = false: run `sudo morzer task run client-config --output -- "
                       f"{device}` on a server for its links")
     facts = {n: k["facts"] for n, k in st.get("facts", {}).items()}
-    lead = next((facts[s.name] for s in applied_keys(net, st, facts)), None)
+    group = net.group_of(device)
+    lead = next((facts[s.name] for s in applied_keys(net, st, facts, group)), None)
     if lead is None:
-        raise Refused("no server has applied the manager's keys yet: run sync, and status --wait")
+        raise Refused(f"no server of {group} has applied the manager's keys yet: run sync, and status --wait")
     out = set(st.get("out", []))
     urls = subscription_urls(net, st, facts, device, lead, out, kept_pools(net, facts, out, st.get("stands", {}))[0])
     if not urls:
@@ -353,7 +349,8 @@ def adopt_server(
     net, st = o.open()
     if st["published"] and not force:
         raise Refused("the manager already published its own keys: adopting now changes them again on every machine; --force if that is meant")
-    for line in [*adopt.take(st, net, keys, ids, unnamed, desktops), *adopt.changes(net, m, adopt.settings(text))]:
+    for line in [*adopt.take(st, net, net.group_of(m), keys, ids, unnamed, desktops),
+                 *adopt.changes(net, m, adopt.settings(text))]:
         print(line)
     state.save(o.state, st)
 
@@ -377,7 +374,9 @@ def join(
         raise Refused(f"add {name} to {o.roster} first, as [[server]], [[relay]], [[canary]] or [[client]] with its name")
     recipient = subprocess.run(["age-keygen", "-y", net.identity], capture_output=True, text=True, check=True).stdout.strip()
     doc = None
-    if m.kind != "server":
+    # A server's and a relay's come once they are up: a relay's servers lines
+    # need its nonce, which it makes at init, and its facts carry.
+    if m.kind in ("canary", "client"):
         docs, waiting = render(net, st, Morzer(net, o.morzer_roster, o.morzer).gather(st.setdefault("facts", {})))
         doc = docs.get(m.name)
         if doc is None:

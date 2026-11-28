@@ -10,9 +10,10 @@ let in). Three steps, each published by the next sync:
   finish  after WINDOW, so every device had a subscription refresh or new
           links, the second key goes off.
 
-State keeps where it stands, as rotation = {phase, since, second}: phase
-"next" or "swapped" with the second key set, "done" after finish. Pure but
-for the clock it is handed."""
+Every server group rotates at once, each to a next key of its own. State
+keeps where it stands, as rotation = {phase, since, second}: phase "next" or
+"swapped" with second each group's second key set, "done" after finish. Pure
+but for the clock it is handed."""
 
 from . import Refused
 from .roster import Network
@@ -26,36 +27,41 @@ def phase(state: dict) -> str:
     return state.get("rotation", {}).get("phase", "none")
 
 
-def second(state: dict) -> dict | None:
-    """The second key set the servers get, or None with no rotation under way."""
+def second(state: dict, group: str) -> dict | None:
+    """The second key set a group's servers get, or None with no rotation
+    under way for it."""
     r = state.get("rotation", {})
-    return r.get("second") if r.get("phase") in ("next", "swapped") else None
+    return r["second"].get(group) if r.get("phase") in ("next", "swapped") else None
 
 
-def canary_key(state: dict) -> dict | None:
-    """The key set the canaries watching servers check them under, when it is
-    not the current one: the next key, between start and swap."""
+def canary_key(state: dict, group: str) -> dict | None:
+    """The key set the canaries watching a group's servers check them under,
+    when it is not the current one: the next key, between start and swap."""
     r = state.get("rotation", {})
-    return r["second"] if r.get("phase") == "next" else None
+    return r["second"].get(group) if r.get("phase") == "next" else None
 
 
-def start(state: dict, now: int) -> str:
+def start(state: dict, net: Network, now: int) -> str:
     if phase(state) in ("next", "swapped"):
         raise Refused(f"a rotation is under way ({phase(state)}): swap or finish it first")
-    state["rotation"] = {"phase": "next", "since": now, "second": {k: SHARED_KEYS[k]() for k in KEYS}}
-    return ("the next REALITY key goes to the servers as their second, and the canaries watching them move to it; "
-            "once one gets through on it, run rotate swap")
+    state["rotation"] = {"phase": "next", "since": now,
+                         "second": {g.name: {k: SHARED_KEYS[k]() for k in KEYS} for g in net.group}}
+    return ("each group's next REALITY key goes to its servers as their second, and the canaries watching them move "
+            "to it; once one per group gets through on it, run rotate swap")
 
 
-def proven(net: Network, facts: dict, state: dict) -> list[str]:
-    """The canaries watching servers that got REALITY through on the next key
-    since start: facts naming it, a reading after start, reality up."""
+def proven(net: Network, facts: dict, state: dict) -> dict[str, list[str]]:
+    """The canaries watching each group's servers that got REALITY through on
+    its next key since start: facts naming it, a reading after start, reality up."""
     r = state["rotation"]
-    pbk = public_key(r["second"]["reality_key"])
-    servers = {s.name for s in net.server}
-    return [c.name for c in net.canary if c.watches in servers and (f := facts.get(c.name))
-            and f.get("public_key") == pbk and isinstance(f.get("checked_at"), int)
-            and f["checked_at"] >= r["since"] and (f.get("paths") or {}).get("reality") is True]
+    out: dict[str, list[str]] = {}
+    for c in net.canary:
+        target, f = net.find(c.watches), facts.get(c.name)
+        nxt = r["second"].get(net.group_of(target)) if target.kind == "server" else None
+        if (nxt and f and f.get("public_key") == public_key(nxt["reality_key"]) and isinstance(f.get("checked_at"), int)
+                and f["checked_at"] >= r["since"] and (f.get("paths") or {}).get("reality") is True):
+            out.setdefault(net.group_of(target), []).append(c.name)
+    return out
 
 
 def swap(state: dict, net: Network, facts: dict, now: int, force: bool = False) -> str:
@@ -63,15 +69,18 @@ def swap(state: dict, net: Network, facts: dict, now: int, force: bool = False) 
         raise Refused("nothing to swap: run rotate start first" if phase(state) in ("none", "done")
                       else "already swapped: rotate finish retires the old key")
     ok = proven(net, facts, state)
-    if not ok and not force:
-        raise Refused("no canary watching a server has got REALITY through on the next key yet "
+    lacking = [g for g in state["rotation"]["second"] if g not in ok and net.servers_of(g)]
+    if lacking and not force:
+        raise Refused(f"no canary watching a server of {', '.join(lacking)} has got REALITY through on its next key yet "
                       "(a canary's facts name the key it checks under from this release on): wait for a sync after it applied, "
                       "or --force")
-    keys = state["keys"]
-    old = {k: keys[k] for k in KEYS}
-    keys.update(state["rotation"]["second"])
+    old = {}
+    for g, nxt in state["rotation"]["second"].items():
+        old[g] = {k: state["keys"][g][k] for k in KEYS}
+        state["keys"][g].update(nxt)
     state["rotation"] = {"phase": "swapped", "since": now, "second": old}
-    by = f"{', '.join(ok)} got through on it" if ok else "forced"
+    names = [c for cs in ok.values() for c in cs]
+    by = f"{', '.join(names)} got through on it" if names and not lacking else "forced"
     return (f"the new REALITY key is the servers' key ({by}), the old one their second: subscriptions and relays move "
             f"to the new key, devices on the old one keep getting in; rotate finish after {WINDOW // 86400} days")
 

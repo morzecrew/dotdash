@@ -9,7 +9,8 @@ from dotdash_manager.roster import loads
 from typer.testing import CliRunner
 
 ROSTER = ('target = "file:///t"\nkey = "k"\nidentity = "i"\nauthority = "a"\nsubscription = true\n'
-          'devices = ["phone", "laptop"]\n[[server]]\nname = "a"\n[[relay]]\nname = "r1"\n')
+          '[[group]]\nname = "g"\ndevices = ["phone", "laptop"]\n[[group]]\nname = "h"\ndevices = ["tv"]\n'
+          '[[server]]\nname = "a"\ngroup = "g"\n[[relay]]\nname = "r1"\n')
 PHONE, OLD, R1 = "6e3c4bd2-5a4f-4b8e-9d1e-0f2a3b4c5d6e", "0f2a3b4c-5d6e-4b8e-9d1e-6e3c4bd25a4f", "1d1e0f2a-3b4c-4d6e-8e3c-4bd25a4f9d1e"
 
 
@@ -28,9 +29,16 @@ def test_command_prints_what_parse_reads(tmp_path):
     keys, ids, unnamed, desktops = adopt.parse(out)
     assert set(keys) == set(state.SHARED_KEYS) and ids == {"phone": PHONE} and unnamed == 0 and desktops == set()
     assert keys["xhttp_path"] == (tmp_path / "xhttp_path").read_text().strip()
+    # A server from before relay ids has no relay_seed: the manager keeps its own.
+    (tmp_path / "relay_seed").unlink()
+    out = subprocess.run(["sh", "-c", adopt.COMMAND.replace("/run/dotdash/secrets", str(tmp_path))],
+                         capture_output=True, text=True, check=True).stdout
+    assert "relay_seed" not in adopt.parse(out)[0]
     (tmp_path / "kcp_seed").unlink()
-    r = subprocess.run(["sh", "-c", adopt.COMMAND.replace("/run/dotdash/secrets", str(tmp_path))], capture_output=True)
-    assert r.returncode != 0
+    out = subprocess.run(["sh", "-c", adopt.COMMAND.replace("/run/dotdash/secrets", str(tmp_path))],
+                         capture_output=True, text=True, check=True).stdout
+    with pytest.raises(Refused, match="lacks kcp_seed"):
+        adopt.parse(out)
 
 
 def test_parse_refuses_what_no_server_printed():
@@ -49,23 +57,27 @@ def test_parse_refuses_what_no_server_printed():
             adopt.parse(text)
 
 
-def test_take_keeps_the_roster_names_and_says_who_moves():
+def test_take_keeps_the_groups_names_and_says_who_moves():
     net = loads(ROSTER)
-    st = {"keys": {k: "made" for k in state.SHARED_KEYS}, "ids": {"phone": "new", "laptop": "new2"}}
+    made = {k: "made" for k in state.SHARED_KEYS}
+    st = {"keys": {"g": dict(made), "h": dict(made)}, "ids": {"phone": "new", "laptop": "new2", "tv": "new3"}}
     keys, ids, unnamed, _ = adopt.parse(server_output(f"# devices\n{PHONE} phone\n{OLD} tablet\n{R1} relay-r1\n{OLD}\n"))
-    said = adopt.take(st, net, keys, ids, unnamed)
-    assert st["keys"] == keys and st["ids"]["phone"] == PHONE and st["ids"]["relay-r1"] == R1 and st["ids"]["laptop"] == "new2"
-    assert said[0] == "adopted: the server's keys; ids of 2 of the roster's 3 names"
+    said = adopt.take(st, net, "g", keys, ids, unnamed)
+    # Its relay_seed too: the relays' ids there stay what they were.
+    assert st["keys"]["g"] == keys and keys["relay_seed"] and st["keys"]["h"] == made
+    assert st["ids"]["phone"] == PHONE and "relay-r1" not in st["ids"] and st["ids"]["laptop"] == "new2"
+    assert said[0] == "adopted: the server's keys, as g's; ids of 1 of g's 2 names"
     assert "new to the server, so new links: laptop" in said
-    assert "losing access at the next sync unless added: tablet" in said[2]
-    assert said[3].startswith("1 line(s)")
+    assert said[2].startswith("relays' clients of the release before, dropped at the next sync") and said[2].endswith("relay-r1")
+    assert said[3] == "on the server but not in g, losing access at the next sync unless added: tablet"
+    assert said[4].startswith("1 line(s)")
 
 
 def test_take_refuses_ids_xray_takes_for_one():
-    st = {"keys": {}, "ids": {}}
+    st = {"keys": {"g": {}}, "ids": {}}
     keys, ids, unnamed, _ = adopt.parse(server_output(f"{PHONE} phone\n{PHONE[:14]}ffff{PHONE[18:]} laptop\n"))
     with pytest.raises(Refused, match="phone and laptop have ids that differ only in bytes 6 and 7"):
-        adopt.take(st, loads(ROSTER), keys, ids, unnamed)
+        adopt.take(st, loads(ROSTER), "g", keys, ids, unnamed)
 
 
 def test_cli_adopts_once_and_not_after_a_publish(tmp_path, monkeypatch):
@@ -78,7 +90,7 @@ def test_cli_adopts_once_and_not_after_a_publish(tmp_path, monkeypatch):
     r = run(app, ["adopt", "a"], input=out)
     assert r.exit_code == 0, r.output
     st = json.loads((tmp_path / "dotdash-state.json").read_text())
-    assert st["ids"]["phone"] == PHONE and st["keys"] == adopt.parse(out)[0]
+    assert st["ids"]["phone"] == PHONE and st["keys"]["g"] == adopt.parse(out)[0]
     assert run(app, ["adopt", "r1"], input=out).exit_code != 0
     st["published"] = {"inst_1": {"digest": "d", "at": 1}}
     (tmp_path / "dotdash-state.json").write_text(json.dumps(st))
@@ -95,7 +107,7 @@ def test_adopt_makes_the_state_of_a_roster_naming_the_server_joined(tmp_path, mo
     out = server_output(f"{PHONE} phone\n")
     r = CliRunner().invoke(app, ["adopt", "a"], input=out)
     assert r.exit_code == 0, r.output
-    assert json.loads((tmp_path / "dotdash-state.json").read_text())["keys"] == adopt.parse(out)[0]
+    assert json.loads((tmp_path / "dotdash-state.json").read_text())["keys"]["g"] == adopt.parse(out)[0]
 
 
 def test_parse_takes_the_first_word_of_a_key_file_and_no_newline():
@@ -104,12 +116,13 @@ def test_parse_takes_the_first_word_of_a_key_file_and_no_newline():
 
 
 def test_adopt_names_the_desktops_the_roster_does_not():
-    net = loads(ROSTER.replace('devices = ["phone", "laptop"]', 'devices = ["phone", "laptop", "pc"]\ndesktops = ["pc"]'))
-    st = {"keys": {}, "ids": {}}
+    net = loads(ROSTER.replace('subscription = true\n', 'subscription = true\ndesktops = ["pc"]\n')
+                .replace('devices = ["phone", "laptop"]', 'devices = ["phone", "laptop", "pc"]'))
+    st = {"keys": {"g": {}}, "ids": {}}
     PC = "2e3c4bd2-5a4f-4b8e-9d1e-0f2a3b4c5d6e"
     keys, ids, unnamed, desktops = adopt.parse(server_output(f"{PHONE} phone mobile\n{OLD} laptop desktop\n{PC} pc desktop\n"))
     assert desktops == {"laptop", "pc"}
-    said = adopt.take(st, net, keys, ids, unnamed, desktops)
+    said = adopt.take(st, net, "g", keys, ids, unnamed, desktops)
     assert said[-1] == ("desktops on the server but not in the roster's desktops, getting CDN links at the next sync "
                         "unless added: laptop")
 
@@ -132,15 +145,17 @@ def test_command_prints_the_settings_morzer_gives(tmp_path):
 
 
 def test_changes_names_what_the_first_sync_would_change():
-    net = loads(ROSTER.replace("subscription = true\n", "direct = false\n") + '[pools]\nhome = ["203.0.113.5", "phone"]\n')
+    net = loads(ROSTER.replace("subscription = true\n", 'direct = false\npools = { home = ["203.0.113.5", "phone"] }\n'))
     a = net.find("a")
     said = adopt.changes(net, a, {"subscription": "true", "cdn_hosts": "cdn.example.net", "direct": "true",
-                                  "pools": "# a comment\nhome phone 203.0.113.5\nwork laptop"})
+                                  "pools": "# a comment\nhome phone 203.0.113.5\nwork laptop", "name": "old"})
     assert said[0] == "subscription: the server has true, the roster false, which the next sync sets: every device's subscription URL stops"
     assert said[1] == "cdn_hosts: the server has cdn.example.net, its [[server]] none, which the next sync sets"
     assert said[2].startswith("pools: ") and said[3].startswith("direct: the server has true, the roster false")
-    assert said[4].startswith("join the relays before this server")
+    assert said[4].startswith("name: the server has old, its group g, which the next sync sets")
+    assert said[5].startswith("join the relays before this server")
     # The same settings, or a release that gives none, leave only the order to join in.
-    same = {"subscription": "false", "cdn_hosts": "none", "direct": "false", "pools": "# One pool per line\nhome phone 203.0.113.5"}
-    assert adopt.changes(net, a, same) == adopt.changes(net, a, {}) == said[4:]
+    same = {"subscription": "false", "cdn_hosts": "none", "direct": "false", "pools": "# One pool per line\nhome phone 203.0.113.5",
+            "name": "g"}
+    assert adopt.changes(net, a, same) == adopt.changes(net, a, {"name": "none"}) == adopt.changes(net, a, {}) == said[5:]
     assert adopt.changes(loads(ROSTER.split("[[relay]]")[0]), a, {}) == []
